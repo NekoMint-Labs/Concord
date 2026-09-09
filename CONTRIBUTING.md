@@ -1,31 +1,118 @@
 # Contributing
 
-Read [README.md](README.md), [DEVELOPMENT.md](DEVELOPMENT.md), relevant parts of
-[VERIFICATION.md](VERIFICATION.md), and [TEAM_DEVELOPMENT.md](TEAM_DEVELOPMENT.md) before
-starting work.
+This is the main contribution entry point for Concord.
 
-## Workflow
+Normal feature and bug work starts from an Issue. Do not develop features directly on
+`main`. Read deeper documents only when they are relevant to the current change.
 
-Normal feature and bug work starts with an Issue. Create a short-lived issue branch from
-`main`, keep the change focused, and integrate through a pull request only—never direct
-feature pushes to `main`. Use `Closes #<issue>` in the PR description.
+## Quick start
 
-Normal PRs need one peer approval, applicable CI, and resolved review conversations.
-High-risk shared seam changes need stronger review as described in
-[TEAM_DEVELOPMENT.md](TEAM_DEVELOPMENT.md). Coordinate before editing a shared contract
-or seam; one active owner should change it at a time.
+Create or claim the relevant task or bug Issue, assign its owner, then follow this path:
 
-## Change hygiene
+```text
+Issue
+→ assign owner
+→ update local main
+→ create short-lived issue branch
+→ implement
+→ focused local verification
+→ Draft PR
+→ self-review
+→ Ready for review
+→ peer approval
+→ CI
+→ squash merge
+```
 
-Preserve snapshot freshness, evidence traceability, approvals, permissions, idempotency,
-auditability, cancellation, and recovery. Run the smallest relevant checks, then the
-broader checks required by the affected area. Report commands and results; if a check
-cannot run locally, state the command, blocker, and remaining qualification.
+Branch from the latest `main` and use one of:
 
-`frontend/openapi.json` and `frontend/src/api/schema.ts` are generator-owned. Regenerate
-them only through the documented locked commands; never hand-edit them. Use committed
-locks for normal work and do not make incidental manifest or lockfile updates.
+- `feat/<issue-number>-short-name`
+- `fix/<issue-number>-short-name`
+- `chore/<issue-number>-short-name`
 
-Do not submit secrets, private project data, local databases, dependency directories,
-build output, caches, logs, test reports, or handoff artifacts. Keep `.env.example` safe
-and preserve notices for approved third-party material.
+See [TEAM_DEVELOPMENT.md](TEAM_DEVELOPMENT.md) for ownership and shared-seam details.
+
+## Before you start
+
+- Read the assigned Issue and confirm its acceptance criteria and dependencies.
+- Check whether the change involves a shared seam.
+- Read `specifications/00_READ_ME_FIRST.md` and `specifications/01_AGENTS.md`, then
+  consult only the specifications relevant to the change. Do not reread the whole
+  specification pack for one change.
+- Read the deeper guidance linked below only when its detail is needed for the affected
+  area.
+
+## Development boundaries
+
+Keep changes focused and do not mix them with unrelated cleanup or refactoring. Preserve
+architecture and safety invariants, including snapshot freshness, evidence traceability,
+approvals, permissions, idempotency, auditability, cancellation, and recovery.
+
+Generator-owned API artifacts must be regenerated only through documented locked
+commands; never hand-edit them. Do not include secrets, private project data, build
+output, caches, logs, local artifacts, or incidental dependency changes.
+
+## Pull request requirements
+
+Before requesting review:
+
+- [ ] The PR addresses one focused acceptance goal.
+- [ ] The related Issue is linked with `Closes #<issue-number>` when applicable.
+- [ ] No unrelated cleanup or refactoring is included.
+- [ ] Relevant local verification has been run.
+- [ ] Generated artifacts were regenerated through documented commands when required.
+- [ ] Meaningful UI changes include screenshots.
+- [ ] Shared seams and risks are declared in the PR description.
+- [ ] The author has completed a self-review.
+- [ ] No secrets, private project data, build output, caches, logs, or local artifacts are included.
+
+Before merge:
+
+- [ ] At least one peer approval has been obtained.
+- [ ] Applicable CI is green.
+- [ ] Review conversations are resolved.
+- [ ] The PR is squash merged into `main`.
+
+## Shared seams
+
+Changes involving shared contracts or seams require brief coordination before
+implementation. This includes:
+
+- API / schemas;
+- Domain / ports;
+- database / migrations;
+- generated API artifacts;
+- dependencies / lockfiles;
+- workflows / CI;
+- major application composition files.
+
+See [TEAM_DEVELOPMENT.md](TEAM_DEVELOPMENT.md) for ownership, exact shared seams, and
+coordination rules.
+
+## Verification
+
+Run the smallest relevant check first, then the standard checks required for the affected
+area.
+
+- [DEVELOPMENT.md](DEVELOPMENT.md) — local development and common commands
+- [VERIFICATION.md](VERIFICATION.md) — full verification and qualification paths
+
+## Review expectations
+
+Reviewers primarily check:
+
+1. Whether the Issue acceptance criteria are satisfied.
+2. Whether architecture and safety invariants are preserved.
+3. Whether verification is sufficient.
+4. Whether unrelated changes are included.
+5. Whether the change unnecessarily expands shared seams or coupling.
+
+## Further guidance
+
+- [TEAM_DEVELOPMENT.md](TEAM_DEVELOPMENT.md) — ownership, shared seams, review, and
+  Definition of Done
+- [DEVELOPMENT.md](DEVELOPMENT.md) — local development and common verification commands
+- [VERIFICATION.md](VERIFICATION.md) — detailed verification and qualification
+- [STATUS.md](STATUS.md) — current project status
+- [`specifications/`](specifications/) — authoritative technical specifications; read only
+  as needed
