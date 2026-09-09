@@ -44,6 +44,7 @@ native/manual acceptance. Current evidence and remaining platform boundaries are
 recorded in the documents below:
 
 - [DEVELOPMENT.md](DEVELOPMENT.md) — contributor workflow and focused checks.
+- [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow and pull request rules.
 - [VERIFICATION.md](VERIFICATION.md) — verification commands and qualification
   boundaries.
 - [STATUS.md](STATUS.md) — current project status.

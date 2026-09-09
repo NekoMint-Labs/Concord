@@ -1,3 +1,11 @@
+---
+name: Bug
+about: Report a reproducible defect
+title: ""
+labels: ""
+assignees: ""
+---
+
 ## Problem
 
 ## Reproduction
