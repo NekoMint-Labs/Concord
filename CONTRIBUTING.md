@@ -3,7 +3,10 @@
 This is the main contribution entry point for Concord.
 
 Normal feature and bug work starts from an Issue. Do not develop features directly on
-`main`. Read deeper documents only when they are relevant to the current change.
+`main`. A very small repository or administrative chore may omit an Issue only when it does
+not change product behavior, a shared contract, or a shared seam; use
+`chore/<short-name>` and explain why no Issue was used in the PR description. Read deeper
+documents only when they are relevant to the current change.
 
 ## Quick start
 
@@ -24,17 +27,23 @@ Issue
 → squash merge
 ```
 
+An eligible no-Issue repository or administrative chore follows the same path starting from
+an updated local `main`; document the exception in its PR description.
+
 Branch from the latest `main` and use one of:
 
 - `feat/<issue-number>-short-name`
 - `fix/<issue-number>-short-name`
 - `chore/<issue-number>-short-name`
+- `chore/<short-name>` for an eligible no-Issue repository or administrative chore
 
 See [TEAM_DEVELOPMENT.md](TEAM_DEVELOPMENT.md) for ownership and shared-seam details.
 
 ## Before you start
 
-- Read the assigned Issue and confirm its acceptance criteria and dependencies.
+- Read the assigned Issue and confirm its acceptance criteria and dependencies. For an
+  eligible no-Issue repository or administrative chore, confirm it does not change product
+  behavior, a shared contract, or a shared seam.
 - Check whether the change involves a shared seam.
 - Read `specifications/00_READ_ME_FIRST.md` and `specifications/01_AGENTS.md`, then
   consult only the specifications relevant to the change. Do not reread the whole
@@ -49,8 +58,10 @@ architecture and safety invariants, including snapshot freshness, evidence trace
 approvals, permissions, idempotency, auditability, cancellation, and recovery.
 
 Generator-owned API artifacts must be regenerated only through documented locked
-commands; never hand-edit them. Do not include secrets, private project data, build
-output, caches, logs, local artifacts, or incidental dependency changes.
+commands; never hand-edit them. Keep `.env.example` safe: it must contain placeholders only,
+never real secrets. Preserve notices for approved third-party materials. Do not include
+secrets, private project data, build output, caches, logs, local artifacts, or incidental
+dependency changes.
 
 ## Pull request requirements
 
@@ -58,6 +69,8 @@ Before requesting review:
 
 - [ ] The PR addresses one focused acceptance goal.
 - [ ] The related Issue is linked with `Closes #<issue-number>` when applicable.
+- [ ] A no-Issue repository or administrative chore explains in the PR description why it
+  does not change product behavior, a shared contract, or a shared seam.
 - [ ] No unrelated cleanup or refactoring is included.
 - [ ] Relevant local verification has been run.
 - [ ] Generated artifacts were regenerated through documented commands when required.
