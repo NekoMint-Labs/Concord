@@ -1,254 +1,238 @@
+/*
+ * Detail pane calibration: a plain surface that reports the selected object.
+ * Its local navigation is quiet text, and it never repeats workspace status.
+ * The pane boundary itself stays square; only local objects inside it soften.
+ */
 .inspector {
-  width: 315px;
+  width: 318px;
   flex-shrink: 0;
-  background: white;
+  background: var(--surface-detail);
   border-left: 1px solid var(--line);
   overflow: auto;
-  padding: 20px 19px;
+  padding: 16px 18px 24px;
 }
-.inspector-header {
-  display: flex;
-  justify-content: space-between;
+.panel-heading {
   align-items: center;
-  margin-bottom: 17px;
-}
-.inspector-header h2 {
-  font-size: 12px;
-}
-.inspector section {
-  border-top: 1px solid var(--line);
-  padding-top: 15px;
-  margin-top: 17px;
-}
-.inspector .eyebrow {
+  justify-content: space-between;
   margin-bottom: 10px;
 }
-.inspector h3 {
-  font-size: 12px;
-  line-height: 1.5;
-  margin-bottom: 7px;
+.inspector-scope {
+  color: var(--muted);
+  font-size: var(--fs-label);
 }
-.inspector p {
-  font-size: 11px;
-  color: #76838a;
-  line-height: 1.65;
-}
-.property-grid {
+.icon-button {
   display: grid;
-  grid-template-columns: 95px 1fr;
-  gap: 8px;
-  font-size: 10px;
-  margin: 14px 0;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
 }
-.property-grid dt {
-  color: #8a969c;
+.icon-button:hover {
+  background: var(--hover);
+  color: var(--ink);
 }
-.property-grid dd {
+
+/* local navigation between details: text weight only; spacing, not a rule,
+   separates it from the section it opens */
+.inspector-switch {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 12px;
+}
+.inspector-switch button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-action);
+  font-weight: 500;
+}
+.inspector-switch button:hover {
+  color: var(--ink-2);
+}
+.inspector-switch button.active {
+  color: var(--ink);
+  font-weight: 600;
+}
+.inspector-switch .count {
   margin: 0;
-  color: #3e515c;
-  overflow-wrap: anywhere;
+  font-size: var(--fs-label);
+  color: var(--muted-2);
 }
-.constraint-item {
-  padding: 10px;
-  border: 1px solid #ecdfcb;
-  background: #fffbf4;
-  border-radius: 4px;
-  margin-bottom: 8px;
-}
-.constraint-item strong {
-  display: block;
-  font-size: 11px;
-  color: #97631e;
-}
-.constraint-item small {
-  display: block;
-  font-size: 10px;
-  color: #a0845c;
-  margin-top: 6px;
-}
-.evidence-box {
-  background: #f5f8f8;
-  padding: 11px;
-  border-left: 2px solid #83a7a5;
-  border-radius: 2px;
-  font-size: 11px;
-  line-height: 1.6;
-}
-.evidence-box code {
-  font-size: 9px;
-  display: block;
-  margin-top: 7px;
-  color: #68848a;
-}
-.inspector .action-panel {
-  border: 1px solid #ccdfd8;
-  background: #f7fbf9;
-  border-radius: 5px;
-  padding: 12px;
-  margin-top: 16px;
-}
-.action-panel .action-buttons {
-  display: flex;
-  gap: 7px;
-  margin: 12px 0;
-}
-.action-panel input {
-  width: 100%;
-  font-size: 10px;
-  margin-top: 10px;
-}
-.action-panel ul {
-  padding-left: 15px;
-  font-size: 10px;
-  color: #536e65;
-  line-height: 1.8;
-}
-.action-panel code {
-  display: block;
-  color: #87978f;
-  font-size: 8px;
-  margin-top: 7px;
-}
-.action-panel .risk-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 7px;
-}
-.action-panel .risk-line span {
-  font-size: 9px;
-}
-.inspector .no-blockers {
-  color: #47786b;
-  background: #f1f7f4;
-  padding: 11px;
-  border-radius: 4px;
-  font-size: 11px;
-}
-.inspector .muted {
-  font-size: 10px;
-  color: #8d9a9e;
-  margin-top: 7px;
-}
-@media (min-width: 1600px) {
-  .inspector {
-    width: 342px;
-  }
-}
-@media (max-width: 1150px) {
-  .inspector {
-    width: 275px;
-    padding: 16px 14px;
-  }
-}
-@media (max-width: 850px) {
-  .inspector {
-    width: 246px;
-  }
-}
+
 .inspector-section {
-  padding: 18px 0;
-  border-bottom: 1px solid var(--line);
-}
-.inspector-section:first-of-type {
-  padding-top: 8px;
-}
-.inspector-section h2 {
-  font-size: 16px;
-  margin: 8px 0 12px;
-}
-.inspector-section h3 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 12px;
+  padding: 14px 0;
 }
 .inspector-section p {
-  font-size: 11px;
+  font-size: var(--fs-body);
   line-height: 1.7;
-  color: #74848b;
+  color: var(--ink-2);
 }
-.properties {
-  display: grid;
-  grid-template-columns: 65px 1fr;
-  gap: 9px;
-  font-size: 10px;
-  margin-top: 18px;
-}
-.properties dt {
-  color: #87949a;
-}
-.properties dd {
+.constraint-list {
+  list-style: none;
   margin: 0;
-  color: #4b6068;
+  padding: 0;
 }
-.evidence {
-  padding: 12px;
-  background: #f6f9f8;
-  border-left: 2px solid #92ada4;
-  margin-top: 12px;
-  font-size: 10px;
+.constraint-list li + li {
+  margin-top: 14px;
 }
-.evidence summary {
-  cursor: pointer;
-  color: #54766b;
-  font-weight: 550;
+.constraint-list button {
+  display: block;
+  width: 100%;
+  /* the negative margin lets the hover surface bleed into the pane gutter
+     without moving the text it highlights */
+  padding: 4px 8px;
+  margin: 0 -8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
 }
-.evidence p {
-  margin: 9px 0;
+.constraint-list button:hover {
+  background: var(--hover);
 }
-.evidence .mono {
-  font-size: 9px;
-  color: #83948e;
+.constraint-list .eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+}
+.constraint-list strong {
+  display: block;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  font-weight: 400;
+  color: var(--ink);
+}
+.constraint-list small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+}
+.constraint-list button.selected strong {
+  font-weight: 600;
+}
+
+.evidence-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.evidence-list li {
+  display: flex;
+  gap: 10px;
+}
+.evidence-list li + li {
+  margin-top: 16px;
+}
+.evidence-index {
+  flex-shrink: 0;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+  padding-top: 1px;
+}
+.evidence-body strong {
+  display: block;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.evidence-body p {
+  margin: 6px 0;
+  color: var(--ink-2);
+}
+.evidence-meta {
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
-.evidence-id {
-  font-size: 9px;
-  color: #83948e;
-  margin-top: 9px;
-}
+
 .action-title {
   display: flex;
-  gap: 6px;
-  justify-content: space-between;
-  font-size: 11px;
-  margin-bottom: 10px;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--fs-body);
+  margin-bottom: 8px;
+}
+.action-title strong {
+  font-weight: 600;
 }
 .risk {
-  font-size: 9px;
-  border: 1px solid #dfc497;
-  padding: 2px 5px;
-  background: #fff8e9;
-  color: #966726;
+  color: var(--muted);
+  font-size: var(--fs-label);
 }
 .effect-list {
-  margin-top: 12px;
-  font-size: 10px;
-  color: #6e8586;
+  margin-top: 10px;
+  font-size: var(--fs-meta);
+  color: var(--muted);
 }
 .effect-list > div {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 6px 0;
+  margin: 4px 0;
 }
-.simulation-label {
-  font-size: 8px;
-  letter-spacing: 0.6px;
-  color: #ad8554;
-  border-top: 1px dashed #dccfb9;
-  margin: 14px 0;
-  padding-top: 10px;
+.approval-required {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
+.form-label {
+  display: block;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+.form-label input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
 }
 .action-buttons {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin-top: 13px;
+  margin-top: 12px;
 }
-.operation {
-  font-size: 8px;
-  margin-top: 11px;
-  color: #93a29f;
-  overflow-wrap: anywhere;
+.inline-more {
+  margin-top: 14px;
+}
+.supplementary-details {
+  margin-top: 28px;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+.supplementary-details summary {
+  cursor: pointer;
+}
+.properties {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: var(--fs-meta);
+}
+.properties dt {
+  color: var(--muted-2);
+}
+.properties dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+@media (max-width: 1150px) {
+  .inspector {
+    width: 276px;
+    padding: 14px;
+  }
+}
+@media (max-width: 850px) {
+  .inspector {
+    width: 248px;
+  }
 }

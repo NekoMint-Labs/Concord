@@ -1,14 +1,14 @@
 import { useMemo } from "react";
 import {
-  ReactFlow,
-  Background,
   Controls,
   MarkerType,
-  type Node,
+  ReactFlow,
   type Edge,
+  type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { Workspace } from "../api/client";
+import { activeCoordinationEvent } from "../app/coordination";
 
 export default function ImpactGraph({
   workspace,
@@ -20,43 +20,56 @@ export default function ImpactGraph({
   onConstraint: (id: string) => void;
 }) {
   const { nodes, edges } = useMemo(() => {
-    const wp = workspace.state.work_packages.find((p) => p.id === selected)!;
-    const constraints = (workspace.analysis?.constraints ?? [])
-      .filter((c) => c.work_package_id === selected)
-      .slice(0, 8);
-    const proposal = workspace.proposals.find(
-      (p) => p.work_package_id === selected,
+    const wp = workspace.state.work_packages.find(
+      (item) => item.id === selected,
+    )!;
+    const activeEvent = activeCoordinationEvent(workspace, selected);
+    const readiness = workspace.analysis?.readiness.find(
+      (item) => item.work_package_id === selected,
     );
+    const constraints = (workspace.analysis?.constraints ?? [])
+      .filter((item) => item.work_package_id === selected && item.blocking)
+      .slice(0, 4);
+    const proposal = workspace.proposals.find(
+      (item) => item.work_package_id === selected,
+    );
+    const revision = activeEvent?.change.revision;
     const nodes: Node[] = [
       {
-        id: "source",
-        position: { x: 30, y: 80 },
+        id: "event",
+        position: { x: 0, y: 100 },
         className: "graph-node source-node",
         data: {
           label: (
             <>
-              <small>SOURCE / DRAWING</small>
-              <strong>{wp.design_revision ?? "V16"}</strong>
-              <span>Revision-bound project facts</span>
+              <small>{activeEvent ? "变更事件" : "当前检查"}</small>
+              <strong>
+                {activeEvent?.title ?? `图纸 ${wp.design_revision}`}
+              </strong>
+              <span>
+                {revision
+                  ? `图纸 ${wp.accepted_revision} → ${revision}`
+                  : "基于最新项目事实"}
+              </span>
             </>
           ),
         },
       },
       {
         id: wp.id,
-        position: { x: 340, y: 80 },
-        className: `graph-node ${constraints.length ? "node-blocked" : "node-ready"}`,
+        position: { x: 285, y: 100 },
+        className: `graph-node ${readiness?.status === "BLOCKED" ? "node-blocked" : "node-ready"}`,
         data: {
           label: (
             <>
-              <small>
-                {wp.id} / {wp.discipline}
-              </small>
-              <strong>{wp.name}</strong>
+              <small>受影响工作包</small>
+              <strong>
+                {wp.id} · {wp.name}
+              </strong>
               <span>
-                {constraints.length
-                  ? `${constraints.length} blocking constraints`
-                  : "No unresolved constraints"}
+                {readiness?.status === "BLOCKED"
+                  ? `${constraints.length} 项阻塞原因`
+                  : "就绪，没有未解决阻塞"}
               </span>
             </>
           ),
@@ -65,103 +78,81 @@ export default function ImpactGraph({
     ];
     const edges: Edge[] = [
       {
-        id: "source-package",
-        source: "source",
+        id: "event-package",
+        source: "event",
         target: wp.id,
-        label: "governs",
+        label: "影响",
         markerEnd: { type: MarkerType.ArrowClosed },
       },
     ];
-    constraints.forEach((c, index) => {
+    constraints.forEach((constraint, index) => {
       nodes.push({
-        id: c.id,
-        position: { x: 330, y: 260 + index * 150 },
+        id: constraint.id,
+        position: { x: 580, y: 25 + index * 135 },
         className: "graph-node constraint-node",
         data: {
           label: (
             <>
-              <small>CONSTRAINT / {c.kind}</small>
-              <strong>{c.description}</strong>
-              <span>{c.evidence_ids.length} persisted evidence reference</span>
+              <small>阻塞原因</small>
+              <strong>{constraint.description}</strong>
+              <span>{constraint.evidence_ids.length} 条判断依据</span>
             </>
           ),
         },
       });
       edges.push({
-        id: `edge-${c.id}`,
-        source: c.id,
-        target: wp.id,
-        label: "blocks",
+        id: `edge-${constraint.id}`,
+        source: wp.id,
+        target: constraint.id,
+        label: "阻塞",
         markerEnd: { type: MarkerType.ArrowClosed },
       });
     });
     if (proposal) {
       nodes.push({
         id: proposal.id ?? "proposal",
-        position: { x: 660, y: 80 },
+        position: { x: 875, y: 100 },
         className: "graph-node action-node",
         data: {
           label: (
             <>
-              <small>PROPOSAL / R{proposal.risk}</small>
-              <strong>Coordinate & re-check</strong>
-              <span>Human approval required</span>
+              <small>建议处理</small>
+              <strong>{proposal.title}</strong>
+              <span>批准后执行 · R{proposal.risk}</span>
             </>
           ),
         },
       });
       edges.push({
-        id: "package-proposal",
-        source: wp.id,
+        id: "constraint-proposal",
+        source: constraints[0]?.id ?? wp.id,
         target: proposal.id ?? "proposal",
-        label: "resolve",
+        label: "处理",
         markerEnd: { type: MarkerType.ArrowClosed },
-      });
-    }
-    for (const [index, predecessor] of (wp.predecessors ?? []).entries()) {
-      nodes.push({
-        id: predecessor,
-        position: { x: 30, y: 280 + index * 150 },
-        className: "graph-node",
-        data: {
-          label: (
-            <>
-              <small>PREDECESSOR</small>
-              <strong>{predecessor}</strong>
-              <span>Schedule dependency</span>
-            </>
-          ),
-        },
-      });
-      edges.push({
-        id: `pred-${predecessor}`,
-        source: predecessor,
-        target: wp.id,
-        label: "precedes",
       });
     }
     return { nodes, edges };
   }, [workspace, selected]);
+
   return (
-    <div className="graph-canvas" aria-label="Impact graph">
+    <div className="graph-canvas" aria-label="影响关系图">
       <div className="canvas-label">
-        <span className="eyebrow">DEPENDENCY LENS</span>
-        <span>Relevant workface subgraph</span>
+        <span className="eyebrow">影响关系</span>
+        <span>变更 → 影响 → 阻塞 → 处理</span>
       </div>
       <ReactFlow
         key={`${selected}-${workspace.analysis?.id}`}
         nodes={nodes}
         edges={edges}
         fitView
-        fitViewOptions={{ padding: 0.3 }}
-        minZoom={0.35}
-        maxZoom={1.4}
+        fitViewOptions={{ padding: 0.16 }}
+        minZoom={0.45}
+        maxZoom={1.35}
         nodesDraggable={false}
         nodesConnectable={false}
         onNodeClick={(_, node) => onConstraint(node.id)}
         proOptions={{ hideAttribution: false }}
       >
-        <Background gap={24} size={1} />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>

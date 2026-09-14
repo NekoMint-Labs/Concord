@@ -15,7 +15,6 @@ export function Capabilities() {
     <div className="content-view">
       <div className="view-heading">
         <div>
-          <span className="eyebrow">DEPLOYMENT & INTEGRATIONS</span>
           <h2>Capability health</h2>
         </div>
         <Button

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
 import { api, type Workspace } from "../api/client";
-import { Inspector } from "./Inspector";
+import { Inspector, type InspectorView } from "./Inspector";
 
 type Scalar = string | number | boolean | null;
 const record = <T extends Scalar>(
@@ -43,18 +43,28 @@ const proposal = waiting.proposals.find(
 const perform = async (operation: () => Promise<unknown>) => {
   await operation();
 };
-const props = { selected: "WP-200", selectedConstraint: "", perform };
+const props = {
+  selected: "WP-200",
+  selectedConstraint: "",
+  perform,
+  onClose: () => undefined,
+  onView: () => undefined,
+};
+const action = (workspace: Workspace, view: InspectorView = "action") => (
+  <Inspector {...props} workspace={workspace} view={view} />
+);
 const approved = { ...waiting, approvals: [fixture.approval] } as Workspace;
 
 afterEach(() => vi.restoreAllMocks());
 
 describe("evidence-backed action controls", () => {
   it("requires exact R4 confirmation and never offers unapproved execution", () => {
-    render(<Inspector {...props} workspace={waiting} />);
+    render(action(waiting));
+    expect(screen.getByText(/执行前需要批准/)).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Execute & re-check" }),
+      screen.getByRole("button", { name: "执行并重新检查" }),
     ).toBeDisabled();
-    const approve = screen.getByRole("button", { name: "Approve R4" });
+    const approve = screen.getByRole("button", { name: "批准 R4" });
     expect(approve).toBeDisabled();
     fireEvent.change(screen.getByLabelText("R4 confirmation"), {
       target: { value: "approve r4" },
@@ -70,17 +80,17 @@ describe("evidence-backed action controls", () => {
     const request = vi
       .spyOn(api, "approve")
       .mockResolvedValue(fixture.approval as Workspace["approvals"][number]);
-    render(<Inspector {...props} workspace={waiting} />);
+    render(action(waiting));
     fireEvent.change(screen.getByLabelText("R4 confirmation"), {
       target: { value: "APPROVE R4" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Approve R4" }));
+    fireEvent.click(screen.getByRole("button", { name: "批准 R4" }));
     expect(request).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledWith(proposal.id, true, "APPROVE R4");
   });
 
   it("clears typed consent when a new proposal replaces the old one", () => {
-    const { rerender } = render(<Inspector {...props} workspace={waiting} />);
+    const { rerender } = render(action(waiting));
     fireEvent.change(screen.getByLabelText("R4 confirmation"), {
       target: { value: "APPROVE R4" },
     });
@@ -91,9 +101,9 @@ describe("evidence-backed action controls", () => {
         id: item.id + "-replacement",
       })),
     };
-    rerender(<Inspector {...props} workspace={next} />);
+    rerender(action(next));
     expect(screen.getByLabelText("R4 confirmation")).toHaveValue("");
-    expect(screen.getByRole("button", { name: "Approve R4" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "批准 R4" })).toBeDisabled();
   });
 
   it("allows execution only after approval", () => {
@@ -102,9 +112,9 @@ describe("evidence-backed action controls", () => {
       operation_id: proposal.operation_id,
       queued: true,
     });
-    render(<Inspector {...props} workspace={approved} />);
-    expect(screen.getByRole("button", { name: "Approved" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "Execute & re-check" }));
+    render(action(approved));
+    expect(screen.getByRole("button", { name: "已批准" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "执行并重新检查" }));
     expect(request).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledWith(proposal.id);
   });
@@ -114,11 +124,16 @@ describe("evidence-backed action controls", () => {
     { stale: false, busy: true },
   ])("prevents stale or overlapping mutations: %j", ({ stale, busy }) => {
     render(
-      <Inspector {...props} workspace={{ ...approved, stale }} busy={busy} />,
+      <Inspector
+        {...props}
+        workspace={{ ...approved, stale }}
+        view="action"
+        busy={busy}
+      />,
     );
-    expect(screen.getByRole("button", { name: "Approved" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "已批准" })).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Execute & re-check" }),
+      screen.getByRole("button", { name: "执行并重新检查" }),
     ).toBeDisabled();
   });
 
@@ -128,9 +143,7 @@ describe("evidence-backed action controls", () => {
     workspace.analysis!.evidence.forEach((item) => {
       item.fact = text;
     });
-    const { container } = render(
-      <Inspector {...props} workspace={workspace} />,
-    );
+    const { container } = render(action(workspace, "evidence"));
     expect(screen.getAllByText(text).length).toBeGreaterThan(0);
     expect(container.querySelector("script")).toBeNull();
   });
@@ -140,32 +153,84 @@ it.each(["CANCELLED", "EXPIRED", "FAILED", "COMPLETED"] as const)(
   "cannot dispatch a proposal whose owning run is %s",
   (status) => {
     const owner = { ...approved.run!, status };
-    render(
-      <Inspector {...props} workspace={{ ...approved, analysis_run: owner }} />,
-    );
+    render(action({ ...approved, analysis_run: owner }));
     expect(
-      screen.getByRole("button", { name: "Execute & re-check" }),
+      screen.getByRole("button", { name: "执行并重新检查" }),
     ).toBeDisabled();
   },
 );
 
 it("uses the analysis owner rather than an unrelated completed upload", () => {
   render(
-    <Inspector
-      {...props}
-      workspace={{
-        ...approved,
-        analysis_run: { ...approved.run!, status: "WAITING_APPROVAL" },
-        run: {
-          ...approved.run!,
-          id: "upload-run",
-          category: "document_parse",
-          status: "COMPLETED",
-        },
-      }}
-    />,
+    action({
+      ...approved,
+      analysis_run: { ...approved.run!, status: "WAITING_APPROVAL" },
+      run: {
+        ...approved.run!,
+        id: "upload-run",
+        category: "document_parse",
+        status: "COMPLETED",
+      },
+    }),
   );
+  expect(screen.getByRole("button", { name: "执行并重新检查" })).toBeEnabled();
+});
+
+it("lists only blocking constraints as blocker reasons", () => {
+  const workspace = structuredClone(waiting);
+  workspace.analysis!.constraints.push({
+    ...workspace.analysis!.constraints[0],
+    id: "informational-constraint",
+    blocking: false,
+    description: "Informational coordination note",
+  });
+
+  render(action(workspace, "blocker"));
+
   expect(
-    screen.getByRole("button", { name: "Execute & re-check" }),
-  ).toBeEnabled();
+    screen.queryByText("Informational coordination note"),
+  ).not.toBeInTheDocument();
+});
+
+describe("contextual detail", () => {
+  it("shows only the detail the user opened", () => {
+    const { rerender } = render(action(waiting, "evidence"));
+    expect(screen.getByText("验收尚未通过。")).toBeVisible();
+    // The inspector never restates the recommendation or the approval gate.
+    expect(screen.queryByText(/执行前需要批准/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/完成相关负责人确认后/)).not.toBeInTheDocument();
+
+    rerender(action(waiting, "action"));
+    expect(screen.getByText(/完成相关负责人确认后/)).toBeVisible();
+    expect(screen.getByText(/执行前需要批准/)).toBeVisible();
+    // Nor the blocker narrative the workspace already told.
+    expect(screen.queryByText("验收尚未通过。")).not.toBeInTheDocument();
+  });
+
+  it("switches between details without a work-package headline", () => {
+    const onView = vi.fn();
+    render(
+      <Inspector
+        {...props}
+        workspace={waiting}
+        view="blocker"
+        onView={onView}
+      />,
+    );
+    expect(
+      screen.queryByRole("heading", { name: /East-wing duct installation/ }),
+    ).not.toBeInTheDocument();
+    screen.getByRole("button", { name: /^判断依据/ }).click();
+    expect(onView).toHaveBeenCalledWith("evidence");
+  });
+
+  it("labels deterministic fixture evidence in Chinese with stable identifiers", () => {
+    render(action(waiting, "evidence"));
+    expect(screen.getByText("验收", { exact: true })).toBeVisible();
+    expect(
+      screen.getByText(
+        /来源 structured-inspection · inspection\/WP-200 · r2 · L02-E/,
+      ),
+    ).toBeVisible();
+  });
 });

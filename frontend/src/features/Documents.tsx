@@ -59,7 +59,6 @@ export function Documents({
     <div className="content-view documents-view">
       <div className="view-heading">
         <div>
-          <span className="eyebrow">LOCAL EVIDENCE LIBRARY</span>
           <h2>Documents & retrieval</h2>
         </div>
         <Button

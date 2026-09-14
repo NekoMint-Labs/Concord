@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test, type APIRequestContext } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import type { Workspace } from '../src/api/client';
 
 const authorization = { Authorization: 'Bearer local-demo-admin' };
 const project = '/api/projects/harbor-east';
+const workspaceRoute = '**/api/projects/harbor-east/workspace';
+
 async function workspace(request: APIRequestContext): Promise<Workspace> {
   const response = await request.get(`${project}/workspace`, { headers: authorization });
   expect(response.ok()).toBeTruthy();
   return response.json() as Promise<Workspace>;
 }
+
 async function event(request: APIRequestContext, change = { revision: 'V17' }) {
   const response = await request.post(`${project}/events`, { headers: authorization, data: {
     id: randomUUID(), project_id: 'harbor-east', work_package_id: 'WP-200',
@@ -16,6 +19,36 @@ async function event(request: APIRequestContext, change = { revision: 'V17' }) {
   } });
   expect(response.status()).toBe(202);
   return response.json();
+}
+
+/** The selected work package reports its state beside its own title. */
+const stateTag = (page: Page) => page.locator('.coordination-state-tag');
+const inspector = (page: Page) =>
+  page.getByRole('complementary', { name: '判断依据与处理详情' });
+
+async function expectBlocked(page: Page) {
+  await expect(stateTag(page)).toContainText('已阻塞', { timeout: 30_000 });
+}
+
+async function expectReady(page: Page) {
+  await expect(page.getByText('当前没有阻塞施工的条件')).toBeVisible({ timeout: 30_000 });
+}
+
+/** The deterministic demo fixture is reached through the single demo entry. */
+async function injectDemoEvent(page: Page, label: RegExp | string) {
+  await page.locator('.demo-menu summary').click();
+  await page.getByRole('button', { name: label }).click();
+  await page.locator('.demo-menu').evaluate((node) => node.removeAttribute('open'));
+}
+
+/** Secondary destinations live behind "更多"; none of them is primary navigation. */
+async function openSecondaryView(page: Page, label: string) {
+  const more = page.locator('.more-views');
+  if (!(await more.evaluate((node) => node.hasAttribute('open')))) {
+    await more.locator('summary').click();
+  }
+  await more.getByRole('button', { name: label, exact: true }).click();
+  await more.evaluate((node) => node.removeAttribute('open'));
 }
 
 test.beforeEach(async ({ request, page }) => {
@@ -29,23 +62,33 @@ test.beforeEach(async ({ request, page }) => {
   }).toBe(true);
   await page.addInitScript(() => { if (!sessionStorage.getItem('cca-token')) sessionStorage.setItem('cca-token', 'local-demo-admin'); });
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('duct', { ignoreCase: true });
+  await expect(page.getByRole('heading', { level: 2, name: '东翼风管安装' })).toBeVisible();
 });
 
-test('real browser coordinates design and workforce with approval, receipt, and fresh recheck', async ({ page, request }) => {
-  const inspector = page.getByRole('complementary', { name: 'Evidence and actions inspector' });
-  await page.getByRole('button', { name: /Drawing V16.*V17/ }).click();
-  await expect(inspector.getByText('BLOCKED', { exact: true })).toBeVisible();
-  await expect(inspector.getByRole('button', { name: 'Execute & re-check' })).toBeDisabled();
+test('coordinates a design change through evidence, approval, receipt, and a fresh recheck', async ({ page, request }) => {
+  const panel = inspector(page);
+  await injectDemoEvent(page, /图纸 V16/);
+  await expectBlocked(page);
+  await expect(page.getByText('图纸已更新至 V17，但当前施工面仍基于 V16。')).toBeVisible();
+
+  // Evidence is one click away, and the pane reports only the opened detail.
+  await page.getByRole('button', { name: '查看依据' }).click();
+  await expect(panel.getByText(/来源 structured-drawing/)).toBeVisible();
+  await expect(panel.getByText('完成相关负责人确认后，重新检查当前施工条件。')).toHaveCount(0);
+
   const before = await workspace(request);
   const proposal = before.proposals.find(item => item.work_package_id === 'WP-200')!;
   expect(before.analysis!.evidence.length).toBeGreaterThan(0);
   const denied = await request.post(`/api/proposals/${proposal.id}/execute`, { headers: authorization });
   expect(denied.status()).toBe(403);
-  await inspector.getByRole('button', { name: /^Approve R/ }).click();
-  await expect(inspector.getByRole('button', { name: 'Approved' })).toBeVisible();
-  await inspector.getByRole('button', { name: 'Execute & re-check' }).click();
-  await expect(inspector.getByText('READY', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: '批准并继续' }).click();
+  await expect(panel.getByRole('button', { name: '执行并重新检查' })).toBeDisabled();
+  await panel.getByRole('button', { name: /^批准 R/ }).click();
+  await expect(panel.getByRole('button', { name: '已批准' })).toBeVisible();
+  await panel.getByRole('button', { name: '执行并重新检查' }).click();
+  await expectReady(page);
+
   const after = await workspace(request);
   expect(after.analysis!.snapshot.id).not.toBe(before.analysis!.snapshot.id);
   expect(after.analysis!.snapshot.version).toBe(after.state.version);
@@ -56,26 +99,33 @@ test('real browser coordinates design and workforce with approval, receipt, and 
   const retried = await request.get(`/api/operations/${proposal.operation_id}`, { headers: authorization });
   expect(await retried.json()).toEqual(firstReceipt);
   expect((await workspace(request)).state.version).toBe(firstReceipt.after_version);
-  await page.getByRole('button', { name: 'Crew shortage' }).click();
-  await expect(inspector.getByText('BLOCKED', { exact: true })).toBeVisible();
-  await inspector.getByRole('button', { name: /^Approve R/ }).click();
-  await inspector.getByRole('button', { name: 'Execute & re-check' }).click();
-  await expect(inspector.getByText('READY', { exact: true })).toBeVisible();
+
+  // The secondary workforce case runs through the same engine and the same view.
+  await injectDemoEvent(page, '电气班组不足');
+  await expect(page.getByRole('heading', { level: 2, name: '03 层电气粗装' })).toBeVisible();
+  await expectBlocked(page);
+  await page.getByRole('button', { name: '批准并继续' }).click();
+  await panel.getByRole('button', { name: /^批准 R/ }).click();
+  await panel.getByRole('button', { name: '执行并重新检查' }).click();
+  await expectReady(page);
 });
 
 test('stale approval is rejected and the browser refreshes instead of silently approving', async ({ page, request }) => {
-  const inspector = page.getByRole('complementary', { name: 'Evidence and actions inspector' });
-  await page.getByRole('button', { name: /Drawing V16.*V17/ }).click();
-  await expect(inspector.getByRole('button', { name: /^Approve R/ })).toBeEnabled();
+  const panel = inspector(page);
+  await injectDemoEvent(page, /图纸 V16/);
+  await expectBlocked(page);
+  await page.getByRole('button', { name: '批准并继续' }).click();
+  const approve = panel.getByRole('button', { name: /^批准 R/ });
+  await expect(approve).toBeEnabled();
+
   const staleWorkspace = await workspace(request);
   const old = staleWorkspace.proposals.find(item => item.work_package_id === 'WP-200')!;
   // Keep this tab's old snapshot until the click, while another client updates
   // authoritative facts. This tests the 409 path without a polling-time race.
-  const workspaceRoute = '**/api/projects/harbor-east/workspace';
   await page.route(workspaceRoute, route => route.fulfill({ json: staleWorkspace }));
   await event(request, { revision: 'V18' });
   const rejected = page.waitForResponse(response => response.url().endsWith(`/proposals/${old.id}/approve`));
-  await inspector.getByRole('button', { name: /^Approve R/ }).click();
+  await approve.click();
   expect((await rejected).status()).toBe(409);
   await page.unroute(workspaceRoute);
   await expect(page.getByRole('alert').first()).toBeVisible();
@@ -89,19 +139,32 @@ test('inspection R4 requires exact typed confirmation', async ({ page, request }
   } });
   expect(response.status()).toBe(202);
   await page.reload();
-  const inspector = page.getByRole('complementary', { name: 'Evidence and actions inspector' });
-  const approve = inspector.getByRole('button', { name: 'Approve R4' });
+  await expectBlocked(page);
+  await page.getByRole('button', { name: '批准并继续' }).click();
+  const panel = inspector(page);
+  const approve = panel.getByRole('button', { name: '批准 R4' });
   await expect(approve).toBeDisabled();
-  await inspector.getByLabel('R4 confirmation').fill('approve r4');
+  await panel.getByLabel('R4 confirmation').fill('approve r4');
   await expect(approve).toBeDisabled();
-  await inspector.getByLabel('R4 confirmation').fill('APPROVE R4');
+  await panel.getByLabel('R4 confirmation').fill('APPROVE R4');
   await approve.click();
-  await inspector.getByRole('button', { name: 'Execute & re-check' }).click();
-  await expect(inspector.getByText('READY', { exact: true })).toBeVisible();
+  await panel.getByRole('button', { name: '执行并重新检查' }).click();
+  await expectReady(page);
+});
+
+test('an outdated judgement is raised beside the work package, not as a global banner', async ({ page, request }) => {
+  // An authoritative fact changes behind this client's back, so the recorded
+  // judgement is no longer current.
+  await event(request, { revision: 'V18' });
+  await page.reload();
+  await expectBlocked(page);
+  // The work package reports its own state; nothing is raised application-wide.
+  await expect(page.locator('.alert')).toHaveCount(0);
+  await expect(page.locator('.coordination-workspace')).toContainText('已阻塞');
 });
 
 test('document upload, retrieval and authenticated source download use the real API', async ({ page }) => {
-  await page.getByRole('navigation', { name: 'Workspace views' }).getByRole('button', { name: 'Documents', exact: true }).click();
+  await page.getByRole('navigation', { name: '工作区视图' }).getByRole('button', { name: '文档', exact: true }).click();
   await page.locator('input[type=file]').setInputFiles({
     name: 'browser-evidence.md', mimeType: 'text/markdown', buffer: Buffer.from('# Browser evidence\nunique-browser-evidence-phrase'),
   });
@@ -119,10 +182,11 @@ test('viewer can read but cannot approve or execute', async ({ page, request }) 
   await event(request);
   await page.evaluate(() => sessionStorage.setItem('cca-token', 'local-demo-viewer'));
   await page.reload();
-  const inspector = page.getByRole('complementary', { name: 'Evidence and actions inspector' });
-  await expect(inspector.getByText('BLOCKED', { exact: true })).toBeVisible();
+  await expectBlocked(page);
+  await page.getByRole('button', { name: '批准并继续' }).click();
+  const panel = inspector(page);
   const response = page.waitForResponse(value => value.url().endsWith('/approve'));
-  await inspector.getByRole('button', { name: /^Approve R/ }).click();
+  await panel.getByRole('button', { name: /^批准 R/ }).click();
   expect((await response).status()).toBe(403);
   await expect(page.getByRole('alert').first()).toBeVisible();
   const data = await workspace(request);
@@ -130,23 +194,22 @@ test('viewer can read but cannot approve or execute', async ({ page, request }) 
 });
 
 test('structured BIM, capability status, and run history remain usable without optional SDKs', async ({ page }) => {
-  const views = page.getByRole('navigation', { name: 'Workspace views' });
+  const views = page.getByRole('navigation', { name: '工作区视图' });
   await views.getByRole('button', { name: 'BIM', exact: true }).click();
   await expect(page.locator('.bim-element').first()).toBeVisible();
   await page.locator('.bim-element').first().click();
   await expect(page.locator('.bim-properties')).toBeVisible();
-  await views.getByRole('button', { name: 'Capabilities', exact: true }).click();
+  await openSecondaryView(page, '能力');
   await expect(page.getByRole('heading', { name: /capabilit/i }).first()).toBeVisible();
-  await views.getByRole('button', { name: 'Operations', exact: true }).click();
+  await openSecondaryView(page, '运行');
   await expect(page.getByRole('heading', { name: 'Operations & run history' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Solve schedule' })).toBeDisabled();
 });
 
-
 test('real local GIS renders and selects its linked work package', async ({ page }) => {
   await page.locator('.package-nav').filter({ hasText: 'WP-300' }).click();
-  await expect(page.locator('.inspector .mono').first()).toHaveText('WP-300');
-  await page.getByRole('navigation', { name: 'Workspace views' }).getByRole('button', { name: 'Site', exact: true }).click();
+  await page.locator('.package-nav[aria-current="page"]').filter({ hasText: 'WP-300' }).waitFor();
+  await openSecondaryView(page, '现场');
   await expect(page.getByText('Site map ready', { exact: true })).toBeVisible();
   const canvas = page.locator('.maplibregl-canvas');
   await expect(canvas).toBeVisible();
@@ -154,13 +217,13 @@ test('real local GIS renders and selects its linked work package', async ({ page
   expect(box).not.toBeNull();
   // The original synthetic WP-200 marker is exactly at the map's declared center.
   await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } });
-  await expect(page.locator('.inspector .mono').first()).toHaveText('WP-200');
-  await page.getByRole('navigation', { name: 'Workspace views' }).getByRole('button', { name: 'Work packages', exact: true }).click();
+  await expect(page.locator('.breadcrumb strong')).toHaveText('WP-200');
+  await expect(page.locator('.package-nav[aria-current="page"]')).toContainText('WP-200');
+  await openSecondaryView(page, '工作包');
   await expect(page.locator('.maplibregl-canvas')).toHaveCount(0);
 });
 
 test('a disconnected event stream reconnects and preserves approvals behind a newer document job', async ({ page, request }) => {
-  const inspector = page.getByRole('complementary', { name: 'Evidence and actions inspector' });
   let attempts = 0;
   await page.route('**/api/runs/*/events', route => {
     attempts += 1;
@@ -168,31 +231,34 @@ test('a disconnected event stream reconnects and preserves approvals behind a ne
     // real SSE endpoint, rather than receiving a mocked success response.
     return attempts === 1 ? route.abort('connectionreset') : route.continue();
   });
-  await page.getByRole('button', { name: /Drawing V16.*V17/ }).click();
+  await injectDemoEvent(page, /图纸 V16/);
   await expect.poll(() => attempts).toBeGreaterThanOrEqual(2);
-  await expect(inspector.getByText('BLOCKED', { exact: true })).toBeVisible();
-  await expect(inspector.getByRole('button', { name: /^Approve R/ })).toBeEnabled();
+  await expectBlocked(page);
+  await page.getByRole('button', { name: '批准并继续' }).click();
+  const panel = inspector(page);
+  await expect(panel.getByRole('button', { name: /^批准 R/ })).toBeEnabled();
+
   const current = await workspace(request);
   const proposal = current.proposals.find(item => item.work_package_id === 'WP-200')!;
-  await page.getByRole('navigation', { name: 'Workspace views' }).getByRole('button', { name: 'Documents', exact: true }).click();
+  await page.getByRole('navigation', { name: '工作区视图' }).getByRole('button', { name: '文档', exact: true }).click();
   await page.locator('input[type=file]').setInputFiles({
     name: 'approval-stream.md', mimeType: 'text/markdown', buffer: Buffer.from('Independent document job'),
   });
   await expect(page.getByText('approval-stream.md', { exact: true })).toBeVisible();
   await expect(page.locator('.upload-status')).toContainText('COMPLETED');
-  await expect(page.locator('.timeline-heading')).toContainText('COMPLETED');
+  await expect(page.locator('.timeline-heading')).toContainText('已完成');
   const uploaded = await workspace(request);
   expect(uploaded.run!.id).not.toBe(current.run!.id);
   expect(uploaded.analysis_run!.id).toBe(current.analysis_run!.id);
   expect(uploaded.analysis_run!.status).toBe('WAITING_APPROVAL');
   // This separate client does not trigger React Query invalidation in the tab.
   // The approval owner's real stream must remain subscribed even though a newer,
-  // completed document job now owns the visible timeline and disables polling.
+  // completed document job now owns the visible timeline.
   const approved = await request.post(`/api/proposals/${proposal.id}/approve`, {
     headers: authorization,
     data: { strong: false, confirmation: '' },
   });
   expect(approved.status()).toBe(200);
-  await expect(inspector.getByRole('button', { name: 'Approved', exact: true })).toBeVisible();
-  await expect(inspector.getByRole('button', { name: 'Execute & re-check' })).toBeEnabled();
+  await expect(panel.getByRole('button', { name: '已批准', exact: true })).toBeVisible();
+  await expect(panel.getByRole('button', { name: '执行并重新检查' })).toBeEnabled();
 });

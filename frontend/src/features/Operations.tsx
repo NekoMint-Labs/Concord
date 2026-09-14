@@ -43,7 +43,6 @@ export function Operations({
     <div className="content-view operations-view">
       <div className="view-heading">
         <div>
-          <span className="eyebrow">CONTROLLED CAPABILITY JOBS</span>
           <h2>Operations & run history</h2>
         </div>
       </div>

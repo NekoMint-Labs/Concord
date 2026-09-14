@@ -12,7 +12,6 @@ export function WorkPackages({
     <div className="content-view">
       <div className="view-heading">
         <div>
-          <span className="eyebrow">COORDINATION REGISTER</span>
           <h2>Work packages</h2>
         </div>
         <span className="muted">Authoritative facts, not chat state</span>

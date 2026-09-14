@@ -81,13 +81,13 @@ export function EventComposer({
         aria-modal="true"
         aria-labelledby="event-title"
       >
-        <span className="eyebrow">NEW PROJECT OBSERVATION</span>
-        <h2 id="event-title">Record an event</h2>
+        <span className="eyebrow">新建项目观察</span>
+        <h2 id="event-title">记录变更</h2>
         <p>
           {wp.id} / {wp.name}
         </p>
         <label className="form-label">
-          Event family
+          变更类型
           <select
             value={kind}
             onChange={(e) => {
@@ -106,22 +106,22 @@ export function EventComposer({
               );
             }}
           >
-            <option value="design_revision">Design revision</option>
-            <option value="workforce">Workforce shortage</option>
-            <option value="predecessor">Incomplete predecessor</option>
-            <option value="material">Material unavailable</option>
-            <option value="equipment">Equipment unavailable</option>
-            <option value="inspection">Inspection failed</option>
-            <option value="external">External observation</option>
+            <option value="design_revision">设计修订</option>
+            <option value="workforce">班组人员不足</option>
+            <option value="predecessor">前置工作未完成</option>
+            <option value="material">材料不可用</option>
+            <option value="equipment">设备不可用</option>
+            <option value="inspection">验收未通过</option>
+            <option value="external">外部观察</option>
           </select>
         </label>
         {!["inspection", "external"].includes(kind) && (
           <label className="form-label">
             {kind === "design_revision"
-              ? "New revision"
+              ? "新版本"
               : kind === "workforce"
-                ? "Available workers"
-                : "Resource / predecessor ID"}
+                ? "可用人员"
+                : "资源 / 前置工作 ID"}
             <input
               type={kind === "workforce" ? "number" : "text"}
               min={0}
@@ -132,7 +132,7 @@ export function EventComposer({
           </label>
         )}
         <label className="form-label">
-          Source note (untrusted content)
+          来源说明（不受信任内容）
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -141,13 +141,11 @@ export function EventComposer({
         </label>
         <div className="dialog-actions">
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            取消
           </Button>
-          <Button onClick={submit}>Ingest & analyze</Button>
+          <Button onClick={submit}>提交并分析</Button>
         </div>
-        <small>
-          Events change recorded facts. They do not grant agent permissions.
-        </small>
+        <small>变更会更新已记录事实，但不会授予任何代理权限。</small>
       </section>
     </div>
   );

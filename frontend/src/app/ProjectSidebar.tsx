@@ -1,6 +1,13 @@
-import { Building2, ChevronRight } from "lucide-react";
 import type { DTO, Workspace } from "../api/client";
-import { Button } from "../components/ui/button";
+import { Status } from "../components/Status";
+import {
+  demoAreaName,
+  demoDiscipline,
+  demoWorkPackageName,
+} from "../ui/demo/demoPresentation";
+
+/** Abnormal states earn the only labels here; normal rows stay plain text. */
+const notable = new Set(["BLOCKED", "WAITING_APPROVAL", "STALE"]);
 
 export function ProjectSidebar({
   data,
@@ -9,7 +16,6 @@ export function ProjectSidebar({
   selected,
   onProject,
   onSelect,
-  onReset,
 }: {
   data: Workspace;
   project: string;
@@ -17,110 +23,62 @@ export function ProjectSidebar({
   selected: string;
   onProject: (id: string) => void;
   onSelect: (id: string) => void;
-  onReset: () => void;
 }) {
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" aria-label="项目与工作包">
       <div className="brand">
-        <div className="brand-mark">
-          <Building2 size={23} />
-        </div>
-        <div>
-          <strong>CONCORD</strong>
-          <span>Construction coordination</span>
-        </div>
+        <strong>Concord</strong>
+        <span>施工协同</span>
       </div>
       <div className="project-picker">
-        <span className="eyebrow">ACTIVE PROJECT</span>
+        <label className="eyebrow" htmlFor="project-picker">
+          项目
+        </label>
         <select
-          aria-label="Project"
+          id="project-picker"
+          aria-label="项目"
           value={project}
-          onChange={(e) => onProject(e.target.value)}
+          onChange={(event) => onProject(event.target.value)}
         >
-          {projects?.map((p) => (
-            <option value={p.id} key={p.id}>
-              {p.name}
+          {projects?.map((item) => (
+            <option value={item.id} key={item.id}>
+              {item.name}
             </option>
           ))}
         </select>
-        <span className="project-meta">REFERENCE PROJECT / SYNTHETIC</span>
       </div>
-      <div className="sidebar-section">
-        <div className="sidebar-label">
-          WORK PACKAGES <span>{data.state.work_packages.length}</span>
-        </div>
+      <nav className="sidebar-section" aria-label="工作包">
+        <div className="sidebar-label">工作包</div>
         {data.state.areas.map((area) => (
           <div key={area.id} className="area-group">
-            <div className="area-title">
-              <ChevronRight size={12} />
-              {area.name}
-            </div>
+            <div className="area-title">{demoAreaName(area.id, area.name)}</div>
             {data.state.work_packages
-              .filter((p) => p.area_id === area.id)
-              .map((p) => (
-                <button
-                  key={p.id}
-                  className={`package-nav ${selected === p.id ? "selected" : ""}`}
-                  onClick={() => {
-                    onSelect(p.id);
-                  }}
-                >
-                  <span
-                    className={`nav-indicator ${data.analysis?.readiness.find((r) => r.work_package_id === p.id)?.status === "BLOCKED" ? "is-blocked" : ""}`}
-                  />
-                  <span>
-                    <strong>{p.name}</strong>
-                    <small>
-                      {p.id} / {p.discipline}
-                    </small>
-                  </span>
-                </button>
-              ))}
+              .filter((item) => item.area_id === area.id)
+              .map((item) => {
+                const status =
+                  data.analysis?.readiness.find(
+                    (readiness) => readiness.work_package_id === item.id,
+                  )?.status ?? "UNCHECKED";
+                return (
+                  <button
+                    key={item.id}
+                    className={`package-nav ${selected === item.id ? "selected" : ""}`}
+                    aria-current={selected === item.id ? "page" : undefined}
+                    onClick={() => onSelect(item.id)}
+                  >
+                    <span>
+                      <strong>{demoWorkPackageName(item.id, item.name)}</strong>
+                      <small>
+                        {item.id} · {demoDiscipline(item.discipline)}
+                      </small>
+                    </span>
+                    {notable.has(status) && <Status value={status} />}
+                  </button>
+                );
+              })}
           </div>
         ))}
-      </div>
-      <div className="sidebar-section">
-        <div className="sidebar-label">
-          RECENT EVENTS <span>{data.events.length}</span>
-        </div>
-        {data.events.length === 0 ? (
-          <p className="sidebar-empty">
-            No changes recorded.
-            <br />
-            The workface is ready for review.
-          </p>
-        ) : (
-          data.events.slice(0, 4).map((e) => (
-            <div className="sidebar-event" key={e.id}>
-              <span>{e.kind.replaceAll("_", " ")}</span>
-              <strong>{e.title}</strong>
-            </div>
-          ))
-        )}
-      </div>
-      <div className="sidebar-bottom">
-        <div>
-          <span className="online-dot" />
-          {data.analysis?.reasoning_mode === "offline"
-            ? "Offline reasoning"
-            : "Model reasoning"}
-        </div>
-        <small>Local-first / Evidence-backed</small>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            if (
-              window.confirm(
-                "Reset synthetic facts? Audit history is retained.",
-              )
-            )
-              onReset();
-          }}
-        >
-          Reset demo
-        </Button>
-      </div>
+      </nav>
     </aside>
   );
 }

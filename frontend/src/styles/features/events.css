@@ -12,7 +12,7 @@
   background: white;
   width: 470px;
   max-width: 94vw;
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 15px 80px #132d3960;
   padding: 26px;
 }

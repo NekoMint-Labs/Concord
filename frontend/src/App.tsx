@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Building2, AlertTriangle } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { api, setToken, type DTO } from "./api/client";
 import { Button } from "./components/ui/button";
 import { Timeline } from "./features/Timeline";
 import { EventComposer } from "./features/EventComposer";
+import type { InspectorView } from "./features/Inspector";
 import { DemoControls } from "./app/DemoControls";
 import { ProjectSidebar } from "./app/ProjectSidebar";
 import { WorkspaceHeader } from "./app/WorkspaceHeader";
@@ -17,38 +18,41 @@ export function App() {
   const [project, setProject] = useState("harbor-east");
   const [selected, setSelected] = useState("WP-200");
   const [selectedConstraint, setSelectedConstraint] = useState("");
-  const [tab, setTab] = useState<WorkspaceTab>("impact");
+  const [tab, setTab] = useState<WorkspaceTab>("coordination");
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [inspectorView, setInspectorView] = useState<InspectorView>("blocker");
   const [eventDialog, setEventDialog] = useState(false);
   const [token, updateToken] = useState("");
-  const { profile, projects, workspace } = useWorkspace(project);
+  const { projects, workspace } = useWorkspace(project);
   const { perform, busy, error, setError } = useWorkspaceMutation();
   const data = workspace.data;
+
   function createEvent(event: DTO<"ProjectEvent-Input">) {
     setSelected(event.work_package_id);
     setSelectedConstraint("");
-    setTab("impact");
+    setTab("coordination");
+    setDetailsOpen(false);
     setEventDialog(false);
     void perform(() => api.events(project, event));
   }
+
   const wp =
-    data?.state.work_packages.find((p) => p.id === selected) ??
+    data?.state.work_packages.find((item) => item.id === selected) ??
     data?.state.work_packages[0];
   if (!data || !wp)
     return (
       <div className="startup">
         <Building2 size={36} />
-        <h1>Construction Coordination Agent</h1>
+        <h1>Concord</h1>
         {workspace.isPending ? (
-          <p>Connecting to the project workspace...</p>
+          <p>正在连接项目工作区…</p>
         ) : (
           <>
-            <p role="alert">
-              {workspace.error?.message ?? "No project has been seeded."}
-            </p>
-            <p>Start the Python API, then use the configured bearer token.</p>
+            <p role="alert">{workspace.error?.message ?? "尚未初始化项目。"}</p>
+            <p>启动 Python API 后，使用已配置的访问令牌连接。</p>
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
+              onSubmit={(event) => {
+                event.preventDefault();
                 setToken(token);
                 void cache.invalidateQueries();
               }}
@@ -57,15 +61,16 @@ export function App() {
                 type="password"
                 aria-label="API token"
                 value={token}
-                onChange={(e) => updateToken(e.target.value)}
+                onChange={(event) => updateToken(event.target.value)}
                 placeholder="API bearer token"
               />
-              <Button type="submit">Connect</Button>
+              <Button type="submit">连接</Button>
             </form>
           </>
         )}
       </div>
     );
+
   return (
     <div className="application-shell" aria-busy={busy}>
       <ProjectSidebar
@@ -77,25 +82,38 @@ export function App() {
         onSelect={(id) => {
           setSelected(id);
           setSelectedConstraint("");
+          setDetailsOpen(false);
         }}
-        onReset={() => void perform(api.reset)}
       />
       <main className="main-shell">
-        <WorkspaceHeader
-          data={data}
-          wp={wp}
-          profile={profile.data}
-          busy={busy}
-          onRecheck={() => void perform(() => api.recheck(project))}
-          onEvent={() => setEventDialog(true)}
-        />
-        <DemoControls project={project} busy={busy} createEvent={createEvent} />
-        {(error || data.stale) && (
+        <WorkspaceHeader data={data} wp={wp}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            onClick={() => setEventDialog(true)}
+          >
+            记录变更
+          </Button>
+          <DemoControls
+            project={project}
+            busy={busy}
+            createEvent={createEvent}
+            onReset={() => {
+              setSelectedConstraint("");
+              setDetailsOpen(false);
+              setTab("coordination");
+              void perform(api.reset);
+            }}
+          />
+        </WorkspaceHeader>
+        {/* Reserved for global failures; a stale judgement is a work-package
+            condition and is reported inside the coordination workspace. */}
+        {error && (
           <div className="alert" role="alert">
-            <AlertTriangle size={16} />
-            {error || "This analysis is stale. Re-check before taking action."}
-            <button onClick={() => setError("")} aria-label="Dismiss error">
-              x
+            {error}
+            <button onClick={() => setError("")} aria-label="关闭提示">
+              ×
             </button>
           </div>
         )}
@@ -106,21 +124,21 @@ export function App() {
           selectedConstraint={selectedConstraint}
           tab={tab}
           busy={busy}
+          detailsOpen={detailsOpen}
+          inspectorView={inspectorView}
           perform={perform}
           onTab={setTab}
           onSelected={setSelected}
-          onConstraint={setSelectedConstraint}
+          onConstraint={(id) => {
+            setSelectedConstraint(id);
+            setInspectorView("blocker");
+            setDetailsOpen(true);
+          }}
+          onDetailsOpen={setDetailsOpen}
+          onInspectorView={setInspectorView}
+          onRecheck={() => void perform(() => api.recheck(project))}
         />
         <Timeline run={data.run} perform={perform} />
-        <footer className="statusbar">
-          <span>
-            Revision-aware coordination / Not a final safety authority
-          </span>
-          <span>
-            State v{data.state.version} / {data.analysis?.evidence.length ?? 0}{" "}
-            evidence items
-          </span>
-        </footer>
       </main>
       {eventDialog && (
         <EventComposer

@@ -1,134 +1,100 @@
-.graph-shell {
-  height: 100%;
-  min-height: 350px;
-  position: relative;
-}
-.graph-caption {
-  position: absolute;
-  left: 21px;
-  top: 18px;
-  z-index: 2;
-  color: #8b999e;
-  font-size: 9px;
-  letter-spacing: 0.9px;
-}
-.graph-legend {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  z-index: 2;
-  display: flex;
-  gap: 14px;
-  font-size: 9px;
-  color: #809097;
-  background: #f8fafade;
-  padding: 8px;
-}
-.react-flow__node-default {
-  background: #fff;
-  border: 1px solid #cfdadc;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px #1c3a4510;
-  padding: 12px;
-  text-align: left;
-  color: #31454d;
-  width: 195px;
-  font-size: 11px;
-}
-.react-flow__node-default.selected {
-  border-color: #3e8c80;
-  box-shadow: 0 0 0 2px #73ab9a25;
-}
-.react-flow__node-default strong {
-  display: block;
-  font-weight: 600;
-  font-size: 11px;
-  line-height: 1.5;
-}
-.react-flow__node-default small {
-  display: block;
-  font-size: 9px;
-  color: #829397;
-  margin-top: 6px;
-}
-.react-flow__node-default .eyebrow {
-  font-size: 8px;
-  margin-bottom: 5px;
-}
-.react-flow__node-default.source-node {
-  background: #f6f8f9;
-  border-style: dashed;
-}
-.react-flow__node-default.constraint-node {
-  background: #fffaf1;
-  border-color: #d9ba88;
-}
-.react-flow__node-default.action-node {
-  background: #eef7f3;
-  border-color: #a6cbbd;
-}
-.react-flow__node-default.ready-node {
-  border-color: #a0c8b9;
-}
-.react-flow__handle {
-  height: 5px;
-  width: 5px;
-  background: #a5b6bb;
-  border: 1px solid #fff;
-}
-.react-flow__edge-path {
-  stroke: #b4c4c9;
-  stroke-width: 1.3;
-}
-.react-flow__controls {
-  box-shadow: 0 1px 4px #203e4820;
-  border: 1px solid #dbe3e6;
-}
-.react-flow__attribution {
-  font-size: 8px !important;
-  color: #98a3a6;
-}
-.react-flow__edge-text {
-  font-size: 9px;
-  fill: #839396;
-}
+/* The graph is a secondary canvas surface: hairline boxes, neutral nodes. */
 .graph-canvas {
   position: absolute;
   inset: 0;
-  min-height: 280px;
+  min-height: 260px;
+  background: var(--bg-app);
 }
 .canvas-label {
   position: absolute;
   z-index: 2;
-  top: 18px;
+  top: 16px;
   left: 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   pointer-events: none;
-  color: #8a989c;
-  font-size: 10px;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+/* the Impact Graph is entered contextually, so it carries its own way back */
+.canvas-back {
+  position: absolute;
+  z-index: 3;
+  top: 14px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  /* positioned, so it keeps a symmetric padded surface at a smaller inset */
+  padding: 3px 6px;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+.canvas-back:hover {
+  color: var(--ink);
+}
+.react-flow__node-default {
+  width: 200px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: none;
+  color: var(--ink-2);
+  text-align: left;
+  font-size: var(--fs-meta);
+}
+.react-flow__node-default.selected {
+  border-color: var(--ink);
+  box-shadow: none;
 }
 .graph-node strong {
   display: block;
-  font-size: 12px;
+  margin: 5px 0;
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--ink);
   line-height: 1.5;
-  margin: 7px 0;
 }
 .graph-node small {
   display: block;
-  color: #7a8d93;
-  font-size: 9px;
-  letter-spacing: 0.5px;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
 }
 .graph-node span {
   display: block;
-  font-size: 10px;
-  color: #7a8d93;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
 }
-.react-flow__node-default.node-blocked {
-  border-color: #cda363;
+/* one restrained exception colour, on the blocking node only */
+.react-flow__node-default.constraint-node {
+  border-color: var(--warn-line);
 }
-.react-flow__node-default.node-ready {
-  border-color: #a0c8b9;
+.react-flow__edge-path {
+  stroke: var(--line-strong);
+  stroke-width: 1.25;
+}
+.react-flow__edge-text {
+  font-size: var(--fs-label);
+  fill: var(--muted);
+}
+.react-flow__controls {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+.react-flow__controls-button {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.react-flow__controls-button:hover {
+  background: var(--hover);
+}
+.react-flow__attribution {
+  font-size: 8px !important;
+  color: var(--muted-2);
 }

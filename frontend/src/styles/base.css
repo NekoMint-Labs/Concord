@@ -1,23 +1,83 @@
+/*
+ * Calibration pass: hierarchy is carried by neutral value contrast, spacing,
+ * and typography. Colour is reserved for exceptional state, never decoration.
+ * Tokens follow the restraint of Primer's label/side-nav scales and COSS's
+ * neutral primary (near-black) and alpha-overlay interaction states.
+ */
 :root {
   font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
+    "Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui,
     sans-serif;
-  color: #24313a;
-  background: #f2f4f5;
+  color: var(--ink);
+  background: var(--bg-app);
   font-size: 13px;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --line: #dfe5e7;
-  --muted: #77838b;
-  --ink: #203038;
-  --accent: #176c66;
-  --amber: #a3611b;
+
+  /*
+   * Neutrals. Four region surfaces, one plane relationship: the primary work
+   * surface is the lightest, and every surrounding region recedes from it by a
+   * single barely perceptible step. The steps are deliberately small enough to
+   * read as depth, never as a boxed content area.
+   */
+  --bg-app: #f4f4f2;
+  --surface-nav: #f2f2f0;
+  --surface-chrome: #f8f8f6;
+  --surface-workspace: #fbfbfa;
+  --surface-detail: #f7f7f5;
+  /* controls, inputs, and genuinely floating surfaces stay plain white so they
+     read as objects sitting on a region rather than as another region */
+  --surface: #fff;
+  --line: #e5e5e7;
+  --line-soft: #eeeef0;
+  /* control borders sit a step softer than structure lines so controls read as
+     objects rather than as cuts through the page */
+  --line-strong: #d7d7da;
+  --ink: #1f2328;
+  --ink-2: #3d444d;
+  --muted: #656d76;
+  --muted-2: #8c959f;
+  --hover: rgba(0, 0, 0, 0.045);
+  --selected: rgba(0, 0, 0, 0.07);
+  --focus: #1f2328;
+
+  /*
+   * Radius scale: desktop softness, not SaaS softness. Shell structural
+   * boundaries (panes, chrome, tables, workspace regions) stay square at 0;
+   * only interactive objects and genuinely floating surfaces take a radius.
+   */
+  --radius-xs: 3px; /* tiny inline highlight */
+  --radius-sm: 5px; /* buttons, inputs, selects, selected rows, menu items */
+  --radius-md: 7px; /* dropdowns, popovers, small floating panels */
+  --radius-lg: 9px; /* modal / floating overlay only */
+
+  /* primary control fill: near-black, one step softer than body ink */
+  --primary: #2b3038;
+  --primary-hover: #3a4048;
+
+  /* one restrained exception colour, used only for blocking state */
+  --warn-fg: #9a6700;
+  --warn-line: rgba(154, 103, 0, 0.4);
+  --warn-bg: #fff8c5;
+  --danger-fg: #a40e26;
+
+  /* neutral aliases kept so secondary views inherit the calibration */
+  --accent: var(--ink);
+  --accent-soft: rgba(0, 0, 0, 0.045);
+  --amber: var(--warn-fg);
+  --danger-soft: rgba(164, 14, 38, 0.06);
+
+  /*
+   * Type scale: one step per role. Action text shares the body floor so a text
+   * action never reads smaller than the sentence it sits in; 11px is reserved
+   * for genuinely tertiary metadata.
+   */
+  --fs-title: 18px;
+  --fs-body: 14px;
+  --fs-action: 13px;
+  --fs-meta: 12px;
+  --fs-label: 11px;
 }
 * {
   box-sizing: border-box;
@@ -36,27 +96,28 @@ button {
 }
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.48;
+  opacity: 0.5;
 }
 button,
 input,
 textarea,
 select {
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
-select:focus-visible {
-  outline: 2px solid #298b82;
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--focus);
 }
 input,
 textarea,
 select {
-  border: 1px solid #cfd8dc;
-  border-radius: 5px;
-  background: #fff;
-  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 5px 8px;
   color: var(--ink);
 }
 textarea {
@@ -70,33 +131,35 @@ p {
   margin: 0;
 }
 h1 {
-  font-size: 25px;
+  font-size: 20px;
   font-weight: 600;
-  letter-spacing: -0.65px;
+  letter-spacing: normal;
 }
 h2 {
-  font-size: 18px;
+  font-size: var(--fs-title);
   font-weight: 600;
+  letter-spacing: normal;
 }
 h3 {
-  font-size: 13px;
-  font-weight: 650;
+  font-size: var(--fs-body);
+  font-weight: 600;
 }
 small {
-  font-size: 11px;
+  font-size: var(--fs-meta);
 }
 code,
 .mono {
   font-family: "SFMono-Regular", Consolas, monospace;
 }
 code {
-  font-size: 11px;
+  font-size: var(--fs-label);
   overflow-wrap: anywhere;
 }
 button {
   transition:
-    background 0.12s,
-    border-color 0.12s;
+    background 0.1s,
+    border-color 0.1s,
+    color 0.1s;
 }
 button svg {
   flex-shrink: 0;
@@ -110,36 +173,30 @@ pre {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--fs-body);
 }
 th {
   text-align: left;
-  background: #f5f7f7;
-  color: #6a7880;
-  font-size: 10px;
-  letter-spacing: 0.7px;
-  text-transform: uppercase;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-label);
   font-weight: 600;
-  padding: 12px 14px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
 }
 td {
-  padding: 14px;
-  border-bottom: 1px solid #e7ebed;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-soft);
   vertical-align: top;
 }
 td small {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--muted);
 }
 tbody tr:hover {
-  background: #f7faf9;
+  background: var(--hover);
 }
 a {
-  color: var(--accent);
-}
-@media (max-width: 1150px) {
-  h1 {
-    font-size: 21px;
-  }
+  color: var(--ink);
 }

@@ -1,216 +1,222 @@
+/* Supporting label: secondary text, not a visual device. */
 .eyebrow {
-  font-size: 9px;
-  letter-spacing: 1.7px;
-  font-weight: 700;
+  font-size: var(--fs-label);
+  font-weight: 500;
   color: var(--muted);
+  letter-spacing: normal;
 }
+
+/* Reserved for genuinely global failures. */
 .alert {
-  padding: 10px 25px;
-  color: #8c5020;
-  background: #fff4e7;
+  padding: 8px 22px;
+  color: var(--warn-fg);
+  background: var(--warn-bg);
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  font-size: 11px;
-  border-bottom: 1px solid #efd9bd;
+  font-size: var(--fs-meta);
+  border-bottom: 1px solid var(--warn-line);
 }
 .alert button {
-  border: none;
+  border: 0;
   background: none;
   margin-left: auto;
+  color: inherit;
+  font-size: 15px;
+  line-height: 1;
 }
 .loading-view,
 .empty-state {
-  padding: 35px;
+  padding: 28px;
   color: var(--muted);
-  line-height: 1.8;
-  font-size: 12px;
+  line-height: 1.7;
+  font-size: var(--fs-body);
 }
 .loading-view {
   display: grid;
   place-items: center;
   height: 100%;
 }
+
+/*
+ * Primer label treatment: a hairline outline and coloured text, never a
+ * filled tinted capsule. Used where peer objects must be scanned (sidebar
+ * rows, register tables), not as decoration. It stays fully round because it
+ * is a tag-like peer label, not a control or a container.
+ */
 .status {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 9px;
-  padding: 3px 7px;
-  line-height: 1.25;
-  border-radius: 3px;
-  border: 1px solid #d9e3df;
-  background: #edf5f1;
-  color: #427668;
-  font-weight: 650;
-  letter-spacing: 0.45px;
+  height: 18px;
+  padding: 0 6px;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  line-height: 1;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
   white-space: nowrap;
 }
-.status-blocked,
-.status-waiting_approval,
-.status-stale,
-.status-unhealthy,
-.status-failed {
-  background: #fbf0df;
-  border-color: #efdcba;
-  color: #986323;
+.status-blocked {
+  color: var(--warn-fg);
+  border-color: var(--warn-line);
 }
-.status-running,
-.status-queued {
-  background: #eaf1f7;
-  border-color: #d0dfe9;
-  color: #4d7190;
+.status-ready,
+.status-neutral {
+  color: var(--muted);
+  border-color: var(--line-strong);
 }
-.status-unavailable_dependency,
-.status-unavailable_credential,
-.status-available_disabled,
-.status-cancelled,
-.status-expired {
-  background: #f1f3f4;
-  border-color: #e1e6e8;
-  color: #849199;
-}
+
 .view-heading {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 19px;
+  margin-bottom: 16px;
   gap: 14px;
 }
 .view-heading p,
 .table-view > p,
 .capability-view > p {
-  font-size: 11px;
-  color: #7e8d92;
-  line-height: 1.7;
-  margin-top: 7px;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  line-height: 1.6;
+  margin-top: 6px;
 }
 .import-button {
   display: inline-flex;
   cursor: pointer;
   align-items: center;
-  gap: 5px;
-  padding: 7px 10px;
-  border: 1px solid #cfdcd7;
-  border-radius: 4px;
-  background: white;
-  color: #516c63;
-  font-size: 10px;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: var(--fs-action);
+}
+.import-button:hover {
+  background: var(--hover);
 }
 .import-button input {
   display: none;
 }
-/* Shared primitives and semantic workspace surfaces. */
+
+/* COSS-calibrated control sizing: compact, neutral, no brand fill. */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
   border: 1px solid transparent;
-  border-radius: 5px;
-  padding: 8px 12px;
-  font-weight: 550;
-  font-size: 11px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-action);
+  font-weight: 500;
   white-space: nowrap;
 }
+.button svg {
+  opacity: 0.8;
+}
 .button-primary {
-  background: #176c66;
-  color: white;
-  border-color: #176c66;
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
 }
 .button-primary:hover {
-  background: #115a54;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 .button-secondary {
-  background: white;
-  color: #405961;
-  border-color: #ccd9dc;
+  background: var(--surface);
+  color: var(--ink-2);
+  border-color: var(--line-strong);
 }
 .button-secondary:hover {
-  background: #eef4f3;
+  background: var(--hover);
 }
 .button-ghost {
   background: transparent;
-  color: #567079;
+  color: var(--ink-2);
+}
+.button-ghost:hover {
+  background: var(--hover);
 }
 .button-danger {
-  background: #fff3ef;
-  color: #944b38;
-  border-color: #ddaa99;
+  background: var(--surface);
+  color: var(--danger-fg);
+  border-color: var(--line-strong);
+}
+.button-danger:hover {
+  background: var(--danger-soft);
 }
 .button-sm {
-  padding: 5px 8px;
-  font-size: 10px;
+  height: 26px;
+  padding: 0 8px;
 }
 .content-view {
-  padding: 22px;
+  padding: 20px 22px;
   overflow: auto;
   min-height: 0;
 }
 .content-view > .muted {
   line-height: 1.7;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
+/*
+ * A text action is text. It answers with colour and a hairline underline, never
+ * with a filled surface: a small grey rectangle on hover makes an inline action
+ * read as a miniature toolbar button.
+ */
 .text-button {
   border: 0;
   background: none;
   padding: 0;
-  color: #176c66;
+  color: var(--ink-2);
+  font-size: var(--fs-action);
   text-align: left;
+  text-decoration: none;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.text-button:hover {
+  color: var(--ink);
+  text-decoration: underline;
 }
 .panel-heading,
 .timeline-heading {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 13px;
-}
-.panel-heading {
-  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 .count {
   margin-left: auto;
-  color: #859399;
-  font-size: 10px;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
 }
 .quiet-message {
-  font-size: 11px;
-  color: #87979d;
+  font-size: var(--fs-meta);
+  color: var(--muted);
   line-height: 1.7;
 }
-.status-neutral {
-  color: #796d4f;
-  background: #f7f2e5;
-  border-color: #e7dcc2;
-}
-.status-ready {
-  color: #39725f;
-  background: #edf6f0;
-  border-color: #b9d6c7;
-}
-.status-dot {
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  background: currentColor;
-  border-radius: 50%;
-  margin-right: 5px;
-}
 .content-view .audit-list {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 .content-view > .view-heading:not(:first-child) {
-  margin-top: 25px;
+  margin-top: 22px;
 }
 .consent {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  font-size: 11px;
+  gap: 8px;
+  font-size: var(--fs-meta);
   line-height: 1.7;
-  margin: 14px 0;
-  color: #74878b;
+  margin: 12px 0;
+  color: var(--muted);
 }
 .consent input {
-  margin-top: 4px;
+  margin-top: 3px;
 }
