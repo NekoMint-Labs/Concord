@@ -1,14 +1,8 @@
+import pytest
 from app.domain.events import ProjectEvent
 
 
-def test_design_change_evidence_is_persisted_and_retained_after_resolution(services, admin):
-    project_id, work_package_id = "harbor-east", "WP-200"
-    with services.factory.open() as repo:
-        initial = repo.latest_analysis(project_id)
-    assert (
-        next(r for r in initial.readiness if r.work_package_id == work_package_id).status == "READY"
-    )
-
+def start_design_change(services, admin, project_id, work_package_id):
     event = ProjectEvent(
         project_id=project_id,
         work_package_id=work_package_id,
@@ -18,6 +12,23 @@ def test_design_change_evidence_is_persisted_and_retained_after_resolution(servi
     )
     run = services.coordination.ingest(event, admin)
     services.runtime.start(run.id)
+    return event, run
+
+
+@pytest.mark.parametrize("other_work_package", [None, "WP-300"], ids=["isolated", "other-blocker"])
+def test_design_change_evidence_is_persisted_and_retained_after_resolution(
+    services, admin, other_work_package
+):
+    project_id, work_package_id = "harbor-east", "WP-200"
+    if other_work_package:
+        start_design_change(services, admin, project_id, other_work_package)
+    with services.factory.open() as repo:
+        initial = repo.latest_analysis(project_id)
+    assert (
+        next(r for r in initial.readiness if r.work_package_id == work_package_id).status == "READY"
+    )
+
+    event, run = start_design_change(services, admin, project_id, work_package_id)
     with services.factory.open() as repo:
         run = repo.run(run.id)
         analysis = repo.analysis(run.analysis_id)
@@ -30,10 +41,15 @@ def test_design_change_evidence_is_persisted_and_retained_after_resolution(servi
     assert analysis.snapshot.version == state.version == initial.snapshot.version + 1
     assert state.package(work_package_id).design_revision == event.change.revision == "V17"
     assert proposal.snapshot_id == analysis.snapshot.id
-    assert analysis.findings and analysis.constraints and analysis.evidence
+    findings = [f for f in analysis.findings if f.work_package_id == work_package_id]
+    constraints = [c for c in analysis.constraints if c.work_package_id == work_package_id]
+    expected = {e.id: e for e in analysis.evidence if e.work_package_id == work_package_id}
+    assert findings and constraints and expected
     readiness = next(r for r in analysis.readiness if r.work_package_id == work_package_id)
     assert readiness.status == "BLOCKED"
-    assert set(readiness.constraint_ids) == {c.id for c in analysis.constraints if c.blocking}
+    assert readiness.snapshot_id == analysis.snapshot.id
+    assert set(readiness.constraint_ids) == {c.id for c in constraints if c.blocking}
+    assert set(proposal.resolution.constraint_ids) == {c.id for c in constraints}
 
     # Read committed rows through a new session, not just the Evidence embedded in Analysis.
     with services.factory.open() as repo:
@@ -41,8 +57,7 @@ def test_design_change_evidence_is_persisted_and_retained_after_resolution(servi
         assert repo.snapshot(analysis.snapshot.id) == analysis.snapshot
         persisted = {item.id: item for item in repo.evidence(project_id)}
 
-    expected = {item.id: item for item in analysis.evidence}
-    for record in (*analysis.findings, *analysis.constraints):
+    for record in (*findings, *constraints):
         assert record.snapshot_id == analysis.snapshot.id
         assert record.evidence_ids
         for evidence_id in record.evidence_ids:
@@ -70,6 +85,12 @@ def test_design_change_evidence_is_persisted_and_retained_after_resolution(servi
             next(r for r in fresh.readiness if r.work_package_id == work_package_id).status
             == "READY"
         )
+        if other_work_package:
+            assert (
+                next(r for r in fresh.readiness if r.work_package_id == other_work_package).status
+                == "BLOCKED"
+            )
+            assert state.package(other_work_package).accepted_revision == "V16"
         # Resolving a blocker must retain the historical analysis and its persisted evidence.
         assert repo.analysis(analysis.id) == analysis
         retained = {item.id: item for item in repo.evidence(project_id)}
