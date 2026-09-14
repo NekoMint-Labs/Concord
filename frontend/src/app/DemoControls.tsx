@@ -1,4 +1,8 @@
+import { useState } from "react";
 import type { DTO } from "../api/client";
+import { AppMenu, AppMenuItem, AppMenuLabel } from "../components/ui/AppMenu";
+import { AppDialog } from "../components/ui/AppDialog";
+import { Button } from "../components/ui/button";
 
 /** The single demo entry point. There is no second "演示" affordance elsewhere. */
 export function DemoControls({
@@ -12,14 +16,14 @@ export function DemoControls({
   createEvent: (event: DTO<"ProjectEvent-Input">) => void;
   onReset: () => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
   return (
-    <details className="demo-menu">
-      <summary>演示选项</summary>
-      <div className="demo-menu-content">
-        <span>确定性演示</span>
-        <button
+    <>
+      <AppMenu label="演示选项">
+        <AppMenuLabel>确定性演示</AppMenuLabel>
+        <AppMenuItem
           disabled={busy}
-          onClick={() =>
+          onSelect={() =>
             createEvent({
               project_id: project,
               work_package_id: "WP-200",
@@ -30,10 +34,10 @@ export function DemoControls({
           }
         >
           图纸 V16 → V17
-        </button>
-        <button
+        </AppMenuItem>
+        <AppMenuItem
           disabled={busy}
-          onClick={() =>
+          onSelect={() =>
             createEvent({
               project_id: project,
               work_package_id: "WP-300",
@@ -44,16 +48,43 @@ export function DemoControls({
           }
         >
           电气班组不足
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => {
-            if (window.confirm("重置演示项目？审计记录将保留。")) onReset();
-          }}
-        >
+        </AppMenuItem>
+        <AppMenuItem danger onSelect={() => setConfirming(true)}>
           重置演示
-        </button>
-      </div>
-    </details>
+        </AppMenuItem>
+      </AppMenu>
+      {/*
+        Resetting the demo fixture is irreversible, so it is confirmed in the
+        application's own dialog rather than by `window.confirm`: the platform
+        modal is unstyleable, it blocks the WebView, and it is the one surface in
+        the demo flow that would still look like a browser rather than a product.
+      */}
+      {confirming && (
+        <AppDialog
+          open
+          onOpenChange={(next) => {
+            if (!next) setConfirming(false);
+          }}
+          eyebrow={<span className="eyebrow">演示</span>}
+          title="重置演示项目？"
+          description="审计记录会保留。"
+          className="is-compact"
+        >
+          <div className="dialog-actions">
+            <Button variant="secondary" onClick={() => setConfirming(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirming(false);
+                onReset();
+              }}
+            >
+              重置
+            </Button>
+          </div>
+        </AppDialog>
+      )}
+    </>
   );
 }

@@ -1,0 +1,213 @@
+/*
+ * Resizable panes (frontend/src/layout/PaneSplit.tsx) and the furniture a pane
+ * uses to state that it is a pane.
+ *
+ * The library owns the flex math, the keyboard handling, and the ARIA state;
+ * this stylesheet owns the pane edge and the pane's own header.
+ *
+ * Pane identity used to be "one more vertical line": a column of content beside
+ * another column of content with a 1px rule between them. That is a boundary,
+ * not an identity, and it is why adopting a real resizable-panel library changed
+ * nothing about how the workspace looked. A pane now states itself three ways -
+ * its own surface (a recessed plane beside the work plane), its own header band
+ * in the chrome plane, and its own scroll - and the divider is left to be what it
+ * actually is, the grab handle for resizing.
+ */
+.pane-split {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+.pane {
+  min-width: 0;
+  min-height: 0;
+}
+
+/*
+ * The visible rule is 1px and its pointer target is 9px. The width is set with
+ * `width`, not with `flex-basis`: the library writes its own `flexBasis` inline
+ * on this element, and a rule that only set the flex basis would leave the pane
+ * edge zero pixels wide and invisible.
+ */
+.pane-divider {
+  position: relative;
+  z-index: 1;
+  align-self: stretch;
+  width: 1px;
+  min-width: 1px;
+  background: var(--border);
+  transition: background var(--motion-instant) var(--ease);
+}
+/* the pointer target: 9px of transparent surface around a 1px rule */
+.pane-divider::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline: -4px;
+}
+.pane-divider:hover {
+  background: var(--border-strong);
+}
+.pane-divider[data-separator="focus"] {
+  background: var(--accent);
+}
+/* the library reports the drag, the keyboard focus, and the disabled state as
+   `data-separator`; `active` is the pane being moved under the pointer */
+.pane-divider[data-separator="active"] {
+  background: var(--accent);
+}
+.pane-divider:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 0;
+}
+
+/* ---------- pane furniture ---------- */
+
+/*
+ * A pane that owns a header and a scrolling body. The library already gives the
+ * pane `overflow: auto` inline, so the body is what takes the scroll, and the
+ * header stays where it is while the content under it moves.
+ */
+.pane-stack {
+  display: flex;
+  flex-direction: column;
+}
+/*
+ * The pane header is a chrome band: the same material as the topbar and the view
+ * toolbar, which is what makes it read as belonging to the window rather than as
+ * the first row of the content. It carries the pane's own name and the pane's own
+ * count or control - nothing else, because a header that repeats the workspace
+ * title is chrome spent on nothing.
+ */
+.pane-header {
+  flex-shrink: 0;
+  /* A structural band, so it declares the floor of the radius scale rather than
+     simply omitting a radius: the intent is that a pane header is never an
+     object, and a bare absence of a declaration would let a later edit soften it
+     without noticing. */
+  border-radius: var(--radius-none);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 12px;
+  background: var(--surface-chrome);
+}
+.pane-header > h3,
+.pane-header > strong {
+  min-width: 0;
+  font-size: var(--fs-section);
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* a pane header's own menu: the pane's identity, reached as a menu when the pane
+   budget has given the list's column to the Inspector */
+.pane-header-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 26px;
+  margin-left: -6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-section);
+  font-weight: 600;
+}
+.pane-header-menu:hover,
+.pane-header-menu[data-state="open"] {
+  background: var(--hover);
+}
+.pane-header-menu .count {
+  margin-left: 0;
+}
+/*
+ * The same control in a header that already has its own title: a picker, not an
+ * identity. It sits at the label tier and in muted ink so the subject beside it
+ * stays the one thing at the pane's title size.
+ */
+.pane-header-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  height: 24px;
+  margin-left: -6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.pane-header-picker:hover,
+.pane-header-picker[data-state="open"] {
+  background: var(--hover);
+  color: var(--ink);
+}
+.pane-header-picker .count {
+  margin-left: 0;
+  font-size: var(--fs-label);
+}
+.pane-header-label {
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pane-header .mono {
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+}
+.pane-header > .mono {
+  /* the identifier is the pane header's own right edge, so a header whose title
+     changes length does not move it */
+  margin-left: auto;
+}
+.pane-header-note {
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+}
+.pane-header .count {
+  margin-left: auto;
+}
+.pane-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+/* a pane header that also navigates: the identity row sits above the switch */
+.pane-header.is-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px 12px;
+  min-height: 0;
+}
+.pane-header-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 24px;
+}
+.pane-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+/* a pane body that owns no surface of its own: content only, no scroll */
+.pane-body.is-static {
+  overflow: visible;
+}

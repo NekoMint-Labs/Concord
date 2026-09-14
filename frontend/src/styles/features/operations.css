@@ -1,118 +1,82 @@
-.table-view,
-.capability-view {
-  padding: 25px;
-  min-width: 520px;
-}
-.table-view table,
-.capability-view table {
-  border: 1px solid #e0e7e7;
-  background: white;
-}
-.table-view h3 {
-  margin: 25px 0 12px;
-}
-.table-view .row-link {
-  border: none;
-  background: none;
-  color: #357b72;
-  padding: 0;
-  text-align: left;
-}
+/*
+ * Secondary views are sections of the work surface. The audit list is separated
+ * by its own row rules and the capability table by the header and row rules
+ * already in base.css.
+ *
+ * Bounded regions stay bounded, but they recede rather than float: a block of
+ * captured output or a form disclosure is cut into the work plane with a tinted
+ * surface, not lifted off it with an edge and a shadow. An outline around a
+ * white fill reads as a card on a page, which is the shape this direction
+ * removed everywhere else.
+ */
 .audit-list {
-  background: white;
-  border: 1px solid #e1e7e8;
-}
-.audit-item {
-  padding: 11px 13px;
-  border-bottom: 1px solid #edf0f0;
-  font-size: 10px;
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
-}
-.capability-view td:last-child {
-  max-width: 270px;
-  line-height: 1.6;
-  color: #7e8c93;
-}
-.profile-info {
-  display: flex;
-  gap: 17px;
-  flex-wrap: wrap;
-  background: white;
-  padding: 13px;
-  border: 1px solid #e1e7e8;
-  margin: 18px 0;
-  font-size: 10px;
-}
-.profile-info span {
-  color: #7a8b91;
-}
-.profile-info strong {
-  display: block;
-  color: #3b535b;
-  margin-top: 4px;
-  font-weight: 500;
+  background: transparent;
 }
 .profile-summary {
-  padding: 13px;
-  background: #fff;
-  border: 1px solid var(--line);
+  padding: var(--space-3);
+  background: var(--surface-chrome);
+  border: 0;
+  border-radius: var(--radius-md);
   display: flex;
-  gap: 13px;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  margin-bottom: 20px;
-  font-size: 11px;
+  margin-bottom: var(--space-5);
+  font-size: var(--fs-meta);
 }
 .profile-summary p {
   width: 100%;
-  font-size: 10px;
+  font-size: var(--fs-label);
   line-height: 1.6;
-  color: #77868b;
+  color: var(--muted);
 }
 .capability-table td:last-child {
   max-width: 400px;
+  line-height: 1.6;
+  color: var(--muted);
 }
 .audit-list > div {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  padding: 12px;
-  border-bottom: 1px solid #e7edeb;
-  font-size: 10px;
+  gap: var(--space-3);
+  /* no horizontal inset: the row rules are the only separation, so the text
+     lines up with the table and the heading above it */
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--fs-label);
 }
 .audit-list strong {
-  font-size: 10px;
-  font-weight: 550;
+  font-size: var(--fs-label);
+  font-weight: 600;
 }
 .operation-form {
-  padding: 17px;
-  background: #fff;
-  border: 1px solid var(--line);
-  margin: 14px 0;
+  padding: var(--space-4);
+  background: var(--surface-chrome);
+  border: 0;
+  border-radius: var(--radius-md);
+  margin: var(--space-3) 0;
 }
 .operation-form summary {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-weight: 600;
   cursor: pointer;
 }
 .operation-form p {
-  font-size: 11px;
+  font-size: var(--fs-meta);
   line-height: 1.7;
-  color: #7c8c90;
+  color: var(--muted);
   margin: 12px 0;
 }
 .operation-form textarea {
   width: 100%;
-  font-family: Consolas, monospace;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-action);
   resize: vertical;
   margin-bottom: 10px;
 }
 .operation-form > small {
   display: block;
   margin-top: 10px;
-  color: #998459;
+  color: var(--warn-fg);
   line-height: 1.6;
 }
 .operation-form > select {
@@ -130,17 +94,18 @@
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-  font-size: 10px;
+  font-size: var(--fs-label);
   margin: 14px 0;
 }
 .run-summary code {
-  font-size: 9px;
+  font-size: var(--fs-label);
 }
 .job-result {
-  border: 1px solid var(--line);
-  padding: 16px;
-  background: #fff;
-  margin: 15px 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface-chrome);
+  margin: var(--space-4) 0;
 }
 .job-result h4 {
   margin: 9px 0;
@@ -148,15 +113,15 @@
 .job-result pre {
   max-height: 340px;
   overflow: auto;
-  font-family: Consolas, monospace;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
 }
 .trace-list {
   padding-left: 18px;
 }
 .trace-list pre {
-  font-family: Consolas, monospace;
-  font-size: 10px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
   max-height: 160px;
   overflow: auto;
 }

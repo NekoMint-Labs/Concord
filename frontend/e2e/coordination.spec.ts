@@ -36,19 +36,16 @@ async function expectReady(page: Page) {
 
 /** The deterministic demo fixture is reached through the single demo entry. */
 async function injectDemoEvent(page: Page, label: RegExp | string) {
-  await page.locator('.demo-menu summary').click();
-  await page.getByRole('button', { name: label }).click();
-  await page.locator('.demo-menu').evaluate((node) => node.removeAttribute('open'));
+  // The demo entry and the secondary views are application menus: they dismiss
+  // on selection, on Escape, and on a click elsewhere, so no cleanup is needed.
+  await page.locator('.header-tools .quiet-trigger').click();
+  await page.getByRole('menuitem', { name: label }).click();
 }
 
 /** Secondary destinations live behind "更多"; none of them is primary navigation. */
 async function openSecondaryView(page: Page, label: string) {
-  const more = page.locator('.more-views');
-  if (!(await more.evaluate((node) => node.hasAttribute('open')))) {
-    await more.locator('summary').click();
-  }
-  await more.getByRole('button', { name: label, exact: true }).click();
-  await more.evaluate((node) => node.removeAttribute('open'));
+  await page.locator('.more-views .quiet-trigger').click();
+  await page.getByRole('menuitem', { name: label, exact: true }).click();
 }
 
 test.beforeEach(async ({ request, page }) => {
@@ -170,11 +167,11 @@ test('document upload, retrieval and authenticated source download use the real 
   });
   await expect(page.getByText('browser-evidence.md', { exact: true })).toBeVisible();
   await page.getByText('browser-evidence.md', { exact: true }).click();
-  await page.getByLabel('Search documents').fill('unique-browser-evidence-phrase');
-  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByLabel('搜索文档').fill('unique-browser-evidence-phrase');
+  await page.getByRole('button', { name: '搜索', exact: true }).click();
   await expect(page.locator('.document-chunk')).toContainText('unique-browser-evidence-phrase');
   const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Save selected source' }).click();
+  await page.getByRole('button', { name: '保存来源' }).click();
   expect((await download).suggestedFilename()).toBe('browser-evidence.md');
 });
 
@@ -198,7 +195,7 @@ test('structured BIM, capability status, and run history remain usable without o
   await views.getByRole('button', { name: 'BIM', exact: true }).click();
   await expect(page.locator('.bim-element').first()).toBeVisible();
   await page.locator('.bim-element').first().click();
-  await expect(page.locator('.bim-properties')).toBeVisible();
+  await expect(page.locator('.bim-property-list')).toBeVisible();
   await openSecondaryView(page, '能力');
   await expect(page.getByRole('heading', { name: /capabilit/i }).first()).toBeVisible();
   await openSecondaryView(page, '运行');

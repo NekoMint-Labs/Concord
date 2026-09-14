@@ -1,128 +1,218 @@
 /*
- * Shell calibration: a muted navigation panel beside a work surface that is
- * the lightest plane on screen, left-anchored work content, and chrome carried
- * by hairlines and vertical rhythm rather than fills. Region surfaces differ by
- * a couple of percent so the workspace reads as layered, not as boxed.
+ * Shell: one continuous desktop workspace.
+ *
+ * The application is a single edge-to-edge surface - a recessed navigation
+ * plane, a chrome band for window identity and view navigation, the work plane,
+ * and the detail pane when it is open. Nothing is inset, nothing is a card, and
+ * no region carries a shadow, because the shell is the window rather than a page
+ * that happens to contain the app.
+ *
+ * The shell draws no structural hairline at all. What separates navigation from
+ * the chrome band, and the chrome band from the work plane, is the value step
+ * declared in base.css: each neighbouring plane clears 1.08:1, which the eye
+ * reads as two materials. The previous shell drew seven 1px rules across five
+ * planes separated by 1.06:1, so the only structure it actually communicated was
+ * linework, and the whole surface read as a ruled table. A rule is now spent on
+ * content (a table row, an evidence boundary) or on a control boundary that has
+ * to be identifiable - never on a region boundary.
  */
 .application-shell {
   height: 100dvh;
   min-height: 560px;
   display: flex;
   overflow: hidden;
-  background: var(--bg-app);
+  background: var(--workspace);
 }
 
 /* ---------- sidebar ---------- */
 
 .sidebar {
-  width: 232px;
+  width: 248px;
   flex-shrink: 0;
-  background: var(--surface-nav);
+  background: var(--sidebar);
   color: var(--ink-2);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--line);
 }
+/*
+ * The sidebar header and the topbar are both 44px and both open their plane, so
+ * the two read as one band of window chrome spanning the whole window. They do
+ * not need a rule between them: they are already two different materials.
+ */
+/*
+ * The brand block. The product's own name is the identity; the Chinese
+ * descriptor is a gloss on it rather than a second title. The two used to be a
+ * 14px name and an 11px gloss sharing one baseline with 7px between them, which
+ * the eye read as a single grey string. They are now two type tiers apart - name
+ * at the section step in full ink, descriptor at the label step in faint ink with
+ * tracking - and the band stays 44px so it still opens the same window chrome row
+ * as the topbar beside it.
+ */
 .brand {
   display: flex;
   align-items: baseline;
-  gap: 7px;
-  height: 42px;
-  padding: 0 14px;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 44px;
+  padding: 0 16px;
 }
 .brand strong {
-  font-size: 13px;
+  font-size: var(--fs-section);
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--ink);
 }
 .brand span {
   font-size: var(--fs-label);
+  letter-spacing: 0.08em;
   color: var(--muted-2);
 }
 .project-picker {
-  padding: 4px 14px 12px;
+  padding: 0 10px 14px;
 }
-.project-picker label {
-  display: block;
-  margin-bottom: 5px;
-}
-.project-picker select {
+/* the picker is a wide control, not a menu label: the trigger owns the row */
+.project-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   width: 100%;
-  height: 28px;
-  padding: 0 6px;
-  font-size: var(--fs-meta);
+  height: 30px;
+  padding: 0 var(--space-2) 0 10px;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-md);
   background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 600;
+  text-align: left;
+  transition:
+    border-color var(--motion-fast) var(--ease),
+    background var(--motion-fast) var(--ease);
+}
+.project-trigger:hover {
+  border-color: var(--ink-2);
+}
+/*
+ * An open picker takes the accent. That is the one state in the sidebar where the
+ * product's own colour is the right answer rather than a darker grey: it says
+ * "this is the control you are in", which is a statement about position, and
+ * position is what the accent is for. The resting boundary stays --line-control,
+ * because it is the only thing identifying the control against the navigation
+ * plane (see the control-boundary contract in tests/design-tokens.test.mjs).
+ */
+.project-trigger[data-state="open"] {
+  border-color: var(--accent);
+}
+.project-trigger svg {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--muted);
+}
+.project-trigger:hover svg,
+.project-trigger[data-state="open"] svg {
+  color: var(--ink-2);
+}
+.project-trigger .project-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sidebar-section {
-  padding: 12px 8px 16px;
+  padding: 8px 10px 20px;
   overflow: auto;
 }
+/*
+ * Three levels, three treatments, so the hierarchy is legible without a single
+ * extra pixel of width or a line anywhere:
+ *
+ *   工作包          label step, 600, faint ink, tracked   -> a section eyebrow
+ *   L02 东翼        label step, 600, muted ink, tracked   -> a group label
+ *   东翼风管安装     action step, ink, 600 when selected   -> the content
+ *   WP-200 · 机电   label step, faint ink                 -> its metadata
+ *
+ * Three tiers, three jobs, and the group label sits between two of them: it is a
+ * heading rather than a row, so it takes the label step and tracking, and it is
+ * quieter than the content it owns, so it stays in muted ink at 600 rather than
+ * in the row's ink. At the meta step in regular weight it read as one more piece
+ * of data between two work packages - and at the section label's own tier in its
+ * own grey the two labels became indistinguishable, which is how the sidebar
+ * previously read as one flat list with an occasional bold row.
+ */
 .sidebar-label {
-  padding: 0 6px 6px;
+  padding: 0 8px 6px;
   color: var(--muted-2);
   font-size: var(--fs-label);
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 .area-group {
-  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 14px;
+}
+/* the first group follows the section label, which already carries the space */
+.area-group:first-of-type {
+  margin-top: 2px;
 }
 .area-title {
-  padding: 0 6px 4px;
-  color: var(--muted-2);
+  padding: 0 8px 5px;
+  color: var(--muted);
   font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.06em;
 }
+/*
+ * A navigation row is a structural list row: square is wrong here and so is a
+ * card. Selection is an accent-tinted surface with a small radius - the same
+ * grammar as the document source list and the BIM element list, so selection is
+ * learned once and applies in all three places. It replaced a 2px left rule,
+ * which carried no area: the marker asked the eye to notice a 2px change in a
+ * 46px row, and every row in the sidebar needed a border-left reserve so the
+ * label would not reflow on selection.
+ *
+ * The row's own ink is the strongest on the navigation plane, so a work package
+ * outranks the area heading above it even when nothing is selected, and the
+ * selected state adds weight on top of the tint rather than substituting for it.
+ */
 .package-nav {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
-  padding: 5px 6px 5px 8px;
+  padding: 6px 8px;
   border: 0;
-  /* keeps the content offset the 2px active rule needs; the rule itself is
-     drawn by ::before so the selected surface can round without tapering it */
-  border-left: 2px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--ink-2);
+  color: var(--ink);
   text-align: left;
+  transition:
+    background var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease);
 }
-.package-nav:hover {
+.package-nav:not(.selected):hover {
   background: var(--hover);
 }
 .package-nav.selected {
-  background: var(--selected);
-}
-.package-nav.selected::before {
-  content: "";
-  position: absolute;
-  left: -2px;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--ink);
-}
-.package-nav.selected strong {
-  font-weight: 600;
+  background: var(--accent-muted);
 }
 .package-nav strong {
   display: block;
   font-size: var(--fs-action);
-  font-weight: 500;
-  line-height: 1.45;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.package-nav.selected strong {
+  font-weight: 600;
 }
 .package-nav small {
   display: block;
   margin-top: 1px;
   color: var(--muted-2);
   font-size: var(--fs-label);
-}
-.package-nav .status {
-  flex-shrink: 0;
-  height: 16px;
-  padding: 0 5px;
-  font-size: 10px;
+  line-height: 1.4;
 }
 
 /* ---------- shell chrome ---------- */
@@ -132,10 +222,17 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--surface-chrome);
+  background: var(--chrome);
+  /* clips the detail pane as it enters from the surface's own right edge */
+  overflow: hidden;
 }
+/*
+ * Window identity band. It carries the project path on the left and the
+ * application's own actions on the right, and it is closed by the plane step to
+ * the work surface rather than by a rule.
+ */
 .topbar {
-  height: 42px;
+  height: 44px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -158,189 +255,152 @@
   font-weight: 600;
 }
 .header-tools {
-  gap: 10px;
-}
-.demo-menu {
-  position: relative;
-}
-.demo-menu summary {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 6px;
-  margin: -4px -6px;
-  border-radius: var(--radius-xs);
-  color: var(--muted);
-  font-size: var(--fs-action);
-  cursor: pointer;
-  list-style: none;
-}
-.demo-menu summary::-webkit-details-marker {
-  display: none;
-}
-.demo-menu summary:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-.demo-menu-content {
-  position: absolute;
-  right: 0;
-  top: 26px;
-  z-index: 5;
-  min-width: 200px;
-  padding: 4px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: 0 4px 14px rgba(31, 35, 40, 0.1);
-}
-.demo-menu-content > span {
-  display: block;
-  padding: 4px 8px 6px;
-  color: var(--muted-2);
-  font-size: var(--fs-label);
-}
-.demo-menu-content button {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--ink-2);
-  font-size: var(--fs-action);
-  text-align: left;
-}
-.demo-menu-content button:hover {
-  background: var(--hover);
+  gap: var(--space-2);
 }
 
-/* quiet workspace navigation: text weight, no filled or underlined tab language */
+/*
+ * View navigation. Three primary destinations, stated as tabs.
+ *
+ * The active view is said twice, and only twice: the label takes full ink and
+ * real weight, and a 2px accent rail moves along the bottom edge of the strip.
+ * This replaces an accent-tinted rectangle behind the label, which - at 10% over
+ * the chrome plane - rendered as a grey box rather than as a slate one, and read
+ * exactly like a browser settings tab. The tint was the right idea at the wrong
+ * density: on a row this short there is not enough area for a tint to be the
+ * signal, so the area goes back to being the label's, and position is carried by
+ * a rail plus typography instead.
+ *
+ * The rail is a real element with a shared `layoutId`, not a ::after that scales
+ * under its own tab: switching views *moves* one continuous object along the
+ * strip rather than switching one mark off and another on. Its inset matches the
+ * button's own padding, so the rail underlines the word rather than the target.
+ */
 .workspace-tabs {
   display: flex;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--line);
-  gap: 16px;
-  height: 34px;
+  align-items: stretch;
+  gap: var(--space-1);
+  padding: 0 18px;
+  height: 40px;
   flex-shrink: 0;
   overflow-x: auto;
 }
 .workspace-tabs button {
+  position: relative;
   display: flex;
   gap: 6px;
   align-items: center;
-  padding: 0 6px;
-  margin: 0 -6px;
+  padding: 2px 10px 0;
   font-size: var(--fs-action);
-  font-weight: 500;
   border: none;
-  border-radius: var(--radius-xs);
+  border-radius: 0;
   color: var(--muted);
   background: transparent;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: color var(--motion-fast) var(--ease);
 }
 .workspace-tabs button:hover {
-  background: var(--hover);
   color: var(--ink-2);
 }
 .workspace-tabs button.active {
   color: var(--ink);
   font-weight: 600;
 }
-.more-views {
+.tab-label {
   position: relative;
+  z-index: 1;
+}
+.tab-surface {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+/* the destination of the menu below: it owns only its own placement, because the
+   trigger and the surface are both owned by components/ui/AppMenu */
+.more-views {
   margin-left: auto;
   align-self: center;
 }
-.more-views summary {
-  padding: 4px 6px;
-  margin: -4px -6px;
-  border-radius: var(--radius-xs);
-  color: var(--muted);
-  cursor: pointer;
-  font-size: var(--fs-action);
-}
-.more-views summary:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-.more-views > div {
-  position: absolute;
-  right: 0;
-  top: 24px;
-  z-index: 5;
-  min-width: 130px;
-  padding: 4px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: 0 4px 14px rgba(31, 35, 40, 0.1);
-}
-.more-views button {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 8px;
-  height: 28px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--ink-2);
-  font-size: var(--fs-action);
-  text-align: left;
-}
-.more-views button:hover,
-.more-views button.active {
-  background: var(--hover);
-  color: var(--ink);
-}
-.workspace-body {
-  display: flex;
-  flex: 1;
-  min-height: 160px;
-  overflow: hidden;
-}
+/*
+ * The work surface is the left pane of the workspace split, and the detail pane
+ * is the right one (frontend/src/layout/PaneSplit.tsx). A split keeps a minimum
+ * height of its own, which is what the old fixed-height row expressed here.
+ */
 .central-workspace {
-  flex: 1;
   min-width: 0;
+  min-height: 160px;
   position: relative;
   overflow: auto;
   background: var(--surface-workspace);
+  /*
+   * The analysis footer is a chrome band laid out below this region
+   * (.timeline), and its height is content-driven rather than fixed, so the
+   * scroll region states the footer's requirement as its own bottom scroll
+   * padding. Anything scrolled to - a focused control, an anchor, the end of the
+   * content - stops clear of the band instead of landing flush against it. The
+   * footer and this reserve read the same token, so the two cannot drift apart.
+   */
+  scroll-padding-bottom: var(--status-bar-h);
 }
 
 /* ---------- work item ---------- */
 
 /*
- * Left anchored beside the navigation panel: the column keeps a readable
- * measure and the remaining width stays empty instead of centring an article.
+ * One work item, composed as a readout rather than as a paragraph.
+ *
+ * The region owns the width; the body keeps a measure so a line of Chinese or a
+ * sentence of product copy does not run the full width of a 1200px pane. The
+ * composition is: identity, then the record - what the judgement is on the left,
+ * the package's condition on the right, and the action spanning both underneath -
+ * and then, behind a disclosure, the rest of the conditions. READY and BLOCKED are
+ * the same composition in two states, so a change of state does not move the page
+ * under the reader.
+ *
+ * The body's bottom padding is the region's own breathing room plus the footer's
+ * requirement, so the end of the record can always be brought clear of the band
+ * rather than stopping at it.
+ *
+ * The measure is declared once here and consumed by both the header and the body,
+ * because the two have to agree: the state tag is the header's own right edge, and
+ * a header allowed to run wider than the record put that tag in empty space 200px
+ * past the object it describes.
  */
 .coordination-workspace {
+  --coordination-measure: 900px;
   min-height: 100%;
-  padding: 28px 32px 48px;
+  padding: var(--space-5) var(--space-6)
+    calc(var(--space-6) + var(--status-bar-h));
 }
-.coordination-head,
 .coordination-body {
-  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: var(--coordination-measure);
+  margin-top: var(--space-5);
 }
 /*
- * Object identity: the title and its state form one intrinsic inline row, so
- * the state sits with the work package instead of opening an empty band
- * between the identity row and the body measure below. The metadata line stays
- * below, as the second line of the identity block.
+ * Object identity: the title and its state form one row across the region with
+ * the state pushed to the far edge. There is no rule under it - the state is the
+ * header's own right edge, and the gap to the body is what separates the two.
+ * The title takes the display step and a real gap under it, because it is the one
+ * line that names what the page is about and it was previously the same visual
+ * size as the metadata beneath it.
  */
 .coordination-head {
   display: flex;
-  align-items: baseline;
-  gap: 16px;
-  width: fit-content;
-  padding-bottom: 16px;
+  align-items: flex-start;
+  gap: var(--space-4);
+  max-width: var(--coordination-measure);
 }
-.coordination-head h2 {
-  font-size: var(--fs-title);
+.coordination-identity {
+  min-width: 0;
+}
+.coordination-identity h2 {
+  letter-spacing: -0.015em;
 }
 .coordination-head p {
   margin-top: 5px;
@@ -350,28 +410,113 @@
 .coordination-state-tag {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-2);
   flex-shrink: 0;
+  margin-left: auto;
+  min-height: 30px;
 }
 .state-text {
   font-size: var(--fs-action);
   font-weight: 600;
-  color: var(--muted);
+  color: var(--ink-2);
 }
 .state-text.is-blocked {
   color: var(--warn-fg);
 }
 
-.coordination-body {
+/*
+ * The record: one work-package record, not a pair of objects.
+ *
+ * This is the composition the whole page rests on. It used to be two independent
+ * boxes - a grey conclusion block on the left and a fact stack on the right, with
+ * the recommendation as a third card below both - and the reader had to work out
+ * that they were about the same work package. They now sit inside one well, on one
+ * top edge, with one label tier across both columns, so the conclusion and the
+ * condition matrix read as the two halves of a single statement.
+ *
+ * The step is `--surface-chrome`, the quietest plane that still groups: the well
+ * has to cut into the work plane without becoming the page's largest object. At
+ * `--surface-detail` the rectangle carried more weight than the conclusion
+ * written inside it, and the record read as a disabled form - the container
+ * arrived before the content. One step lighter and the well recedes behind what
+ * it groups, which is what lets the conclusion, the facts and the recommendation
+ * be read as one statement.
+ *
+ * Flex wrapping is the collapse, not a breakpoint: no media query has to guess the
+ * pane's width, so the Inspector opening at a constrained window is handled by the
+ * same rule as a narrow window.
+ */
+.coordination-record {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--surface-chrome);
+}
+/*
+ * BLOCKED. The exception colour is spent on a 3px rail down the record's own
+ * left edge, plus the badge and the one or two values that are actually wrong.
+ * This replaces a full amber panel, which at that area stopped reading as a
+ * warning and started reading as a sticky note - it out-shouted the page it was
+ * warning about. The rail is a surface, so it states the exception in area the way
+ * every other state in this product is stated; it is inset so it costs no layout
+ * and cannot shift the text beside it.
+ */
+.coordination-record.is-blocked {
+  box-shadow: inset 3px 0 0 0 var(--warn-line);
+}
+.coordination-record > .state-block {
+  flex: 1 1 400px;
+  min-width: 0;
+}
+.coordination-record > .fact-list {
+  flex: 1 1 280px;
+  align-self: flex-start;
+}
+/*
+ * The record's own action, on its own line beneath both columns, so blocker,
+ * recommendation and commitment are one read rather than three objects - and so
+ * either state's action spans the record instead of competing with the fact
+ * column for a share of the first line. That competition is not hypothetical: the
+ * READY action used to take a third of the first line, which left the fact column
+ * too narrow for its own two-column grid and collapsed the condition matrix into a
+ * single stack of four values.
+ */
+.coordination-record > .recommendation,
+.coordination-record > .coordination-actions {
+  flex: 1 1 100%;
+}
+
+/*
+ * The conclusion. It is no longer its own object: inside the record well it is the
+ * left half of the record, and it states itself with type - a conclusion at the
+ * section step in full ink, the facts it rests on at the meta step in muted ink -
+ * rather than with a surface of its own.
+ */
+.state-block {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-top: 18px;
+  gap: 8px;
+  min-width: 0;
+}
+.ready-line {
+  font-size: var(--fs-section);
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink);
+}
+/* the state object's own supporting line: a timestamp, the snapshot a judgement
+   rests on, and how many sources it read */
+.state-meta {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
 }
 .revision-line {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 6px;
   font-size: var(--fs-body);
   color: var(--muted);
 }
@@ -379,30 +524,95 @@
   color: var(--ink);
   font-weight: 600;
 }
+.blocking-fact {
+  /* The blocked record's conclusion, at the same step the ready record states
+     its own: in both states the sentence the record exists to say is the largest
+     text in the left column, so the two are one composition in two states rather
+     than a conclusion and a note. */
+  font-size: var(--fs-section);
+  line-height: 1.65;
+  color: var(--ink);
+}
+/*
+ * Scope line: how wide this judgement reaches, and the way into the graph that
+ * shows it. A fact and its action on one line, so "12 elements are affected" is
+ * never a dead end.
+ */
 .scope-line {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   font-size: var(--fs-action);
   color: var(--muted);
 }
-.blocking-fact {
-  font-size: var(--fs-body);
-  line-height: 1.6;
-  color: var(--ink);
+.stale-note {
+  font-size: var(--fs-meta);
+  color: var(--warn-fg);
 }
+
+/*
+ * Facts. A label spine and a value, repeated on a grid, which is the one shape
+ * this product uses to state engineering values outside a table. Labels are the
+ * small label tier and values are body text, so a reader can scan the left
+ * column and read the right one.
+ *
+ * The column floor is 120px, which is the widest a value at this tier can need
+ * ("机电 / 陈", "4 / 4 人") and narrow enough that the grid answers the space it is
+ * actually given: two columns beside the conclusion on a wide window, four across
+ * the record once the columns wrap on a narrow one. A wider floor would let the
+ * condition matrix collapse into a single tall stack in exactly the layout where
+ * the page has no room to spare for one.
+ */
+.fact-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-4);
+  max-width: 720px;
+  min-width: 0;
+}
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.fact-label {
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.fact-value {
+  color: var(--ink);
+  font-size: var(--fs-action);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.fact-value.is-attention {
+  color: var(--warn-fg);
+}
+
+/*
+ * The recommendation. It lives inside the record well and directly under the
+ * blocker it answers, with no surface of its own: it used to be a separate grey
+ * card below the record, which made the answer look like an unrelated second
+ * object. Within one well and one text column it reads as the record's closing
+ * paragraph - the blocker, the way out of it, and the one committed action.
+ *
+ * The measure is capped so a suggestion stays a sentence rather than a line.
+ */
 .recommendation {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-width: 520px;
+  gap: var(--space-2);
+  max-width: 640px;
+  margin-top: var(--space-2);
 }
 .recommendation p {
   font-size: var(--fs-body);
-  line-height: 1.7;
+  line-height: 1.75;
   color: var(--ink-2);
 }
-/* metadata, so it must out-specify the recommendation body it sits under */
 .recommendation p.approval-line {
   font-size: var(--fs-meta);
   color: var(--muted);
@@ -410,32 +620,12 @@
 .coordination-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-top: 2px;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
 }
-.stale-note {
-  font-size: var(--fs-meta);
-  color: var(--warn-fg);
-}
-
-/* ready: an ordinary statement, not a success state */
-.coordination-body.is-ready {
-  gap: 8px;
-  padding-top: 20px;
-}
-.ready-line {
-  font-size: var(--fs-body);
-  color: var(--ink);
-}
-.ready-meta {
-  color: var(--muted);
-  font-size: var(--fs-meta);
-}
-
-/* analyzing: plain inline activity text */
+/* analyzing: an inline activity statement, not a state block */
 .coordination-body.is-activity {
-  gap: 4px;
-  padding-top: 20px;
+  gap: 6px;
 }
 .activity-line {
   font-size: var(--fs-body);
@@ -461,11 +651,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
-  background: var(--bg-app);
+  gap: var(--space-4);
+  background: var(--background);
   color: var(--ink-2);
   padding: 30px;
   text-align: center;
+}
+.startup h1 {
+  color: var(--ink);
 }
 .startup p {
   max-width: 560px;
@@ -474,7 +667,8 @@
 }
 .startup form {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
 }
 .startup input {
   min-width: 240px;
@@ -482,10 +676,10 @@
 
 @media (max-width: 1150px) {
   .sidebar {
-    width: 208px;
+    width: 224px;
   }
   .coordination-workspace {
-    padding: 24px 24px 40px;
+    padding: 22px 22px calc(30px + var(--status-bar-h));
   }
 }
 @media (max-width: 850px) {
@@ -493,13 +687,16 @@
     min-width: 720px;
   }
   .sidebar {
-    width: 184px;
+    width: 200px;
   }
   .topbar,
-  .workspace-tabs {
-    padding: 0 14px;
+  .workspace-tabs,
+  .view-toolbar,
+  .viewer-toolbar {
+    padding-left: 14px;
+    padding-right: 14px;
   }
   .coordination-workspace {
-    padding: 20px 16px 32px;
+    padding: 18px 14px calc(26px + var(--status-bar-h));
   }
 }

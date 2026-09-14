@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Building2 } from "lucide-react";
 import { api, setToken, type DTO } from "./api/client";
 import { Button } from "./components/ui/button";
+import { AppToaster } from "./components/ui/AppToaster";
 import { Timeline } from "./features/Timeline";
 import { EventComposer } from "./features/EventComposer";
 import type { InspectorView } from "./features/Inspector";
@@ -33,7 +34,7 @@ export function App() {
     setTab("coordination");
     setDetailsOpen(false);
     setEventDialog(false);
-    void perform(() => api.events(project, event));
+    void perform(() => api.events(project, event), "变更已记录。");
   }
 
   const wp =
@@ -103,7 +104,7 @@ export function App() {
               setSelectedConstraint("");
               setDetailsOpen(false);
               setTab("coordination");
-              void perform(api.reset);
+              void perform(api.reset, "演示项目已重置。");
             }}
           />
         </WorkspaceHeader>
@@ -136,7 +137,9 @@ export function App() {
           }}
           onDetailsOpen={setDetailsOpen}
           onInspectorView={setInspectorView}
-          onRecheck={() => void perform(() => api.recheck(project))}
+          onRecheck={() =>
+            void perform(() => api.recheck(project), "重新检查已提交。")
+          }
         />
         <Timeline run={data.run} perform={perform} />
       </main>
@@ -148,6 +151,9 @@ export function App() {
           onClose={() => setEventDialog(false)}
         />
       )}
+      {/* The one toast mount point. Feedback is ephemeral; authoritative run,
+          readiness, and blocking state stays in the workspace itself. */}
+      <AppToaster />
     </div>
   );
 }

@@ -1,151 +1,331 @@
+/*
+ * Documents: an evidence workspace. A source list pane on the left and a reading
+ * pane on the right, each composed as a pane-stack with its own header band
+ * (layout.css), divided by a real pane edge.
+ *
+ * The reading pane is not a document reader: it is a surface for *scanning
+ * evidence*, and that is what decides its shape. Each chunk is a drafting-sheet
+ * row - a metadata gutter, a rule, and a body column held at a decided measure -
+ * rather than a paragraph stack at whatever width the window happens to be. The
+ * chunks stay sections of one plane: separated by a single quiet rule, never
+ * boxed into a card, because a white chunk with a border and a shadow on the work
+ * plane is exactly the "generic card" this pass removes.
+ */
 .documents-view {
   height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
-.document-toolbar {
-  padding: 16px 20px;
+/*
+ * The search control. Its width is a range rather than a number: it grows to 460px
+ * on a wide toolbar and never shrinks below its own content, so at a narrow pane
+ * the toolbar wraps the whole control onto its own row instead of squeezing the
+ * field down to nothing while the two buttons beside it keep their full width.
+ * The field's own floor is what makes that work - without it the rigid buttons
+ * absorb nothing and the input absorbs everything.
+ */
+.documents-search {
   display: flex;
-  gap: 8px;
-  border-bottom: 1px solid var(--line);
-  background: #f8faf9;
   align-items: center;
+  gap: 8px;
+  flex: 1 1 260px;
+  max-width: 460px;
 }
-.document-toolbar form {
-  flex: 1;
-  display: flex;
-  gap: 6px;
-}
-.document-toolbar input {
-  width: 100%;
-  font-size: 11px;
-}
-.document-columns {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-}
-.document-list {
-  width: 220px;
+.documents-search svg {
   flex-shrink: 0;
-  border-right: 1px solid var(--line);
-  overflow: auto;
-  background: #fafbfb;
+  color: var(--muted-2);
 }
-.document-item {
-  display: block;
-  width: 100%;
-  padding: 15px 18px;
-  text-align: left;
-  border: none;
-  border-bottom: 1px solid #e4eaea;
-  background: transparent;
+.documents-search input {
+  flex: 1;
+  min-width: 120px;
+  height: 30px;
 }
-.document-item:hover,
-.document-item.selected {
-  background: #eaf1ee;
-}
-.document-item strong {
-  display: block;
-  font-size: 11px;
-  overflow-wrap: anywhere;
+/* a transient import notice: part of the chrome band, closed by the plane step
+   below it rather than by a rule */
+.upload-status {
+  flex-shrink: 0;
+  padding: 9px 22px;
+  background: var(--surface-chrome);
+  color: var(--muted);
+  font-size: var(--fs-meta);
   line-height: 1.6;
 }
-.document-item small {
-  display: block;
-  font-size: 9px;
-  color: #839297;
-  margin-top: 4px;
+
+/* ---------- source list pane ---------- */
+
+/*
+ * The source list is the left pane of the split (frontend/src/layout/PaneSplit),
+ * so it states no width and the pane edge is the divider rather than a border
+ * here. It is a recessed plane beside the work plane, and its rows live in the
+ * pane's own body so the header stays fixed while the list scrolls.
+ */
+.document-list {
+  background: var(--surface-detail);
 }
-.document-content {
-  flex: 1;
-  min-width: 0;
-  padding: 24px;
-  overflow: auto;
+/* the body owns the inset, so a selected row's tint stops short of the pane edge
+   and reads as a selection rather than as a region */
+.document-list .pane-body {
+  padding: var(--space-1) var(--space-2);
 }
-.document-chunk {
-  padding: 20px;
-  margin-bottom: 15px;
-  background: white;
-  border: 1px solid #e0e7e5;
-  border-radius: 4px;
-}
-.document-chunk header {
+/*
+ * A source row is a structural list row: square is wrong here and so is a card.
+ * Selection is the accent-tinted surface at --radius-sm that the sidebar
+ * (.package-nav) and the BIM element list use, so "where am I" is learned once
+ * and applies in all three master/detail lists. It replaced a 2px left rule,
+ * which carried no area; the row rhythm is now spacing, hover, and selection
+ * instead of a bottom rule between rows.
+ */
+.document-list .pane-body > button {
   display: flex;
-  justify-content: space-between;
-  font-size: 9px;
-  color: #8a989d;
-  margin-bottom: 13px;
-}
-.document-chunk pre {
-  font-size: 12px;
-}
-.document-chunk code {
-  display: block;
-  font-size: 9px;
-  color: #81928c;
-  margin-top: 15px;
-}
-.search-bar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin: 14px 0;
-  padding: 9px;
-  background: #f7faf9;
-  border: 1px solid var(--line);
-}
-.search-bar input {
-  flex: 1;
-  min-width: 0;
-}
-.document-layout {
-  display: flex;
-  flex: 1;
-  min-height: 300px;
-  border: 1px solid var(--line);
-  overflow: hidden;
-}
-.document-list > button {
-  display: flex;
-  gap: 9px;
-  text-align: left;
+  align-items: flex-start;
+  gap: 10px;
   width: 100%;
-  padding: 14px;
+  padding: 8px 10px;
   border: 0;
-  border-bottom: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   background: transparent;
+  color: var(--ink-2);
+  text-align: left;
+  transition: background var(--motion-fast) var(--ease);
 }
-.document-list > button.selected {
-  background: #e9f2ee;
+.document-list .pane-body > button:not(.selected):hover {
+  background: var(--hover);
 }
-.document-list strong {
-  font-size: 11px;
+.document-list .pane-body > button.selected {
+  background: var(--accent-muted);
+}
+.document-list .pane-body > button svg {
+  flex-shrink: 0;
+  /* optical centre of the first line, not the row's top padding */
+  margin-top: 2px;
+  color: var(--muted-2);
+}
+.document-list .pane-body > button.selected svg {
+  color: var(--ink-2);
+}
+/*
+ * Two tiers inside one row: the filename is the object and takes full ink, and the
+ * parser and content hash are its provenance. The hash is a technical identifier,
+ * so it carries the mono role (components.css) and can be compared down the list;
+ * the line stays at the label tier and in faint ink, which on the recessed pane
+ * plane is still 6.4:1 - receded, not faint.
+ */
+.document-list .pane-body > button strong {
   display: block;
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 400;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
-.document-list small {
-  font-size: 9px;
+.document-list .pane-body > button.selected strong {
+  font-weight: 600;
+}
+.document-list .pane-body > button small {
   display: block;
-  color: #86978f;
-  margin-top: 6px;
+  margin-top: 2px;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- reading pane ---------- */
+
+/*
+ * The reading surface is the work plane - the lightest plane on screen, one step
+ * above the source list beside it. The measured column lives in the body, not in
+ * the region.
+ */
+.document-content {
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface-workspace);
+}
+.document-content .pane-body {
+  padding: var(--space-5) 34px 44px;
+}
+.document-content [role="alert"] {
+  max-width: 836px;
+  padding: 0 0 var(--space-4);
+  color: var(--danger-fg);
+  font-size: var(--fs-meta);
   line-height: 1.7;
 }
-.document-chunk .eyebrow {
-  margin-bottom: 13px;
+.document-content .quiet-message {
+  max-width: 836px;
+  padding-top: var(--space-4);
+}
+/*
+ * One piece of evidence. The base object is shared with the semantic-retrieval
+ * list in Operations, so it stays a plain section there - a chunk separation
+ * rather than a card. Documents adds the two-column composition on top of it
+ * (.evidence-sheet below) without changing what the shared object is.
+ */
+.document-chunk {
+  max-width: 780px;
+  padding: 20px 0 22px;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  border-radius: 0;
+}
+.document-chunk.evidence-sheet:last-child {
+  border-bottom: 0;
+}
+.document-chunk > strong {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+.document-chunk p {
+  margin-top: 8px;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  line-height: 1.75;
 }
 .document-chunk small {
   display: block;
-  color: #80948a;
-  margin-top: 12px;
+  margin-top: 14px;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
-.upload-status {
-  background: #edf5f1;
-  padding: 9px 12px;
-  font-size: 11px;
-  line-height: 1.7;
-  margin-bottom: 10px;
+.document-chunk pre {
+  color: var(--ink);
+  font-size: var(--fs-body);
+  line-height: 1.75;
+  /*
+   * Parsed document text is prose, so it opts out of the global tabular figures:
+   * a proportional digit is what a sentence expects, and this is the only surface
+   * in the product that is not read down a column.
+   */
+  font-variant-numeric: normal;
 }
+
+/*
+ * The evidence composition, the main reason this pane exists. This surface is
+ * for SCANNING EVIDENCE, not for reading prose, so the body is held at a ~660px
+ * measure - a 680px column less the body's own 20px inset - instead of the 780px
+ * a reader's measure would want. The measure is a cap, not a fraction: a 1600px
+ * window gets whitespace at the end of the row, not a 1400px line, so the line
+ * length cannot silently grow with the window. The gutter (~156px) plus that
+ * measure form the two columns of the row.
+ *
+ * The vertical rule is content structure organising the two columns, not a
+ * region boundary - the one place this screen legitimately spends a line.
+ */
+.document-content .pane-body {
+  /* the reading surface answers for its own width, so it can decide how to
+     degrade without the pane policy having to shrink the window it lives in */
+  container-type: inline-size;
+}
+.document-chunk.evidence-sheet {
+  display: grid;
+  grid-template-columns: 156px minmax(0, 680px);
+  max-width: 836px;
+  padding: 22px 0 24px;
+}
+/*
+ * The gutter is an annotation column: four label/value pairs under the chunk's own
+ * ordinal. The ordinal is the thing that makes an evidence chain citable, so it
+ * ranks above the labels rather than below them, and each pair is tightened to a
+ * 2px label-to-value gap with the value at 1.45 leading - the difference between a
+ * column of four scannable pairs and eight lines of similar-looking grey text.
+ */
+.chunk-gutter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-right: 18px;
+  border-right: 1px solid var(--line-soft);
+}
+.chunk-ordinal {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.chunk-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* labels scan, values read: the small label tier over --fs-meta, the one place
+   the hierarchy rules 3 and 6 meet in this pane */
+.chunk-fact-label {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted-2);
+}
+.chunk-fact-value {
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.chunk-body {
+  min-width: 0;
+  padding-left: 20px;
+}
+
+/*
+ * The gutter is an annotation, and an annotation never gets to crowd out what it
+ * annotates. The 156px column is worth keeping while it stays under about a third
+ * of the reading pane; below that it folds into a row above the evidence instead
+ * of standing beside it. The threshold is derived from that ratio rather than
+ * picked: 156 / 0.34 ≈ 460. It matters at 1280 with the Inspector open, where the
+ * pane that survives is about 430px, and at 860 without it (about 420px); it has
+ * roughly 50px of headroom on both sides in every layout the product ships, so a
+ * three-pixel change cannot flip it.
+ *
+ * The pane policy decides how many panes there are; this decides what one of them
+ * looks like once it has been given its column.
+ *
+ * This block sits after the rules it overrides, and that ordering is load-bearing:
+ * a container query has the same specificity as the selector inside it, so a
+ * `.chunk-gutter` rule declared *below* this one would silently win and the fold
+ * would half-apply - the sheet would collapse to one column while the gutter kept
+ * standing as a 350px-wide vertical stack inside it.
+ */
+@container (max-width: 460px) {
+  .document-chunk.evidence-sheet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .chunk-gutter {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    padding-right: 0;
+    padding-bottom: var(--space-2);
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .chunk-body {
+    padding-left: 0;
+    padding-top: var(--space-3);
+  }
+}
+
+/*
+ * A search match is marked, not decorated. The tint is the accent at its denser
+ * step: the same "found here" surface the application spends on a selected row,
+ * one step up, because a mark inside a paragraph has to be found among the words
+ * around it rather than read as a region. Amber cannot do this job - base.css
+ * reserves it for blocking state and forbids it as decoration - so the warning
+ * family stays out of the reading surface.
+ */
+.document-chunk mark.evidence-match {
+  padding: 0 1px;
+  background: var(--accent-strong);
+  color: var(--ink);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+
 .semantic-query {
   display: flex;
   gap: 8px;

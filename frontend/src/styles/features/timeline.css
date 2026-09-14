@@ -1,71 +1,84 @@
-/* Run surface: a quiet chrome strip. Activity status is plain text, not a badge. */
+/*
+ * Run surface: a quiet chrome strip at the bottom edge of the window.
+ *
+ * It is a chrome band, so the plane step to the work surface above it does the
+ * separating and it draws no rule of its own. Its status is the same object the
+ * sidebar uses for the same word - one status vocabulary, in two places - which
+ * replaced a line of 12px muted text that was the least legible place in the
+ * product to state the most important fact about the run in progress.
+ *
+ * Its minimum height is `--status-bar-h`, the same token every scrollable
+ * workspace reserves as bottom padding: the strip and the space kept clear of it
+ * cannot drift apart, because they are one number.
+ */
 .timeline {
   flex-shrink: 0;
-  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
   background: var(--surface-chrome);
-  padding: 7px 20px;
+  padding: 6px 20px;
+  min-height: var(--status-bar-h);
 }
+/*
+ * The strip reads as one sentence - what is being reported, its state, and the
+ * way into the trace - so the three parts share one gap instead of two, and the
+ * name of the report is a label rather than the loudest text in the band. It is
+ * the state beside it that carries the information, and the whole strip stays
+ * secondary to the workspace above it.
+ */
 .timeline-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   margin: 0;
-  gap: 10px;
+  min-width: 0;
 }
 .timeline-heading strong {
-  font-size: var(--fs-meta);
+  font-size: var(--fs-label);
   font-weight: 600;
-  color: var(--ink-2);
+  letter-spacing: 0.06em;
+  color: var(--muted-2);
 }
-.timeline-status {
+/*
+ * The trace trigger is the sentence's last clause, not a third control: no
+ * surface of its own and no padding, so the space before its text is the
+ * heading's own gap and the three parts align on one rhythm. As a padded quiet
+ * trigger it pushed its label a further 8px away than the label before it, which
+ * is what made the strip read as three unrelated links positioned along a
+ * footer rather than as one status line.
+ */
+.timeline-heading .quiet-trigger {
+  height: auto;
+  padding: 0;
   color: var(--muted);
   font-size: var(--fs-meta);
 }
-.timeline-heading details {
-  margin-left: auto;
-}
-.timeline-heading summary {
-  padding: 3px 6px;
-  margin: -3px -6px;
-  border-radius: var(--radius-xs);
-  color: var(--muted);
-  cursor: pointer;
-  font-size: var(--fs-meta);
-  list-style: none;
-}
-.timeline-heading summary::-webkit-details-marker {
-  display: none;
-}
-.timeline-heading summary:hover {
-  background: var(--hover);
+.timeline-heading .quiet-trigger:hover,
+.timeline-heading .quiet-trigger[data-state="open"] {
+  background: transparent;
   color: var(--ink);
-}
-.timeline-details {
-  position: absolute;
-  right: 20px;
-  bottom: 34px;
-  z-index: 4;
-  width: min(460px, calc(100vw - 40px));
-  padding: 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: 0 4px 14px rgba(31, 35, 40, 0.1);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .timeline-run-meta {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   color: var(--muted-2);
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: var(--fs-label);
 }
 .timeline-events {
   display: grid;
   gap: 6px;
   max-height: 180px;
-  margin-top: 8px;
+  margin-top: var(--space-2);
   overflow: auto;
 }
 .timeline-event {
   display: grid;
   grid-template-columns: 68px 1fr;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-meta);
 }
 .timeline-event span {
@@ -73,7 +86,7 @@
 }
 .timeline-event strong {
   color: var(--ink-2);
-  font-weight: 500;
+  font-weight: 400;
 }
 .timeline p {
   margin-top: 6px;

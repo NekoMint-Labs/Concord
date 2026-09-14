@@ -50,7 +50,7 @@ it("a local IFC stays local and overlapping import clicks submit only once", asy
   });
   await screen.findByText("Local viewer: fixture.ifc");
   expect(api.uploadIFC).not.toHaveBeenCalled();
-  const submit = screen.getByRole("button", { name: "Import to project" });
+  const submit = screen.getByRole("button", { name: "导入项目" });
   fireEvent.click(submit);
   fireEvent.click(submit);
   expect(api.uploadIFC).toHaveBeenCalledTimes(1);
@@ -79,7 +79,7 @@ it("rejecting a new oversized file clears the previous import target", async () 
   });
   expect(screen.getByRole("alert")).toHaveTextContent("25 MiB");
   expect(
-    screen.queryByRole("button", { name: "Import to project" }),
+    screen.queryByRole("button", { name: "导入项目" }),
   ).not.toBeInTheDocument();
   expect(screen.queryByText("Local viewer: first.ifc")).not.toBeInTheDocument();
   unmount();

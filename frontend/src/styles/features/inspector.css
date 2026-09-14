@@ -1,30 +1,62 @@
 /*
- * Detail pane calibration: a plain surface that reports the selected object.
- * Its local navigation is quiet text, and it never repeats workspace status.
- * The pane boundary itself stays square; only local objects inside it soften.
+ * Detail pane calibration: the selected object's own pane, not a popover and not
+ * another grey column.
+ *
+ * The pane states itself three ways, which is what "pane identity" means here:
+ *
+ * - a recessed surface (`--surface-detail`) beside the work plane, a 1.18:1 step
+ *   rather than the 1.08:1 it used to be - it used to sit *darker* than the work
+ *   plane by about the same amount as chrome did, so it read as one more grey
+ *   band rather than as the surface being read;
+ * - a chrome header band owning the object reference, the detail switch, and the
+ *   close control, so the pane is named rather than merely bounded;
+ * - its own scroll, with the header fixed above it.
+ *
+ * Its local navigation is quiet text over an accent rail, and it never repeats
+ * workspace status: the workspace owns the story, this pane owns the selected
+ * detail. Nothing here needs a hairline - the plane step, the header
+ * band, and the spacing do the separating.
+ *
+ * The pane's width, its left edge, and the divider belong to the resizable split
+ * that hosts it (frontend/src/layout/PaneSplit.tsx), and its arrival is animated
+ * from frontend/src/motion for the same reason: the content moves, not the
+ * column.
  */
-.inspector {
-  width: 318px;
-  flex-shrink: 0;
+.inspector-pane {
   background: var(--surface-detail);
-  border-left: 1px solid var(--line);
-  overflow: auto;
-  padding: 16px 18px 24px;
 }
-.panel-heading {
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
+.inspector {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
-.inspector-scope {
-  color: var(--muted);
-  font-size: var(--fs-label);
+/*
+ * The pane's own header band. The selector carries `.pane-header` so the padding
+ * below is not outranked by the shared `.pane-header.is-stacked` rule this element
+ * also matches (layout.css): a stated value a shared selector silently overrides
+ * is a comment, not a design. The right inset is one step tighter than the left
+ * because the close control is a 26px square and reads as its own inset.
+ */
+.pane-header.inspector-header {
+  padding: 8px 10px 8px 12px;
+}
+/*
+ * The pane's own name: the work package this pane is reporting on. Scoped under
+ * `.inspector-header` so it is not demoted to the label tier by the shared
+ * `.pane-header .mono` rule, which quiets a right-edge identifier - here the
+ * identifier is the pane's subject, so it ranks at the meta tier in ink-2, above
+ * the quiet switch labels beneath it.
+ */
+.inspector-header .inspector-scope {
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
 }
 .icon-button {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -35,23 +67,34 @@
   color: var(--ink);
 }
 
-/* local navigation between details: text weight only; spacing, not a rule,
-   separates it from the section it opens */
+/*
+ * The detail switch: a segmented row of the pane's own three details. Its active
+ * item states position the way the workspace tab strip does - full ink at 600
+ * over a 2px accent rail - because it is the same "which view am I in" question
+ * asked one plane down, on the same chrome band where a 10% accent tint renders
+ * as a grey box rather than as a slate one. That is exactly why the tab strip
+ * left the tint; the tint stays the grammar for a selected *row*, which this is
+ * not. Text-only hover for the same reason: the rail carries position, so a
+ * hover needs no surface of its own, and the count badge stays at the label tier
+ * beside the active label so it still reads with no tint behind it.
+ */
 .inspector-switch {
   display: flex;
-  gap: 14px;
-  padding-bottom: 12px;
+  gap: 2px;
 }
 .inspector-switch button {
+  position: relative;
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 5px;
-  padding: 0;
+  height: 24px;
+  padding: 0 var(--space-2);
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: var(--fs-action);
-  font-weight: 500;
+  font-size: var(--fs-meta);
+  font-weight: 400;
+  transition: color var(--motion-fast) var(--ease);
 }
 .inspector-switch button:hover {
   color: var(--ink-2);
@@ -60,93 +103,124 @@
   color: var(--ink);
   font-weight: 600;
 }
+/* the rail underlines the label, not the target: its inset matches the button's
+   own horizontal padding, the way the tab strip's rail does */
+.inspector-switch button.active::after {
+  content: "";
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
 .inspector-switch .count {
   margin: 0;
   font-size: var(--fs-label);
+  font-weight: 600;
   color: var(--muted-2);
 }
+.inspector-switch button.active .count {
+  color: var(--ink-2);
+}
 
-.inspector-section {
-  padding: 14px 0;
+/* the pane's own scroll: the header stays where it is while detail moves */
+.inspector-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-3) var(--space-4) var(--space-5);
 }
 .inspector-section p {
   font-size: var(--fs-body);
   line-height: 1.7;
   color: var(--ink-2);
 }
+
+/*
+ * Blocker reasons: rows, not cards, and the same selection grammar as every
+ * other list in the application.
+ */
 .constraint-list {
   list-style: none;
   margin: 0;
   padding: 0;
-}
-.constraint-list li + li {
-  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 .constraint-list button {
   display: block;
   width: 100%;
-  /* the negative margin lets the hover surface bleed into the pane gutter
-     without moving the text it highlights */
-  padding: 4px 8px;
-  margin: 0 -8px;
+  padding: var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
   text-align: left;
+  transition: background var(--motion-fast) var(--ease);
 }
-.constraint-list button:hover {
+.constraint-list button:not(.selected):hover {
   background: var(--hover);
+}
+.constraint-list button.selected {
+  background: var(--accent-muted);
 }
 .constraint-list .eyebrow {
   display: block;
-  margin-bottom: 4px;
-  color: var(--muted-2);
-  font-size: var(--fs-label);
+  margin-bottom: 3px;
 }
 .constraint-list strong {
   display: block;
-  font-size: var(--fs-body);
+  font-size: var(--fs-action);
   line-height: 1.6;
   font-weight: 400;
   color: var(--ink);
 }
-.constraint-list small {
-  display: block;
-  margin-top: 4px;
-  color: var(--muted-2);
-  font-size: var(--fs-label);
-}
 .constraint-list button.selected strong {
   font-weight: 600;
 }
+.constraint-list small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+}
 
+/*
+ * Evidence: numbered entries with a label spine, the same shape the workspace
+ * uses for a fact list, so an evidence chain is citable rather than just listed.
+ */
 .evidence-list {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 .evidence-list li {
-  display: flex;
-  gap: 10px;
-}
-.evidence-list li + li {
-  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: var(--space-2);
 }
 .evidence-index {
-  flex-shrink: 0;
   color: var(--muted-2);
   font-size: var(--fs-label);
-  padding-top: 1px;
+  font-weight: 600;
+  padding-top: 2px;
 }
 .evidence-body strong {
   display: block;
   color: var(--ink);
-  font-size: var(--fs-body);
+  font-size: var(--fs-action);
   font-weight: 600;
 }
 .evidence-body p {
-  margin: 6px 0;
+  margin: 4px 0;
   color: var(--ink-2);
+  font-size: var(--fs-action);
+  line-height: 1.7;
 }
 .evidence-meta {
   color: var(--muted-2);
@@ -158,9 +232,9 @@
 .action-title {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  font-size: var(--fs-body);
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  font-size: var(--fs-section);
+  margin-bottom: var(--space-2);
 }
 .action-title strong {
   font-weight: 600;
@@ -168,24 +242,37 @@
 .risk {
   color: var(--muted);
   font-size: var(--fs-label);
+  font-weight: 600;
 }
 .effect-list {
-  margin-top: 10px;
+  margin-top: var(--space-2);
   font-size: var(--fs-meta);
   color: var(--muted);
 }
 .effect-list > div {
-  margin: 4px 0;
+  margin: 3px 0;
+}
+/*
+ * The approval gate is a soft object because it is the one thing on this pane
+ * that asks for a decision: what has to be true, the strong confirmation it may
+ * need, and the two actions. A chrome-plane block on the recessed pane plane is
+ * a visible step without becoming a card - it is cut into the surface the pane
+ * already is rather than lifted above it.
+ */
+.action-gate {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-chrome);
 }
 .approval-required {
-  margin-top: 12px;
   color: var(--muted);
   font-size: var(--fs-meta);
   line-height: 1.6;
 }
 .form-label {
   display: block;
-  margin-top: 12px;
+  margin-top: var(--space-3);
   color: var(--muted);
   font-size: var(--fs-meta);
 }
@@ -196,43 +283,16 @@
 }
 .action-buttons {
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 .inline-more {
-  margin-top: 14px;
+  margin-top: var(--space-3);
+  display: block;
 }
 .supplementary-details {
-  margin-top: 28px;
+  margin-top: var(--space-5);
   color: var(--muted);
   font-size: var(--fs-meta);
-}
-.supplementary-details summary {
-  cursor: pointer;
-}
-.properties {
-  display: grid;
-  grid-template-columns: 60px 1fr;
-  gap: 6px;
-  margin: 10px 0 0;
-  font-size: var(--fs-meta);
-}
-.properties dt {
-  color: var(--muted-2);
-}
-.properties dd {
-  margin: 0;
-  color: var(--ink-2);
-}
-@media (max-width: 1150px) {
-  .inspector {
-    width: 276px;
-    padding: 14px;
-  }
-}
-@media (max-width: 850px) {
-  .inspector {
-    width: 248px;
-  }
 }

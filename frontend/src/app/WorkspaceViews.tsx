@@ -1,7 +1,16 @@
 import { lazy, Suspense } from "react";
+import { motion } from "motion/react";
 import { ArrowLeft } from "lucide-react";
 import type { Workspace } from "../api/client";
 import { ViewerBoundary } from "../components/ViewerBoundary";
+import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
+import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
+import {
+  condensedFor,
+  inspectorWidthFor,
+  usePaneWidth,
+} from "../layout/paneBudget";
+import { useMotion } from "../motion";
 import { CoordinationWorkspace } from "../features/CoordinationWorkspace";
 import { Inspector, type InspectorView } from "../features/Inspector";
 import { WorkPackages } from "../features/WorkPackages";
@@ -65,6 +74,15 @@ export function WorkspaceViews({
   onInspectorView: (view: InspectorView) => void;
   onRecheck: () => void;
 }) {
+  const { transition } = useMotion();
+  /*
+   * The pane budget: the Inspector is what the user just opened, so it always
+   * wins the column it needs. Below 1280px the nested list pane yields to it and
+   * is reached as a menu instead of as a third column
+   * (frontend/src/layout/paneBudget.ts).
+   */
+  const width = usePaneWidth();
+  const condensed = condensedFor(width, detailsOpen);
   return (
     <>
       <nav className="workspace-tabs" aria-label="工作区视图">
@@ -75,27 +93,45 @@ export function WorkspaceViews({
             aria-current={tab === id ? "page" : undefined}
             onClick={() => onTab(id)}
           >
-            {label}
+            <span className="tab-label">{label}</span>
+            {/*
+              One surface element shared across the strip. `layoutId` makes
+              Motion move it between the tabs it belongs to, so the active view
+              is an object the user watched arrive rather than a rule that
+              switched on somewhere new - and it says what every selected row in
+              this application says, in area rather than in a 2px underline.
+            */}
+            {tab === id && (
+              <motion.span
+                className="tab-surface"
+                layoutId="workspace-view-surface"
+                transition={transition()}
+              />
+            )}
           </button>
         ))}
-        <details className="more-views">
-          <summary>更多</summary>
-          <div>
+        <div className="more-views">
+          <AppMenu label="更多">
             {secondaryTabs.map(({ id, label }) => (
-              <button
+              <AppMenuItem
                 key={id}
-                className={tab === id ? "active" : ""}
-                aria-current={tab === id ? "page" : undefined}
-                onClick={() => onTab(id)}
+                active={tab === id}
+                onSelect={() => onTab(id)}
               >
                 {label}
-              </button>
+              </AppMenuItem>
             ))}
-          </div>
-        </details>
+          </AppMenu>
+        </div>
       </nav>
-      <div className={`workspace-body ${detailsOpen ? "has-details" : ""}`}>
-        <div className="central-workspace">
+      {/*
+        The workspace and its detail pane are one adjustable split. The pane is a
+        real desktop pane: it can be dragged, it can be moved with the arrow keys
+        while the divider has focus, and it states its own minimum so it can never
+        be collapsed into an unreadable strip.
+      */}
+      <PaneSplit id="workspace">
+        <Pane className="central-workspace">
           {tab === "impact" && (
             <button
               className="canvas-back text-button"
@@ -135,13 +171,18 @@ export function WorkspaceViews({
                 <WorkPackages workspace={data} onSelect={onSelected} />
               )}
               {tab === "documents" && (
-                <Documents project={project} perform={perform} />
+                <Documents
+                  project={project}
+                  perform={perform}
+                  condensed={condensed}
+                />
               )}
               {tab === "capabilities" && <Capabilities />}
               {tab === "bim" && (
                 <BIMWorkspace
                   project={project}
                   impacted={data.analysis?.impact.element_ids ?? []}
+                  condensed={condensed}
                 />
               )}
               {tab === "gis" && (
@@ -153,20 +194,33 @@ export function WorkspaceViews({
               )}
             </Suspense>
           </ViewerBoundary>
-        </div>
+        </Pane>
         {detailsOpen && (
-          <Inspector
-            busy={busy}
-            workspace={data}
-            selected={selected}
-            selectedConstraint={selectedConstraint}
-            view={inspectorView}
-            perform={perform}
-            onClose={() => onDetailsOpen(false)}
-            onView={onInspectorView}
-          />
+          <>
+            <PaneDivider />
+            <Pane
+              id="inspector-pane"
+              className="inspector-pane pane-stack"
+              /* A wide window can afford the Inspector's designed width; a
+                 constrained one gives its own column back to the content. */
+              defaultSize={inspectorWidthFor(width)}
+              minSize="240px"
+              maxSize="40%"
+            >
+              <Inspector
+                busy={busy}
+                workspace={data}
+                selected={selected}
+                selectedConstraint={selectedConstraint}
+                view={inspectorView}
+                perform={perform}
+                onClose={() => onDetailsOpen(false)}
+                onView={onInspectorView}
+              />
+            </Pane>
+          </>
         )}
-      </div>
+      </PaneSplit>
     </>
   );
 }

@@ -1,19 +1,47 @@
-.viewer-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  background: #fff;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--line);
-  font-size: 10px;
+/*
+ * Viewer chrome shared by the BIM and site workspaces. The toolbar itself is the
+ * application's chrome row (see .view-toolbar in components.css); only the
+ * viewer-specific alignment lives here, so a canvas workspace reads as the same
+ * product as the document and coordination surfaces.
+ */
+.viewer-toolbar > strong {
+  flex-shrink: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  color: var(--ink);
 }
-.viewer-toolbar span {
-  color: #829499;
-  margin-right: auto;
+.viewer-toolbar > span:first-of-type {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+.viewer-toolbar > span[role="status"] {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+
+/* a transient job notice: a chrome band, closed by the plane step to the region
+   below it rather than by a rule (the same treatment the document import notice
+   gets - one job, one answer) */
+.viewer-status {
+  flex-shrink: 0;
+  padding: 9px 20px;
+  background: var(--surface-chrome);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
+
 .bim-workspace,
 .gis-workspace {
   height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -24,86 +52,259 @@
   position: relative;
   min-height: 250px;
 }
+/*
+ * Structured BIM: an engineering list beside the selected element's property
+ * sheet, as the two panes of one split. Each pane states its identity with its
+ * own header band instead of with a rule, because a boundary between two white
+ * rectangles says nothing about what either one is - the owner read the old
+ * arrangement as "two panes have boundaries but no identity".
+ *
+ * Selection is the one grammar all three master/detail lists share: an
+ * accent-tinted surface at a small radius. The list used to mark the current row
+ * with a 2px left rule, which asked the eye to catch a 2px change in a 46px row
+ * and forced every row to reserve that strip so the label would not reflow on
+ * selection. A tint states the same thing with area.
+ */
 .bim-element-list {
-  background: white;
-  margin: 20px;
-  border: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
+  background: var(--surface-detail);
+}
+/*
+ * The rows are the pane's body, and the body owns the inset and the rhythm. There
+ * is no row rule: a 1px separator on the recessed pane plane sits below the
+ * threshold where the eye reads it as an edge, so the rhythm is spacing, hover,
+ * and selection instead of linework.
+ */
+.bim-element-list .pane-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
 }
 .bim-element {
-  padding: 17px;
-  border: 1px solid #e7eded;
-  background: #fff;
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
   text-align: left;
+  transition: background var(--motion-fast) var(--ease);
 }
-.bim-element.impacted {
-  background: #fffbf4;
-  border-color: #e0bf8e;
+.bim-element:not(.selected):hover {
+  background: var(--hover);
 }
 .bim-element.selected {
-  outline: 2px solid #7ea69a;
-  outline-offset: -2px;
+  background: var(--accent-muted);
+}
+.bim-element-name {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
 }
 .bim-element strong {
-  font-size: 12px;
   display: block;
+  font-size: var(--fs-action);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.bim-element.selected strong {
+  font-weight: 600;
+}
+.bim-element-impact {
+  flex-shrink: 0;
+  color: var(--warn-fg);
+  font-size: var(--fs-label);
+  font-weight: 600;
 }
 .bim-element small {
-  font-size: 10px;
-  color: #87989d;
   display: block;
-  margin-top: 6px;
+  margin-top: 3px;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
+/* The selected row's metadata steps up with it, so the whole row reads as the
+   current one without the tint having to carry it alone. */
+.bim-element.selected small {
+  color: var(--muted);
+}
+
+/*
+ * The property pane is a stack: a chrome header that names the selected element,
+ * and a body that scrolls under it. The body owns the padding, because the header
+ * has to stay where it is while the values move.
+ */
 .bim-properties {
-  margin: 20px;
-  background: white;
-  border: 1px solid var(--line);
-  padding: 18px;
-  font-size: 11px;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface-workspace);
 }
-.bim-properties h3 {
-  margin-bottom: 12px;
+.bim-properties .pane-body {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 24px 40px;
 }
-.bim-properties pre {
-  font-size: 10px;
-  color: #64797e;
+/* the pane-level empty state keeps the property body's own inset and origin, so
+   the instruction arrives where the first value would (components.css) */
+/*
+ * The header carries the element's own name when one is selected and the pane's
+ * noun when none is, so the pane always says what it is. The technical id is
+ * pushed to the far edge: it is the pane's own stamp, not a second title.
+ */
+.bim-properties .pane-header > h3 {
+  flex: 1 1 auto;
 }
-.viewer-message {
-  position: absolute;
-  left: 15px;
-  bottom: 15px;
-  max-width: 80%;
-  background: #fffffff0;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 10px 13px;
-  font-size: 10px;
-  color: #687e84;
-  z-index: 4;
+.bim-properties .pane-header .mono {
+  margin-left: auto;
+}
+/*
+ * The two headers belong to one family: both are chrome bands carrying ink, and
+ * only the rank differs - the list pane names itself at the label tier, the
+ * properties pane names its subject at the section tier. The list's label is
+ * lifted off the faint tier so the pair reads as two titled panes rather than a
+ * titled pane beside a placeholder.
+ */
+.bim-element-list .pane-header > .pane-header-label {
+  color: var(--ink-2);
+}
+/*
+ * The property summary is keyed by element id, so choosing another element mounts
+ * a new summary rather than mutating the old values in place; that mount is what
+ * the detail-swap fade spends itself on. The disclosure below it is deliberately
+ * outside that key: it holds open state, and resetting a disclosure in order to
+ * animate would trade a real interaction for a decoration.
+ */
+.bim-property-summary {
+  max-width: 620px;
+  padding-top: 2px;
+}
+/*
+ * Value groups. The label spine and the value column are one grid, so a reader can
+ * scan the left column and read the right one. A group is separated from the next
+ * by space and a `--line-soft` rule - a rule is legitimate here because it
+ * separates two sets of values, not two regions, which is the one job a line
+ * still has. There is no card: a boxed group on the work plane would be visible
+ * only by its border and its shadow, which is the failure the visual language
+ * removes.
+ *
+ * The space is split so the heading belongs to the values beneath it: the group
+ * opens with air, the rule closes the group above, and the heading sits tighter
+ * to its own list than to that rule. The label then sits on the value's first
+ * baseline and never wraps, so a two-line value still reads back to its label.
+ */
+.property-group + .property-group {
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}
+.property-group-title {
+  display: block;
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.bim-property-list,
+.property-values {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px var(--space-4);
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-action);
+}
+.bim-property-list dt,
+.property-values dt {
+  color: var(--muted);
+  font-size: var(--fs-label);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.bim-property-list dd,
+.property-values dd {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-action);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+/*
+ * Amber is the exception colour, spent only when the element is actually in the
+ * impacted set. An always-amber "受影响" row would make the colour decoration, and a
+ * decoration is exactly what a signal cannot afford to be.
+ */
+.property-value.is-attention {
+  color: var(--warn-fg);
+}
+/*
+ * The full record stays one action away rather than printed at equal weight with
+ * the values a decision needs, and it sits outside the keyed summary because it
+ * holds open state.
+ */
+.bim-properties .disclosure-block {
+  max-width: 620px;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line-soft);
+}
+.bim-properties .disclosure-body pre {
+  margin: 0;
+  font-size: var(--fs-meta);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+/* explanatory text belongs to the workspace footer, not over the canvas. The
+   note is a chrome band and the canvas is the window backdrop, so the plane step
+   between them is the separation; a rule here would be a region boundary drawn
+   for no reason */
+.viewer-note {
+  flex-shrink: 0;
+  padding: 9px 20px;
+  background: var(--surface-chrome);
+  color: var(--muted);
+  font-size: var(--fs-meta);
   line-height: 1.6;
 }
-.map-stage .maplibregl-canvas {
-  outline: none;
+
+/* canvas overlays: legible, opaque, and still square-framed */
+.viewer-message {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  max-width: min(560px, 80%);
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  /* floats over the canvas, so it is a small floating surface, not a row */
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+  z-index: 4;
 }
-.map-feature-label {
-  font-size: 10px;
-  background: #fff;
-  border: 1px solid #c6dcd5;
-  border-radius: 3px;
-  padding: 5px 8px;
-  color: #427b6c;
+.viewer-message pre {
+  max-height: 200px;
+  margin-top: 8px;
+  overflow: auto;
+  font-size: var(--fs-meta);
+}
+.viewer-message summary {
+  cursor: pointer;
 }
 .viewer-actions {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 14px;
+  left: 14px;
   z-index: 6;
   display: flex;
   gap: 6px;
 }
-.viewer-message pre {
-  max-height: 200px;
-  overflow: auto;
+.map-stage .maplibregl-canvas {
+  outline: none;
 }

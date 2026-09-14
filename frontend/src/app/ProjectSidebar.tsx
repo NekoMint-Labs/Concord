@@ -1,5 +1,7 @@
+import { ChevronDown } from "lucide-react";
 import type { DTO, Workspace } from "../api/client";
 import { Status } from "../components/Status";
+import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
 import {
   demoAreaName,
   demoDiscipline,
@@ -24,28 +26,43 @@ export function ProjectSidebar({
   onProject: (id: string) => void;
   onSelect: (id: string) => void;
 }) {
+  const current =
+    projects?.find((item) => item.id === project)?.name ?? project;
   return (
     <aside className="sidebar" aria-label="项目与工作包">
       <div className="brand">
         <strong>Concord</strong>
         <span>施工协同</span>
       </div>
+      {/*
+        The project picker is a menu, not a native <select>: the platform's own
+        dropdown is a different control language, it renders its own arrow and
+        popup, and on the WebView it is the one control on this surface whose
+        appearance the product does not decide. The menu also states which
+        project is current, which a closed select cannot do at a glance.
+      */}
       <div className="project-picker">
-        <label className="eyebrow" htmlFor="project-picker">
-          项目
-        </label>
-        <select
-          id="project-picker"
-          aria-label="项目"
-          value={project}
-          onChange={(event) => onProject(event.target.value)}
+        <AppMenu
+          label="项目"
+          align="start"
+          triggerClassName="project-trigger"
+          trigger={
+            <>
+              <span className="project-name">{current}</span>
+              <ChevronDown size={14} aria-hidden="true" />
+            </>
+          }
         >
           {projects?.map((item) => (
-            <option value={item.id} key={item.id}>
+            <AppMenuItem
+              key={item.id}
+              active={item.id === project}
+              onSelect={() => onProject(item.id)}
+            >
               {item.name}
-            </option>
+            </AppMenuItem>
           ))}
-        </select>
+        </AppMenu>
       </div>
       <nav className="sidebar-section" aria-label="工作包">
         <div className="sidebar-label">工作包</div>

@@ -4,6 +4,8 @@
 
 @import "./styles/base.css";
 @import "./styles/components.css";
+@import "./styles/layout.css";
+@import "./styles/ui.css";
 @import "./styles/shell.css";
 @import "./styles/features/inspector.css";
 @import "./styles/features/impact.css";

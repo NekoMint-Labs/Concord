@@ -1,18 +1,40 @@
+/*
+ * Shared objects: labels, controls, chrome rows, and the states a pane falls
+ * back to. Everything here is a thing that appears in more than one workspace.
+ */
+
 /* Supporting label: secondary text, not a visual device. */
 .eyebrow {
   font-size: var(--fs-label);
-  font-weight: 500;
-  color: var(--muted);
-  letter-spacing: normal;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: var(--muted-2);
+}
+
+/*
+ * The technical identifier role: a GUID, a SHA, an IFC id, a revision. One
+ * treatment everywhere it appears, so an engineer learns to recognise the register
+ * once and scan it identically in the sidebar, the property sheet, the evidence
+ * gutter and the Inspector.
+ *
+ * The face comes from base.css (one mono role, asserted by the design contract).
+ * What is added here is the two things that make a column of identifiers
+ * comparable: figures that line up, and a hair of negative tracking, because a
+ * monospace face at these sizes reads looser than the prose beside it and
+ * identifiers are scanned rather than read.
+ */
+.mono {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 /* Reserved for genuinely global failures. */
 .alert {
-  padding: 8px 22px;
-  color: var(--warn-fg);
-  background: var(--warn-bg);
+  padding: 8px 20px;
+  color: var(--warning);
+  background: var(--warning-muted);
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
   font-size: var(--fs-meta);
   border-bottom: 1px solid var(--warn-line);
@@ -39,41 +61,47 @@
 }
 
 /*
- * Primer label treatment: a hairline outline and coloured text, never a
- * filled tinted capsule. Used where peer objects must be scanned (sidebar
- * rows, register tables), not as decoration. It stays fully round because it
- * is a tag-like peer label, not a control or a container.
+ * A peer label: a tinted surface with a small radius, never a filled capsule and
+ * never a hairline outline.
+ *
+ * It used to be the only fully round object in the application - a 999px pill
+ * inside a shell of right angles - which is what made the radius strategy read
+ * as inconsistent rather than deliberate. It is also the one place a 1px outline
+ * was doing a tag's job: at a rule tone on a light plane the outline sat below
+ * the threshold where it reads as an edge, so the tag looked like text that had
+ * been accidentally underlined by a rule. A tint states the same thing with
+ * area.
  */
 .status {
   display: inline-flex;
   align-items: center;
-  height: 18px;
+  height: 20px;
   padding: 0 6px;
   font-size: var(--fs-label);
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--hover);
+  color: var(--ink-2);
   white-space: nowrap;
 }
 .status-blocked {
-  color: var(--warn-fg);
-  border-color: var(--warn-line);
+  color: var(--warning);
+  background: var(--warning-muted);
 }
 .status-ready,
 .status-neutral {
-  color: var(--muted);
-  border-color: var(--line-strong);
+  color: var(--ink-2);
+  background: var(--hover);
 }
 
 .view-heading {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 16px;
-  gap: 14px;
+  margin-bottom: var(--space-4);
+  gap: var(--space-4);
 }
 .view-heading p,
 .table-view > p,
@@ -88,13 +116,14 @@
   cursor: pointer;
   align-items: center;
   gap: 6px;
-  height: 28px;
+  height: 30px;
   padding: 0 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--ink-2);
   font-size: var(--fs-action);
+  font-weight: 600;
 }
 .import-button:hover {
   background: var(--hover);
@@ -103,26 +132,36 @@
   display: none;
 }
 
-/* COSS-calibrated control sizing: compact, neutral, no brand fill. */
+/*
+ * Controls. A control is identified by its own boundary and its surface, never
+ * by a shadow: a drop shadow under a button is the most reliable tell of a
+ * generated interface, and it also made a secondary control compete with a
+ * floating surface for the same signal.
+ *
+ * The secondary boundary is deliberately strong. It is the tone Windows itself
+ * uses for a text box, it clears WCAG 1.4.11 for a control boundary, and on a
+ * chrome band a white control with a faint border is simply not perceivable as a
+ * control at all.
+ */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   height: 30px;
-  padding: 0 10px;
+  padding: 0 11px;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-size: var(--fs-action);
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
 }
 .button svg {
-  opacity: 0.8;
+  opacity: 0.9;
 }
 .button-primary {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   border-color: var(--primary);
 }
 .button-primary:hover {
@@ -132,7 +171,7 @@
 .button-secondary {
   background: var(--surface);
   color: var(--ink-2);
-  border-color: var(--line-strong);
+  border-color: var(--line-control);
 }
 .button-secondary:hover {
   background: var(--hover);
@@ -147,23 +186,96 @@
 .button-danger {
   background: var(--surface);
   color: var(--danger-fg);
-  border-color: var(--line-strong);
+  border-color: var(--line-control);
 }
 .button-danger:hover {
   background: var(--danger-soft);
 }
 .button-sm {
-  height: 26px;
-  padding: 0 8px;
+  height: 28px;
+  padding: 0 9px;
+}
+/*
+ * Integrated view toolbar: one chrome row that owns a primary view's title, its
+ * inline controls, and its actions. Documents, BIM, and the site workspace share
+ * it so the working views read as the same application rather than as three
+ * embedded pages. It is a chrome band, so it is closed by the plane step to the
+ * surface below it rather than by a rule.
+ */
+.view-toolbar,
+.viewer-toolbar {
+  flex-shrink: 0;
+  /* a structural chrome band: square by declaration, not by omission */
+  border-radius: var(--radius-none);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  /* a generous column gap, because the band's children are three different kinds
+     of thing - a view's own name, the view's inline controls, and its actions -
+     and 16px between them read as one crowded row rather than as three groups */
+  gap: var(--space-2) var(--space-5);
+  min-height: 48px;
+  padding: 8px 20px;
+  background: var(--surface-chrome);
+}
+.view-toolbar > h2,
+.viewer-toolbar > h2 {
+  font-size: var(--fs-title);
+}
+.view-toolbar-note,
+.viewer-toolbar-note {
+  min-width: 0;
+  flex: 1 1 220px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.view-toolbar-actions,
+.viewer-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+/* a list-level empty state, anchored to the top of its own scroll region */
+.pane-empty {
+  padding: var(--space-3) var(--space-4) 0;
+}
+/*
+ * A pane-level empty state: one instruction, stated at the origin the pane's own
+ * content starts from rather than as an object centred in the space.
+ *
+ * It was a tinted, rounded placeholder in the middle of the pane, which is how a
+ * component library reports "no data" - inside a workspace pane that is the wrong
+ * register twice over. The empty surface is the workspace itself, so a card drawn
+ * on it becomes a second, competing object; and a pane that has nothing selected
+ * is waiting for a choice rather than reporting a failure. The instruction
+ * therefore sits where the first property value will sit, in the quiet tier, with
+ * the pointer hint kept as a low-contrast mark rather than as an illustration.
+ */
+.empty-pane {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: var(--fs-action);
+  line-height: 1.6;
+}
+.empty-pane svg {
+  flex-shrink: 0;
+  color: var(--muted-2);
 }
 .content-view {
-  padding: 20px 22px;
+  padding: var(--space-5) var(--space-6);
   overflow: auto;
   min-height: 0;
 }
 .content-view > .muted {
   line-height: 1.7;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 /*
  * A text action is text. It answers with colour and a hairline underline, never
@@ -189,13 +301,14 @@
 .timeline-heading {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 .count {
   margin-left: auto;
   color: var(--muted-2);
   font-size: var(--fs-label);
+  font-weight: 600;
 }
 .quiet-message {
   font-size: var(--fs-meta);
@@ -203,20 +316,50 @@
   line-height: 1.7;
 }
 .content-view .audit-list {
-  margin-bottom: 18px;
+  margin-bottom: var(--space-4);
 }
 .content-view > .view-heading:not(:first-child) {
-  margin-top: 22px;
+  margin-top: var(--space-5);
 }
 .consent {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: var(--fs-meta);
   line-height: 1.7;
-  margin: 12px 0;
+  margin: var(--space-3) 0;
   color: var(--muted);
 }
 .consent input {
   margin-top: 3px;
+}
+
+/*
+ * A disclosure: a quiet control that opens a block of supporting values. It
+ * replaces the native <details> element everywhere the primary workspace uses
+ * one - the platform triangle, its 13px inset, and its behaviour under a
+ * different font are the last pieces of the operating system's own control
+ * language that were still showing through the product.
+ */
+.disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+.disclosure:hover {
+  color: var(--ink);
+}
+.disclosure svg {
+  transition: transform var(--motion-fast) var(--ease);
+}
+.disclosure[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+.disclosure-body {
+  margin-top: var(--space-3);
 }

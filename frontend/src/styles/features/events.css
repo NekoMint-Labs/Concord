@@ -1,78 +1,87 @@
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: #10252b66;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(2px);
-}
-.event-dialog {
-  background: white;
-  width: 470px;
-  max-width: 94vw;
-  border-radius: var(--radius-lg);
-  box-shadow: 0 15px 80px #132d3960;
-  padding: 26px;
-}
-.event-dialog header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 21px;
-}
-.event-dialog header button {
-  border: none;
-  background: transparent;
-  font-size: 19px;
-  color: #7a8b91;
-}
-.event-dialog label {
+/*
+ * The event composer's own fields, inside the shared dialog surface
+ * (frontend/src/styles/ui.css owns the surface, the header, and the footer
+ * rhythm, so a dialog and a confirmation are the same object).
+ *
+ * Fields are labelled above the control and take the full width of the surface,
+ * because a modal is a form and the label/field pair is the whole composition.
+ *
+ * The rhythm is the surface's own 16px gap and nothing else. The shared
+ * `.form-label` (the Inspector's) carries margins of its own, and these fields
+ * inherited them from a stylesheet that has nothing to do with this dialog: two
+ * fields stood 40px apart while the header opened the form 27px above the first
+ * one, so the form read as a loose stack of unrelated rows. A field is now
+ * separated from the next by the same gap the header and the footer get, and a
+ * label stays nearer to its own control than to the field above it.
+ *
+ * The select is a native control here on purpose: it sits inside a modal, where
+ * the platform's own dropdown is reachable, keyboard-correct, and consistent
+ * with the text fields beside it. What it does not keep is the operating
+ * system's arrow - the one part of the control the product does not draw, and
+ * the reason this field was the least integrated control in the application. It
+ * is replaced by the same chevron the project picker's menu trigger carries,
+ * over the same metrics as the inputs.
+ */
+.event-dialog .form-label {
   display: block;
-  font-size: 11px;
-  color: #6c7c83;
-  margin: 13px 0;
+  /* the shared `.form-label` (the Inspector's) carries margins of its own, and
+     this dialog's fields inherited them: the surface's own gap is the whole
+     rhythm here */
+  margin: 0;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--muted);
 }
-.event-dialog input,
-.event-dialog select,
+.event-dialog .form-label input,
+.event-dialog .form-label textarea,
+.event-dialog .form-label select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  font-size: var(--fs-action);
+  font-weight: 400;
+  letter-spacing: normal;
+}
+.event-dialog .form-label .select-field {
+  display: block;
+  position: relative;
+  margin-top: 6px;
+}
+.event-dialog .form-label .select-field select {
+  appearance: none;
+  margin-top: 0;
+  padding-right: 30px;
+}
+.event-dialog .form-label .select-field svg {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  /* the mark belongs to the control, so it must not intercept the click that
+     opens it */
+  pointer-events: none;
+}
+/* the action row and the caveat beneath it are the surface's footer: one gap
+   above, one below, and no margin of their own */
+.event-dialog .dialog-actions {
+  margin-top: 0;
+}
 .event-dialog textarea {
-  display: block;
-  width: 100%;
-  margin-top: 6px;
-}
-.event-dialog p {
-  font-size: 10px;
-  color: #8a969a;
-  line-height: 1.6;
-  margin: 10px 0;
-}
-.event-dialog footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 23px;
-}
-.form-label {
-  display: block;
-  font-size: 11px;
-  margin-top: 14px;
-  color: #73888c;
-}
-.form-label input,
-.form-label textarea,
-.form-label select {
-  width: 100%;
-  display: block;
-  margin-top: 6px;
-}
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 9px;
-  margin: 18px 0;
+  min-height: 64px;
 }
 .event-dialog > small {
-  font-size: 10px;
-  color: #859694;
+  color: var(--muted-2);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
+
+/* the confirmation surface is the same object, sized for one decision */
+.dialog-surface.is-compact {
+  width: 400px;
+  gap: var(--space-2);
+}
+.dialog-surface.is-compact .dialog-actions {
+  margin-top: var(--space-3);
 }

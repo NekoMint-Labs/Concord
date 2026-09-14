@@ -1,2 +1,20 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="theme-color" content="#18272e"/><title>CCA | Project coordination</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      The window tint. It has to be a literal: this file is outside the token
+      layer and cannot read a custom property. It is the chrome plane, so a
+      Windows title bar or a browser toolbar continues the application's own
+      material instead of introducing a third colour - the previous value was a
+      dark teal that existed nowhere in the palette.
+    -->
+    <meta name="theme-color" content="#f0f1f2" />
+    <title>Concord · 施工协同</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

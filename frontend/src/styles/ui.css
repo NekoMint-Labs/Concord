@@ -1,0 +1,356 @@
+/*
+ * Floating surfaces and their motion: menus, popovers, tooltips, dialogs, and
+ * toasts.
+ *
+ * Everything here floats above a region, so this is the only stylesheet allowed
+ * to spend elevation or an entrance. It is also where the family has to earn its
+ * hierarchy: the previous pass styled all five as one white rectangle with a
+ * light border and a shadow, so a menu, a toast, and a tooltip differed only by
+ * 2px of corner radius. They differ by role now.
+ *
+ *   menu / popover   a container of actions or detail: a plain surface closed
+ *                    by an edge and a shadow, generous padding, grouped items
+ *   tooltip          a label, not a container: inverted ink, no edge, read at a
+ *                    glance and gone
+ *   toast            a notice about something that already happened: compact,
+ *                    quiet, and never authoritative
+ *   dialog           the one object layered over the whole workspace: the only
+ *                    surface with the largest radius and the modal shadow
+ *
+ * Entry and exit are CSS keyframes rather than a JS animation on purpose: Radix
+ * keeps a surface mounted until its exit animation finishes, which is what makes
+ * a dismissed menu leave in the direction it arrived instead of blinking out,
+ * and it costs no JavaScript at all. The keyframes are declared once and keyed
+ * off `data-state`, so every floating surface in the product moves the same way.
+ */
+@keyframes surface-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes surface-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes scrim-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* ---------- triggers ---------- */
+
+/*
+ * A quiet trigger: chrome that opens something (a menu, a popover) and answers
+ * the pointer without becoming a bordered control. Shared so a menu trigger and
+ * a popover trigger in the same chrome row are the same object.
+ */
+.quiet-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 24px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-action);
+}
+.quiet-trigger:hover,
+.quiet-trigger[data-state="open"] {
+  background: var(--hover);
+  color: var(--text);
+}
+
+/* ---------- menu ---------- */
+
+/*
+ * Grouped, ordered, and closed: a label tier for the group name, a rule between
+ * groups, a tinted surface for the current item, and a right-aligned support
+ * column for the second line a list row would have carried.
+ */
+.menu-content {
+  z-index: 60;
+  min-width: 184px;
+  padding: var(--space-1);
+  border: 1px solid var(--line-float);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-float);
+  animation: surface-in var(--motion-fast) var(--ease);
+}
+.menu-content[data-state="closed"] {
+  animation: surface-out var(--motion-instant) var(--ease);
+}
+.menu-label {
+  display: block;
+  padding: var(--space-1) var(--space-2) 3px;
+  color: var(--text-faint);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.menu-separator {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--border);
+}
+.menu-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  width: 100%;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--fs-action);
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+.menu-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.menu-item-hint {
+  flex-shrink: 0;
+  max-width: 180px;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: var(--fs-label);
+  /* the support column is meta, so it stays at the regular weight even inside
+     the current item: the current item already emphasises its hint by darkening
+     it below, and a second 600 here would flatten the label/hint hierarchy that
+     is the whole point of the two lines */
+  font-weight: 400;
+  text-overflow: ellipsis;
+}
+.menu-item[data-highlighted] {
+  background: var(--hover);
+  color: var(--text);
+  outline: none;
+}
+.menu-item.active {
+  background: var(--accent-muted);
+  color: var(--text);
+  font-weight: 600;
+}
+/*
+ * The current item under keyboard focus needs its own answer. Both states set a
+ * background at equal specificity, so without this rule the active tint won and a
+ * keyboard user moving onto the current item saw nothing happen - the one place
+ * in the menu where the pointer and the keyboard disagreed.
+ */
+.menu-item.active[data-highlighted] {
+  background: var(--accent-strong);
+}
+/* a destructive item is the only item in a list of equals that carries the
+   exception colour, and only because its effect cannot be undone from the menu */
+.menu-item.is-danger {
+  color: var(--danger-fg);
+}
+.menu-item.is-danger[data-highlighted] {
+  background: var(--danger-soft);
+  color: var(--danger-fg);
+}
+.menu-item.active .menu-item-hint {
+  color: var(--text-secondary);
+}
+.menu-item[data-disabled] {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* ---------- popover ---------- */
+
+.popover {
+  z-index: 60;
+  width: min(440px, calc(100vw - 40px));
+  padding: var(--space-3);
+  border: 1px solid var(--line-float);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-float);
+  animation: surface-in var(--motion-fast) var(--ease);
+}
+.popover[data-state="closed"] {
+  animation: surface-out var(--motion-instant) var(--ease);
+}
+
+/* ---------- tooltip ---------- */
+
+/*
+ * A tooltip is a label, so it is not a small menu: no edge, no white surface,
+ * the ink plane and nothing else. It reads instantly against the light
+ * workspace, it cannot be mistaken for something interactive, and it stops being
+ * the fourth white rectangle in this stylesheet.
+ */
+.tooltip {
+  z-index: 70;
+  max-width: 280px;
+  padding: 5px var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--ink);
+  box-shadow: var(--shadow-float);
+  color: var(--surface);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  animation: surface-in var(--motion-instant) var(--ease);
+}
+.tooltip[data-state="closed"] {
+  animation: surface-out var(--motion-instant) var(--ease);
+}
+
+/* ---------- dialog ---------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--scrim);
+  animation: scrim-in var(--motion-fast) var(--ease);
+}
+.modal-backdrop[data-state="closed"] {
+  animation: scrim-out var(--motion-fast) var(--ease);
+}
+/*
+ * The one object in the application that is layered over everything, so it is
+ * the one that takes the largest radius, the modal shadow, and no edge of its
+ * own. Its header is an owner: the eyebrow, the title, and the close control in
+ * one row, so the surface states what it is before it states anything else.
+ */
+.dialog-surface {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 470px;
+  max-width: 94vw;
+  padding: var(--space-5) var(--space-5) 22px;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-modal);
+  animation: dialog-in var(--motion) var(--ease);
+}
+.dialog-surface[data-state="closed"] {
+  animation: dialog-out var(--motion) var(--ease);
+}
+/*
+ * The header is centred rather than top-aligned, because the close control
+ * belongs to the title, not to the eyebrow above it: top-aligned, a 26px target
+ * sat on the 11px eyebrow line and its × read as belonging to the small label
+ * while the surface is about the title. Centred on the heading block, which is
+ * eyebrow, title and identity, it lands on the title's own optical line. The
+ * eyebrow stays attached to the title and the identity below it is one step
+ * further off, so the block reads label / title / what this dialog is about
+ * rather than three lines of one heading.
+ */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.dialog-heading {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.dialog-heading h2 {
+  font-size: var(--fs-title);
+}
+.dialog-heading p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
+.dialog-heading .eyebrow {
+  display: block;
+  margin-bottom: 3px;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.dialog-note {
+  color: var(--text-faint);
+  font-size: var(--fs-meta);
+}
+
+/* ---------- toast ---------- */
+
+/*
+ * Sonner supplies the queue, the stacking, the swipe dismissal, and the live
+ * region; `unstyled` turns off its look so a toast is Concord's surface with
+ * Concord's border and no brand colour. Only the icon carries state.
+ *
+ * A toast reports something that already happened, so it stays small: one line
+ * of result, one line of support, and no authoritative state, which lives in the
+ * workspace where it can still be read after the toast is gone.
+ */
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 300px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-float);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-float);
+  color: var(--text);
+  font-size: var(--fs-action);
+}
+.toast-content {
+  min-width: 0;
+}
+.toast-title {
+  font-weight: 600;
+  line-height: 1.5;
+}
+.toast-description {
+  margin-top: 1px;
+  color: var(--text-muted);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+}
+.toast-icon {
+  display: flex;
+  margin-top: 3px;
+}
+.toast-success .toast-icon {
+  color: var(--success);
+}
+.toast-error .toast-icon {
+  color: var(--danger-fg);
+}
+.toast-info .toast-icon {
+  color: var(--text-muted);
+}

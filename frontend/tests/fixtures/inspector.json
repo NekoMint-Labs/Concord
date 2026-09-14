@@ -26,9 +26,7 @@
           "name": "Structure handover",
           "area_id": "L02-E",
           "discipline": "Structure",
-          "element_ids": [
-            "2EG_GvBOnHSANjPr7CHowU"
-          ],
+          "element_ids": ["2EG_GvBOnHSANjPr7CHowU"],
           "predecessors": [],
           "complete": true,
           "design_revision": "V16",
@@ -47,24 +45,15 @@
           "name": "East-wing duct installation",
           "area_id": "L02-E",
           "discipline": "Mechanical",
-          "element_ids": [
-            "2CU_Px_b9MJe1kH$vDvU8G",
-            "2EG_GvBOnHSANjPr7CHowU"
-          ],
-          "predecessors": [
-            "WP-100"
-          ],
+          "element_ids": ["2CU_Px_b9MJe1kH$vDvU8G", "2EG_GvBOnHSANjPr7CHowU"],
+          "predecessors": ["WP-100"],
           "complete": false,
           "design_revision": "V16",
           "accepted_revision": "V16",
           "required_workers": 4,
           "available_workers": 4,
-          "required_qualifications": [
-            "duct-install"
-          ],
-          "qualifications": [
-            "duct-install"
-          ],
+          "required_qualifications": ["duct-install"],
+          "qualifications": ["duct-install"],
           "materials": {
             "duct-section": true
           },
@@ -79,21 +68,15 @@
           "name": "Level 03 electrical rough-in",
           "area_id": "L03-E",
           "discipline": "Electrical",
-          "element_ids": [
-            "1xhjFnj$HKePcWkxtV734X"
-          ],
+          "element_ids": ["1xhjFnj$HKePcWkxtV734X"],
           "predecessors": [],
           "complete": false,
           "design_revision": "V16",
           "accepted_revision": "V16",
           "required_workers": 3,
           "available_workers": 3,
-          "required_qualifications": [
-            "electrician"
-          ],
-          "qualifications": [
-            "electrician"
-          ],
+          "required_qualifications": ["electrician"],
+          "qualifications": ["electrician"],
           "materials": {
             "cable-tray": true
           },
@@ -189,19 +172,10 @@
         "captured_at": "2026-09-08T05:49:37.361609Z"
       },
       "impact": {
-        "work_package_ids": [
-          "WP-200"
-        ],
-        "area_ids": [
-          "L02-E"
-        ],
-        "element_ids": [
-          "2CU_Px_b9MJe1kH$vDvU8G",
-          "2EG_GvBOnHSANjPr7CHowU"
-        ],
-        "disciplines": [
-          "Mechanical"
-        ]
+        "work_package_ids": ["WP-200"],
+        "area_ids": ["L02-E"],
+        "element_ids": ["2CU_Px_b9MJe1kH$vDvU8G", "2EG_GvBOnHSANjPr7CHowU"],
+        "disciplines": ["Mechanical"]
       },
       "evidence": [
         {
@@ -212,10 +186,7 @@
           "source_revision": "r2",
           "observed_at": "2026-09-08T05:49:37.354201Z",
           "work_package_id": "WP-200",
-          "element_ids": [
-            "2CU_Px_b9MJe1kH$vDvU8G",
-            "2EG_GvBOnHSANjPr7CHowU"
-          ],
+          "element_ids": ["2CU_Px_b9MJe1kH$vDvU8G", "2EG_GvBOnHSANjPr7CHowU"],
           "page": null,
           "location": "L02-E",
           "fact": "Inspection acceptance has not passed.",
@@ -228,9 +199,7 @@
           "snapshot_id": "d6006aa8-1185-4fcf-9f9b-7fbf5c88ac10",
           "work_package_id": "WP-200",
           "conclusion": "Inspection acceptance has not passed.",
-          "evidence_ids": [
-            "10dce1b9-0886-4ee9-9fa6-21c13bb486b5"
-          ],
+          "evidence_ids": ["10dce1b9-0886-4ee9-9fa6-21c13bb486b5"],
           "reasoning_summary": "Deterministic inspection rule compared recorded project facts.",
           "confidence": 1.0,
           "limitations": [
@@ -246,9 +215,7 @@
           "work_package_id": "WP-200",
           "kind": "inspection",
           "description": "Inspection acceptance has not passed.",
-          "evidence_ids": [
-            "10dce1b9-0886-4ee9-9fa6-21c13bb486b5"
-          ],
+          "evidence_ids": ["10dce1b9-0886-4ee9-9fa6-21c13bb486b5"],
           "resource_id": null,
           "blocking": true
         }
@@ -263,9 +230,7 @@
         {
           "work_package_id": "WP-200",
           "status": "BLOCKED",
-          "constraint_ids": [
-            "d7f21b82-538d-47b5-817c-be0a23782599"
-          ],
+          "constraint_ids": ["d7f21b82-538d-47b5-817c-be0a23782599"],
           "snapshot_id": "d6006aa8-1185-4fcf-9f9b-7fbf5c88ac10"
         },
         {
@@ -325,9 +290,7 @@
           "id": "6ab43b8a-5dad-45f9-a99e-1e825ce4bef7",
           "title": "Coordinate East-wing duct installation",
           "explanation": "Obtain the listed confirmations from responsible owners, then refresh and re-check. Demo execution simulates confirmations; it does not perform site work or certify safety.",
-          "constraint_ids": [
-            "d7f21b82-538d-47b5-817c-be0a23782599"
-          ],
+          "constraint_ids": ["d7f21b82-538d-47b5-817c-be0a23782599"],
           "effects": [
             {
               "kind": "record_inspection",
@@ -338,9 +301,7 @@
           ],
           "resolver": "simple"
         },
-        "evidence_ids": [
-          "10dce1b9-0886-4ee9-9fa6-21c13bb486b5"
-        ],
+        "evidence_ids": ["10dce1b9-0886-4ee9-9fa6-21c13bb486b5"],
         "execution_mode": "simulated",
         "created_at": "2026-09-08T05:49:37.364740Z"
       }
