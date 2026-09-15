@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Building2 } from "lucide-react";
+import { Building2, PenLine } from "lucide-react";
 import { api, setToken, type DTO } from "./api/client";
 import { Button } from "./components/ui/button";
+import { icon } from "./components/ui/icon";
 import { AppToaster } from "./components/ui/AppToaster";
+import { AppTooltip } from "./components/ui/AppTooltip";
 import { Timeline } from "./features/Timeline";
 import { EventComposer } from "./features/EventComposer";
 import type { InspectorView } from "./features/Inspector";
@@ -23,6 +25,15 @@ export function App() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [inspectorView, setInspectorView] = useState<InspectorView>("blocker");
   const [eventDialog, setEventDialog] = useState(false);
+  /*
+   * Navigation collapse is a frontend working posture, not project state: it says
+   * how much room this user wants for the work plane right now, changes nothing
+   * about the project, and is deliberately not sent anywhere. It is also not
+   * persisted - a remembered posture would have to be restored before the first
+   * paint, and this product would rather open in one predictable state than in
+   * whichever one was last touched.
+   */
+  const [navOpen, setNavOpen] = useState(true);
   const [token, updateToken] = useState("");
   const { projects, workspace } = useWorkspace(project);
   const { perform, busy, error, setError } = useWorkspaceMutation();
@@ -43,7 +54,7 @@ export function App() {
   if (!data || !wp)
     return (
       <div className="startup">
-        <Building2 size={36} />
+        <Building2 size={36} aria-hidden="true" />
         <h1>Concord</h1>
         {workspace.isPending ? (
           <p>正在连接项目工作区…</p>
@@ -73,12 +84,17 @@ export function App() {
     );
 
   return (
-    <div className="application-shell" aria-busy={busy}>
+    <div
+      className={`application-shell${navOpen ? "" : " is-nav-collapsed"}`}
+      aria-busy={busy}
+    >
       <ProjectSidebar
         data={data}
         project={project}
         projects={projects.data}
         selected={wp.id}
+        collapsed={!navOpen}
+        onCollapse={() => setNavOpen(false)}
         onProject={setProject}
         onSelect={(id) => {
           setSelected(id);
@@ -87,13 +103,21 @@ export function App() {
         }}
       />
       <main className="main-shell">
-        <WorkspaceHeader data={data} wp={wp}>
+        <WorkspaceHeader
+          data={data}
+          wp={wp}
+          navCollapsed={!navOpen}
+          onToggleNav={() => setNavOpen((open) => !open)}
+        >
           <Button
             variant="ghost"
             size="sm"
             disabled={busy}
             onClick={() => setEventDialog(true)}
           >
+            {/* the one action in the shell that writes: a mark says "this records
+                something" before the label is read */}
+            <PenLine {...icon} />
             记录变更
           </Button>
           <DemoControls
@@ -113,9 +137,11 @@ export function App() {
         {error && (
           <div className="alert" role="alert">
             {error}
-            <button onClick={() => setError("")} aria-label="关闭提示">
-              ×
-            </button>
+            <AppTooltip label="关闭提示">
+              <button onClick={() => setError("")} aria-label="关闭提示">
+                ×
+              </button>
+            </AppTooltip>
           </div>
         )}
         <WorkspaceViews

@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { DTO, WorkPackage } from "../api/client";
 import { Button } from "../components/ui/button";
 import { AppDialog, DialogClose } from "../components/ui/AppDialog";
+import { icon } from "../components/ui/icon";
 
 export function EventComposer({
   wp,
@@ -85,7 +86,7 @@ export function EventComposer({
             <option value="inspection">验收未通过</option>
             <option value="external">外部观察</option>
           </select>
-          <ChevronDown size={14} aria-hidden="true" />
+          <ChevronDown {...icon} />
         </span>
       </label>
       {!["inspection", "external"].includes(kind) && (

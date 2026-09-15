@@ -46,7 +46,7 @@
 }
 .audit-list strong {
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
 }
 .operation-form {
   padding: var(--space-4);
@@ -57,7 +57,7 @@
 }
 .operation-form summary {
   font-size: var(--fs-meta);
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
 }
 .operation-form p {
@@ -84,7 +84,7 @@
   margin-top: 13px;
 }
 .run-history {
-  margin-top: 24px;
+  margin-top: 20px;
 }
 .run-history > select {
   width: 100%;

@@ -22,11 +22,13 @@
  *    1.02:1, so a "card" was visible only by its border and its shadow, which is
  *    exactly the failure mode rule 1 removes.
  *
- * 3. HIERARCHY IS TYPE. Seven roles with a real size step each (20 / 19 / 15 /
- *    14 / 13 / 12 / 11), two weights, and tabular figures. The previous scale
- *    spanned 12-14px with 400/500/600, and a 500-to-600 weight difference is
- *    invisible in the CJK faces this product actually renders in, so no
- *    hierarchy was left anywhere.
+ * 3. HIERARCHY IS TYPE AND WEIGHT, NOT SIZE. Seven roles with a real size step
+ *    each (20 / 18 / 14.5 / 13.5 / 13 / 12 / 11.5), three weights of which 600 is
+ *    spent only where it carries information, and tabular figures. The previous
+ *    scale was one notch larger at the top and used 600 on every label, which is
+ *    the "heavy" half of the density problem: the product read as coarser than it
+ *    was, because the two tiers that carry the most text were the two tiers that
+ *    had been emphasised.
  *
  * The ladder is cool-stone graphite: a true neutral with a whisper of cool and
  * no more. The previous pass carried a few points of warmth in every plane,
@@ -51,29 +53,67 @@
   font-family: var(--font-ui);
   color: var(--ink);
   background: var(--bg-app);
-  font-size: 14px;
+  font-size: 13.5px;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 
   /*
    * Neutrals. One plane per structural role, ordered by recession: the window
-   * backdrop is the dimmest, navigation sits on top of it, secondary panes
-   * (a source list, an element list, the Inspector, a grouped value well) are
-   * the next step, chrome bands and pane headers come after that, and the work
-   * plane is the lightest thing on screen. Depth is a value relationship, never
-   * a box, so no plane needs a border to be legible.
+   * backdrop is the dimmest, persistent navigation sits on top of it, the docked
+   * contextual Inspector is the next step, a local object list - a BIM element
+   * browser, a document source list - and the chrome bands (a toolbar, a pane
+   * header, a grouped value well) come after that, and the work plane is the
+   * lightest thing on screen. Depth is a value relationship, never a box, so no
+   * plane needs a border to be legible.
    *
-   * Measured, not eyeballed: each step below is at least 1.08:1 from its
-   * neighbour (see the ordered ladder in frontend/tests/design-tokens.test.mjs).
-   * The steps have to be this large because the eye is far better at detecting
-   * a thin high-contrast edge than a 2% area difference - so a small step plus
-   * a hairline reads as a table, while a large step plus no hairline reads as
-   * separated regions.
+   * The four roles are distinguished by which plane they take - the local object
+   * list used to share the Inspector's, which is what made a window of three
+   * similar grey columns around one work plane read as assembled rather than as
+   * one product - and each role is spent once.
+   *
+   * The one deliberate exception is persistent navigation, which shares the
+   * chrome bands' plane rather than taking a step of its own (--sidebar, in the
+   * semantic block below). It is an *assignment* and not a value: no plane moved,
+   * and --surface-nav is still declared as the recessed step it always was.
+   *
+   * `--surface-list` is the one step this pass added, and it is a *half* step on
+   * purpose - a material difference inside the local-object-list role, not another
+   * structural plane. The list used to take the chrome band's own value, so the
+   * toolbar above it, its own header band, and its rows were one uninterrupted
+   * slab of grey, and a slab has no name. One notch below the chrome bands, the
+   * pane's own header reads as a band over its rows (1.035:1) and the browser is
+   * plainly lighter than persistent navigation (1.19:1 rather than 1.13:1), so it
+   * cannot be read as a second rail.
+   *
+   * The step is deliberately small, and it cannot be larger. The gap between the
+   * Inspector's plane and the chrome bands is only 1.087:1 wide, so no value exists
+   * that clears the 1.08:1 structural step in both directions: this ladder is
+   * saturated at five planes, and a sixth can only ever be a half step inside one
+   * of them. This one lands 1.051:1 from the Inspector's plane - the local browser
+   * and the docked contextual pane are still two materials rather than the one
+   * material they were before the surface pass, and they are never adjacent on
+   * screen (below 1280px the list yields its column to the Inspector altogether), so
+   * the remaining difference is read across the work plane between them rather than
+   * edge to edge.
+   *
+   * Measured, not eyeballed: each step of the *structural* ladder above is at
+   * least 1.08:1 from its neighbour (see the ordered ladder in
+   * frontend/tests/design-tokens.test.mjs). The steps have to be this large because
+   * the eye is far better at detecting a thin high-contrast edge than a 2% area
+   * difference - so a small step plus a hairline reads as a table, while a large
+   * step plus no hairline reads as separated regions. `--surface-list` is the one
+   * deliberate exception: it is a material difference *inside* one role rather than
+   * between two, so it is a small step by definition and it is therefore not part of
+   * the ordered ladder the contract measures.
    */
   --bg-app: #cbcdcf;
   --surface-nav: #d9dbdd;
   --surface-detail: #e6e8e9;
+  /* the local object list's own body: one notch below the chrome bands, so a pane
+     header is a band over it and the browser stays plainly lighter than the sidebar
+     (see the ladder note above) */
+  --surface-list: #ededee;
   --surface-chrome: #f0f1f2;
   --surface-workspace: #fbfbfc;
   /* controls, content objects, and floating surfaces stay plain white so they
@@ -90,14 +130,31 @@
   /* the quieter content rule, for a second-order separation on a light plane */
   --line-soft: #e5e8e9;
   /*
-   * Control boundaries: inputs, selects, secondary buttons. These *identify* a
-   * control, so WCAG 1.4.11 applies, and this clears 3:1 against every plane a
-   * boundary is actually placed on - including the navigation plane, where the
-   * project picker sits and where a tone tuned only against white would fail.
-   * It is also the register Windows itself uses for a text box border, which is
-   * the platform this application ships in.
+   * Control boundaries. Two tokens, and the split is a placement rule rather
+   * than a tone preference: a boundary has to clear WCAG 1.4.11 (3:1) against
+   * the plane it is drawn on, and the two planes controls actually sit on are
+   * far apart in value.
+   *
+   * `--line-control` is the boundary for a control that can land on the
+   * *navigation* plane - the project picker, and the startup token field on the
+   * window backdrop. On #d9dbdd this is already at 3.07:1, which is the floor:
+   * it cannot be quietened any further without failing on the exact plane it is
+   * reserved for.
+   *
+   * `--line-control-soft` is the boundary for every control that only ever sits
+   * on a light plane - a toolbar button, a search field, a dialog field, the
+   * BIM IFC actions. The binding plane is the darkest of those
+   * (`--surface-detail`, where the Inspector's own fields sit) and it clears
+   * 3.02:1 there, 3.28:1 on chrome, 3.71:1 on white. It is roughly 13% lighter
+   * than `--line-control`, which is what stops every secondary control in the
+   * product reading as a native form outline.
+   *
+   * The rule is one direction only: `--line-control-soft` may never be spent on
+   * `--surface-nav` or `--bg-app`, where it measures 2.67:1 and 2.33:1.
+   * frontend/tests/design-tokens.test.mjs holds both halves of it.
    */
   --line-control: #787b7e;
+  --line-control-soft: #838586;
   /* floating-surface edges. A menu or a dialog is identified by its surface and
      its shadow; this only has to close the shape. */
   --line-float: #c8cbce;
@@ -115,6 +172,17 @@
   /* interaction overlays are neutral ink at low alpha, so a hover reads as the
      same material darkening under the pointer rather than as grey paint */
   --hover: rgba(23, 25, 27, 0.05);
+  /*
+   * The second depth of the same overlay, and the reason it exists is that a
+   * secondary control now rests on the first one. A white rectangle on a chrome
+   * band is a form outline and nothing else: at 1.09:1 its own fill says nothing,
+   * so a 1px boundary was carrying the whole control and every toolbar read as a
+   * row of outlined boxes. Filled with the neutral the pointer already uses, the
+   * same control is a quiet local surface whose edge is one of two signals rather
+   * than the only one - and the pointer then darkens it by `--hover-strong`, so
+   * rest and hover are one material at two depths.
+   */
+  --hover-strong: rgba(23, 25, 27, 0.09);
   --focus: var(--accent);
 
   /*
@@ -207,22 +275,44 @@
 
   /*
    * Type scale: one step per role, with a real size step between every role.
-   * The band that carried all product text used to be 12-14px, which left no
-   * room for hierarchy in a script where weight barely varies. Seven roles now,
-   * each a deliberate step: 22 / 20 / 15 / 14 / 13 / 12 / 11 - the display step
-   * is the application's own name on the startup surface, and the label step is
-   * the one tier small enough to be mistaken for decoration, so it is reserved
-   * for labels that carry no product information of their own. The title step sat
-   * one pixel under the display step, which left the object title - the one line
-   * that names what the page is about - with no presence of its own.
+   * Seven roles: 20 / 18 / 14.5 / 13.5 / 13 / 12.5 / 12. The display step is the
+   * application's own name on the startup surface; the label step is the smallest
+   * tier, and it is now a real 12px rather than 11.5px (below).
+   *
+   * The two smallest steps moved up one notch in this pass - 12 -> 12.5 and
+   * 11.5 -> 12 - and nothing else moved. The floor is the reason. 11.5px was
+   * carrying text a person has to read: a property label, a metadata key, a pane
+   * header's count, a work package's own id beside its name. Meaningful text below
+   * 12px is the point at which a desktop reader stops reading and starts decoding,
+   * and the small end is where the product's *volume* of quiet text lives, so the
+   * lift costs a little height in every list and buys legibility everywhere. Only
+   * technical register - a GUID, a SHA, an IFC id, a revision - may approach the
+   * floor, and it approaches it through the mono role rather than by earning a
+   * smaller step. Hierarchy below this point is spent on weight and colour, which
+   * is what the two tiers beneath the action step are: a 500 label in a quieter
+   * ink, not a smaller one.
+   *
+   * The scale came down about 7% in the density pass before this one, unevenly and
+   * on purpose. The two steps that were doing the shouting were the display and the
+   * title step: a 20px pane title in a 48px toolbar band and a 22px product name
+   * read as a settings application, and the object title sat one pixel under the
+   * display step, so a work package's own name competed with the application's. The
+   * two bands that carry the volume of product text moved least - body text cannot
+   * be made "denser" by shrinking it past the point where Chinese is comfortable
+   * at 1x - and the label tier moved *up* there too, because 11px tracking labels
+   * were the reason the header and metadata rows read as coarse rather than quiet.
+   * That direction is the one this pass finished: the smallest tier is now at the
+   * floor a reader can actually hold.
+   *
+   * The hierarchy is spent on weight and colour instead (see --font-ui).
    */
-  --fs-display: 22px; /* the application's own name, on the startup surface */
-  --fs-title: 20px; /* object title: the selected work package, a document */
-  --fs-section: 15px; /* a pane's or a section's own heading */
-  --fs-body: 14px; /* body text and engineering values */
+  --fs-display: 20px; /* the application's own name, on the startup surface */
+  --fs-title: 18px; /* object title: the selected work package, a document */
+  --fs-section: 14.5px; /* a pane's or a section's own heading */
+  --fs-body: 13.5px; /* body text and engineering values */
   --fs-action: 13px; /* controls, list-row titles */
-  --fs-meta: 12px; /* metadata, timestamps, counts */
-  --fs-label: 11px; /* the small label tier: eyebrows, group titles */
+  --fs-meta: 12.5px; /* metadata, timestamps, counts, gutters */
+  --fs-label: 12px; /* the small label tier: eyebrows, group titles, pane headers */
 
   /*
    * Font roles. One UI face for everything, and one technical face for the
@@ -231,11 +321,16 @@
    * Tauri WebView, and a remote font would be a network dependency and a flash
    * of unstyled text in both.
    *
-   * Two weights, 400 and 600, and no others. That is the whole axis this
-   * product can rely on: 500 sits between them in Segoe UI but not in the CJK
-   * faces that follow it in this stack, so a 500-to-600 difference renders as
-   * "identical" in exactly the lines that carry Chinese product text. A third
-   * weight is a third weight the user cannot see.
+   * Three weights are named - 400, 500, 600 - and the middle one is deliberately
+   * the tier labels and metadata are written in. On the Windows WebView both
+   * "Segoe UI" and "Microsoft YaHei" resolve 500 to their regular face, so a 500
+   * label is *not* distinguished from body text by weight on the platform this
+   * ships in; it is distinguished by size, tracking, and colour, which is the
+   * hierarchy this pass wants. 600 is then spent only where it is carrying real
+   * information - an object title, the current row or view, a committed action -
+   * instead of on every 11px label in the product, which is what made the
+   * interface read as heavy. Never write a 500-to-600 *difference* into a line
+   * that carries Chinese product text: it renders as identical.
    */
   --font-ui:
     "Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui,
@@ -262,7 +357,28 @@
    * height, and every scrollable workspace reserves it as bottom padding so the
    * end of the content can always clear the band above it.
    */
-  --status-bar-h: 36px;
+  --status-bar-h: 32px;
+
+  /*
+   * Control heights, named once so the density calibration is one edit rather
+   * than a hunt through feature stylesheets. Two steps: the standard control
+   * (buttons, inputs, the project picker) and the small one used where a control
+   * sits inside a chrome band that is itself only 42px tall. Both stay above the
+   * 24px WCAG 2.5.8 target floor, which is the one number this scale may not go
+   * under for the sake of density.
+   */
+  --control-h: 28px;
+  --control-h-sm: 25px;
+
+  /*
+   * The gap between a functional icon and its label, named once. It is one
+   * number for the whole product because it is an optical relationship rather
+   * than a layout decision: a 15px mark and a line of 13px text need about 6px
+   * between them, and a feature that invents its own value is how two buttons in
+   * one chrome row stop reading as one row. The icon size and stroke that go
+   * with it live in frontend/src/components/ui/icon.ts.
+   */
+  --icon-gap: 6px;
 
   /*
    * Semantic layer. These are the names product code and every component under
@@ -275,7 +391,31 @@
    */
   --background: var(--bg-app);
   --workspace: var(--surface-workspace);
-  --sidebar: var(--surface-nav);
+  /*
+   * Persistent navigation is part of the window's chrome, not a plane of its own.
+   *
+   * It took the recessed navigation plane, one full step below the chrome bands,
+   * and that is exactly what it looked like: a tall grey slab bolted to the left
+   * of the application, 1.34:1 from the work plane and carrying nothing below its
+   * last row. Re-toning the plane could not fix it - the ladder is saturated, so
+   * the most --surface-nav could give back before it fell through its own 1.08:1
+   * floor against --surface-detail was about four percent, which the eye does not
+   * register. The assignment moved instead.
+   *
+   * On the chrome plane the sidebar is one material with the window band above
+   * it, which is the desktop composition this is: an L of window chrome around a
+   * single light work plane. What separates navigation from the work plane is now
+   * the same step that already separates every toolbar and every pane header from
+   * its own content (--surface-chrome -> --surface-workspace, 1.09:1) - one weak
+   * signal, spent the same way everywhere in the product, instead of a second
+   * darker material that only the sidebar ever used.
+   *
+   * Selection is not weakened by the move: --accent-muted on --surface-chrome is
+   * 1.21:1, the strongest step it takes on any plane (tests/design-tokens.test.mjs
+   * holds that floor), and the row grammar inside the column is what carries the
+   * hierarchy now (styles/shell.css).
+   */
+  --sidebar: var(--surface-chrome);
   --chrome: var(--surface-chrome);
   --surface-elevated: var(--surface);
   --border: var(--line);
@@ -349,10 +489,10 @@ summary:focus-visible {
 input,
 textarea,
 select {
-  border: 1px solid var(--line-control);
+  border: 1px solid var(--line-control-soft);
   border-radius: var(--radius-md);
   background: var(--surface);
-  padding: 5px 8px;
+  padding: 4px 8px;
   color: var(--ink);
 }
 textarea {
@@ -380,12 +520,12 @@ h2 {
 /* a pane's or a section's own heading */
 h3 {
   font-size: var(--fs-section);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.35;
 }
 h4 {
   font-size: var(--fs-action);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.4;
 }
 small {
@@ -435,12 +575,12 @@ th {
   background: transparent;
   color: var(--muted);
   font-size: var(--fs-label);
-  font-weight: 600;
-  padding: 8px 12px;
+  font-weight: 500;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--line);
 }
 td {
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--line-soft);
   vertical-align: top;
 }

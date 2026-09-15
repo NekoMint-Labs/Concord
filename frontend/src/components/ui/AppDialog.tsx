@@ -1,6 +1,8 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
+import { AppTooltip } from "./AppTooltip";
+import { icon } from "./icon";
 
 /**
  * A modal dialog. It replaces the hand-written one in the event composer, which
@@ -54,9 +56,11 @@ export function AppDialog({
                   <Dialog.Description>{description}</Dialog.Description>
                 )}
               </div>
-              <Dialog.Close className="icon-button" aria-label={closeLabel}>
-                <X size={16} />
-              </Dialog.Close>
+              <AppTooltip label={closeLabel}>
+                <Dialog.Close className="icon-button" aria-label={closeLabel}>
+                  <X {...icon} />
+                </Dialog.Close>
+              </AppTooltip>
             </header>
             {children}
           </Dialog.Content>

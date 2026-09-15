@@ -1,13 +1,15 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { MousePointerClick } from "lucide-react";
+import { FolderOpen, MousePointerClick, PackageOpen } from "lucide-react";
+import { icon } from "../components/ui/icon";
 import { api } from "../api/client";
 import { useBIMSource } from "./useBIMSource";
 import { Button } from "../components/ui/button";
 import { notify } from "../components/ui/AppToaster";
 import { AppDisclosure } from "../components/ui/AppDisclosure";
 import { AppMenu, AppMenuItem, AppMenuLabel } from "../components/ui/AppMenu";
+import { AppTooltip } from "../components/ui/AppTooltip";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
 import { useMotion } from "../motion";
 const IFCViewer = lazy(() => import("./IFCViewer"));
@@ -48,6 +50,7 @@ export default function BIMWorkspace({
     chooseFile,
   } = useBIMSource(project);
   const { transition, variants } = useMotion();
+  const fileInput = useRef<HTMLInputElement>(null);
   const item = elements.data?.find((e) => e.id === selected);
   const count = elements.data?.length ?? 0;
   const selectedImpacted = item ? impacted.includes(item.id) : false;
@@ -111,7 +114,7 @@ export default function BIMWorkspace({
         variants={variants.detailSwap}
         initial="hidden"
         animate="visible"
-        transition={transition()}
+        transition={transition("fast")}
       >
         <div className="property-group">
           <span className="property-group-title">标识与类型</span>
@@ -152,14 +155,36 @@ export default function BIMWorkspace({
       </AppDisclosure>
     </>
   ) : (
-    /* Nothing selected is a state, not a hole: the pane states what it is
-       waiting for at the origin its own values start from, in the register those
-       values are written in, instead of as a placeholder centred in the space. */
+    /*
+     * Nothing selected is a state, not a hole - and not a blank panel with a
+     * caption pinned to its own top edge either, which is what one line at the
+     * pane's origin looked like: a workspace that had not finished loading, with
+     * a sentence in the corner where the first property value would be.
+     *
+     * The instruction is composed instead, with the hierarchy it actually has: the
+     * existing functional mark, what to do, and what doing it gets you. It sits
+     * about a third of the way down the pane it is waiting in, so it reads as
+     * workspace guidance rather than as a heading for an empty document
+     * (styles/viewers.css owns the placement, and states why it is a spacer and
+     * not a margin). No card, no illustration, no call to action: the pane is
+     * waiting for a choice, and the choice is in the column beside it.
+     */
     <div className="empty-pane">
-      <MousePointerClick size={15} aria-hidden="true" />
-      <p>选择左侧构件查看属性和关联关系</p>
+      <MousePointerClick {...icon} />
+      <span>
+        <strong>选择一个构件</strong>
+        <small>查看其属性和关联关系</small>
+      </span>
     </div>
   );
+
+  /*
+   * The property pane is *waiting* when there is nothing to show, and it states
+   * that as a class of its own rather than through a `:has()` on the DOM: the
+   * placement of the empty state belongs to the pane, not to the element inside
+   * it, and both the wide and the condensed branch render the same pane.
+   */
+  const propertiesClass = item ? "pane-body" : "pane-body is-waiting";
 
   /*
    * Condensed: the Inspector has taken the column the element list would have
@@ -204,19 +229,28 @@ export default function BIMWorkspace({
           </AppMenu>
           {item && <span className="mono">{item.id}</span>}
         </header>
-        <div className="pane-body">{properties}</div>
+        <div className={propertiesClass}>{properties}</div>
       </Pane>
     </PaneSplit>
   ) : (
     <PaneSplit id="bim" persist>
-      {/* the floor is a collapse guard, not a target width: at 860px with
-          the sidebar and the Inspector open this nested split has about
-          340px to share between the list and the properties */}
+      {/*
+        The browser column is 264px, the same proportion the Documents source
+        list already uses and reads well at. It used to open at 360px, which is
+        *wider than the application's own sidebar* - so the browser was the
+        largest single column on the BIM screen and had to be read as a second
+        navigation rail rather than as a local object list beside the property
+        sheet it belongs to. Its plane did the rest of that work in the surface
+        pass: it now takes the quiet local-object-list plane rather than the
+        Inspector's recessed one, which is what lets it sit *inside* this workspace
+        instead of beside it (frontend/src/styles/viewers.css states the
+        assignment, frontend/src/styles/base.css owns the ladder).
+      */}
       <Pane
         className="bim-element-list pane-stack"
-        defaultSize="360px"
-        minSize="150px"
-        maxSize="46%"
+        defaultSize="264px"
+        minSize="180px"
+        maxSize="34%"
       >
         <header className="pane-header">
           <span className="pane-header-label">构件</span>
@@ -230,7 +264,7 @@ export default function BIMWorkspace({
           <h3>{item ? item.name : "属性"}</h3>
           {item && <span className="mono">{item.id}</span>}
         </header>
-        <div className="pane-body">{properties}</div>
+        <div className={propertiesClass}>{properties}</div>
       </Pane>
     </PaneSplit>
   );
@@ -243,36 +277,69 @@ export default function BIMWorkspace({
           {file ? "本地 IFC / That Open Engine" : "结构化 BIM / 无需几何引擎"}
         </span>
         <div className="viewer-toolbar-actions">
-          <label className="import-button">
-            打开本地 IFC
-            <input
-              aria-label="Local IFC file"
-              type="file"
-              accept=".ifc"
+          {/*
+            The two ways into geometry, marked and explained.
+
+            They stay labelled: "local file" and "the project's own IFC" are a
+            domain distinction that no pair of glyphs carries on its own, so the
+            mark only tells the two apart at a glance once the labels have taught
+            it. What teaches it is the tooltip, which says the difference in one
+            clause each - and which is not the only place the difference exists:
+            the note under the panes states it in full, which is what keeps this
+            inside AppTooltip's contract rather than making product meaning
+            tooltip-only.
+
+            The local-file control is a button that opens a hidden file input
+            rather than a label wrapping one. A label is not focusable, so the one
+            control here that leads somewhere local was the one control in the
+            product that Tab could not reach; a real button is tabbable, takes the
+            shared focus ring, and is what lets its own tooltip open on focus.
+          */}
+          <AppTooltip label="在本机打开 IFC 文件，不导入项目">
+            <button
+              type="button"
+              className="import-button"
               disabled={busy}
-              onChange={(event) => {
-                chooseFile(event.target.files?.[0]);
-                event.target.value = "";
-              }}
-            />
-          </label>
-          <Button
-            size="sm"
-            variant="secondary"
+              onClick={() => fileInput.current?.click()}
+            >
+              <FolderOpen {...icon} />
+              打开本地 IFC
+            </button>
+          </AppTooltip>
+          <input
+            ref={fileInput}
+            hidden
+            type="file"
+            accept=".ifc"
             disabled={busy}
-            onClick={() => void openImported()}
-          >
-            打开项目 IFC
-          </Button>
-          {file && (
+            aria-label="Local IFC file"
+            onChange={(event) => {
+              chooseFile(event.target.files?.[0]);
+              event.target.value = "";
+            }}
+          />
+          <AppTooltip label="打开已导入当前项目的 IFC 文件">
             <Button
               size="sm"
               variant="secondary"
               disabled={busy}
-              onClick={() => void importSource()}
+              onClick={() => void openImported()}
             >
-              {busy ? "处理中…" : "导入项目"}
+              <PackageOpen {...icon} />
+              打开项目 IFC
             </Button>
+          </AppTooltip>
+          {file && (
+            <AppTooltip label="把本地 IFC 发送到已配置的后端并导入当前项目">
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => void importSource()}
+              >
+                {busy ? "处理中…" : "导入项目"}
+              </Button>
+            </AppTooltip>
           )}
           {file && (
             <Button

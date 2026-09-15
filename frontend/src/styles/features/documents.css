@@ -28,7 +28,7 @@
 .documents-search {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--icon-gap);
   flex: 1 1 260px;
   max-width: 460px;
 }
@@ -39,13 +39,13 @@
 .documents-search input {
   flex: 1;
   min-width: 120px;
-  height: 30px;
+  height: var(--control-h);
 }
 /* a transient import notice: part of the chrome band, closed by the plane step
    below it rather than by a rule */
 .upload-status {
   flex-shrink: 0;
-  padding: 9px 22px;
+  padding: 7px 18px;
   background: var(--surface-chrome);
   color: var(--muted);
   font-size: var(--fs-meta);
@@ -57,16 +57,31 @@
 /*
  * The source list is the left pane of the split (frontend/src/layout/PaneSplit),
  * so it states no width and the pane edge is the divider rather than a border
- * here. It is a recessed plane beside the work plane, and its rows live in the
- * pane's own body so the header stays fixed while the list scrolls.
+ * here. Its rows live in the pane's own body so the header stays fixed while the
+ * list scrolls.
+ *
+ * It is the same surface role as the BIM element list, and it takes the same
+ * plane: the local object list has a value of its own, half a step below the
+ * chrome bands and well below the persistent navigation plane, so this column
+ * cannot read as a second navigation rail and its own header band is a band
+ * rather than the same grey as the rows it names (frontend/src/styles/base.css
+ * owns the step, frontend/src/styles/viewers.css states the assignment).
  */
 .document-list {
-  background: var(--surface-detail);
+  background: var(--surface-list);
+}
+/*
+ * The browser header, aligned with the list: the header's title and the row titles
+ * beneath it open on one edge, so the pane reads as a named list rather than as a
+ * band above a list (frontend/src/styles/viewers.css states the arithmetic).
+ */
+.document-list > .pane-header {
+  padding-left: 15px;
 }
 /* the body owns the inset, so a selected row's tint stops short of the pane edge
    and reads as a selection rather than as a region */
 .document-list .pane-body {
-  padding: var(--space-1) var(--space-2);
+  padding: 4px 6px;
 }
 /*
  * A source row is a structural list row: square is wrong here and so is a card.
@@ -79,15 +94,18 @@
 .document-list .pane-body > button {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 6px 9px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink-2);
   text-align: left;
-  transition: background var(--motion-fast) var(--ease);
+  /* colour is in the list because selection steps the row's provenance up with
+     its filename - see `.selected small` below */
+  transition:
+    background var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease);
 }
 .document-list .pane-body > button:not(.selected):hover {
   background: var(--hover);
@@ -95,28 +113,28 @@
 .document-list .pane-body > button.selected {
   background: var(--accent-muted);
 }
-.document-list .pane-body > button svg {
-  flex-shrink: 0;
-  /* optical centre of the first line, not the row's top padding */
-  margin-top: 2px;
-  color: var(--muted-2);
-}
-.document-list .pane-body > button.selected svg {
-  color: var(--ink-2);
-}
+/*
+ * There is deliberately no rule for a row's own mark here. The row used to lead
+ * with a file glyph, which is the same fact printed on every line of a list whose
+ * every line is a file; the row now opens with its filename, and the list matches
+ * the sidebar and the BIM element browser, where an object's own name is what
+ * identifies it (frontend/src/components/ui/icon.ts).
+ */
 /*
  * Two tiers inside one row: the filename is the object and takes full ink, and the
- * parser and content hash are its provenance. The hash is a technical identifier,
- * so it carries the mono role (components.css) and can be compared down the list;
- * the line stays at the label tier and in faint ink, which on the recessed pane
- * plane is still 6.4:1 - receded, not faint.
+ * parser and content hash are its provenance. The filename opens at the body step
+ * rather than the action step, because a source list is a list of documents a
+ * person reads the names of rather than a list of controls. The hash is a
+ * technical identifier, so it carries the mono role (components.css) and can be
+ * compared down the list; the line stays at the label tier in faint ink, which on
+ * this plane is still 5.7:1 - receded, not faint.
  */
 .document-list .pane-body > button strong {
   display: block;
   color: var(--ink);
-  font-size: var(--fs-action);
+  font-size: var(--fs-body);
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 .document-list .pane-body > button.selected strong {
@@ -129,6 +147,17 @@
   font-size: var(--fs-label);
   line-height: 1.5;
   overflow-wrap: anywhere;
+}
+/*
+ * Selection steps the whole row, not only its filename: the parser and the hash
+ * are the provenance of the selected source, and a row whose first line darkens
+ * while its second line stays behind reads as half-selected. This is the same
+ * lifecycle the BIM element list and the sidebar row use (`.bim-element.selected
+ * small`, `.package-nav.selected small`), so the metadata step is part of the one
+ * selection grammar rather than a fourth local decision.
+ */
+.document-list .pane-body > button.selected small {
+  color: var(--muted);
 }
 
 /* ---------- reading pane ---------- */
@@ -143,18 +172,36 @@
   min-height: 0;
   background: var(--surface-workspace);
 }
+/*
+ * The reading measure, declared once.
+ *
+ * Three numbers decide how this pane reads, and every rule below reads them from
+ * here rather than restating one of them: the evidence gutter (140px), the reading
+ * column (700px), and their sum - the sheet's own width (840px). Stating them
+ * together is what keeps a chunk's metadata gutter and the prose beside it on one
+ * decided rhythm, and it is why the container query further down can decide when
+ * the gutter folds without three numbers having to be hunted for in three rules.
+ *
+ * The reading column is a *cap*, never a fraction: a 1600px window gets whitespace
+ * at the end of the row rather than a 1400px line, so the measure cannot silently
+ * grow with the window. That trailing space is what tells the reader the column,
+ * not the pane, decided where the line ends.
+ */
 .document-content .pane-body {
-  padding: var(--space-5) 34px 44px;
+  --evidence-gutter: 140px;
+  --reading-column: 700px;
+  --reading-measure: calc(var(--evidence-gutter) + var(--reading-column));
+  padding: 20px 30px 40px;
 }
 .document-content [role="alert"] {
-  max-width: 836px;
+  max-width: var(--reading-measure);
   padding: 0 0 var(--space-4);
   color: var(--danger-fg);
   font-size: var(--fs-meta);
   line-height: 1.7;
 }
 .document-content .quiet-message {
-  max-width: 836px;
+  max-width: var(--reading-measure);
   padding-top: var(--space-4);
 }
 /*
@@ -162,8 +209,20 @@
  * list in Operations, so it stays a plain section there - a chunk separation
  * rather than a card. Documents adds the two-column composition on top of it
  * (.evidence-sheet below) without changing what the shared object is.
+ *
+ * The object declares its own reading step, once, and both of its text elements
+ * read it from here. Parsed document text is prose, and this is the one surface in
+ * the product where prose is the content rather than a value inside a readout, so
+ * it takes 14.5px at 1.6 leading rather than the 13.5px at 1.75 a table cell would
+ * get. The old pairing kept the *leading* of a document and the *size* of a table
+ * cell - generous for a paragraph, small for the only paragraph a reader is asked
+ * to actually read - which is why the reading pane read as an interface full of
+ * small text instead of as a document. 1.6 is the leading of a printed report: a
+ * document's rhythm without a page's airiness.
  */
 .document-chunk {
+  --reading-text: 14.5px;
+  --reading-leading: 1.6;
   max-width: 780px;
   padding: 20px 0 22px;
   border-bottom: 1px solid var(--line-soft);
@@ -176,14 +235,14 @@
 .document-chunk > strong {
   display: block;
   color: var(--muted);
-  font-size: var(--fs-label);
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 500;
 }
 .document-chunk p {
   margin-top: 8px;
   color: var(--ink);
-  font-size: var(--fs-body);
-  line-height: 1.75;
+  font-size: var(--reading-text);
+  line-height: var(--reading-leading);
 }
 .document-chunk small {
   display: block;
@@ -195,8 +254,8 @@
 }
 .document-chunk pre {
   color: var(--ink);
-  font-size: var(--fs-body);
-  line-height: 1.75;
+  font-size: var(--reading-text);
+  line-height: var(--reading-leading);
   /*
    * Parsed document text is prose, so it opts out of the global tabular figures:
    * a proportional digit is what a sentence expects, and this is the only surface
@@ -206,45 +265,87 @@
 }
 
 /*
- * The evidence composition, the main reason this pane exists. This surface is
- * for SCANNING EVIDENCE, not for reading prose, so the body is held at a ~660px
- * measure - a 680px column less the body's own 20px inset - instead of the 780px
- * a reader's measure would want. The measure is a cap, not a fraction: a 1600px
- * window gets whitespace at the end of the row, not a 1400px line, so the line
- * length cannot silently grow with the window. The gutter (~156px) plus that
- * measure form the two columns of the row.
+ * The evidence composition, the main reason this pane exists.
  *
- * The vertical rule is content structure organising the two columns, not a
- * region boundary - the one place this screen legitimately spends a line.
+ * The surface is for SCANNING EVIDENCE rather than for reading a book, and that is
+ * what decides its shape: an annotation gutter, a rule, and a body column at a
+ * decided measure. Both columns are read from the tokens declared on the pane body
+ * above, so the gutter (140px) and the column (700px) cannot drift apart, and the
+ * column is a cap rather than a fraction - a 1600px window gets whitespace at the
+ * end of the row, not a 1400px line.
+ *
+ * The vertical rule is content structure organising the two columns, not a region
+ * boundary - the one place this screen legitimately spends a line.
  */
 .document-content .pane-body {
   /* the reading surface answers for its own width, so it can decide how to
      degrade without the pane policy having to shrink the window it lives in */
   container-type: inline-size;
 }
+/*
+ * The header answers for the pane's width the way the body answers for its own,
+ * and the pane is the container here because the header is a *sibling* of the
+ * scrolling body rather than a child of it. Two containers, nested, each answering
+ * for the thing it actually contains.
+ */
+.document-content {
+  container-type: inline-size;
+}
+/*
+ * Narrow, the pane answers with its frame and its provenance rather than with its
+ * prose.
+ *
+ * Two rules, one width, and both are the same decision: what is spent on framing
+ * comes out of the thing being framed. 30px of inset on each side is 60px of a
+ * 443px pane - 14% of the reading surface spent on its own margin at exactly the
+ * width where the surface is scarcest - so the inset steps down to 18px, which is
+ * the inset every other pane in the product already uses. The source hash goes for
+ * the reason stated at the header. Neither rule touches type: the reading text is
+ * 14.5px at every width in this product, and layout yields before typography does.
+ *
+ * The threshold is the pane's own inline size, so the Inspector taking a column is
+ * handled by the same rule as a narrow window - the pane policy decides how many
+ * columns there are, and this decides what one of them looks like once it has one.
+ */
+@container (max-width: 520px) {
+  .document-content .pane-body {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .document-content .pane-header .mono {
+    display: none;
+  }
+}
 .document-chunk.evidence-sheet {
   display: grid;
-  grid-template-columns: 156px minmax(0, 680px);
-  max-width: 836px;
-  padding: 22px 0 24px;
+  grid-template-columns: var(--evidence-gutter) minmax(0, var(--reading-column));
+  max-width: var(--reading-measure);
+  padding: 18px 0 20px;
 }
 /*
  * The gutter is an annotation column: four label/value pairs under the chunk's own
  * ordinal. The ordinal is the thing that makes an evidence chain citable, so it
  * ranks above the labels rather than below them, and each pair is tightened to a
- * 2px label-to-value gap with the value at 1.45 leading - the difference between a
- * column of four scannable pairs and eight lines of similar-looking grey text.
+ * 2px label-to-value gap - the difference between a column of four scannable pairs
+ * and eight lines of similar-looking grey text.
+ *
+ * Labels recede, values read. The label takes the small tier in the faint ink and
+ * the value the meta tier in full ink, and the tone step is what carries the
+ * hierarchy: the two were once within half a pixel of each other in two of the
+ * quietest greys, which made the column one texture in which a reader could not
+ * tell 来源 from the hash printed beside it. The size step stays small on purpose -
+ * an annotation never competes with the prose it annotates.
  */
 .chunk-gutter {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding-right: 18px;
+  gap: 10px;
+  padding-right: 16px;
   border-right: 1px solid var(--line-soft);
 }
 .chunk-ordinal {
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.1em;
   color: var(--muted);
 }
@@ -253,34 +354,37 @@
   flex-direction: column;
   gap: 2px;
 }
-/* labels scan, values read: the small label tier over --fs-meta, the one place
-   the hierarchy rules 3 and 6 meet in this pane */
 .chunk-fact-label {
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
   color: var(--muted-2);
 }
 .chunk-fact-value {
   font-size: var(--fs-meta);
-  line-height: 1.45;
-  color: var(--ink-2);
+  line-height: 1.5;
+  color: var(--ink);
   overflow-wrap: anywhere;
 }
 .chunk-body {
   min-width: 0;
-  padding-left: 20px;
+  padding-left: 18px;
 }
 
 /*
  * The gutter is an annotation, and an annotation never gets to crowd out what it
- * annotates. The 156px column is worth keeping while it stays under about a third
- * of the reading pane; below that it folds into a row above the evidence instead
- * of standing beside it. The threshold is derived from that ratio rather than
- * picked: 156 / 0.34 ≈ 460. It matters at 1280 with the Inspector open, where the
- * pane that survives is about 430px, and at 860 without it (about 420px); it has
- * roughly 50px of headroom on both sides in every layout the product ships, so a
- * three-pixel change cannot flip it.
+ * annotates. Folding it is a question about the prose column, and the pane body is
+ * simply the element that measures it: the body's content box is the gutter (140px)
+ * plus the chunk body's own separation (18px) plus the prose, so the fold stands at
+ * 600px - the content box at which a standing gutter still leaves the reading text
+ * 442px, which is the width the previous 440px pane threshold was standing in for
+ * from the other end (it read the pane; this reads what the pane has to hold).
+ *
+ * Stating it this way round matters, and the old rule shows why: at 1100px the pane
+ * body's content box was 559px, which clears 440, so the gutter kept standing while
+ * the reading column beside it was 419px and the text in that column 401px -
+ * narrower than the annotation is designed to sit beside, and already under the
+ * floor the 440 was a proxy for.
  *
  * The pane policy decides how many panes there are; this decides what one of them
  * looks like once it has been given its column.
@@ -291,7 +395,7 @@
  * would half-apply - the sheet would collapse to one column while the gutter kept
  * standing as a 350px-wide vertical stack inside it.
  */
-@container (max-width: 460px) {
+@container (max-width: 600px) {
   .document-chunk.evidence-sheet {
     grid-template-columns: minmax(0, 1fr);
   }

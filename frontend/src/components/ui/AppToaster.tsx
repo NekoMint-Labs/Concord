@@ -1,5 +1,6 @@
 import { Check, TriangleAlert, Info } from "lucide-react";
 import { Toaster, toast } from "sonner";
+import { icon } from "./icon";
 
 /**
  * The one toast mount point and the one place the application talks to it.
@@ -18,12 +19,25 @@ export function AppToaster() {
     <Toaster
       position="bottom-right"
       gap={8}
-      offset={16}
+      /*
+       * The toast clears the analysis footer instead of landing on it. They occupy
+       * the same corner of the window - both are transient, both are bottom-right -
+       * and at the footer's own height the toast used to cover the run status the
+       * footer exists to report, so the *less* authoritative of the two was hiding
+       * the more authoritative one.
+       *
+       * The offset reads `--status-bar-h`, which is already the single number the
+       * footer's minimum height and every scroll region's bottom reserve are built
+       * from (frontend/src/styles/base.css). Sonner applies an object offset as the
+       * raw CSS value it is given, so the token survives into a library that only
+       * asked for pixels and the three cannot drift apart.
+       */
+      offset={{ bottom: "calc(var(--status-bar-h) + 8px)", right: 16 }}
       duration={4000}
       icons={{
-        success: <Check size={14} aria-hidden="true" />,
-        error: <TriangleAlert size={14} aria-hidden="true" />,
-        info: <Info size={14} aria-hidden="true" />,
+        success: <Check {...icon} />,
+        error: <TriangleAlert {...icon} />,
+        info: <Info {...icon} />,
       }}
       toastOptions={{
         unstyled: true,

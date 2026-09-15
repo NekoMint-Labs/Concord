@@ -30,7 +30,9 @@
   right: 12px;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  /* the icon-to-label step is the shared one (frontend/src/styles/base.css), so
+     an inline action and a chrome button indent their own mark identically */
+  gap: var(--icon-gap);
   /* positioned, so it keeps a symmetric padded surface at a smaller inset */
   padding: 3px 6px;
   color: var(--muted);
@@ -41,7 +43,7 @@
 }
 .react-flow__node-default {
   width: 200px;
-  padding: var(--space-3);
+  padding: 10px;
   border: 1px solid var(--line-control);
   border-radius: var(--radius-md);
   background: var(--surface);
@@ -58,7 +60,7 @@
   display: block;
   margin: 4px 0;
   font-size: var(--fs-meta);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink);
   line-height: 1.5;
 }

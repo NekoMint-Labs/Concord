@@ -1,9 +1,10 @@
 import { lazy, Suspense } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Ellipsis } from "lucide-react";
 import type { Workspace } from "../api/client";
 import { ViewerBoundary } from "../components/ViewerBoundary";
 import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
+import { icon } from "../components/ui/icon";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
 import {
   condensedFor,
@@ -111,7 +112,21 @@ export function WorkspaceViews({
           </button>
         ))}
         <div className="more-views">
-          <AppMenu label="更多">
+          {/*
+            The secondary destinations keep their label. This is the only route to
+            half the product's views, and an ellipsis that has to be guessed at is a
+            worse trade than four characters of chrome - the mark is here to say
+            "this opens a list", not to replace the word that names it.
+          */}
+          <AppMenu
+            label="更多"
+            trigger={
+              <>
+                <Ellipsis {...icon} />
+                更多
+              </>
+            }
+          >
             {secondaryTabs.map(({ id, label }) => (
               <AppMenuItem
                 key={id}
@@ -137,7 +152,7 @@ export function WorkspaceViews({
               className="canvas-back text-button"
               onClick={() => onTab("coordination")}
             >
-              <ArrowLeft size={13} /> 返回协调
+              <ArrowLeft {...icon} size={13} /> 返回协调
             </button>
           )}
           <ViewerBoundary key={`${project}:${tab}`}>

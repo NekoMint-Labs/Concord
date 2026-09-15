@@ -12,6 +12,18 @@
  *   close control, so the pane is named rather than merely bounded;
  * - its own scroll, with the header fixed above it.
  *
+ * It is now the *only* large surface on that plane, which is what the plane is
+ * for. The local object lists - the BIM element browser and the document source
+ * list - used to share it, so the recessed column inside a workspace and the docked
+ * contextual pane at the edge of the window were the same material, and the window
+ * carried three similar grey columns around one work plane. Those lists moved one
+ * step lighter (frontend/src/styles/viewers.css, frontend/src/styles/features/
+ * documents.css), which leaves the ladder doing exactly what it was ordered to do:
+ * the darkest large plane is persistent navigation, the next is this contextual
+ * pane, the next is a local object list, and the lightest is the work surface. The
+ * Inspector keeps the chrome header band over its recessed body, so its identity is
+ * unchanged by the move - it is the pane that owns the detail well now.
+ *
  * Its local navigation is quiet text over an accent rail, and it never repeats
  * workspace status: the workspace owns the story, this pane owns the selected
  * detail. Nothing here needs a hairline - the plane step, the header
@@ -39,7 +51,7 @@
  * because the close control is a 26px square and reads as its own inset.
  */
 .pane-header.inspector-header {
-  padding: 8px 10px 8px 12px;
+  padding: 6px 8px 6px 10px;
 }
 /*
  * The pane's own name: the work package this pane is reporting on. Scoped under
@@ -52,20 +64,12 @@
   color: var(--ink-2);
   font-size: var(--fs-meta);
 }
-.icon-button {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--muted);
-}
-.icon-button:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
+/*
+ * The close control is an `.icon-button`, which now lives in components.css: it
+ * stopped being this pane's own object when the dialog header and the window
+ * chrome adopted it, and a control shared by three regions cannot be owned by a
+ * fourth's stylesheet.
+ */
 
 /*
  * The detail switch: a segmented row of the pane's own three details. Its active
@@ -87,7 +91,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 24px;
+  height: 23px;
   padding: 0 var(--space-2);
   border: 0;
   background: transparent;
@@ -118,7 +122,7 @@
 .inspector-switch .count {
   margin: 0;
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--muted-2);
 }
 .inspector-switch button.active .count {
@@ -130,7 +134,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: var(--space-3) var(--space-4) var(--space-5);
+  padding: 10px 14px 20px;
 }
 .inspector-section p {
   font-size: var(--fs-body);
@@ -158,7 +162,9 @@
   border-radius: var(--radius-sm);
   background: transparent;
   text-align: left;
-  transition: background var(--motion-fast) var(--ease);
+  transition:
+    background var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease);
 }
 .constraint-list button:not(.selected):hover {
   background: var(--hover);
@@ -186,6 +192,11 @@
   color: var(--muted-2);
   font-size: var(--fs-label);
 }
+/* the same lifecycle as every other selected row: the whole row steps up, not only
+   its first line, so "this is the record the pane is reporting on" is one read */
+.constraint-list button.selected small {
+  color: var(--muted);
+}
 
 /*
  * Evidence: numbered entries with a label spine, the same shape the workspace
@@ -197,7 +208,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 .evidence-list li {
   display: grid;
@@ -207,7 +218,7 @@
 .evidence-index {
   color: var(--muted-2);
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   padding-top: 2px;
 }
 .evidence-body strong {
@@ -242,7 +253,7 @@
 .risk {
   color: var(--muted);
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
 }
 .effect-list {
   margin-top: var(--space-2);
@@ -260,8 +271,8 @@
  * already is rather than lifted above it.
  */
 .action-gate {
-  margin-top: var(--space-4);
-  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-3);
+  padding: 10px 14px;
   border-radius: var(--radius-md);
   background: var(--surface-chrome);
 }
@@ -272,14 +283,14 @@
 }
 .form-label {
   display: block;
-  margin-top: var(--space-3);
+  margin-top: 10px;
   color: var(--muted);
   font-size: var(--fs-meta);
 }
 .form-label input {
   display: block;
   width: 100%;
-  margin-top: 6px;
+  margin-top: 5px;
 }
 .action-buttons {
   display: flex;
@@ -292,7 +303,7 @@
   display: block;
 }
 .supplementary-details {
-  margin-top: var(--space-5);
+  margin-top: 20px;
   color: var(--muted);
   font-size: var(--fs-meta);
 }

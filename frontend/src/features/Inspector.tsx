@@ -5,6 +5,7 @@ import { api, type Workspace } from "../api/client";
 import { Button } from "../components/ui/button";
 import { AppDisclosure } from "../components/ui/AppDisclosure";
 import { AppTooltip } from "../components/ui/AppTooltip";
+import { icon } from "../components/ui/icon";
 import { useMotion } from "../motion";
 import {
   demoConstraintKind,
@@ -112,7 +113,7 @@ export function Inspector({
                 onClick={onClose}
                 aria-label="关闭详情"
               >
-                <X size={16} />
+                <X {...icon} />
               </button>
             </AppTooltip>
           </span>
@@ -150,7 +151,7 @@ export function Inspector({
           variants={variants.detailSwap}
           initial="hidden"
           animate="visible"
-          transition={transition()}
+          transition={transition("fast")}
         >
           {view === "blocker" && (
             <>

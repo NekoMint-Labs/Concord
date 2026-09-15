@@ -31,7 +31,19 @@ export function Timeline({
   return (
     <section className="timeline" aria-label="分析过程">
       <div className="timeline-heading">
-        <strong>当前分析</strong>
+        {/*
+          The band's subject is the *analysis workflow*, and it says so.
+
+          Its state word comes out of the shared status vocabulary, so 等待批准 and
+          已阻塞 are the same two objects here and in the sidebar - which is
+          exactly how a reader could take them for contradicting each other. They
+          are two dimensions: the run's workflow position, and the work package's
+          condition. 当前分析 was a noun phrase that named neither, so the two sat
+          side by side as two unrelated verdicts; named as a dimension, the pair
+          reads as one axis with a value on it, and the work package's own state
+          above stays the other axis.
+        */}
+        <strong>分析流程</strong>
         {/*
           The run's state is stated with the same object the sidebar uses for
           the same kind of fact, so the word a reader learns in one place is

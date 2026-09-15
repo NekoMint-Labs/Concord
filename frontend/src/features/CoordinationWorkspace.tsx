@@ -219,10 +219,16 @@ export function CoordinationWorkspace({
            * carries one only when the body has none - a stale blocked package, where
            * the recorded judgement is not actionable until it is refreshed. Two
            * controls with the same name on one page is not a quiet READY.
+           *
+           * It is the same `secondary` control the READY record carries rather than
+           * the ghost it used to be: this is the same action, and an explicit
+           * re-check without primary workflow authority is one role with one
+           * appearance. A ghost here made one control look like two things depending
+           * on which state the package happened to be in.
            */}
           {stale && blocked && (
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               disabled={busy}
               onClick={onRecheck}
@@ -230,9 +236,23 @@ export function CoordinationWorkspace({
               重新检查
             </Button>
           )}
-          <span className={`state-text ${blocked ? "is-blocked" : ""}`}>
+          {/*
+           * The state word is keyed by its own text, so a re-check that changes the
+           * conclusion crossfades the word in place rather than rewriting it. The
+           * record beneath settles separately - the body is keyed by the state it is
+           * reporting - and this is the one line the reader looks at first, so it is
+           * the one part of the page that changes without the page moving.
+           */}
+          <motion.span
+            key={stateDisplay}
+            className={`state-text ${blocked ? "is-blocked" : ""}`}
+            variants={variants.detailSwap}
+            initial="hidden"
+            animate="visible"
+            transition={transition("fast")}
+          >
             {stateDisplay}
-          </span>
+          </motion.span>
         </div>
       </header>
 
@@ -276,74 +296,88 @@ export function CoordinationWorkspace({
               <p className="stale-note">判断基于过期快照，重新检查后再处理。</p>
             )}
             <div className="coordination-record is-blocked">
-              <div className="state-block">
-                {revision ? (
-                  <p className="revision-line">
-                    {wp.accepted_revision} → <strong>{revision}</strong>
-                  </p>
-                ) : (
-                  activeEvent && (
-                    <p className="revision-line">{activeEvent.title}</p>
-                  )
-                )}
+              {/*
+                One judgement, one column. What changed, what is blocked, what it
+                rests on, what is recommended, and the one action are a single
+                read down the record's left column; the work package's condition
+                sits beside them. The recommendation used to be a full-width
+                footer under both columns, which is what made the well read as a
+                form with a button row beneath it.
+              */}
+              <div className="record-main">
+                <div className="state-block">
+                  {revision ? (
+                    <p className="revision-line">
+                      {wp.accepted_revision} → <strong>{revision}</strong>
+                    </p>
+                  ) : (
+                    activeEvent && (
+                      <p className="revision-line">{activeEvent.title}</p>
+                    )
+                  )}
 
-                <p className="scope-line">
-                  {impactCount > 0 && <span>{impactCount} 个构件需要协调</span>}
-                  <button className="text-button" onClick={onImpact}>
-                    查看影响
-                  </button>
-                </p>
-
-                <p className="blocking-fact">
-                  {blocker
-                    ? demoConstraintText(blocker.kind, blocker.description)
-                    : "存在尚未解决的施工约束。"}
-                </p>
-
-                {blocker && (
                   <p className="scope-line">
-                    <span>{blocker.evidence_ids.length} 项判断依据</span>
-                    <button
-                      className="text-button"
-                      onClick={() => onDetails("evidence")}
-                    >
-                      查看依据
+                    {impactCount > 0 && (
+                      <span>{impactCount} 个构件需要协调</span>
+                    )}
+                    <button className="text-button" onClick={onImpact}>
+                      查看影响
                     </button>
                   </p>
-                )}
 
-                <p className="state-meta">{provenance}</p>
-              </div>
-              {facts}
-
-              {/*
-                The recommendation is the record's own closing paragraph rather
-                than a second card: it answers the blocker directly above it, so
-                it sits inside the same well, in the same text column, with no
-                surface of its own. It is also its own object in one respect -
-                it is the only part of the page that asks for a decision.
-              */}
-              <div className="recommendation">
-                <span className="fact-label">建议</span>
-                <p>
-                  {proposal
-                    ? demoProposalExplanation(proposal.resolution.explanation)
-                    : "处理方案准备后将在此显示。"}
-                </p>
-                {proposal && (
-                  <p className="approval-line">
-                    需批准后执行 · R{proposal.risk}
+                  <p className="blocking-fact">
+                    {blocker
+                      ? demoConstraintText(blocker.kind, blocker.description)
+                      : "存在尚未解决的施工约束。"}
                   </p>
-                )}
-                <div className="coordination-actions">
-                  <Button
-                    disabled={busy || !proposal}
-                    onClick={() => onDetails("action")}
-                  >
-                    批准并继续
-                  </Button>
+
+                  {blocker && (
+                    <p className="scope-line">
+                      <span>{blocker.evidence_ids.length} 项判断依据</span>
+                      <button
+                        className="text-button"
+                        onClick={() => onDetails("evidence")}
+                      >
+                        查看依据
+                      </button>
+                    </p>
+                  )}
+
+                  <p className="state-meta">{provenance}</p>
+                </div>
+
+                {/*
+                  The recommendation is the record's own closing paragraph
+                  rather than a second card: it answers the blocker directly
+                  above it, so it sits in the same column, under the same text
+                  measure, with no surface of its own. It is also its own object
+                  in one respect - it is the only part of the page that asks for
+                  a decision.
+                */}
+                <div className="recommendation">
+                  <span className="fact-label">建议</span>
+                  <p>
+                    {proposal
+                      ? demoProposalExplanation(proposal.resolution.explanation)
+                      : "处理方案准备后将在此显示。"}
+                  </p>
+                  {proposal && (
+                    <p className="approval-line">
+                      需批准后执行 · R{proposal.risk}
+                    </p>
+                  )}
+                  <div className="coordination-actions">
+                    <Button
+                      disabled={busy || !proposal}
+                      onClick={() => onDetails("action")}
+                    >
+                      批准并继续
+                    </Button>
+                  </div>
                 </div>
               </div>
+
+              {facts}
             </div>
 
             <AppDisclosure label="其他施工条件">
@@ -356,22 +390,42 @@ export function CoordinationWorkspace({
               <p className="stale-note">判断基于过期快照，重新检查后再处理。</p>
             )}
             <div className="coordination-record">
-              <div className="state-block">
-                <p className="ready-line">当前没有阻塞施工的条件</p>
-                {checked && <p className="state-meta">上次检查：{checked}</p>}
-                <p className="state-meta">{provenance}</p>
+              <div className="record-main">
+                <div className="state-block">
+                  <p className="ready-line">当前没有阻塞施工的条件</p>
+                  {checked && <p className="state-meta">上次检查：{checked}</p>}
+                  <p className="state-meta">{provenance}</p>
+                  {/*
+                    READY is a resting state, not an end state, and nothing on
+                    the page said so: the reader was left to work out what
+                    Concord expected next. This line names the inputs that would
+                    make the judgement wrong and the two steps that follow from
+                    them. It is guidance rather than a call to action, so it
+                    carries no control of its own - the action it names is
+                    记录变更 in the window band, and a second control with the
+                    same name on the same page would make a quiet READY loud.
+                  */}
+                  <p className="ready-guidance">
+                    图纸、班组或现场条件变化时，记录变更并重新检查。
+                  </p>
+                </div>
+                {/*
+                  READY closes with its own action in the same column the blocked
+                  record closes its recommendation in, so the two states are one
+                  composition rather than two layouts that happen to share a
+                  page.
+                */}
+                <div className="coordination-actions">
+                  <Button
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={onRecheck}
+                  >
+                    重新检查
+                  </Button>
+                </div>
               </div>
               {facts}
-              {/*
-                READY closes with its own action on the same line the blocked
-                record does, so the two states are one composition rather than two
-                layouts that happen to share a page.
-              */}
-              <div className="coordination-actions">
-                <Button variant="secondary" disabled={busy} onClick={onRecheck}>
-                  重新检查
-                </Button>
-              </div>
             </div>
             <AppDisclosure label="其他施工条件">
               <div className="fact-list">{conditions}</div>

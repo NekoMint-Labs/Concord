@@ -1,5 +1,8 @@
 import { useId, useState, type ReactNode } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { ChevronRight } from "lucide-react";
+import { useMotion } from "../../motion";
+import { icon } from "./icon";
 
 /**
  * A quiet disclosure: a control that opens a block of supporting values.
@@ -12,6 +15,19 @@ import { ChevronRight } from "lucide-react";
  * quiet while leaving the full condition set one action away, so it has to be a
  * first-class object rather than an element whose behaviour happens to be built
  * into the browser.
+ *
+ * The opening is one gesture in two halves: the chevron pivots in CSS over the same
+ * `--motion-fast` step, and the body expands to its own height through the shared
+ * motion vocabulary (frontend/src/motion). `AnimatePresence` is what makes the
+ * closing half exist at all - without it the block would vanish in a single frame
+ * while the chevron was still turning - and the height is `auto` so nothing has to
+ * measure the content in JavaScript. The body's own spacing is inside the animated
+ * box, which is what stops a 12px gap arriving a frame before the content does
+ * (frontend/src/styles/components.css states the layout).
+ *
+ * Nothing disclosed anywhere in this product holds a focusable control, which is
+ * why the expanding box can clip its own content safely. A disclosed *form* would
+ * have to be reconsidered before it is added here.
  *
  * The open state is local by design: a disclosure holds a reading preference, and
  * nothing outside this component needs to know it.
@@ -27,6 +43,7 @@ export function AppDisclosure({
 }) {
   const [open, setOpen] = useState(false);
   const bodyId = useId();
+  const { transition, variants } = useMotion();
   const classes = ["disclosure-block", className].filter(Boolean).join(" ");
   return (
     <div className={classes}>
@@ -37,14 +54,24 @@ export function AppDisclosure({
         aria-controls={bodyId}
         onClick={() => setOpen((value) => !value)}
       >
-        <ChevronRight size={13} aria-hidden="true" />
+        <ChevronRight {...icon} size={13} />
         {label}
       </button>
-      {open && (
-        <div className="disclosure-body" id={bodyId}>
-          {children}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            className="disclosure-body"
+            id={bodyId}
+            variants={variants.disclosure}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            transition={transition("fast")}
+          >
+            <div className="disclosure-inner">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -7,7 +7,10 @@ const labels: Record<string, string> = {
   RUNNING: "分析中",
   WAITING_APPROVAL: "等待批准",
   COMPLETED: "已完成",
-  "NO RUN": "无分析",
+  /* The absent run is stated as a position in the workflow rather than as an
+     absence of one: the analysis band reads 分析流程 未开始, which is a state, where
+     无分析 was a missing thing beside a band that had to be read as a label for it. */
+  "NO RUN": "未开始",
 };
 
 /** Blocking and approval states carry the one exception colour; everything else is neutral. */

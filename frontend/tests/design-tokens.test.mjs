@@ -300,10 +300,17 @@ test("the neutral ladder stays neutral, cool-stone, and never blue", () => {
   // band is wide enough to let the ladder carry a cool cast and no wider.
   const neutral = [
     ...planes,
+    // The local object list's own half step: a material difference *inside* one
+    // role rather than a step between two, so it is deliberately not part of the
+    // ordered ladder above - but it is a neutral on this axis and obeys the same
+    // rule, which is what stops a "just slightly different grey" from being
+    // smuggled in as a new plane.
+    "surface-list",
     "surface",
     "line",
     "line-soft",
     "line-control",
+    "line-control-soft",
     "line-float",
     "ink",
     "ink-2",
@@ -347,6 +354,7 @@ test("every text token clears AA against every plane it can land on", () => {
     for (const plane of [
       "surface-nav",
       "surface-detail",
+      "surface-list",
       "surface-chrome",
       "surface-workspace",
       "surface",
@@ -375,6 +383,38 @@ test("a control boundary is identifiable, and a content rule is visible where it
     assert.ok(
       ratio >= CONTROL_FLOOR,
       `--line-control is ${ratio.toFixed(2)}:1 on --${plane}; a control boundary must clear ${CONTROL_FLOOR}:1`,
+    );
+  }
+  // The quieter boundary exists because most controls never land on the
+  // navigation plane at all, and at the tone the picker needs they read as
+  // native form outlines. It has to clear the same floor on every plane it is
+  // *allowed* on - the darkest of those being --surface-detail, where the
+  // Inspector's own fields sit - and it is deliberately not asserted against
+  // --surface-nav or --bg-app, because it must never be spent there.
+  for (const plane of [
+    "surface",
+    "surface-detail",
+    "surface-chrome",
+    "surface-workspace",
+  ]) {
+    const ratio = contrast(hexToken("line-control-soft"), hexToken(plane));
+    assert.ok(
+      ratio >= CONTROL_FLOOR,
+      `--line-control-soft is ${ratio.toFixed(2)}:1 on --${plane}; a control boundary must clear ${CONTROL_FLOOR}:1 wherever it may be spent`,
+    );
+  }
+  // ...and it must actually be the quieter of the two, or the split has no
+  // reason to exist.
+  assert.ok(
+    contrast(hexToken("line-control-soft"), hexToken("surface")) <
+      contrast(hexToken("line-control"), hexToken("surface")),
+    "--line-control-soft must be lighter than --line-control on the light planes it is for",
+  );
+  for (const plane of ["surface-nav", "bg-app"]) {
+    const ratio = contrast(hexToken("line-control-soft"), hexToken(plane));
+    assert.ok(
+      ratio < CONTROL_FLOOR,
+      `--line-control-soft measures ${ratio.toFixed(2)}:1 on --${plane}; if it ever clears the floor there, the two control tokens have converged and the placement rule should be deleted rather than left as decoration`,
     );
   }
   for (const name of ["line", "line-soft"]) {

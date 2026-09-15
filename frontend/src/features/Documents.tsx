@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { FileText, Search, Upload } from "lucide-react";
+import { Search, Upload } from "lucide-react";
 import { api, isDesktop, readSource, type AgentRun } from "../api/client";
 import { Button } from "../components/ui/button";
 import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
+import { AppTooltip } from "../components/ui/AppTooltip";
 import { notify } from "../components/ui/AppToaster";
+import { icon } from "../components/ui/icon";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
+import { usePaneWidth } from "../layout/paneBudget";
 import { useMotion } from "../motion";
 
 /**
@@ -67,6 +70,7 @@ export function Documents({
   const [query, setQuery] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const cache = useQueryClient();
+  const width = usePaneWidth();
   const { transition, variants } = useMotion();
   const documents = useQuery({
     queryKey: ["documents", project],
@@ -198,9 +202,18 @@ export function Documents({
             <span className="mono">{meta.content_hash.slice(0, 8)}</span>
           )}
           {current && (
-            <Button size="sm" variant="secondary" onClick={saveSource}>
-              保存来源
-            </Button>
+            /*
+             * The action downloads the parsed source to this machine; it adds
+             * nothing to the project. The label is the product's own word for
+             * that and is left alone - the tooltip states the half of it the
+             * label cannot, which is the same local-versus-project distinction
+             * the BIM toolbar explains the same way.
+             */
+            <AppTooltip label="保存来源文件到本机，不加入项目">
+              <Button size="sm" variant="secondary" onClick={saveSource}>
+                保存来源
+              </Button>
+            </AppTooltip>
           )}
         </span>
       </header>
@@ -218,7 +231,7 @@ export function Documents({
           variants={variants.detailSwap}
           initial="hidden"
           animate="visible"
-          transition={transition()}
+          transition={transition("fast")}
         >
           {visible?.map((chunk, index) => (
             <article className="document-chunk evidence-sheet" key={chunk.id}>
@@ -267,13 +280,36 @@ export function Documents({
       className="document-list pane-stack"
       defaultSize="264px"
       minSize="150px"
-      maxSize="34%"
+      /*
+       * The source list's share has a ceiling on a narrow window.
+       *
+       * It is a percentage, so as the window narrows the list's *proportion* held
+       * while everything else lost absolute width: at 1100px it was 30% of the
+       * view and the article it annotates was down to a 419px prose column. A
+       * pane that is a proportion of the window has no way to know that the thing
+       * beside it is a paragraph, so the ceiling states the one fact it can: below
+       * the width at which the shell itself gives the sidebar less room, this
+       * column stops growing and the article keeps the difference.
+       *
+       * It is a `maxSize` and not a `defaultSize` on purpose: the split persists
+       * the user's own layout by percentage, and a default only ever applies on
+       * the first mount. A ceiling is re-applied to every layout resolution, so
+       * the guard holds on a window that was resized after the layout was saved.
+       */
+      maxSize={width < 1150 ? "200px" : "34%"}
     >
       <header className="pane-header">
         <span className="pane-header-label">来源</span>
         <span className="count">{count}</span>
       </header>
       <div className="pane-body">
+        {/*
+          A source row is text: every row in this list is a document, so a mark on
+          each one would say the same thing four times and add a column of noise to
+          the list's own subject - the filename. The BIM element browser, the
+          sidebar, and this list therefore all carry their objects the same way
+          (frontend/src/components/ui/icon.ts states the rule).
+        */}
         {documents.data?.map((doc) => (
           <button
             className={current === doc.id ? "selected" : ""}
@@ -283,7 +319,6 @@ export function Documents({
             }}
             key={doc.id}
           >
-            <FileText size={16} />
             <span>
               <strong>{doc.filename}</strong>
               <small>
@@ -311,7 +346,7 @@ export function Documents({
             setQuery(search);
           }}
         >
-          <Search size={15} />
+          <Search {...icon} />
           <input
             aria-label="搜索文档"
             value={search}
@@ -343,7 +378,7 @@ export function Documents({
               isDesktop ? void perform(nativeImport) : input.current?.click()
             }
           >
-            <Upload size={14} /> 导入文档
+            <Upload {...icon} /> 导入文档
           </Button>
           <input
             ref={input}

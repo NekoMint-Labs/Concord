@@ -22,94 +22,182 @@
   display: flex;
   overflow: hidden;
   background: var(--workspace);
+  /*
+   * The navigation column's width, declared on the shell because two rules have
+   * to agree on it: the sidebar's own width, and the distance it slides out by
+   * when navigation is collapsed. One number per breakpoint, read twice.
+   */
+  --nav-w: 232px;
 }
 
 /* ---------- sidebar ---------- */
 
+/*
+ * 232px, down from 248. The sidebar carries no content below the work-package
+ * list, so at the old width the column read as a large empty slab beside the
+ * workspace rather than as a navigation column - and the rows inside it had a
+ * 200px text measure for labels that are mostly four Chinese characters. The
+ * plane itself is unchanged (base.css owns the assignment); the sidebar was
+ * quietened by giving it less area, a more compact rhythm, and the window's own
+ * chrome material rather than a second grey of its own.
+ */
 .sidebar {
-  width: 248px;
+  width: var(--nav-w);
   flex-shrink: 0;
   background: var(--sidebar);
   color: var(--ink-2);
   display: flex;
   flex-direction: column;
+  /*
+   * Collapse is a slide, not a squash.
+   *
+   * The column keeps its own width and moves its left edge out by exactly that
+   * much, so the workspace beside it takes the space over one property - and the
+   * navigation keeps its internal layout on the way out instead of re-wrapping
+   * five rows of text into a 0px column. The shell clips it (`overflow: hidden`
+   * above), which is what makes the slide read as leaving the window rather than
+   * as sliding over the page.
+   *
+   * It is one CSS transition and no JavaScript number: the width still comes from
+   * the breakpoint rules at the bottom of this file, and `--nav-w` is what both
+   * this rule and the collapsed rule read.
+   */
+  margin-left: 0;
+  transition: margin-left var(--motion) var(--ease);
+}
+.application-shell.is-nav-collapsed .sidebar {
+  margin-left: calc(-1 * var(--nav-w));
 }
 /*
- * The sidebar header and the topbar are both 44px and both open their plane, so
- * the two read as one band of window chrome spanning the whole window. They do
- * not need a rule between them: they are already two different materials.
+ * The sidebar header and the topbar are both 40px and both sit on the chrome
+ * plane, so the two read as one band of window chrome spanning the whole window -
+ * the top edge of the L the shell is composed as. Because they are now one
+ * material rather than two, the seam between them is carried by the vertical
+ * rhythm inside the column instead of by a rule, and the collapse control at the
+ * far end of this band is what says where the navigation region ends.
  */
 /*
- * The brand block. The product's own name is the identity; the Chinese
- * descriptor is a gloss on it rather than a second title. The two used to be a
- * 14px name and an 11px gloss sharing one baseline with 7px between them, which
- * the eye read as a single grey string. They are now two type tiers apart - name
- * at the section step in full ink, descriptor at the label step in faint ink with
- * tracking - and the band stays 44px so it still opens the same window chrome row
- * as the topbar beside it.
+ * The sidebar header: the product's identity and the one control that belongs to
+ * the navigation column itself.
+ *
+ * The product's own name is the identity; the Chinese descriptor is a gloss on it
+ * rather than a second title. The two used to be a 14px name and an 11px gloss
+ * sharing one baseline with 7px between them, which the eye read as a single grey
+ * string. They are now two type tiers apart - name at the section step in full
+ * ink, descriptor at the label step in faint ink with tracking - and the band
+ * stays 40px so it still opens the same window chrome row as the topbar beside it.
+ *
+ * The collapse control sits at the far end of that band rather than in a header of
+ * its own, which is where a desktop application keeps it: the column states its
+ * own identity, and the control that closes the column belongs to the column. The
+ * band's right inset is 8px so the control's hover surface lines up with the
+ * project picker and the work-package rows beneath it, all of which are inset 8px.
  */
 .brand {
   display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 8px 0 14px;
+}
+/* the identity pair: two sizes, one baseline, so the gloss hangs off the name */
+.brand-name {
+  display: flex;
   align-items: baseline;
   gap: 8px;
-  flex-shrink: 0;
-  height: 44px;
-  padding: 0 16px;
+  min-width: 0;
+  margin-right: auto;
 }
-.brand strong {
+.brand-name strong {
   font-size: var(--fs-section);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--ink);
 }
-.brand span {
+.brand-name span {
   font-size: var(--fs-label);
   letter-spacing: 0.08em;
   color: var(--muted-2);
 }
 .project-picker {
-  padding: 0 10px 14px;
+  padding: 0 8px 10px;
 }
-/* the picker is a wide control, not a menu label: the trigger owns the row */
+/*
+ * The picker is a wide control, not a menu label: the trigger owns the row.
+ *
+ * It is a workspace switcher, not a form field, and the difference is the
+ * boundary. The control previously carried an outlined box - first filled white,
+ * then unfilled but still outlined - which is the platform's own text-box
+ * register: at the top of the sidebar it read as a form field introducing a
+ * navigation list. What identifies it now is what identifies a picker in every
+ * desktop application: a leading mark for the kind of thing being chosen, the
+ * name of the current one, and a chevron. The boundary is spent on interaction
+ * instead of on rest - a local surface on hover, a stronger one while the menu is
+ * open, and the shared focus ring for the keyboard - so the control is legible
+ * where it is being used and quiet where it is only being looked at.
+ *
+ * Removing the resting boundary does not remove the control's identifiability:
+ * the trigger is a real 28px target with an accessible name, it owns the full
+ * width of the column, and its three parts (mark, name, chevron) are the pattern a
+ * sentence-long text label would otherwise have to describe. The height stays at
+ * the shared `--control-h`, which is what keeps the hit area honest.
+ */
 .project-trigger {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--icon-gap);
   width: 100%;
-  height: 30px;
-  padding: 0 var(--space-2) 0 10px;
-  border: 1px solid var(--line-control);
+  height: var(--control-h);
+  padding: 0 6px 0 8px;
+  border: 0;
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: transparent;
   color: var(--ink);
   font-size: var(--fs-action);
-  font-weight: 600;
+  font-weight: 500;
   text-align: left;
-  transition:
-    border-color var(--motion-fast) var(--ease),
-    background var(--motion-fast) var(--ease);
+  transition: background var(--motion-fast) var(--ease);
 }
-.project-trigger:hover {
-  border-color: var(--ink-2);
+.project-trigger:hover,
+.project-trigger[data-state="open"] {
+  background: var(--hover);
 }
 /*
- * An open picker takes the accent. That is the one state in the sidebar where the
- * product's own colour is the right answer rather than a darker grey: it says
- * "this is the control you are in", which is a statement about position, and
- * position is what the accent is for. The resting boundary stays --line-control,
- * because it is the only thing identifying the control against the navigation
- * plane (see the control-boundary contract in tests/design-tokens.test.mjs).
+ * The mark is a navigation cue and nothing more: one restrained building for the
+ * project, at the same weight as the name beside it, stepping to the stronger
+ * foreground when the control answers the pointer. It is not coloured, not
+ * outlined, and not a badge - the exception colour belongs to blocking state and
+ * the accent belongs to position.
  */
-.project-trigger[data-state="open"] {
-  border-color: var(--accent);
+.project-trigger .project-mark {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: color var(--motion-fast) var(--ease);
 }
-.project-trigger svg {
+.project-trigger:hover .project-mark,
+.project-trigger[data-state="open"] .project-mark {
+  color: var(--ink-2);
+}
+.project-trigger .project-chevron {
   flex-shrink: 0;
   margin-left: auto;
   color: var(--muted);
+  transition:
+    transform var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease);
 }
-.project-trigger:hover svg,
-.project-trigger[data-state="open"] svg {
+.project-trigger:hover .project-chevron {
+  color: var(--ink-2);
+}
+/*
+ * The chevron turns while the menu is open. It is the one rotation in the product,
+ * and it is allowed because it is a disclosure rather than an effect: the mark
+ * says which way the surface went, and the alternative is a chevron that keeps
+ * pointing down at a list that is now above the pointer's own click.
+ */
+.project-trigger[data-state="open"] .project-chevron {
+  transform: rotate(180deg);
   color: var(--ink-2);
 }
 .project-trigger .project-name {
@@ -119,48 +207,60 @@
   white-space: nowrap;
 }
 .sidebar-section {
-  padding: 8px 10px 20px;
+  padding: 10px 8px 20px;
   overflow: auto;
 }
 /*
  * Three levels, three treatments, so the hierarchy is legible without a single
  * extra pixel of width or a line anywhere:
  *
- *   工作包          label step, 600, faint ink, tracked   -> a section eyebrow
- *   L02 东翼        label step, 600, muted ink, tracked   -> a group label
+ *   工作包          label step, 500, faint ink, tracked   -> a section eyebrow
+ *   L02 东翼        label step, 500, second ink, tracked  -> a group label
  *   东翼风管安装     action step, ink, 600 when selected   -> the content
  *   WP-200 · 机电   label step, faint ink                 -> its metadata
  *
  * Three tiers, three jobs, and the group label sits between two of them: it is a
  * heading rather than a row, so it takes the label step and tracking, and it is
- * quieter than the content it owns, so it stays in muted ink at 600 rather than
- * in the row's ink. At the meta step in regular weight it read as one more piece
- * of data between two work packages - and at the section label's own tier in its
- * own grey the two labels became indistinguishable, which is how the sidebar
- * previously read as one flat list with an occasional bold row.
+ * quieter than the content it owns. The two labels were previously a hair apart
+ * in tone (--muted against --muted-2), so 工作包, L02 东翼 and L03 东翼 arrived as
+ * one run of nearly identical grey text - a flat list of labels, which is a large
+ * part of why the column read as one undifferentiated slab. The group label now
+ * takes --ink-2 and the eyebrow keeps the faint tier, so the order is monotonic:
+ * eyebrow, then heading, then the row's own ink, then the row's metadata. Weight
+ * is not touched on either - both carry Chinese product text, where a 500-to-600
+ * difference renders as identical (frontend/src/styles/base.css).
  */
 .sidebar-label {
-  padding: 0 8px 6px;
+  padding: 0 8px 8px;
   color: var(--muted-2);
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.08em;
 }
+/*
+ * The section opens the list with the largest gap in the column, and the group
+ * gap is the next largest, so the vertical rhythm descends 18 / 14 / 5: a section
+ * contains groups, a group contains rows. Those three distances are what state
+ * the hierarchy now that the plane no longer states the boundary, and none of
+ * them is a rule.
+ */
 .area-group {
   display: flex;
   flex-direction: column;
   gap: 1px;
   margin-top: 14px;
 }
-/* the first group follows the section label, which already carries the space */
+/* the eyebrow already owns the space above the first group, and owns more of it
+   than a group boundary does, so the section reads as opening rather than as one
+   more gap between groups */
 .area-group:first-of-type {
-  margin-top: 2px;
+  margin-top: 10px;
 }
 .area-title {
   padding: 0 8px 5px;
-  color: var(--muted);
+  color: var(--ink-2);
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
 }
 /*
@@ -175,6 +275,13 @@
  * The row's own ink is the strongest on the navigation plane, so a work package
  * outranks the area heading above it even when nothing is selected, and the
  * selected state adds weight on top of the tint rather than substituting for it.
+ *
+ * The row's text is indented 6px past the group label that owns it, which is the
+ * third of the three devices holding the grouping together (tone, distance,
+ * indentation). The indent is inside the row, so the selection tint still opens
+ * on the same 8px inset as the project picker above it and the group label beside
+ * it: the indent moves the text, not the object, and the selected row therefore
+ * stays contained in the column instead of becoming a stripe across it.
  */
 .package-nav {
   display: flex;
@@ -182,7 +289,7 @@
   justify-content: space-between;
   gap: var(--space-2);
   width: 100%;
-  padding: 6px 8px;
+  padding: 5px 8px 5px 14px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -202,7 +309,7 @@
   display: block;
   font-size: var(--fs-action);
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 .package-nav.selected strong {
   font-weight: 600;
@@ -212,7 +319,24 @@
   margin-top: 1px;
   color: var(--muted-2);
   font-size: var(--fs-label);
-  line-height: 1.4;
+  line-height: 1.35;
+}
+/*
+ * Selection steps the whole row with it - the package id and the discipline are
+ * what the row *is*, and a title that darkens above metadata that stays behind
+ * reads as half-selected. One lifecycle, learned in the sidebar and honoured by
+ * the BIM element list and the document source list (frontend/src/styles/
+ * viewers.css, frontend/src/styles/features/documents.css).
+ *
+ * A blocked work package states its block in the tag beside the name and in
+ * nothing else: the tag keeps its neutral resting surface and takes the exception
+ * colour in its text (frontend/src/styles/components.css), so "this is the current
+ * work package" stays the first read and "this one is blocked" the second. They
+ * are two different facts and they were competing for the same signal: a warm
+ * filled chip inside a slate tinted row was the loudest object in the column.
+ */
+.package-nav.selected small {
+  color: var(--muted);
 }
 
 /* ---------- shell chrome ---------- */
@@ -230,14 +354,20 @@
  * Window identity band. It carries the project path on the left and the
  * application's own actions on the right, and it is closed by the plane step to
  * the work surface rather than by a rule.
+ *
+ * The band also owns the way back to a collapsed navigation column. The control
+ * appears only while the sidebar is gone, at the window's own top-left corner -
+ * the corner the navigation column vacated - so exactly one sidebar control is on
+ * screen at a time and it is always where the column's own edge is.
  */
 .topbar {
-  height: 44px;
+  height: 40px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  gap: var(--space-3);
+  padding: 0 18px;
 }
 .breadcrumb,
 .header-tools {
@@ -249,6 +379,12 @@
 }
 .crumb-sep {
   color: var(--muted-2);
+}
+/* The path absorbs the band's free width, so the actions stay at the right edge
+   whether or not the restore control is on screen. */
+.breadcrumb {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .breadcrumb strong {
   color: var(--ink);
@@ -279,8 +415,8 @@
   display: flex;
   align-items: stretch;
   gap: var(--space-1);
-  padding: 0 18px;
-  height: 40px;
+  padding: 0 16px;
+  height: 36px;
   flex-shrink: 0;
   overflow-x: auto;
 }
@@ -368,19 +504,46 @@
  * because the two have to agree: the state tag is the header's own right edge, and
  * a header allowed to run wider than the record put that tag in empty space 200px
  * past the object it describes.
+ *
+ * 820px, down from 900. The record is a well, so its whole rectangle is a surface
+ * whether or not there is text in it, and at 900 the conclusion and the four
+ * facts together filled about two thirds of it: the remaining third read as the
+ * empty right-hand half of a form. Narrowing the measure does not shrink the
+ * content, it deletes the part of the well that had nothing to say.
  */
 .coordination-workspace {
-  --coordination-measure: 900px;
+  --coordination-measure: 820px;
   min-height: 100%;
   padding: var(--space-5) var(--space-6)
     calc(var(--space-6) + var(--status-bar-h));
+}
+/*
+ * At 1440 the record was 820px inside a 1144px work region, and the remaining
+ * third read as a page that had stopped rather than as a deliberate margin. The
+ * fix is not more content and not a fourth rail (the Inspector already owns the
+ * right-hand contextual space when it is open) - it is to let the information
+ * that is already on the page take the width it can use.
+ *
+ * 960px opens above the four-column floor, which is the one width in this product
+ * that already means "every pane fits, nothing has yielded". At 1280 the work
+ * region is 984px, so the record still stops 24px short of its own padding; at
+ * 1440 it leaves a 184px margin, and that margin is intended - a professional
+ * desktop application does not have to fill the viewport, it has to look like it
+ * decided where to stop. Below the floor the measure stays 820: a narrower window
+ * has no width to give away, and the record's own columns wrap before then in any
+ * case.
+ */
+@media (min-width: 1280px) {
+  .coordination-workspace {
+    --coordination-measure: 960px;
+  }
 }
 .coordination-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   max-width: var(--coordination-measure);
-  margin-top: var(--space-5);
+  margin-top: 20px;
 }
 /*
  * Object identity: the title and its state form one row across the region with
@@ -413,7 +576,7 @@
   gap: var(--space-2);
   flex-shrink: 0;
   margin-left: auto;
-  min-height: 30px;
+  min-height: var(--control-h);
 }
 .state-text {
   font-size: var(--fs-action);
@@ -442,15 +605,25 @@
  * it groups, which is what lets the conclusion, the facts and the recommendation
  * be read as one statement.
  *
+ * The well is now 820px wide with an 18px inset instead of 900px with 24px, and
+ * the two columns are sized so they *fill* it: the conclusion takes the first
+ * 460px and the fact grid sits immediately beside it rather than being pushed
+ * against the far edge. The remaining piece of the "disabled form" reading was
+ * not the surface at all - it was the empty grey between the conclusion and the
+ * facts, which the old 1 1 280px column produced whenever the facts wrapped into
+ * two columns.
+ *
  * Flex wrapping is the collapse, not a breakpoint: no media query has to guess the
  * pane's width, so the Inspector opening at a constrained window is handled by the
- * same rule as a narrow window.
+ * same rule as a narrow window. The wrap threshold is ~790px of record width, so
+ * the record stacks wherever it did before and at the 860px window with the
+ * Inspector open.
  */
 .coordination-record {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4) var(--space-6);
-  padding: var(--space-4) var(--space-5) var(--space-5);
+  gap: var(--space-3) var(--space-5);
+  padding: 13px 18px 15px;
   border-radius: var(--radius-md);
   background: var(--surface-chrome);
 }
@@ -466,26 +639,46 @@
 .coordination-record.is-blocked {
   box-shadow: inset 3px 0 0 0 var(--warn-line);
 }
-.coordination-record > .state-block {
-  flex: 1 1 400px;
+/*
+ * The record is two columns of *one* statement: the left column carries the whole
+ * of the judgement - what changed, what is blocked, what it rests on, what is
+ * recommended, and the one action - and the right column carries the work
+ * package's condition. It reads that way because the left column is a single text
+ * column: the recommendation used to span both columns as a full-width footer,
+ * which is what made the well read as a form with a button row under it rather
+ * than as one record with a decision at the end of it.
+ *
+ * The columns are still flex items, so the wrap is the collapse rather than a
+ * breakpoint: when the record has no room for both, each column takes its own
+ * line and the left one fills it. The wrap threshold stays where it was - the
+ * left column's 460px basis against the fact column's 280px - so the record
+ * stacks wherever it stacked before, including at 860px with the Inspector open.
+ *
+ * At 960px, which is what the wide-screen measure opens to, the split lands at
+ * about 580 / 320: the judgement gets a real reading measure and the condition
+ * grid keeps the two columns it needs (--surface-chrome, the quietest plane that
+ * still groups, so the well recedes behind what it holds).
+ */
+.coordination-record > .record-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex: 1 1 460px;
   min-width: 0;
 }
 .coordination-record > .fact-list {
+  /*
+   * The condition column absorbs the record's spare width, up to the width at
+   * which its own grid would break into a third column - 3 x 120px plus two 16px
+   * gaps is 392, so the cap sits at 320 and the grid stays the two columns it was
+   * designed as. On a wide window that is the difference between a record that
+   * opened to make room and then left 300px of bare well between the judgement and
+   * the facts, and one where the facts are using the room.
+   */
   flex: 1 1 280px;
+  max-width: 320px;
+  min-width: 0;
   align-self: flex-start;
-}
-/*
- * The record's own action, on its own line beneath both columns, so blocker,
- * recommendation and commitment are one read rather than three objects - and so
- * either state's action spans the record instead of competing with the fact
- * column for a share of the first line. That competition is not hypothetical: the
- * READY action used to take a third of the first line, which left the fact column
- * too narrow for its own two-column grid and collapsed the condition matrix into a
- * single stack of four values.
- */
-.coordination-record > .recommendation,
-.coordination-record > .coordination-actions {
-  flex: 1 1 100%;
 }
 
 /*
@@ -497,7 +690,7 @@
 .state-block {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 .ready-line {
@@ -509,6 +702,25 @@
 /* the state object's own supporting line: a timestamp, the snapshot a judgement
    rests on, and how many sources it read */
 .state-meta {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
+/*
+ * READY's next action, in one quiet line at the same tier as the provenance
+ * above it.
+ *
+ * The state object states the conclusion and what it rests on, and a first-time
+ * reader was then left to work out what the product expects of them - the one
+ * thing in this workspace that was legible to someone who already knew the
+ * workflow and not to anyone else. It names the inputs that would invalidate the
+ * judgement and the two steps that follow, in the register the rest of the record
+ * is written in, and it is deliberately not a control: the action it names is
+ * 记录变更 in the window band, and a second control under the same name on the
+ * same page is what turns a quiet READY into a dashboard.
+ */
+.ready-guidance {
+  margin-top: 2px;
   color: var(--muted);
   font-size: var(--fs-meta);
   line-height: 1.6;
@@ -566,26 +778,26 @@
 .fact-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--space-4);
+  gap: var(--space-3) var(--space-4);
   max-width: 720px;
   min-width: 0;
 }
 .fact {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 .fact-label {
   color: var(--muted-2);
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
 }
 .fact-value {
   color: var(--ink);
   font-size: var(--fs-action);
-  line-height: 1.55;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 .fact-value.is-attention {
@@ -593,35 +805,41 @@
 }
 
 /*
- * The recommendation. It lives inside the record well and directly under the
- * blocker it answers, with no surface of its own: it used to be a separate grey
- * card below the record, which made the answer look like an unrelated second
- * object. Within one well and one text column it reads as the record's closing
- * paragraph - the blocker, the way out of it, and the one committed action.
+ * The recommendation. It is the closing paragraph of the record's left column,
+ * directly under the blocker it answers, with no surface of its own: it used to be
+ * a separate grey card below the record, and then a full-width footer inside it,
+ * and both made the answer look like an unrelated second object rather than the
+ * last thing the record says.
  *
- * The measure is capped so a suggestion stays a sentence rather than a line.
+ * The measure is capped so a suggestion stays a sentence rather than a line, and
+ * the cap is only reached on a wide window: the column it now lives in is the
+ * thing that holds it.
  */
 .recommendation {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   max-width: 640px;
-  margin-top: var(--space-2);
 }
 .recommendation p {
   font-size: var(--fs-body);
-  line-height: 1.75;
+  line-height: 1.7;
   color: var(--ink-2);
 }
 .recommendation p.approval-line {
   font-size: var(--fs-meta);
   color: var(--muted);
 }
+/* an action answers the paragraph directly above it, so it takes the smaller of
+   the two gaps in the column: the record's own rhythm when it is the READY
+   record's last element, this one when it closes a recommendation */
 .coordination-actions {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-top: var(--space-2);
+}
+.recommendation .coordination-actions {
+  margin-top: var(--space-1);
 }
 /* analyzing: an inline activity statement, not a state block */
 .coordination-body.is-activity {
@@ -670,24 +888,32 @@
   gap: var(--space-2);
   margin-top: var(--space-1);
 }
+/*
+ * The startup field sits on the window backdrop - the one place a control is
+ * drawn on the dimmest plane in the product - so it takes the boundary that is
+ * calibrated for it rather than the light-plane token the shared input rule now
+ * carries (base.css states the placement rule).
+ */
 .startup input {
   min-width: 240px;
+  border-color: var(--line-control);
 }
 
 @media (max-width: 1150px) {
-  .sidebar {
-    width: 224px;
+  .application-shell {
+    --nav-w: 216px;
   }
   .coordination-workspace {
-    padding: 22px 22px calc(30px + var(--status-bar-h));
+    padding: 20px 20px calc(26px + var(--status-bar-h));
   }
 }
 @media (max-width: 850px) {
   .application-shell {
     min-width: 720px;
+    --nav-w: 196px;
   }
-  .sidebar {
-    width: 200px;
+  .brand {
+    padding: 0 8px 0 12px;
   }
   .topbar,
   .workspace-tabs,
@@ -697,6 +923,6 @@
     padding-right: 14px;
   }
   .coordination-workspace {
-    padding: 18px 14px calc(26px + var(--status-bar-h));
+    padding: 16px 14px calc(24px + var(--status-bar-h));
   }
 }

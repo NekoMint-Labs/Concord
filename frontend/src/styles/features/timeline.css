@@ -18,7 +18,7 @@
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-3);
   background: var(--surface-chrome);
-  padding: 6px 20px;
+  padding: 5px 18px;
   min-height: var(--status-bar-h);
 }
 /*
@@ -37,7 +37,7 @@
 }
 .timeline-heading strong {
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
   color: var(--muted-2);
 }

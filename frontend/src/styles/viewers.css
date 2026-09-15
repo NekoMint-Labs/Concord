@@ -31,7 +31,7 @@
    gets - one job, one answer) */
 .viewer-status {
   flex-shrink: 0;
-  padding: 9px 20px;
+  padding: 7px 18px;
   background: var(--surface-chrome);
   color: var(--muted);
   font-size: var(--fs-meta);
@@ -66,8 +66,34 @@
  * selection. A tint states the same thing with area.
  */
 .bim-element-list {
-  background: var(--surface-detail);
+  background: var(--surface-list);
 }
+/*
+ * `--surface-list`: one half step *lighter* than the chrome band above it, and
+ * that direction is the whole point of the surface contract.
+ *
+ * The window assigns four roles and the ladder had a value for each: the
+ * persistent navigation plane (`--surface-nav`, the sidebar), the local object
+ * list (here), the work plane (`--surface-workspace`), and the contextual
+ * Inspector (`--surface-detail`). This pane used to share `--surface-detail` with
+ * the Inspector, so the recessed column inside the BIM workspace and the docked
+ * detail pane at the edge of the window were the same material - and a full-height
+ * column of that material beside the work plane, with a sidebar of nearly the same
+ * value further left, read as a second navigation rail however narrow it was made.
+ * It is lighter and quieter than the sidebar now, which is what lets it read as an
+ * object list *inside* the BIM workspace rather than as another application rail.
+ * Its area is unchanged: 264px, with 6px rows (BIMWorkspace.tsx).
+ *
+ * The list body takes one value of its own, and its header band consequently reads
+ * as a band. Previously the pane, its rows, the chrome toolbar above it, and its
+ * own header were all `--surface-chrome`: one uninterrupted slab of grey from the
+ * toolbar to the bottom of the window, in which the pane's name was the same
+ * material as everything it named. Two things follow from the half step - the
+ * browser is now 1.19:1 lighter than the sidebar rather than 1.13:1, and the chrome
+ * header band is a 1.035:1 step above its own rows, so the pane is named by a
+ * surface rather than by a rule (frontend/src/styles/layout.css states the shared
+ * header contract, frontend/src/styles/base.css states why the step is this size).
+ */
 /*
  * The rows are the pane's body, and the body owns the inset and the rhythm. There
  * is no row rule: a 1px separator on the recessed pane plane sits below the
@@ -77,19 +103,24 @@
 .bim-element-list .pane-body {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--space-2);
+  gap: 1px;
+  padding: 4px 6px;
 }
 .bim-element {
   display: block;
   width: 100%;
-  padding: 8px 10px;
+  padding: 6px 9px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink-2);
   text-align: left;
-  transition: background var(--motion-fast) var(--ease);
+  /* Colour is in the list because selection steps the row's metadata up with it
+     (below): one 120ms answer to "this row is the current one", rather than a tint
+     that arrives and a value that snaps. */
+  transition:
+    background var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease);
 }
 .bim-element:not(.selected):hover {
   background: var(--hover);
@@ -107,7 +138,7 @@
   display: block;
   font-size: var(--fs-action);
   font-weight: 400;
-  line-height: 1.4;
+  line-height: 1.35;
   color: var(--ink);
   overflow-wrap: anywhere;
 }
@@ -118,14 +149,14 @@
   flex-shrink: 0;
   color: var(--warn-fg);
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
 }
 .bim-element small {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--muted-2);
   font-size: var(--fs-label);
-  line-height: 1.45;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 /* The selected row's metadata steps up with it, so the whole row reads as the
@@ -147,10 +178,28 @@
 .bim-properties .pane-body {
   display: flex;
   flex-direction: column;
-  padding: 20px 24px 40px;
+  padding: 18px 22px 36px;
 }
-/* the pane-level empty state keeps the property body's own inset and origin, so
-   the instruction arrives where the first value would (components.css) */
+/*
+ * Nothing selected: the instruction sits *inside* the property workspace rather
+ * than at the top of it.
+ *
+ * It used to keep the body's own origin, which is the right rule for a list-level
+ * empty state and the wrong one here: at the top of a 700px pane a two-line
+ * instruction is a caption for a blank document, and the pane read as unfinished
+ * rather than as waiting. A third of the way down it is guidance about the pane,
+ * read on the way to the list beside it.
+ *
+ * The offset is a spacer element and not a margin, because a percentage margin
+ * resolves against the containing block's *width* and what this has to measure is
+ * a fraction of its height. The guard is for a short pane, where a third of the
+ * height is not enough room to clear the header band.
+ */
+.bim-properties .pane-body.is-waiting::before {
+  content: "";
+  flex: 0 0 38%;
+  min-height: var(--space-4);
+}
 /*
  * The header carries the element's own name when one is selected and the pane's
  * noun when none is, so the pane always says what it is. The technical id is
@@ -168,7 +217,16 @@
  * properties pane names its subject at the section tier. The list's label is
  * lifted off the faint tier so the pair reads as two titled panes rather than a
  * titled pane beside a placeholder.
+ *
+ * Its inset is the one thing the two headers do not share, and it is deliberate:
+ * a browser header sits 15px in so its title starts on the same edge as the row
+ * titles beneath it (6px of pane-body inset plus 9px of row inset). A header whose
+ * label starts 5px to the left of every row it names is a band *above* a list; on
+ * the same edge it is the list's own title.
  */
+.bim-element-list > .pane-header {
+  padding-left: 15px;
+}
 .bim-element-list .pane-header > .pane-header-label {
   color: var(--ink-2);
 }
@@ -185,37 +243,46 @@
 }
 /*
  * Value groups. The label spine and the value column are one grid, so a reader can
- * scan the left column and read the right one. A group is separated from the next
- * by space and a `--line-soft` rule - a rule is legitimate here because it
- * separates two sets of values, not two regions, which is the one job a line
- * still has. There is no card: a boxed group on the work plane would be visible
- * only by its border and its shadow, which is the failure the visual language
- * removes.
+ * scan the left column and read the right one. There is no card: a boxed group on
+ * the work plane would be visible only by its border and its shadow, which is the
+ * failure the visual language removes.
+ *
+ * A group is separated from the next by space and nothing else. It used to be
+ * closed by a `--line-soft` rule, and three of those rules turned nine values into
+ * a ruled form: the eye was asked to cross three horizontal lines to reach three
+ * short lists that a heading and 22px of air already separate. A rule is spent in
+ * this pane only where the boundary is a boundary of *kind* rather than of rhythm
+ * - between the curated values and the full raw record below them.
  *
  * The space is split so the heading belongs to the values beneath it: the group
- * opens with air, the rule closes the group above, and the heading sits tighter
- * to its own list than to that rule. The label then sits on the value's first
- * baseline and never wraps, so a two-line value still reads back to its label.
+ * opens with air, and the heading sits tighter to its own list than to the group
+ * above. The label then sits on the value's first baseline and never wraps, so a
+ * two-line value still reads back to its label.
  */
 .property-group + .property-group {
-  margin-top: var(--space-5);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line-soft);
+  margin-top: 22px;
 }
+/*
+ * The group's own name. It sits at the label tier in the stronger ink with wide
+ * tracking, and that tracking is what separates a *heading* from the property
+ * labels beneath it: a heading is tracked and darker, a label is tighter and
+ * muted. At one tracking in the same ink the two were the same object, which is
+ * how a sheet of three groups read as one flat list of nine labels.
+ */
 .property-group-title {
   display: block;
   color: var(--ink-2);
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-weight: 500;
+  letter-spacing: 0.08em;
 }
 .bim-property-list,
 .property-values {
   display: grid;
-  grid-template-columns: 80px minmax(0, 1fr);
+  grid-template-columns: 76px minmax(0, 1fr);
   align-items: baseline;
-  gap: 10px var(--space-4);
-  margin: var(--space-2) 0 0;
+  gap: 7px 14px;
+  margin: 6px 0 0;
   font-size: var(--fs-action);
 }
 .bim-property-list dt,
@@ -225,12 +292,22 @@
   letter-spacing: 0.03em;
   white-space: nowrap;
 }
+/*
+ * The value column. A value here is a product fact - a type, a storey, a zone, a
+ * revision, a relationship count, whether this element is affected - so it is read
+ * rather than scanned: body-text scale in full ink, which is the same treatment
+ * the coordination fact list gives an engineering value (frontend/src/styles/
+ * shell.css, `.fact-value`). It used to sit one step below body text in the second
+ * ink, which made every value on this sheet read as a footnote to its own label -
+ * and the two values a reader actually has to compare between elements (楼层 and
+ * 空间) were the quietest text in the pane.
+ */
 .bim-property-list dd,
 .property-values dd {
   margin: 0;
-  color: var(--ink-2);
-  font-size: var(--fs-action);
-  line-height: 1.5;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  line-height: 1.55;
   overflow-wrap: anywhere;
 }
 /*
@@ -244,12 +321,14 @@
 /*
  * The full record stays one action away rather than printed at equal weight with
  * the values a decision needs, and it sits outside the keyed summary because it
- * holds open state.
+ * holds open state. Its rule is the one separator this pane keeps, because a raw
+ * JSON record is a different kind of content from the values above it rather than
+ * the next group of the same kind.
  */
 .bim-properties .disclosure-block {
   max-width: 620px;
-  margin-top: var(--space-5);
-  padding-top: var(--space-4);
+  margin-top: 24px;
+  padding-top: 14px;
   border-top: 1px solid var(--line-soft);
 }
 .bim-properties .disclosure-body pre {
@@ -264,7 +343,7 @@
    for no reason */
 .viewer-note {
   flex-shrink: 0;
-  padding: 9px 20px;
+  padding: 7px 18px;
   background: var(--surface-chrome);
   color: var(--muted);
   font-size: var(--fs-meta);

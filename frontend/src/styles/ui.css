@@ -108,7 +108,7 @@
   padding: var(--space-1) var(--space-2) 3px;
   color: var(--text-faint);
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.03em;
 }
 .menu-separator {
@@ -116,12 +116,20 @@
   margin: var(--space-1) 0;
   background: var(--border);
 }
+/*
+ * A menu row is a `div[role="menuitem"]`, not a `<button>`, so the shared control
+ * transition in base.css does not reach it and its highlight used to arrive in a
+ * single frame while every list row in the product faded over 120ms. It takes the
+ * instant step rather than the fast one because this highlight travels: a menu the
+ * pointer or the arrow keys are walking down answers on the frame it moves, and
+ * anything slower reads as lag rather than as feedback.
+ */
 .menu-item {
   display: flex;
   align-items: baseline;
   gap: var(--space-3);
   width: 100%;
-  height: 28px;
+  height: 26px;
   padding: 0 var(--space-2);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
@@ -129,6 +137,9 @@
   white-space: nowrap;
   cursor: default;
   user-select: none;
+  transition:
+    background var(--motion-instant) var(--ease),
+    color var(--motion-instant) var(--ease);
 }
 .menu-item-label {
   min-width: 0;

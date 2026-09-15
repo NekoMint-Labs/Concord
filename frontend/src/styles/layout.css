@@ -22,6 +22,15 @@
   min-width: 0;
   min-height: 0;
 }
+/*
+ * A pane's size is never animated, and that is a contract rather than an omission.
+ * The Inspector's arrival is a transform and a fade on its own content
+ * (frontend/src/motion), so no width is involved in it; and while the pointer is
+ * on a divider the pane has to track the pointer directly, frame for frame. A
+ * `transition` on `.pane` or on `.pane-split` would make every drag finish behind
+ * the pointer by its own duration, so neither rule may ever grow one - which is why
+ * a pane whose content is animated animates the content and not the column.
+ */
 
 /*
  * The visible rule is 1px and its pointer target is 9px. The width is set with
@@ -78,6 +87,15 @@
  * the first row of the content. It carries the pane's own name and the pane's own
  * count or control - nothing else, because a header that repeats the workspace
  * title is chrome spent on nothing.
+ *
+ * The band is a material statement rather than a rule, and that is what this pass
+ * fixed: a header whose body is the *same* value could only be told apart from its
+ * rows by the rule under it, so it read as text floating above a line. Over the
+ * work plane (the reading pane, the property sheet) the band is already a step
+ * darker than the content it names; over a local object list it is now a step
+ * *lighter* than the rows beneath it, which is the difference `--surface-list`
+ * exists to make (frontend/src/styles/base.css). Either way the header is a band
+ * of a different material from its own body, and no rule is needed to say so.
  */
 .pane-header {
   flex-shrink: 0;
@@ -89,15 +107,18 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 36px;
-  padding: 0 12px;
+  min-height: 32px;
+  padding: 0 10px;
   background: var(--surface-chrome);
 }
 .pane-header > h3,
 .pane-header > strong {
   min-width: 0;
   font-size: var(--fs-section);
-  font-weight: 600;
+  /* the pane's subject is a heading, not a title: at the section step in ink at
+     500 it names the pane, and the object title above it stays the only 600 in
+     the view */
+  font-weight: 500;
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -109,7 +130,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  height: 26px;
+  height: 25px;
   margin-left: -6px;
   padding: 0 6px;
   border: 0;
@@ -117,13 +138,15 @@
   background: transparent;
   color: var(--ink);
   font-size: var(--fs-section);
-  font-weight: 600;
+  font-weight: 500;
 }
 .pane-header-menu:hover,
 .pane-header-menu[data-state="open"] {
   background: var(--hover);
 }
 .pane-header-menu .count {
+  /* the count sits beside the pane's name: it is the header's own annotation, and
+     `margin-left: 0` is what says so against `.count`'s shared auto margin */
   margin-left: 0;
 }
 /*
@@ -136,7 +159,7 @@
   align-items: center;
   gap: var(--space-1);
   flex-shrink: 0;
-  height: 24px;
+  height: 23px;
   margin-left: -6px;
   padding: 0 6px;
   border: 0;
@@ -144,7 +167,7 @@
   background: transparent;
   color: var(--muted);
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.03em;
 }
 .pane-header-picker:hover,
@@ -153,14 +176,13 @@
   color: var(--ink);
 }
 .pane-header-picker .count {
-  margin-left: 0;
   font-size: var(--fs-label);
 }
 .pane-header-label {
   min-width: 0;
   color: var(--muted);
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.03em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -179,8 +201,19 @@
   color: var(--muted-2);
   font-size: var(--fs-label);
 }
+/*
+ * The count is the header's own annotation, not its far edge.
+ *
+ * It used to be pushed to the right with an auto margin, which in a 264px browser
+ * put four characters of grey 200px away from the two-character label they
+ * belonged to: the header then read as a table header - a word at one edge and a
+ * number at the other - rather than as one name. Adjacent, at the quiet tier, it
+ * says what a local browser header says: what this list is, and how many of them
+ * there are. A pane header that owns actions still pins *those* to the edge
+ * (`.pane-header-actions`), because an action belongs where the eye looks for one.
+ */
 .pane-header .count {
-  margin-left: auto;
+  margin-left: 0;
 }
 .pane-header-actions {
   display: flex;
@@ -192,8 +225,8 @@
 .pane-header.is-stacked {
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 5px;
+  padding: 6px 10px;
   min-height: 0;
 }
 .pane-header-row {
