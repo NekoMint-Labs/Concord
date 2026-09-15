@@ -66,7 +66,7 @@ it("refreshes the document library when an asynchronously dispatched import fini
     finish({ ...run, status: "COMPLETED" });
   });
   await screen.findByText("late.md");
-  expect(screen.getByRole("status")).toHaveTextContent("COMPLETED");
+  expect(screen.getByRole("status")).toHaveTextContent("已完成");
   unmount();
   client.clear();
 });

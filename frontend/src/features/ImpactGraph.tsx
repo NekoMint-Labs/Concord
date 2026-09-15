@@ -9,6 +9,11 @@ import {
 import "@xyflow/react/dist/style.css";
 import type { Workspace } from "../api/client";
 import { activeCoordinationEvent } from "../app/coordination";
+import {
+  demoConstraintText,
+  demoProposalTitle,
+  demoWorkPackageName,
+} from "../ui/demo/demoPresentation";
 
 export default function ImpactGraph({
   workspace,
@@ -64,7 +69,7 @@ export default function ImpactGraph({
             <>
               <small>受影响工作包</small>
               <strong>
-                {wp.id} · {wp.name}
+                {wp.id} · {demoWorkPackageName(wp.id, wp.name)}
               </strong>
               <span>
                 {readiness?.status === "BLOCKED"
@@ -94,7 +99,9 @@ export default function ImpactGraph({
           label: (
             <>
               <small>阻塞原因</small>
-              <strong>{constraint.description}</strong>
+              <strong>
+                {demoConstraintText(constraint.kind, constraint.description)}
+              </strong>
               <span>{constraint.evidence_ids.length} 条判断依据</span>
             </>
           ),
@@ -117,7 +124,9 @@ export default function ImpactGraph({
           label: (
             <>
               <small>建议处理</small>
-              <strong>{proposal.title}</strong>
+              <strong>
+                {demoProposalTitle(proposal.work_package_id, proposal.title)}
+              </strong>
               <span>批准后执行 · R{proposal.risk}</span>
             </>
           ),

@@ -4,6 +4,7 @@ import { useRunStream } from "../api/stream";
 import { Button } from "../components/ui/button";
 import { AppPopover } from "../components/ui/AppPopover";
 import { Status } from "../components/Status";
+import { domainLabel } from "../ui/labels";
 
 export function Timeline({
   run,
@@ -89,8 +90,19 @@ export function Timeline({
                     ? new Date(row.timestamp).toLocaleTimeString()
                     : ""}
                 </span>
+                {/*
+                  The row's name is a run-stream frame: a step name, a custom
+                  event name, or a frame type. All three are machine values in one
+                  vocabulary (frontend/src/ui/labels.ts owns the words), and a
+                  value the product does not know is shown as the identifier it is,
+                  because splitting it into suspect prose is how a trace stops being
+                  evidence of what the run did.
+                */}
                 <strong>
-                  {row.name ?? row.stepName ?? row.type?.replaceAll("_", " ")}
+                  {domainLabel(
+                    "runTrace",
+                    row.name ?? row.stepName ?? row.type,
+                  )}
                 </strong>
               </div>
             ))}

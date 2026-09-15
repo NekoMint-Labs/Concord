@@ -15,7 +15,7 @@ export function Capabilities() {
     <div className="content-view">
       <div className="view-heading">
         <div>
-          <h2>Capability health</h2>
+          <h2>能力状态</h2>
         </div>
         <Button
           size="sm"
@@ -25,28 +25,28 @@ export function Capabilities() {
             void capabilities.refetch();
           }}
         >
-          Probe services
+          探测服务
         </Button>
         <span className="profile-tag">
-          {profile.data?.profile ?? "loading"} profile
+          配置档案：{profile.data?.profile ?? "加载中"}
         </span>
       </div>
       {profile.data && (
         <div className="profile-summary">
           <strong>{profile.data.runtime}</strong>
           <span>
-            {profile.data.database} / {profile.data.storage} storage
+            存储 {profile.data.database} / {profile.data.storage}
           </span>
           <p>{profile.data.authentication}</p>
         </div>
       )}
-      {capabilities.error && <p role="alert">Capability request failed.</p>}
+      {capabilities.error && <p role="alert">能力请求失败。</p>}
       <table className="data-table capability-table">
         <thead>
           <tr>
-            <th>Capability</th>
-            <th>Implementation</th>
-            <th>Status / reason</th>
+            <th>能力</th>
+            <th>实现</th>
+            <th>状态 / 原因</th>
           </tr>
         </thead>
         <tbody>
@@ -60,7 +60,7 @@ export function Capabilities() {
                 <Status value={cap.status} />
                 <small>{cap.reason}</small>
                 {cap.service_reachable === null && (
-                  <small>External reachability not asserted</small>
+                  <small>未断言外部可达性</small>
                 )}
               </td>
             </tr>

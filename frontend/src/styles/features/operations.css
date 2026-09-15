@@ -79,15 +79,11 @@
   color: var(--warn-fg);
   line-height: 1.6;
 }
-.operation-form > select {
-  width: 100%;
+.operation-form > .app-select-trigger {
   margin-top: 13px;
 }
 .run-history {
   margin-top: 20px;
-}
-.run-history > select {
-  width: 100%;
 }
 .run-summary {
   display: flex;
@@ -109,6 +105,44 @@
 }
 .job-result h4 {
   margin: 9px 0;
+}
+/*
+ * A structured record: the job result and each timeline event, rendered as
+ * label/value rows rather than as a raw JSON blob. The field names are the
+ * API's identifiers and stay as they arrive; only the presentation is the
+ * product's. The raw payload survives beneath the block behind an explicit
+ * [raw result] / [debug event] disclosure (.disclosure lives in components.css).
+ */
+.value-rows {
+  display: grid;
+  grid-template-columns: minmax(96px, max-content) minmax(0, 1fr);
+  gap: 3px var(--space-3);
+  margin: 0;
+  font-size: var(--fs-meta);
+}
+.value-row {
+  display: contents;
+}
+.value-rows dt {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.value-rows dd {
+  margin: 0;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.value-nested {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.value-empty {
+  color: var(--muted-2);
+}
+.job-result .disclosure-block,
+.trace-list .disclosure-block {
+  margin-top: var(--space-2);
 }
 .job-result pre {
   max-height: 340px;

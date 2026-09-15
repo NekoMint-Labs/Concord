@@ -1,7 +1,39 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import maplibregl from "maplibre-gl";
+import type { FeatureCollection } from "geojson";
 import { api } from "../api/client";
+import { demoWorkPackageName } from "../ui/demo/demoPresentation";
+
+/*
+ * MapLibre's built-in controls and its own map element carry English tooltips and
+ * accessibility names. The `locale` option patches exactly those string ids, so
+ * the controls stay MapLibre's and are read in the product's own language rather
+ * than being replaced just to translate them.
+ */
+const MAP_LOCALE: Record<string, string> = {
+  "Map.Title": "现场地图",
+  "NavigationControl.ZoomIn": "放大",
+  "NavigationControl.ZoomOut": "缩小",
+  "NavigationControl.ResetBearing": "重置方位",
+  "Popup.Close": "关闭",
+};
+
+/**
+ * The work package's own name for the current selection. The fixture emits English
+ * names, so the deterministic demo names are localized through the demo boundary;
+ * an unknown id keeps its own fallback text.
+ */
+function packageLabel(data: FeatureCollection | undefined, id: string): string {
+  const point = data?.features.find(
+    (feature) =>
+      feature.geometry?.type === "Point" &&
+      feature.properties?.work_package_id === id,
+  );
+  const fallback =
+    typeof point?.properties?.name === "string" ? point.properties.name : id;
+  return demoWorkPackageName(id, fallback);
+}
 
 export default function GISWorkspace({
   project,
@@ -22,6 +54,7 @@ export default function GISWorkspace({
     queryKey: ["geo", project],
     queryFn: () => api.geo(project),
   });
+  const failed = Boolean(error || data.error);
   useEffect(() => {
     if (!target.current || !data.data) return;
     let instance: maplibregl.Map | undefined;
@@ -32,9 +65,7 @@ export default function GISWorkspace({
     const fail = (cause: unknown) => {
       if (!disposed) {
         setReady(false);
-        setError(
-          cause instanceof Error ? cause.message : "WebGL map unavailable",
-        );
+        setError(cause instanceof Error ? cause.message : "WebGL 渲染不可用");
       }
     };
     const dispose = () => {
@@ -49,6 +80,7 @@ export default function GISWorkspace({
         center: [120.36, 36.07],
         zoom: 17,
         attributionControl: false,
+        locale: MAP_LOCALE,
         style: {
           version: 8,
           sources: {},
@@ -98,15 +130,20 @@ export default function GISWorkspace({
             if (disposed) return;
             const feature = event.features?.[0];
             if (!feature) return;
-            const workPackage = feature.properties?.work_package_id;
-            if (typeof workPackage === "string") selection.current(workPackage);
+            const properties = feature.properties ?? {};
+            const workPackage =
+              typeof properties.work_package_id === "string"
+                ? properties.work_package_id
+                : "";
+            if (workPackage) selection.current(workPackage);
+            const rawName =
+              typeof properties.name === "string" ? properties.name : "";
+            const label = workPackage
+              ? demoWorkPackageName(workPackage, rawName || workPackage)
+              : rawName || "现场位置";
             new maplibregl.Popup()
               .setLngLat(event.lngLat)
-              .setText(
-                String(
-                  feature.properties?.name ?? workPackage ?? "Site location",
-                ),
-              )
+              .setText(label)
               .addTo(created);
           });
           setReady(true);
@@ -142,21 +179,46 @@ export default function GISWorkspace({
   return (
     <section className="gis-workspace">
       <div className="viewer-toolbar">
-        <strong>SITE CONTEXT</strong>
-        <span>Local GeoJSON / no commercial tiles / synthetic location</span>
+        <strong>现场地图</strong>
+        <span>项目现场与工作包位置</span>
         <span role="status">
-          {ready ? "Site map ready" : "Loading site map"}
+          {failed ? "地图不可用" : ready ? "地图已就绪" : "正在加载地图"}
         </span>
       </div>
-      <div
-        className="map-stage"
-        ref={target}
-        aria-label="Interactive project site map"
-      />
-      {(error || data.error) && (
+      {/* Minimum context so a reader can tell what they are looking at: what the
+          polygon is, what the points are, and which work package is current. Not
+          a dashboard. */}
+      <div className="gis-context">
+        <ul className="gis-legend">
+          <li>
+            <span className="gis-legend-swatch is-area" aria-hidden="true" />
+            作业区域
+          </li>
+          <li>
+            <span className="gis-legend-swatch is-point" aria-hidden="true" />
+            工作包位置
+          </li>
+        </ul>
+        <p className="gis-selected">
+          <span>当前工作包</span>
+          {selected ? (
+            <>
+              <strong className="mono">{selected}</strong>
+              <span aria-hidden="true">·</span>
+              <span>{packageLabel(data.data, selected)}</span>
+            </>
+          ) : (
+            <span>未选择</span>
+          )}
+        </p>
+      </div>
+      <div className="map-stage" ref={target} aria-label="项目现场地图" />
+      <p className="viewer-note">
+        数据来源：本地 GeoJSON 合成位置，未接入商业地图瓦片。
+      </p>
+      {failed && (
         <div className="viewer-message" role="alert">
-          Map unavailable: {error || data.error?.message}. Work packages remain
-          available in the list view.
+          {`地图不可用：${error || data.error?.message}。工作包仍可在“工作包”视图中查看。`}
         </div>
       )}
     </section>

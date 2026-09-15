@@ -65,6 +65,15 @@
 .pane-divider[data-separator="active"] {
   background: var(--accent);
 }
+/*
+ * A disabled divider is the edge of a pane that is not there - the shell's
+ * navigation column while it is collapsed. The library already takes it out of
+ * the tab order; it must not leave a hairline at the window's edge either, which
+ * is what a 1px rule with no pane beside it looks like.
+ */
+.pane-divider[data-separator="disabled"] {
+  visibility: hidden;
+}
 .pane-divider:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 0;

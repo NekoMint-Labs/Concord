@@ -158,6 +158,27 @@ export function demoOwner(id: string, fallback: string): string {
   return locale === "zh" ? (OWNERS[id] ?? fallback) : fallback;
 }
 
+/**
+ * Structured-BIM element names.
+ *
+ * A fixture element's GlobalId is its stable identity
+ * (backend/app/adapters/demo_ids.py), so the three deterministic elements can be
+ * named here the way the fixture's work packages, areas, owners and constraint
+ * sentences already are. Any other id is an imported file's own element: that name
+ * is the file's data and passes through unchanged, exactly as an imported
+ * document's title does. The GlobalId stays visible as the element's identifier
+ * wherever it is shown, so nothing is hidden by the label.
+ */
+const ELEMENT_NAMES: Record<string, string> = {
+  "2EG_GvBOnHSANjPr7CHowU": "东侧核心筒墙",
+  "2CU_Px_b9MJe1kH$vDvU8G": "送风管 E-01",
+  "1xhjFnj$HKePcWkxtV734X": "电缆桥架 E-01",
+};
+
+export function demoElementName(id: string, fallback: string): string {
+  return locale === "zh" ? (ELEMENT_NAMES[id] ?? fallback) : fallback;
+}
+
 export function demoConstraintKind(kind: string): string {
   return locale === "zh" ? (CONSTRAINT_KINDS[kind] ?? kind) : kind;
 }

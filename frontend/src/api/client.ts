@@ -39,7 +39,7 @@ export async function initializeConnection(): Promise<void> {
     endpoint.pathname !== "/" ||
     connection.token.length < 32
   ) {
-    throw new Error("Desktop returned an invalid local backend connection");
+    throw new Error("桌面版返回的本地连接信息无效");
   }
   apiBase = endpoint.origin;
   apiToken = connection.token;
@@ -81,7 +81,24 @@ export async function request<T>(
   ) {
     headers.set("Content-Type", "application/json");
   }
-  const response = await fetch(apiUrl(path), { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(apiUrl(path), { ...init, headers });
+  } catch (cause) {
+    /*
+     * A request that never reached the service is reported as the product's own
+     * failure rather than as the platform's throw. A browser says "Failed to
+     * fetch", which names neither what failed nor what to do about it, and it is
+     * the one error every surface (the workspace banner, a failed action) would
+     * otherwise show verbatim. The cause is kept in the error's `code` so nothing
+     * is swallowed.
+     */
+    throw new APIError(
+      0,
+      "无法连接 Concord 本地服务。请重新连接；如问题持续，可查看诊断信息。",
+      cause instanceof Error ? cause.name : "network",
+    );
+  }
   if (!response.ok) {
     const error = await response
       .json()
@@ -204,7 +221,6 @@ export const api = {
 /** Binary downloads remain authenticated; bearer secrets are never put in URLs. */
 export async function readSource(path: string): Promise<Blob> {
   const response = await fetch(apiUrl(path), { headers: requestHeaders() });
-  if (!response.ok)
-    throw new APIError(response.status, "Source file is unavailable");
+  if (!response.ok) throw new APIError(response.status, "来源文件不可用");
   return response.blob();
 }

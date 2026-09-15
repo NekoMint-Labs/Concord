@@ -17,7 +17,7 @@ it("isolates a failed viewer without removing the project controls", () => {
       </ViewerBoundary>
     </div>,
   );
-  expect(screen.getByRole("alert")).toHaveTextContent("could not be loaded");
+  expect(screen.getByRole("alert")).toHaveTextContent("无法加载");
   expect(
     screen.getByRole("button", { name: "Approve outside the viewer" }),
   ).toBeEnabled();

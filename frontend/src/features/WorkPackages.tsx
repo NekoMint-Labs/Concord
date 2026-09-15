@@ -1,5 +1,9 @@
 import type { Workspace } from "../api/client";
 import { Status } from "../components/Status";
+import {
+  demoDiscipline,
+  demoWorkPackageName,
+} from "../ui/demo/demoPresentation";
 
 export function WorkPackages({
   workspace,
@@ -12,18 +16,18 @@ export function WorkPackages({
     <div className="content-view">
       <div className="view-heading">
         <div>
-          <h2>Work packages</h2>
+          <h2>工作包</h2>
         </div>
-        <span className="muted">Authoritative facts, not chat state</span>
+        <span className="muted">权威事实，非对话状态</span>
       </div>
       <table className="data-table">
         <thead>
           <tr>
-            <th>Package / discipline</th>
-            <th>Area</th>
-            <th>Design</th>
-            <th>Crew</th>
-            <th>Readiness</th>
+            <th>工作包 / 专业</th>
+            <th>区域</th>
+            <th>修订</th>
+            <th>班组</th>
+            <th>就绪状态</th>
           </tr>
         </thead>
         <tbody>
@@ -31,10 +35,10 @@ export function WorkPackages({
             <tr key={wp.id} onClick={() => onSelect(wp.id)}>
               <td>
                 <button className="text-button" onClick={() => onSelect(wp.id)}>
-                  {wp.name}
+                  {demoWorkPackageName(wp.id, wp.name)}
                 </button>
                 <small>
-                  {wp.id} / {wp.discipline}
+                  {wp.id} / {demoDiscipline(wp.discipline)}
                 </small>
               </td>
               <td>{wp.area_id}</td>
@@ -60,8 +64,8 @@ export function WorkPackages({
         </tbody>
       </table>
       <div className="view-heading">
-        <h3>Recent audit</h3>
-        <span className="muted">Append-oriented control history</span>
+        <h3>最近审计</h3>
+        <span className="muted">仅追加的操作历史</span>
       </div>
       <div className="audit-list">
         {workspace.audit.slice(0, 12).map((row) => (

@@ -1,9 +1,30 @@
-import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { DTO, WorkPackage } from "../api/client";
 import { Button } from "../components/ui/button";
 import { AppDialog, DialogClose } from "../components/ui/AppDialog";
-import { icon } from "../components/ui/icon";
+import { AppSelect } from "../components/ui/AppSelect";
+import { domainLabel } from "../ui/labels";
+import { demoWorkPackageName } from "../ui/demo/demoPresentation";
+
+/*
+ * The submitted enum values are the API contract and never change; only the
+ * visible words do. They are read from the label layer so the composer and the
+ * rest of the product cannot drift apart.
+ */
+const CHANGE_KINDS = [
+  "design_revision",
+  "workforce",
+  "predecessor",
+  "material",
+  "equipment",
+  "inspection",
+  "external",
+] as const;
+
+const KIND_OPTIONS = CHANGE_KINDS.map((value) => ({
+  value,
+  label: domainLabel("eventKind", value),
+}));
 
 export function EventComposer({
   wp,
@@ -38,7 +59,7 @@ export function EventComposer({
       project_id: project,
       work_package_id: wp.id,
       kind,
-      title: `${kind.replaceAll("_", " ")} / ${wp.id}`,
+      title: `${domainLabel("eventKind", kind)} / ${wp.id}`,
       note,
       source: "local-demo-ui",
       change,
@@ -52,42 +73,31 @@ export function EventComposer({
       }}
       eyebrow={<span className="eyebrow">新建项目观察</span>}
       title="记录变更"
-      description={`${wp.id} / ${wp.name}`}
+      description={`${wp.id} / ${demoWorkPackageName(wp.id, wp.name)}`}
       className="event-dialog"
     >
       <label className="form-label">
         变更类型
-        {/* the native select keeps its own popup and keyboard behaviour; the
-            field wrapper only owns the chevron that replaces the platform's */}
-        <span className="select-field">
-          <select
-            value={kind}
-            onChange={(e) => {
-              const k = e.target.value as typeof kind;
-              setKind(k);
-              setValue(
-                k === "workforce"
-                  ? "1"
-                  : k === "material"
-                    ? (Object.keys(wp.materials ?? {})[0] ?? "")
-                    : k === "equipment"
-                      ? (Object.keys(wp.equipment ?? {})[0] ?? "")
-                      : k === "predecessor"
-                        ? (wp.predecessors?.[0] ?? "")
-                        : "V17",
-              );
-            }}
-          >
-            <option value="design_revision">设计修订</option>
-            <option value="workforce">班组人员不足</option>
-            <option value="predecessor">前置工作未完成</option>
-            <option value="material">材料不可用</option>
-            <option value="equipment">设备不可用</option>
-            <option value="inspection">验收未通过</option>
-            <option value="external">外部观察</option>
-          </select>
-          <ChevronDown {...icon} />
-        </span>
+        <AppSelect
+          label="变更类型"
+          value={kind}
+          onChange={(next) => {
+            const k = next as typeof kind;
+            setKind(k);
+            setValue(
+              k === "workforce"
+                ? "1"
+                : k === "material"
+                  ? (Object.keys(wp.materials ?? {})[0] ?? "")
+                  : k === "equipment"
+                    ? (Object.keys(wp.equipment ?? {})[0] ?? "")
+                    : k === "predecessor"
+                      ? (wp.predecessors?.[0] ?? "")
+                      : "V17",
+            );
+          }}
+          options={KIND_OPTIONS}
+        />
       </label>
       {!["inspection", "external"].includes(kind) && (
         <label className="form-label">

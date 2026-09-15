@@ -43,22 +43,19 @@ export function Operations({
     <div className="content-view operations-view">
       <div className="view-heading">
         <div>
-          <h2>Operations & run history</h2>
+          <h2>运行作业与历史记录</h2>
         </div>
       </div>
       <p className="muted">
-        All jobs use the selected runtime. Results do not automatically change
-        schedules, grant permissions, or issue safety decisions.
+        所有作业都使用所选运行时。结果不会自动更改排程、授予权限或作出安全决策。
       </p>
       <details className="operation-form" open>
-        <summary>Constrained scheduling / OR-Tools</summary>
+        <summary>约束排程 / OR-Tools</summary>
         <p>
-          Fixture: qualified crews, shared equipment, precedence, time windows
-          and minimum makespan. Server validation independently checks the
-          returned assignments.
+          示例数据：具备资质的班组、共享设备、前置关系、时间窗与最短完工时间。服务端校验会独立检查返回的指派。
         </p>
         <textarea
-          aria-label="Scheduling problem JSON"
+          aria-label="排程问题 JSON"
           rows={8}
           value={
             problem ||
@@ -79,24 +76,22 @@ export function Operations({
             )
           }
         >
-          Solve schedule
+          求解排程
         </Button>
         {!enabled("optimization") && (
           <small>
-            Enable CCA_OPTIMIZATION_ENABLED and install the optimization extra.
-            No fabricated solution is displayed.
+            请启用 CCA_OPTIMIZATION_ENABLED
+            并安装排程优化扩展。不会显示任何虚构的求解结果。
           </small>
         )}
       </details>
       <details className="operation-form">
-        <summary>Image observations / configured vision model</summary>
+        <summary>图像观察 / 已配置的视觉模型</summary>
         <p>
-          Only upload a safe image you are permitted to share. Metadata is
-          stripped, but visual personal or commercial information can remain in
-          the image.
+          仅可上传你有权分享的安全图像。元数据会被剥离，但图像中仍可能残留个人或商业视觉信息。
         </p>
         <input
-          aria-label="Vision image"
+          aria-label="视觉图像"
           type="file"
           accept="image/png,image/jpeg,image/webp"
           onChange={(event) => {
@@ -110,8 +105,7 @@ export function Operations({
             checked={consent}
             onChange={(event) => setConsent(event.target.checked)}
           />
-          I consent to sending the selected, sanitized image to the configured
-          cloud model.
+          我同意将所选、已净化的图像发送到已配置的云端模型。
         </label>
         <Button
           disabled={busy || !image || !consent || !enabled("vision")}
@@ -119,13 +113,10 @@ export function Operations({
             image && void submit(() => api.vision(project, image, consent))
           }
         >
-          Analyze image
+          分析图像
         </Button>
         {!enabled("vision") && (
-          <small>
-            Vision is disabled or unavailable. Configure a vision model and
-            credential explicitly.
-          </small>
+          <small>视觉功能已禁用或不可用。请显式配置视觉模型与凭据。</small>
         )}
       </details>
       <SemanticRetrieval

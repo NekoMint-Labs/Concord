@@ -14,13 +14,13 @@
  * separated from the next by the same gap the header and the footer get, and a
  * label stays nearer to its own control than to the field above it.
  *
- * The select is a native control here on purpose: it sits inside a modal, where
- * the platform's own dropdown is reachable, keyboard-correct, and consistent
- * with the text fields beside it. What it does not keep is the operating
- * system's arrow - the one part of the control the product does not draw, and
- * the reason this field was the least integrated control in the application. It
- * is replaced by the same chevron the project picker's menu trigger carries,
- * over the same metrics as the inputs.
+ * The change kind is a Concord select (frontend/src/components/ui/AppSelect),
+ * not the platform's own. A native `<select>` was the one control this surface
+ * could not draw: on desktop its popup opens as a full-window operating system
+ * list that no surface token can reach, so the change dialog was the least
+ * integrated screen in the product. The trigger takes the same metrics as the
+ * text field beneath it (its surface lives with the other floating surfaces in
+ * ui.css); this file owns only the gap between a label and its control.
  */
 .event-dialog .form-label {
   display: block;
@@ -34,8 +34,7 @@
   color: var(--muted);
 }
 .event-dialog .form-label input,
-.event-dialog .form-label textarea,
-.event-dialog .form-label select {
+.event-dialog .form-label textarea {
   display: block;
   width: 100%;
   margin-top: 6px;
@@ -43,25 +42,12 @@
   font-weight: 400;
   letter-spacing: normal;
 }
-.event-dialog .form-label .select-field {
-  display: block;
-  position: relative;
+/* the select's trigger (ui.css) carries the field metrics itself; the dialog
+   only owns the gap that separates every control from its own label */
+.event-dialog .form-label .app-select-trigger {
   margin-top: 6px;
-}
-.event-dialog .form-label .select-field select {
-  appearance: none;
-  margin-top: 0;
-  padding-right: 30px;
-}
-.event-dialog .form-label .select-field svg {
-  position: absolute;
-  top: 50%;
-  right: 10px;
-  transform: translateY(-50%);
-  color: var(--muted);
-  /* the mark belongs to the control, so it must not intercept the click that
-     opens it */
-  pointer-events: none;
+  font-weight: 400;
+  letter-spacing: normal;
 }
 /* the action row and the caveat beneath it are the surface's footer: one gap
    above, one below, and no margin of their own */

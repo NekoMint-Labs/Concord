@@ -34,17 +34,39 @@ async function expectReady(page: Page) {
   await expect(page.getByText('当前没有阻塞施工的条件')).toBeVisible({ timeout: 30_000 });
 }
 
-/** The deterministic demo fixture is reached through the single demo entry. */
+/**
+ * The header's own entry: 记录变更 is the workflow action beside it, and the 高级
+ * menu is the one door to everything that is not the workflow - the diagnostics
+ * and, on the local demonstration profile, the fixture tools.
+ *
+ * Menus are opened with the keyboard, which is how a keyboard user opens them and
+ * also the only way to open one here without a race: a menu that opens on the
+ * pointer's press can be closed again by the same press's release arriving late on
+ * a loaded machine, and the product is not what that timing measures.
+ */
+async function openHeaderMenu(page: Page) {
+  await page.locator('.header-tools .quiet-trigger').focus();
+  await page.keyboard.press('Enter');
+}
+
+/** The deterministic demo fixture is reached through that one advanced entry. */
 async function injectDemoEvent(page: Page, label: RegExp | string) {
-  // The demo entry and the secondary views are application menus: they dismiss
-  // on selection, on Escape, and on a click elsewhere, so no cleanup is needed.
-  await page.locator('.header-tools .quiet-trigger').click();
+  // Both menus dismiss on selection, on Escape, and on a click elsewhere, so no
+  // cleanup is needed.
+  await openHeaderMenu(page);
   await page.getByRole('menuitem', { name: label }).click();
 }
 
-/** Secondary destinations live behind "更多"; none of them is primary navigation. */
+/** An advanced view is a destination inside 高级, not a peer of the workflow. */
+async function openAdvancedView(page: Page, label: string) {
+  await openHeaderMenu(page);
+  await page.getByRole('menuitem', { name: label, exact: true }).click();
+}
+
+/** Secondary workflow destinations live behind 更多; none of them is primary navigation. */
 async function openSecondaryView(page: Page, label: string) {
-  await page.locator('.more-views .quiet-trigger').click();
+  await page.locator('.more-views .quiet-trigger').focus();
+  await page.keyboard.press('Enter');
   await page.getByRole('menuitem', { name: label, exact: true }).click();
 }
 
@@ -190,24 +212,60 @@ test('viewer can read but cannot approve or execute', async ({ page, request }) 
   expect(data.approvals).toHaveLength(0);
 });
 
+test('the change composer records a kind through the product selection control', async ({
+  page,
+  request,
+}) => {
+  await page.getByRole('button', { name: '记录变更' }).click();
+  const trigger = page.locator('.event-dialog [role=combobox]');
+  await trigger.click();
+  /*
+   * The list must be *on top of* the modal rather than merely present in it.
+   * Playwright fails an actionability check when another element would receive the
+   * click, so this one line is the whole defect it guards: a list that measured
+   * correctly, sat under the dialog surface, and could not be chosen from.
+   */
+  await page.getByRole('option', { name: '班组人员不足' }).click();
+  await expect(trigger).toContainText('班组人员不足');
+  await page.getByRole('button', { name: '提交并分析' }).click();
+  await expectBlocked(page);
+
+  // The submitted value is still the API's own enum, not the Chinese word the
+  // user chose, and the record's own title carries the Chinese label.
+  const recorded = (await workspace(request)).events.find(
+    item =>
+      item.kind === 'workforce' &&
+      item.work_package_id === 'WP-200' &&
+      item.source === 'local-demo-ui',
+  );
+  expect(recorded?.title).toBe('班组人员不足 / WP-200');
+});
+
 test('structured BIM, capability status, and run history remain usable without optional SDKs', async ({ page }) => {
   const views = page.getByRole('navigation', { name: '工作区视图' });
   await views.getByRole('button', { name: 'BIM', exact: true }).click();
   await expect(page.locator('.bim-element').first()).toBeVisible();
   await page.locator('.bim-element').first().click();
   await expect(page.locator('.bim-property-list')).toBeVisible();
-  await openSecondaryView(page, '能力');
-  await expect(page.getByRole('heading', { name: /capabilit/i }).first()).toBeVisible();
-  await openSecondaryView(page, '运行');
-  await expect(page.getByRole('heading', { name: 'Operations & run history' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Solve schedule' })).toBeDisabled();
+  // The diagnostics are still reachable and still intact: they are behind 高级
+  // rather than beside 协调, which is a placement change and not a deletion.
+  await openAdvancedView(page, '能力诊断');
+  await expect(page.locator('.capability-table')).toBeVisible();
+  await openAdvancedView(page, '运行记录');
+  await expect(page.locator('.operations-view')).toBeVisible();
+  await expect(
+    page.locator('.operations-view .operation-form').first().getByRole('button'),
+  ).toBeDisabled();
 });
 
 test('real local GIS renders and selects its linked work package', async ({ page }) => {
   await page.locator('.package-nav').filter({ hasText: 'WP-300' }).click();
   await page.locator('.package-nav[aria-current="page"]').filter({ hasText: 'WP-300' }).waitFor();
-  await openSecondaryView(page, '现场');
-  await expect(page.getByText('Site map ready', { exact: true })).toBeVisible();
+  await openSecondaryView(page, '现场地图');
+  await expect(page.locator('.viewer-toolbar')).toContainText('地图已就绪');
+  // The map says what it is showing: the site polygon, the work-package points,
+  // and which work package is current.
+  await expect(page.locator('.gis-context')).toContainText('WP-300');
   const canvas = page.locator('.maplibregl-canvas');
   await expect(canvas).toBeVisible();
   const box = await canvas.boundingBox();
@@ -242,7 +300,7 @@ test('a disconnected event stream reconnects and preserves approvals behind a ne
     name: 'approval-stream.md', mimeType: 'text/markdown', buffer: Buffer.from('Independent document job'),
   });
   await expect(page.getByText('approval-stream.md', { exact: true })).toBeVisible();
-  await expect(page.locator('.upload-status')).toContainText('COMPLETED');
+  await expect(page.locator('.upload-status')).toContainText('已完成');
   await expect(page.locator('.timeline-heading')).toContainText('已完成');
   const uploaded = await workspace(request);
   expect(uploaded.run!.id).not.toBe(current.run!.id);

@@ -10,7 +10,7 @@
     "frontendDist": "../../frontend/dist"
   },
   "app": {
-    "windows": [{"label": "main", "title": "Concord / Construction Coordination", "width": 1440, "height": 920, "minWidth": 900, "minHeight": 660}],
+    "windows": [{"label": "main", "title": "Concord 施工协同", "width": 1440, "height": 920, "minWidth": 900, "minHeight": 660}],
     "security": {
       "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost http://127.0.0.1:*; worker-src 'self' blob:; object-src 'none'; frame-src 'none'",
       "capabilities": ["main"]

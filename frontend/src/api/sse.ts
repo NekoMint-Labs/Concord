@@ -15,13 +15,13 @@ export function parseFrame(frame: string): SSEFrame | null {
     ?.slice(3)
     .trim();
   if (!rawId || !/^\d+$/.test(rawId))
-    throw new Error("Invalid run stream event ID");
+    throw new Error("运行事件流的事件编号无效");
   const id = Number(rawId);
   if (!Number.isSafeInteger(id) || id < 1)
-    throw new Error("Unsafe run stream event ID");
+    throw new Error("运行事件流的事件编号超出安全范围");
   const value: unknown = JSON.parse(data);
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Invalid run stream event payload");
+    throw new Error("运行事件流的事件负载无效");
   }
   return { id, data: value as Record<string, unknown> };
 }
@@ -38,13 +38,13 @@ export class SSEDecoder {
     let boundary: number;
     while ((boundary = this.buffer.indexOf("\n\n")) >= 0) {
       if (boundary > MAX_FRAME_CHARS)
-        throw new Error("Run stream frame exceeds size limit");
+        throw new Error("运行事件流的数据帧超出大小上限");
       const frame = parseFrame(this.buffer.slice(0, boundary));
       this.buffer = this.buffer.slice(boundary + 2);
       if (frame) frames.push(frame);
     }
     if (this.buffer.length > MAX_FRAME_CHARS)
-      throw new Error("Run stream frame exceeds size limit");
+      throw new Error("运行事件流的数据帧超出大小上限");
     return frames;
   }
 }
@@ -112,7 +112,7 @@ export async function readRunEvents(
       if (signal.aborted) return;
       if ([401, 403, 404].includes(response.status)) {
         onError?.(
-          `Run stream unavailable (${response.status}); reconnect after checking access`,
+          `运行事件流不可用（HTTP ${response.status}）；请检查访问权限后重连`,
         );
         return;
       }
@@ -121,7 +121,7 @@ export async function readRunEvents(
         !response.body ||
         !response.headers.get("content-type")?.includes("text/event-stream")
       ) {
-        throw new Error(`Run stream unavailable (${response.status})`);
+        throw new Error(`运行事件流不可用（HTTP ${response.status}）`);
       }
       onConnected?.();
       reader = response.body.getReader();
@@ -136,7 +136,7 @@ export async function readRunEvents(
         if (signal.aborted) return;
         if (done) {
           if (lastWasTerminal) return;
-          throw new Error("Run stream disconnected before completion");
+          throw new Error("运行事件流在完成前中断");
         }
         for (const frame of decoder.push(value)) {
           if (signal.aborted) return;
@@ -148,9 +148,13 @@ export async function readRunEvents(
       }
     } catch (cause) {
       if (signal.aborted) return;
-      onError?.(
-        cause instanceof Error ? cause.message : "Run stream disconnected",
-      );
+      /*
+       * The transport reports in the product's language. A message raised by the
+       * environment rather than by this file (a failed fetch, a closed socket) is
+       * passed through as it arrived: the alternative is replacing one untranslated
+       * sentence with a sentence that no longer says what happened.
+       */
+      onError?.(cause instanceof Error ? cause.message : "运行事件流已断开");
     } finally {
       if (onAbort) signal.removeEventListener("abort", onAbort);
       if (reader) {

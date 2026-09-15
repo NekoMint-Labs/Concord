@@ -365,3 +365,146 @@
 .toast-info .toast-icon {
   color: var(--text-muted);
 }
+
+/* ---------- select ---------- */
+
+/*
+ * A select is two objects in one control, and it belongs to two grammars that
+ * already exist in this file. The closed trigger is a form field: it takes the
+ * shared control height (`--control-h`), the input radius (`--radius-md`), the
+ * soft control boundary, the surface fill, and the field typography, so a
+ * select dropped beside a text input is the same object. Its open state is the
+ * hover surface `.project-trigger[data-state="open"]` already uses, because
+ * "this control is open" reads the same whether it opened a menu or a list.
+ *
+ * The open content is a floating surface and reuses the menu's grammar exactly
+ * - `--radius-lg`, `--line-float`, `--surface-elevated`, `--shadow-float`, and
+ * the shared `surface-in` motion - so a dropdown is not a second species of
+ * panel. Rows are 30px with a hover surface, a fixed check gutter, and a
+ * right-aligned support column: the row a menu item is, one rung taller so the
+ * list stays scannable when it is the only thing open.
+ *
+ * No colour is written here. Selection is `--accent-muted` / `--accent-strong`
+ * and the check is `--accent` - the same tokens selected rows and the current
+ * menu item already spend - so a future palette (the dark theme) remaps the
+ * select with everything else rather than leaving it behind.
+ */
+.app-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 8px;
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-action);
+  text-align: left;
+  transition: background var(--motion-fast) var(--ease);
+}
+.app-select-trigger:hover,
+.app-select-trigger[data-state="open"] {
+  background: var(--hover);
+}
+.app-select-trigger[data-disabled] {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.app-select-value {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-select-chevron {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--muted);
+  transition: color var(--motion-fast) var(--ease);
+}
+.app-select-trigger:hover .app-select-chevron,
+.app-select-trigger[data-state="open"] .app-select-chevron {
+  color: var(--ink-2);
+}
+.app-select-content {
+  /*
+   * Above the modal layer (100). A select can be opened from inside a dialog -
+   * the change composer is one - and its list is that dialog's own control, so it
+   * has to be painted over the surface it was opened from. At the shared popup
+   * layer this list existed, measured correctly, and was covered by the dialog:
+   * the one control in the dialog that needed a list was the one that had none.
+   */
+  z-index: 110;
+  min-width: var(--radix-select-trigger-width);
+  max-height: var(--radix-select-content-available-height);
+  overflow: hidden;
+  border: 1px solid var(--line-float);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-float);
+  animation: surface-in var(--motion-fast) var(--ease);
+}
+.app-select-content[data-state="closed"] {
+  animation: surface-out var(--motion-instant) var(--ease);
+}
+.app-select-viewport {
+  padding: var(--space-1);
+}
+.app-select-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: 30px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--fs-action);
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+  transition:
+    background var(--motion-instant) var(--ease),
+    color var(--motion-instant) var(--ease);
+}
+.app-select-item[data-highlighted] {
+  background: var(--hover);
+  color: var(--text);
+  outline: none;
+}
+/*
+ * The current item. A check in the gutter already states it, so the row steps
+ * up in weight and tint rather than announcing itself twice - the same grammar
+ * the current menu item uses, and the same rule is kept: a checked item under
+ * the keyboard's highlight darkens one step further instead of losing to the
+ * pointer at equal specificity.
+ */
+.app-select-item[data-state="checked"] {
+  background: var(--accent-muted);
+  color: var(--text);
+  font-weight: 600;
+}
+.app-select-item[data-state="checked"][data-highlighted] {
+  background: var(--accent-strong);
+}
+.app-select-check {
+  display: flex;
+  flex-shrink: 0;
+  width: 15px;
+  color: var(--accent);
+}
+.app-select-item-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-select-item-hint {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-label);
+  font-weight: 400;
+}

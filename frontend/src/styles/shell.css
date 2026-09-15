@@ -15,6 +15,12 @@
  * linework, and the whole surface read as a ruled table. A rule is now spent on
  * content (a table row, an evidence boundary) or on a control boundary that has
  * to be identifiable - never on a region boundary.
+ *
+ * The navigation column and the work plane are one adjustable pane boundary
+ * (frontend/src/layout/PaneSplit.tsx), the same one the Inspector, the Documents
+ * source list and the BIM element list already use - because in a desktop
+ * application the column a user works in beside other columns is a column the
+ * user can size.
  */
 .application-shell {
   height: 100dvh;
@@ -22,15 +28,30 @@
   display: flex;
   overflow: hidden;
   background: var(--workspace);
-  /*
-   * The navigation column's width, declared on the shell because two rules have
-   * to agree on it: the sidebar's own width, and the distance it slides out by
-   * when navigation is collapsed. One number per breakpoint, read twice.
-   */
-  --nav-w: 232px;
 }
 
 /* ---------- sidebar ---------- */
+
+/*
+ * The navigation pane clips the column it contains.
+ *
+ * Collapsed, the pane is zero wide - that is what hands the work plane the whole
+ * window - and a flex item inside it would keep its own content width and paint
+ * over the workspace beside it. The pane is the clip, rather than the window edge
+ * being one.
+ */
+.sidebar-pane {
+  overflow: hidden;
+}
+/*
+ * The work plane is the split's second pane, and it has to paint over the column
+ * beside it: both are flex items, and a background belonging to the earlier
+ * sibling is drawn before the later one's, so the column would otherwise show
+ * through the workspace that has taken its space.
+ */
+.main-pane {
+  position: relative;
+}
 
 /*
  * 232px, down from 248. The sidebar carries no content below the work-package
@@ -40,33 +61,32 @@
  * plane itself is unchanged (base.css owns the assignment); the sidebar was
  * quietened by giving it less area, a more compact rhythm, and the window's own
  * chrome material rather than a second grey of its own.
+ *
+ * The width is no longer declared here. It is the divider's business now - 232px
+ * default, a 200px floor, a 320px ceiling, stated on the pane itself - so each
+ * mechanism has exactly one owner: the divider resizes, the pane collapses. The
+ * column fills whatever the divider has given it.
+ *
+ * Collapse used to be a slide: the column kept its own width and moved its left
+ * edge out of the window on a negative margin, because a fixed-width column had
+ * no other way to leave the work plane. The slide is gone with that rule, and
+ * deliberately - it was the affordance of a fixed width. Animating the pane's own
+ * basis to keep it would put every drag behind the pointer by the animation's
+ * duration, which is the one thing a pane's size may never do
+ * (frontend/src/styles/layout.css states that contract).
+ *
+ * Reopening restores the width the user last chose in this session: the library
+ * keeps the column's expanded size in memory while it is collapsed, and
+ * `expand()` returns to it. Nothing is written to storage, because a width
+ * remembered across launches is a preference, and preferences are their own pass.
  */
 .sidebar {
-  width: var(--nav-w);
+  width: 100%;
   flex-shrink: 0;
   background: var(--sidebar);
   color: var(--ink-2);
   display: flex;
   flex-direction: column;
-  /*
-   * Collapse is a slide, not a squash.
-   *
-   * The column keeps its own width and moves its left edge out by exactly that
-   * much, so the workspace beside it takes the space over one property - and the
-   * navigation keeps its internal layout on the way out instead of re-wrapping
-   * five rows of text into a 0px column. The shell clips it (`overflow: hidden`
-   * above), which is what makes the slide read as leaving the window rather than
-   * as sliding over the page.
-   *
-   * It is one CSS transition and no JavaScript number: the width still comes from
-   * the breakpoint rules at the bottom of this file, and `--nav-w` is what both
-   * this rule and the collapsed rule read.
-   */
-  margin-left: 0;
-  transition: margin-left var(--motion) var(--ease);
-}
-.application-shell.is-nav-collapsed .sidebar {
-  margin-left: calc(-1 * var(--nav-w));
 }
 /*
  * The sidebar header and the topbar are both 40px and both sit on the chrome
@@ -460,6 +480,27 @@
 .more-views {
   margin-left: auto;
   align-self: center;
+}
+/*
+ * The current advanced view, named in the strip without becoming a destination in
+ * it. Four characters of grey beside five characters of ink is the whole
+ * treatment: it says where the user is, and it is deliberately not a button,
+ * because the strip's buttons are the places this product's work happens and the
+ * way back is the 高级 entry the view was opened from.
+ */
+.advanced-view-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 0 10px;
+  font-size: var(--fs-action);
+  color: var(--ink);
+}
+.advanced-view-chip .advanced-view-eyebrow {
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
 }
 /*
  * The work surface is the left pane of the workspace split, and the detail pane
@@ -898,11 +939,53 @@
   min-width: 240px;
   border-color: var(--line-control);
 }
+/*
+ * Recovery, in the order it should be tried: reconnect first, and the technical
+ * detail behind an explicit control. Nothing here is a link to documentation,
+ * because there is no documentation a stranded desktop user could reach.
+ */
+.startup-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+/*
+ * The startup report's diagnostics: labelled facts rather than a paragraph of
+ * sentences, because it holds two different things - what failed, and how this
+ * build normally connects - and each is one fact. The label tier is the same
+ * `fact-label` the engineering values use, so a value with a name beside it reads
+ * the same here as it does in a property sheet.
+ */
+.startup-diagnostics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 560px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--surface-chrome);
+  text-align: left;
+}
+.startup-diagnostic {
+  display: flex;
+  gap: var(--space-3);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.startup-diagnostic > .fact-label {
+  flex-shrink: 0;
+}
 
+/*
+ * The shell's floor, not the column's. The navigation column no longer has a
+ * per-breakpoint width: the divider owns its width, and a user who wants a
+ * narrower column at a narrow window has the divider for exactly that. What has
+ * to be guaranteed at every width is that the work plane beside the column still
+ * reads, and that is what this floor states.
+ */
 @media (max-width: 1150px) {
-  .application-shell {
-    --nav-w: 216px;
-  }
   .coordination-workspace {
     padding: 20px 20px calc(26px + var(--status-bar-h));
   }
@@ -910,7 +993,6 @@
 @media (max-width: 850px) {
   .application-shell {
     min-width: 720px;
-    --nav-w: 196px;
   }
   .brand {
     padding: 0 8px 0 12px;

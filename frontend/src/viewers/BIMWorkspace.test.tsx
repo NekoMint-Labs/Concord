@@ -45,7 +45,7 @@ it("a local IFC stays local and overlapping import clicks submit only once", asy
   );
   vi.spyOn(api, "run").mockResolvedValue(run);
   const { unmount, cache } = view();
-  fireEvent.change(screen.getByLabelText("Local IFC file"), {
+  fireEvent.change(screen.getByLabelText("本地 IFC 文件"), {
     target: { files: [new File(["IFC fixture"], "fixture.ifc")] },
   });
   await screen.findByText("Local viewer: fixture.ifc");
@@ -54,12 +54,12 @@ it("a local IFC stays local and overlapping import clicks submit only once", asy
   fireEvent.click(submit);
   fireEvent.click(submit);
   expect(api.uploadIFC).toHaveBeenCalledTimes(1);
-  expect(screen.getByLabelText("Local IFC file")).toBeDisabled();
+  expect(screen.getByLabelText("本地 IFC 文件")).toBeDisabled();
   await act(async () => {
     finish(run);
   });
   await waitFor(() =>
-    expect(screen.getByRole("status")).toHaveTextContent("COMPLETED"),
+    expect(screen.getByRole("status")).toHaveTextContent("已完成"),
   );
   await waitFor(() => expect(api.bim).toHaveBeenCalledTimes(2));
   unmount();
@@ -68,13 +68,13 @@ it("a local IFC stays local and overlapping import clicks submit only once", asy
 
 it("rejecting a new oversized file clears the previous import target", async () => {
   const { unmount, cache } = view();
-  fireEvent.change(screen.getByLabelText("Local IFC file"), {
+  fireEvent.change(screen.getByLabelText("本地 IFC 文件"), {
     target: { files: [new File(["IFC"], "first.ifc")] },
   });
   await screen.findByText("Local viewer: first.ifc");
   const tooLarge = new File(["x"], "too-large.ifc");
   Object.defineProperty(tooLarge, "size", { value: 26 * 1024 * 1024 });
-  fireEvent.change(screen.getByLabelText("Local IFC file"), {
+  fireEvent.change(screen.getByLabelText("本地 IFC 文件"), {
     target: { files: [tooLarge] },
   });
   expect(screen.getByRole("alert")).toHaveTextContent("25 MiB");
@@ -82,6 +82,45 @@ it("rejecting a new oversized file clears the previous import target", async () 
     screen.queryByRole("button", { name: "导入项目" }),
   ).not.toBeInTheDocument();
   expect(screen.queryByText("Local viewer: first.ifc")).not.toBeInTheDocument();
+  unmount();
+  cache.clear();
+});
+
+it("renders the full condition set as labelled rows, never as JSON source", async () => {
+  vi.spyOn(api, "bim").mockResolvedValue([
+    {
+      id: "2O2Fr$t4X7Zf8NOew3FL9r",
+      name: "East core wall",
+      type: "IfcWall",
+      storey: "L02-E",
+      space: "L02-E-ZONE",
+      revision: "V16",
+      related_ids: [],
+      properties: {
+        FireRating: "120 min",
+        Width: 0.2,
+        ChangeStatus: "baseline",
+        WorkPackageIds: ["WP-100", "WP-200"],
+      },
+    },
+  ]);
+  const cache = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  const { unmount } = render(
+    <QueryClientProvider client={cache}>
+      <BIMWorkspace project="harbor-east" impacted={[]} />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(await screen.findByText("East core wall"));
+  fireEvent.click(screen.getByRole("button", { name: "全部属性" }));
+  expect(await screen.findByText("防火等级")).toBeInTheDocument();
+  expect(screen.getByText("120 min")).toBeInTheDocument();
+  expect(screen.getByText("0.2 m")).toBeInTheDocument();
+  expect(screen.getByText("基线")).toBeInTheDocument();
+  expect(screen.getByText("WP-100、WP-200")).toBeInTheDocument();
+  // The disclosure is a property sheet, not a dumped record.
+  expect(document.querySelector(".bim-properties pre")).toBeNull();
   unmount();
   cache.clear();
 });

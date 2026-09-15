@@ -21,9 +21,15 @@ export function useIFCViewer(
   const callback = useRef(onSelected);
   callback.current = onSelected;
   const [ready, setReady] = useState(false);
-  const [message, setMessage] = useState("Preparing local IFC engine...");
+  const [message, setMessage] = useState("正在准备本地 IFC 引擎…");
   const [error, setError] = useState("");
-  const [properties, setProperties] = useState("");
+  /*
+   * The selected element's attributes, as the SDK returned them - not as a string.
+   * The panel that renders them is a product surface, and a product surface that
+   * prints `JSON.stringify` output is showing its reader source code
+   * (frontend/src/viewers/bimProperties.ts owns the structured presentation).
+   */
+  const [properties, setProperties] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const actionActive = useRef(false);
   const epoch = useRef(0);
@@ -36,13 +42,13 @@ export function useIFCViewer(
     let components: OBC.Components | undefined;
     setReady(false);
     setError("");
-    setProperties("");
+    setProperties(null);
     setBusy(false);
-    setMessage("Preparing local IFC engine...");
+    setMessage("正在准备本地 IFC 引擎…");
     actionActive.current = false;
     const fail = (cause: unknown) => {
       if (!cancelled)
-        setError(cause instanceof Error ? cause.message : "IFC engine failed");
+        setError(cause instanceof Error ? cause.message : "IFC 引擎启动失败");
     };
     async function load() {
       try {
@@ -74,7 +80,7 @@ export function useIFCViewer(
           wasm: { path: "/viewer/wasm/", absolute: true },
         });
         if (cancelled) return;
-        setMessage(`Parsing ${file.name} locally...`);
+        setMessage(`正在本机解析 ${file.name}…`);
         const buffer = new Uint8Array(await file.arrayBuffer());
         if (cancelled) return;
         const model = await loader.load(buffer, false, file.name);
@@ -128,7 +134,7 @@ export function useIFCViewer(
             await paint();
             if (cancelled || ticket !== impactTicket) return;
             setMessage(
-              `${file.name}: ${impactIds.length}/${ids.length} impact GUIDs matched. Double-click to inspect; focus/isolate uses selection, otherwise impacts.`,
+              `${file.name}：已匹配 ${impactIds.length}/${ids.length} 个受影响构件 GUID。双击构件可查看属性；聚焦或单独显示优先使用所选构件，否则使用受影响构件。`,
             );
           },
           async focus() {
@@ -150,7 +156,7 @@ export function useIFCViewer(
             await model.resetVisible();
             if (cancelled) return;
             selected = [];
-            setProperties("");
+            setProperties(null);
             callback.current("");
             await paint();
           },
@@ -172,16 +178,12 @@ export function useIFCViewer(
             ]);
             if (cancelled || ticket !== selectionTicket) return;
             selected = ids;
-            setProperties(JSON.stringify(data[0], null, 2));
+            setProperties(data[0]);
             callback.current(guid ?? String(hit.localId));
             await paint();
           } catch (cause) {
             if (!cancelled)
-              setError(
-                cause instanceof Error
-                  ? cause.message
-                  : "Element selection failed",
-              );
+              setError(cause instanceof Error ? cause.message : "构件选择失败");
           }
         };
         element.addEventListener("dblclick", select);
@@ -190,9 +192,7 @@ export function useIFCViewer(
         if (!cancelled) setReady(true);
       } catch (cause) {
         if (!cancelled)
-          setError(
-            cause instanceof Error ? cause.message : "IFC engine failed",
-          );
+          setError(cause instanceof Error ? cause.message : "IFC 引擎启动失败");
       }
     }
     void load();
@@ -221,9 +221,7 @@ export function useIFCViewer(
       await controls.current[name]();
     } catch (cause) {
       if (current === epoch.current)
-        setError(
-          cause instanceof Error ? cause.message : "Viewer operation failed",
-        );
+        setError(cause instanceof Error ? cause.message : "查看器操作失败");
     } finally {
       if (current === epoch.current) {
         actionActive.current = false;

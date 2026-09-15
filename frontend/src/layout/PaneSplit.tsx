@@ -4,10 +4,23 @@ import {
   Panel,
   Separator,
   useDefaultLayout,
+  usePanelRef,
   type LayoutStorage,
+  type PanelImperativeHandle,
   type PanelProps,
   type SeparatorProps,
 } from "react-resizable-panels";
+
+/**
+ * The handle that lets a product view drive one pane - today only the shell's
+ * navigation column, which is collapsed and expanded from a button in its own
+ * header rather than by dragging the divider.
+ *
+ * It is re-exported here rather than imported by the view so that this file
+ * stays the product's only dependency on the layout library: the next migration
+ * is then one file, not five call sites.
+ */
+export { usePanelRef, type PanelImperativeHandle };
 
 /**
  * The one place Concord touches react-resizable-panels. Product views compose
@@ -24,8 +37,9 @@ import {
  *
  * Layout is never persisted to the backend. `persist` is opt-in, local-storage
  * only, and used for the splits that stay mounted (Documents, BIM); a split
- * containing a pane that mounts and unmounts (the Inspector) does not persist,
- * so it always opens at its designed size.
+ * containing a pane that mounts and unmounts (the Inspector) does not persist, so
+ * it always opens at its designed size. A persisted layout records only what the
+ * user set by hand (see the note on the save callback below).
  */
 export function PaneSplit({
   id,
@@ -36,7 +50,28 @@ export function PaneSplit({
   persist?: boolean;
   children: ReactNode;
 }) {
-  const saved = useDefaultLayout({ id, storage: layoutStorage });
+  /*
+   * Only a layout the *user* set is remembered.
+   *
+   * The library stores a layout as percentages. When the window is made smaller,
+   * the pixel floors in the layout (a 264px source list, a 240px Inspector) can no
+   * longer be satisfied by the stored percentages, so the library re-normalizes
+   * them for the narrower group - and persisting that re-normalized layout means
+   * the next widening restores the *clamped* ratio rather than the width the user
+   * chose. Each shrink/widen cycle therefore moved the source pane a little wider:
+   * the ratchet reported from Windows.
+   *
+   * Ignoring every layout the library changed on its own (constraint recompute,
+   * window resize, initial mount) is the fix, and it is the one the library's own
+   * documentation points at. A stored-away value can still be re-constrained while
+   * it is being restored; it simply cannot be written back as if the user had
+   * asked for it.
+   */
+  const saved = useDefaultLayout({
+    id,
+    storage: layoutStorage,
+    onlySaveAfterUserInteractions: true,
+  });
   return (
     <Group
       id={id}

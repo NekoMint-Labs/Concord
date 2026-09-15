@@ -15,14 +15,9 @@ export class ViewerBoundary extends Component<
     if (this.state.failed) {
       return (
         <section className="loading-view" role="alert">
-          <h2>This workspace view could not be loaded</h2>
-          <p>
-            The project inspector, approvals, and other views remain available.
-          </p>
-          <p>
-            Switch to another view. Reload after checking the browser,
-            connection, and viewer assets.
-          </p>
+          <h2>此工作区视图无法加载</h2>
+          <p>项目检查器、批准与其他视图仍可使用。</p>
+          <p>请切换到其他视图。检查浏览器、网络连接与查看器资源后重新加载。</p>
         </section>
       );
     }

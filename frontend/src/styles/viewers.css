@@ -53,6 +53,66 @@
   min-height: 250px;
 }
 /*
+ * Site map context. The canvas is a page of anonymous shapes on its own, so the
+ * band under the toolbar carries the minimum needed to read it: what the polygon
+ * is (a work area), what the points are (work-package positions), and which work
+ * package is selected. It is two legend entries and one line, not a dashboard -
+ * the map is the surface and this only names it.
+ */
+.gis-context {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  padding: 6px 18px;
+  background: var(--surface-chrome);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+.gis-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gis-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--icon-gap);
+}
+.gis-legend-swatch {
+  flex-shrink: 0;
+}
+/* the site polygon: a filled region. The swatch reuses the semantic tokens, not
+   the map's own literal paint colours, so a dark theme can remap it */
+.gis-legend-swatch.is-area {
+  width: 14px;
+  height: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-muted);
+  border: 1px solid var(--line-control-soft);
+}
+/* a work-package marker: a point */
+.gis-legend-swatch.is-point {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.gis-selected {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 0 auto;
+  color: var(--ink-2);
+}
+.gis-selected .mono {
+  color: var(--ink);
+}
+/*
  * Structured BIM: an engineering list beside the selected element's property
  * sheet, as the two panes of one split. Each pane states its identity with its
  * own header band instead of with a rule, because a boundary between two white
@@ -319,23 +379,17 @@
   color: var(--warn-fg);
 }
 /*
- * The full record stays one action away rather than printed at equal weight with
- * the values a decision needs, and it sits outside the keyed summary because it
- * holds open state. Its rule is the one separator this pane keeps, because a raw
- * JSON record is a different kind of content from the values above it rather than
- * the next group of the same kind.
+ * The full condition set stays one action away rather than printed at equal
+ * weight with the values a decision needs, and it sits outside the keyed summary
+ * because it holds open state. Its rule is the one separator this pane keeps: the
+ * element's whole property set is a different kind of content from the three
+ * curated groups above it rather than the next group of the same kind.
  */
 .bim-properties .disclosure-block {
   max-width: 620px;
   margin-top: 24px;
   padding-top: 14px;
   border-top: 1px solid var(--line-soft);
-}
-.bim-properties .disclosure-body pre {
-  margin: 0;
-  font-size: var(--fs-meta);
-  line-height: 1.7;
-  color: var(--ink-2);
 }
 /* explanatory text belongs to the workspace footer, not over the canvas. The
    note is a chrome band and the canvas is the window backdrop, so the plane step

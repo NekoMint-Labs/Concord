@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
 import { AppTooltip } from "../components/ui/AppTooltip";
 import { notify } from "../components/ui/AppToaster";
+import { statusLabel } from "../components/Status";
 import { icon } from "../components/ui/icon";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
 import { usePaneWidth } from "../layout/paneBudget";
@@ -400,7 +401,7 @@ export function Documents({
       </div>
       {run.data && (
         <div className="upload-status" role="status">
-          {`导入 ${run.data.status} / ${
+          {`导入 ${statusLabel(run.data.status)} / ${
             run.data.error ?? run.data.id.slice(0, 8)
           }。详情见「运行」。`}
         </div>

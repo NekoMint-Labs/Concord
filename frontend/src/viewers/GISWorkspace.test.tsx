@@ -11,6 +11,7 @@ const driver = vi.hoisted(() => ({
     handlers: Record<string, (...args: unknown[]) => void>;
     setPaintProperty: ReturnType<typeof vi.fn>;
   }[],
+  options: [] as Record<string, unknown>[],
   failControl: false,
 }));
 vi.mock("maplibre-gl", () => ({
@@ -19,7 +20,8 @@ vi.mock("maplibre-gl", () => ({
       handlers: Record<string, (...args: unknown[]) => void> = {};
       remove = vi.fn();
       setPaintProperty = vi.fn();
-      constructor() {
+      constructor(options?: Record<string, unknown>) {
+        driver.options.push(options ?? {});
         driver.instances.push(this);
       }
       addControl() {
@@ -59,6 +61,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   driver.instances.length = 0;
+  driver.options.length = 0;
   driver.failControl = false;
 });
 
@@ -108,7 +111,7 @@ it("selects linked work packages and removes its map on unmount", async () => {
   await act(async () => {
     map.handlers.load();
   });
-  expect(screen.getByRole("status")).toHaveTextContent("Site map ready");
+  expect(screen.getByRole("status")).toHaveTextContent("地图已就绪");
   expect(map.setPaintProperty).toHaveBeenCalled();
   act(() => {
     map.handlers.click({
@@ -124,4 +127,35 @@ it("selects linked work packages and removes its map on unmount", async () => {
     map.handlers.load();
   });
   expect(map.remove).toHaveBeenCalledTimes(1);
+});
+
+it("presents the site map as product copy with context and a MapLibre locale patch", async () => {
+  const { unmount, cache } = view();
+  await waitFor(() => expect(driver.instances).toHaveLength(1));
+  await act(async () => {
+    driver.instances[0].handlers.load();
+  });
+  // Toolbar: user copy, not developer copy.
+  expect(screen.getByText("现场地图")).toBeInTheDocument();
+  expect(screen.getByText("项目现场与工作包位置")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("地图已就绪");
+  // Minimum context: what the polygon and the points are.
+  expect(screen.getByText("作业区域")).toBeInTheDocument();
+  expect(screen.getByText("工作包位置")).toBeInTheDocument();
+  // The current work package, localized for the deterministic fixture.
+  expect(screen.getByText("当前工作包")).toBeInTheDocument();
+  expect(screen.getByText("WP-200")).toBeInTheDocument();
+  expect(screen.getByText("东翼风管安装")).toBeInTheDocument();
+  // MapLibre's own controls and accessibility names are patched, not replaced.
+  expect(driver.options[0]).toMatchObject({
+    locale: {
+      "Map.Title": expect.any(String),
+      "NavigationControl.ZoomIn": expect.any(String),
+      "NavigationControl.ZoomOut": expect.any(String),
+      "NavigationControl.ResetBearing": expect.any(String),
+      "Popup.Close": expect.any(String),
+    },
+  });
+  unmount();
+  cache.clear();
 });

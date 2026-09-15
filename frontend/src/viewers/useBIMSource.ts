@@ -52,12 +52,12 @@ export function useBIMSource(project: string) {
       const run = await api.uploadIFC(project, file);
       if (current !== epoch.current) return;
       setRunId(run.id);
-      setNotice("Import submitted. Inspect the durable result in Operations.");
+      setNotice("导入已提交，请在「运行」中查看结果。");
       await cache.invalidateQueries({ queryKey: ["workspace", project] });
       await cache.invalidateQueries({ queryKey: ["runs", project] });
     } catch (cause) {
       if (current === epoch.current)
-        setError(cause instanceof Error ? cause.message : "Import failed");
+        setError(cause instanceof Error ? cause.message : "导入失败");
     } finally {
       if (current === epoch.current) {
         active.current = false;
@@ -81,7 +81,7 @@ export function useBIMSource(project: string) {
     } catch (cause) {
       if (current === epoch.current)
         setError(
-          cause instanceof Error ? cause.message : "No imported IFC source",
+          cause instanceof Error ? cause.message : "没有已导入的 IFC 来源",
         );
     } finally {
       if (current === epoch.current) {
@@ -102,7 +102,7 @@ export function useBIMSource(project: string) {
         !chosen.name.toLowerCase().endsWith(".ifc"))
     ) {
       setFile(null);
-      setError("Choose a nonempty IFC file no larger than 25 MiB.");
+      setError("请选择不超过 25 MiB 的非空 IFC 文件。");
     } else setFile(chosen ?? null);
   }
   return {

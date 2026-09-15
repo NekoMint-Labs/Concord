@@ -32,8 +32,7 @@ export function useWorkspaceMutation() {
       );
       if (completed) notify.success(completed);
     } catch (cause) {
-      const message =
-        cause instanceof Error ? cause.message : "Operation failed";
+      const message = cause instanceof Error ? cause.message : "操作失败";
       setError(message);
       notify.error("操作未完成", message);
       await cache.invalidateQueries({ queryKey: ["workspace"] });

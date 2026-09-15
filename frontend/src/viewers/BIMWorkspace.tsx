@@ -1,10 +1,13 @@
-import { lazy, Suspense, useEffect, useRef } from "react";
+import { Fragment, lazy, Suspense, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { FolderOpen, MousePointerClick, PackageOpen } from "lucide-react";
 import { icon } from "../components/ui/icon";
 import { api } from "../api/client";
 import { useBIMSource } from "./useBIMSource";
+import { OTHER_PROPERTIES_TITLE, propertySections } from "./bimProperties";
+import { statusLabel } from "../ui/labels";
+import { demoElementName } from "../ui/demo/demoPresentation";
 import { Button } from "../components/ui/button";
 import { notify } from "../components/ui/AppToaster";
 import { AppDisclosure } from "../components/ui/AppDisclosure";
@@ -54,6 +57,9 @@ export default function BIMWorkspace({
   const item = elements.data?.find((e) => e.id === selected);
   const count = elements.data?.length ?? 0;
   const selectedImpacted = item ? impacted.includes(item.id) : false;
+  /* The full condition set, structured as rows rather than printed as JSON
+     source (see ./bimProperties.ts, which owns the label and format logic). */
+  const attributeSections = item ? propertySections(item.properties) : [];
   // The import notice stays in the pane's chrome; the toast only reports that
   // the job the user started has finished.
   useEffect(() => {
@@ -79,7 +85,7 @@ export default function BIMWorkspace({
             onClick={() => setSelected(element.id)}
           >
             <span className="bim-element-name">
-              <strong>{element.name}</strong>
+              <strong>{demoElementName(element.id, element.name)}</strong>
               {isImpacted && <span className="bim-element-impact">受影响</span>}
             </span>
             <small>
@@ -151,7 +157,28 @@ export default function BIMWorkspace({
         </div>
       </motion.div>
       <AppDisclosure label="全部属性">
-        <pre>{JSON.stringify(item, null, 2)}</pre>
+        {attributeSections.length > 0 ? (
+          attributeSections.map((section, sectionIndex) => (
+            <div
+              className="property-group"
+              key={section.title ?? `own-${sectionIndex}`}
+            >
+              <span className="property-group-title">
+                {section.title ?? OTHER_PROPERTIES_TITLE}
+              </span>
+              <dl className="property-values">
+                {section.fields.map((field, fieldIndex) => (
+                  <Fragment key={`${field.label}-${fieldIndex}`}>
+                    <dt>{field.label}</dt>
+                    <dd>{field.value}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+            </div>
+          ))
+        ) : (
+          <p className="quiet-message">该构件没有附加属性。</p>
+        )}
       </AppDisclosure>
     </>
   ) : (
@@ -206,7 +233,7 @@ export default function BIMWorkspace({
             triggerClassName="pane-header-menu"
             trigger={
               <>
-                {item ? item.name : "构件"}
+                {item ? demoElementName(item.id, item.name) : "构件"}
                 <span className="count">{count}</span>
               </>
             }
@@ -223,7 +250,7 @@ export default function BIMWorkspace({
                   </>
                 }
               >
-                {element.name}
+                {demoElementName(element.id, element.name)}
               </AppMenuItem>
             ))}
           </AppMenu>
@@ -261,7 +288,7 @@ export default function BIMWorkspace({
       <PaneDivider />
       <Pane className="bim-properties pane-stack">
         <header className="pane-header">
-          <h3>{item ? item.name : "属性"}</h3>
+          <h3>{item ? demoElementName(item.id, item.name) : "属性"}</h3>
           {item && <span className="mono">{item.id}</span>}
         </header>
         <div className={propertiesClass}>{properties}</div>
@@ -312,7 +339,7 @@ export default function BIMWorkspace({
             type="file"
             accept=".ifc"
             disabled={busy}
-            aria-label="Local IFC file"
+            aria-label="本地 IFC 文件"
             onChange={(event) => {
               chooseFile(event.target.files?.[0]);
               event.target.value = "";
@@ -368,7 +395,10 @@ export default function BIMWorkspace({
       )}
       {(notice || imported.data) && (
         <div className="viewer-status" role="status">
-          {[notice, imported.data && `导入 ${imported.data.status}。`]
+          {[
+            notice,
+            imported.data && `导入 ${statusLabel(imported.data.status)}。`,
+          ]
             .filter(Boolean)
             .join(" ")}
         </div>

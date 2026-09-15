@@ -31,12 +31,10 @@ it("changing the selected image requires renewed cloud disclosure consent", asyn
       />
     </QueryClientProvider>,
   );
-  fireEvent.click(
-    screen.getByText("Image observations / configured vision model"),
-  );
-  const image = screen.getByLabelText("Vision image");
-  const consent = screen.getByRole("checkbox", { name: /sanitized image/ });
-  const analyze = screen.getByRole("button", { name: "Analyze image" });
+  fireEvent.click(screen.getByText("图像观察 / 已配置的视觉模型"));
+  const image = screen.getByLabelText("视觉图像");
+  const consent = screen.getByRole("checkbox", { name: /已净化的图像/ });
+  const analyze = screen.getByRole("button", { name: "分析图像" });
   fireEvent.change(image, {
     target: {
       files: [new File(["first"], "first.png", { type: "image/png" })],

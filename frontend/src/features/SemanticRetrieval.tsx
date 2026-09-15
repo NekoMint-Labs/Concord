@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type DTO } from "../api/client";
+import { AppSelect } from "../components/ui/AppSelect";
 import { Button } from "../components/ui/button";
 
 export function SemanticRetrieval({
@@ -41,34 +42,30 @@ export function SemanticRetrieval({
   const documentId = selected || documents.data?.[0]?.id || "";
   return (
     <details className="operation-form">
-      <summary>Derived vector retrieval / PostgreSQL</summary>
+      <summary>派生向量检索 / PostgreSQL</summary>
       <p>
-        Structured and local text search remain the default. Index only a
-        selected document (up to 128 chunks). Test-token embeddings are labeled
-        and are not a language model.
+        结构化与本地文本检索仍为默认方式。仅索引所选文档（最多 128
+        个分块）。测试令牌向量已明确标注，且并非语言模型。
       </p>
-      <select
-        aria-label="Document to index"
+      <AppSelect
+        label="待索引文档"
         value={documentId}
-        onChange={(event) => {
+        onChange={(next) => {
           changeSelection();
-          setSelected(event.target.value);
+          setSelected(next);
         }}
-      >
-        {documents.data?.map((doc) => (
-          <option value={doc.id} key={doc.id}>
-            {doc.filename}
-          </option>
-        ))}
-      </select>
+        options={(documents.data ?? []).map((doc) => ({
+          value: doc.id,
+          label: doc.filename,
+        }))}
+      />
       <label className="consent">
         <input
           type="checkbox"
           checked={consent}
           onChange={(event) => setConsent(event.target.checked)}
         />
-        For a real cloud embedding provider, I consent to sending selected
-        minimized text and my query.
+        若使用真实云端向量提供方，我同意发送所选的最小化文本与我的查询。
       </label>
       <Button
         variant="secondary"
@@ -80,47 +77,44 @@ export function SemanticRetrieval({
           })
         }
       >
-        Index selected document
+        索引所选文档
       </Button>
       <div className="semantic-query">
         <input
-          aria-label="Semantic query"
+          aria-label="语义查询"
           value={query}
           onChange={(event) => {
             changeSelection();
             setQuery(event.target.value);
           }}
-          placeholder="Find related document evidence"
+          placeholder="查找相关文档证据"
         />
         <Button
           disabled={!enabled || !query.trim()}
           onClick={() => void perform(search)}
         >
-          Search vectors
+          搜索向量
         </Button>
       </div>
       {!enabled && (
         <small>
-          Requires the server extra, PostgreSQL with pgvector,
-          CCA_VECTOR_ENABLED, and the optional vector migration.
+          需要服务端扩展、带 pgvector 的
+          PostgreSQL、CCA_VECTOR_ENABLED，以及可选的向量迁移。
         </small>
       )}
       {searched && matches.length === 0 && (
-        <p>
-          No matching indexed evidence. Confirm that indexing completed for the
-          selected source/model revision.
-        </p>
+        <p>没有匹配的已索引证据。请确认所选来源 / 模型修订的索引已完成。</p>
       )}
       {matches.map((match) => (
         <article className="document-chunk" key={match.chunk_id}>
           <strong>
-            {match.test_only ? "TEST-ONLY VECTOR" : "SEMANTIC MATCH"} / score{" "}
+            {match.test_only ? "仅测试向量" : "语义匹配"} / 得分{" "}
             {match.score.toFixed(3)}
           </strong>
           <p>{match.text}</p>
           <small>
-            Page {match.page ?? "?"} / {match.model}@{match.model_version} / SHA{" "}
-            {match.source_hash.slice(0, 12)}
+            第 {match.page ?? "?"} 页 / {match.model}@{match.model_version} /
+            SHA {match.source_hash.slice(0, 12)}
           </small>
         </article>
       ))}

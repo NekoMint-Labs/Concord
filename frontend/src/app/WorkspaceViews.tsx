@@ -1,9 +1,7 @@
 import { lazy, Suspense } from "react";
-import { motion } from "motion/react";
-import { ArrowLeft, Ellipsis } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { Workspace } from "../api/client";
 import { ViewerBoundary } from "../components/ViewerBoundary";
-import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
 import { icon } from "../components/ui/icon";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
 import {
@@ -11,36 +9,25 @@ import {
   inspectorWidthFor,
   usePaneWidth,
 } from "../layout/paneBudget";
-import { useMotion } from "../motion";
 import { CoordinationWorkspace } from "../features/CoordinationWorkspace";
 import { Inspector, type InspectorView } from "../features/Inspector";
 import { WorkPackages } from "../features/WorkPackages";
 import { Documents } from "../features/Documents";
 import { Capabilities } from "../features/Capabilities";
 import { Operations } from "../features/Operations";
+import { WorkspaceTabs, type WorkspaceTab } from "./WorkspaceTabs";
 
 const ImpactGraph = lazy(() => import("../features/ImpactGraph"));
 const BIMWorkspace = lazy(() => import("../viewers/BIMWorkspace"));
 const GISWorkspace = lazy(() => import("../viewers/GISWorkspace"));
 
-/** Primary navigation: the competition workflow only. Text labels, no icons. */
-const primaryTabs = [
-  { id: "coordination", label: "协调" },
-  { id: "bim", label: "BIM" },
-  { id: "documents", label: "文档" },
-] as const;
-
-/** Secondary navigation. None of these is the product's main story. */
-const secondaryTabs = [
-  { id: "impact", label: "影响关系" },
-  { id: "packages", label: "工作包" },
-  { id: "gis", label: "现场" },
-  { id: "operations", label: "运行" },
-  { id: "capabilities", label: "能力" },
-] as const;
-
-const tabs = [...primaryTabs, ...secondaryTabs] as const;
-export type WorkspaceTab = (typeof tabs)[number]["id"];
+/**
+ * The view destinations are the navigation's own business, and they live there
+ * rather than here: what counts as workflow, what is secondary, and what is a
+ * diagnostic is a product decision, and it is stated once
+ * (frontend/src/app/WorkspaceTabs.tsx).
+ */
+export type { WorkspaceTab };
 
 export function WorkspaceViews({
   project,
@@ -75,7 +62,6 @@ export function WorkspaceViews({
   onInspectorView: (view: InspectorView) => void;
   onRecheck: () => void;
 }) {
-  const { transition } = useMotion();
   /*
    * The pane budget: the Inspector is what the user just opened, so it always
    * wins the column it needs. Below 1280px the nested list pane yields to it and
@@ -86,59 +72,7 @@ export function WorkspaceViews({
   const condensed = condensedFor(width, detailsOpen);
   return (
     <>
-      <nav className="workspace-tabs" aria-label="工作区视图">
-        {primaryTabs.map(({ id, label }) => (
-          <button
-            key={id}
-            className={tab === id ? "active" : ""}
-            aria-current={tab === id ? "page" : undefined}
-            onClick={() => onTab(id)}
-          >
-            <span className="tab-label">{label}</span>
-            {/*
-              One surface element shared across the strip. `layoutId` makes
-              Motion move it between the tabs it belongs to, so the active view
-              is an object the user watched arrive rather than a rule that
-              switched on somewhere new - and it says what every selected row in
-              this application says, in area rather than in a 2px underline.
-            */}
-            {tab === id && (
-              <motion.span
-                className="tab-surface"
-                layoutId="workspace-view-surface"
-                transition={transition()}
-              />
-            )}
-          </button>
-        ))}
-        <div className="more-views">
-          {/*
-            The secondary destinations keep their label. This is the only route to
-            half the product's views, and an ellipsis that has to be guessed at is a
-            worse trade than four characters of chrome - the mark is here to say
-            "this opens a list", not to replace the word that names it.
-          */}
-          <AppMenu
-            label="更多"
-            trigger={
-              <>
-                <Ellipsis {...icon} />
-                更多
-              </>
-            }
-          >
-            {secondaryTabs.map(({ id, label }) => (
-              <AppMenuItem
-                key={id}
-                active={tab === id}
-                onSelect={() => onTab(id)}
-              >
-                {label}
-              </AppMenuItem>
-            ))}
-          </AppMenu>
-        </div>
-      </nav>
+      <WorkspaceTabs tab={tab} onTab={onTab} />
       {/*
         The workspace and its detail pane are one adjustable split. The pane is a
         real desktop pane: it can be dragged, it can be moved with the arrow keys
