@@ -84,7 +84,13 @@ export function PaneSplit({
   );
 }
 
-export function Pane({ className, children, ...rest }: PanelProps) {
+export function Pane({
+  className,
+  defaultSize,
+  children,
+  groupResizeBehavior,
+  ...rest
+}: PanelProps) {
   return (
     <Panel
       className={className ? `pane ${className}` : "pane"}
@@ -92,10 +98,62 @@ export function Pane({ className, children, ...rest }: PanelProps) {
          rendering failure; 160px is the narrowest this product still reads at.
          Callers that know better state their own minimum. */
       minSize={rest.minSize ?? "160px"}
+      defaultSize={defaultSize}
+      /*
+       * Pixels in, pixels out. A pane whose width was declared in pixels was
+       * declared that way because the width *is* the value - a 264px object
+       * browser, a 232px navigation column - so it keeps those pixels when the
+       * window changes size instead of keeping its share of the window.
+       *
+       * That is the whole of the ratchet fix. The library's default,
+       * `preserve-relative-size`, carries a *percentage* across a resize, and a
+       * percentage is not what the user chose: at a narrow window the pane's
+       * pixel floor and ceiling bind, the library re-normalizes the layout for
+       * the narrower group, and the widened window then restores the clamped
+       * ratio. Repeated width changes therefore walked the column wider - the
+       * shell's navigation column ended up parked at its 320px ceiling. With
+       * `preserve-pixel-size` the library recomputes the percentage that keeps
+       * the pane's own pixel width, which is the user's intent restated at the
+       * new group size.
+       *
+       * A pane that declared no pixel size stays relative, and that is required
+       * rather than incidental: the group needs at least one relative pane to
+       * absorb the difference, and "the work plane takes whatever is left" is
+       * exactly the behaviour that pane should have.
+       *
+       * ponytail: the library recomputes the remembered pixel from the layout it
+       * currently holds, so the one width it cannot bring back is one a real
+       * constraint took away - a user who drags both the navigation column and a
+       * local browser to their ceilings inside a window narrower than the shell
+       * supports (measured: 760px window, 320px column, 410px browser -> the
+       * browser settles at 278px and stays there). That window is below the floor
+       * the shell itself declares, and at every supported size the pixel ceilings
+       * never bind, so the intent is always restored. Upgrade path if that ever
+       * matters: keep the last user-chosen pixel per panel from the Group's
+       * `onLayoutChanged(layout, { isUserInteraction })` and re-apply it through
+       * `groupRef.setLayout` once the group is wide enough again - one correction
+       * per group size, guarded by the intent comparison so it cannot oscillate.
+       */
+      groupResizeBehavior={
+        groupResizeBehavior ??
+        (isPixelSize(defaultSize) ? "preserve-pixel-size" : undefined)
+      }
       {...rest}
     >
       {children}
     </Panel>
+  );
+}
+
+/**
+ * Whether a panel size prop asks for a fixed number of pixels. The library reads
+ * a number as pixels and a string with no unit as a percentage, so both spellings
+ * have to be recognised here or the rule above would apply to only one of them.
+ */
+function isPixelSize(size: PanelProps["defaultSize"]) {
+  return (
+    typeof size === "number" ||
+    (typeof size === "string" && size.trim().endsWith("px"))
   );
 }
 

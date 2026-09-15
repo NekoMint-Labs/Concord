@@ -277,7 +277,13 @@ export default function BIMWorkspace({
         className="bim-element-list pane-stack"
         defaultSize="264px"
         minSize="180px"
-        maxSize="34%"
+        /* The ceiling is a pixel width, like the pane itself: a 34% ceiling
+           shrinks with the window, so at a narrow window it bound a column the
+           user had chosen by hand and then carried the clamped width back to the
+           wider window (frontend/src/features/Documents.tsx states the
+           arithmetic). 410px is 34% of the 1440px window this layout is drawn
+           at. */
+        maxSize="410px"
       >
         <header className="pane-header">
           <span className="pane-header-label">构件</span>
@@ -285,7 +291,7 @@ export default function BIMWorkspace({
         </header>
         {list}
       </Pane>
-      <PaneDivider />
+      <PaneDivider label="调整构件列表宽度" />
       <Pane className="bim-properties pane-stack">
         <header className="pane-header">
           <h3>{item ? demoElementName(item.id, item.name) : "属性"}</h3>

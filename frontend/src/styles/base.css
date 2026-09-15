@@ -62,8 +62,8 @@
    * Neutrals. One plane per structural role, ordered by recession: the window
    * backdrop is the dimmest, persistent navigation sits on top of it, the docked
    * contextual Inspector is the next step, a local object list - a BIM element
-   * browser, a document source list - and the chrome bands (a toolbar, a pane
-   * header, a grouped value well) come after that, and the work plane is the
+   * browser, a document source list - comes next, then the chrome bands (a
+   * toolbar, a pane header, a grouped value well), and the work plane is the
    * lightest thing on screen. Depth is a value relationship, never a box, so no
    * plane needs a border to be legible.
    *
@@ -72,48 +72,49 @@
    * similar grey columns around one work plane read as assembled rather than as
    * one product - and each role is spent once.
    *
-   * The one deliberate exception is persistent navigation, which shares the
-   * chrome bands' plane rather than taking a step of its own (--sidebar, in the
-   * semantic block below). It is an *assignment* and not a value: no plane moved,
-   * and --surface-nav is still declared as the recessed step it always was.
+   * Every one of those roles is now a step of the *ordered* ladder, and that is
+   * the correction this pass made. The previous ladder was ordered
+   * `bg-app < nav < detail < chrome < workspace` and then spent `--surface-list`
+   * *inside* that ladder as a half step, which left the two pairs it mattered for
+   * below the floor: the local object list rendered 1.05:1 from the Inspector and
+   * 1.035:1 from the chrome bands, and a 1px pane header over a 1.035:1 body is
+   * not a band, it is the same slab with a line through it. Worse, persistent
+   * navigation had been re-assigned onto `--surface-chrome`, so the sidebar,
+   * every pane header, every toolbar and the timeline were literally one value
+   * and the local browser was the smallest step away from all of them. The
+   * Windows review read that as "several large nearly-white slabs", which is what
+   * it was.
    *
-   * `--surface-list` is the one step this pass added, and it is a *half* step on
-   * purpose - a material difference inside the local-object-list role, not another
-   * structural plane. The list used to take the chrome band's own value, so the
-   * toolbar above it, its own header band, and its rows were one uninterrupted
-   * slab of grey, and a slab has no name. One notch below the chrome bands, the
-   * pane's own header reads as a band over its rows (1.035:1) and the browser is
-   * plainly lighter than persistent navigation (1.19:1 rather than 1.13:1), so it
-   * cannot be read as a second rail.
+   * The ladder was therefore re-spaced rather than re-decorated: navigation moves
+   * down, the Inspector and the local object list move down with it, and the
+   * chrome and work planes stay exactly where they were, because those two were
+   * the pair that already read correctly. That re-spacing is what buys each
+   * neighbouring pair a real step without returning to linework - five planes
+   * cannot be squeezed into the 1.03:1 band the previous pass had left for them.
    *
-   * The step is deliberately small, and it cannot be larger. The gap between the
-   * Inspector's plane and the chrome bands is only 1.087:1 wide, so no value exists
-   * that clears the 1.08:1 structural step in both directions: this ladder is
-   * saturated at five planes, and a sixth can only ever be a half step inside one
-   * of them. This one lands 1.051:1 from the Inspector's plane - the local browser
-   * and the docked contextual pane are still two materials rather than the one
-   * material they were before the surface pass, and they are never adjacent on
-   * screen (below 1280px the list yields its column to the Inspector altogether), so
-   * the remaining difference is read across the work plane between them rather than
-   * edge to edge.
+   * Measured, not eyeballed: every neighbouring step of the ladder above clears
+   * 1.08:1 (frontend/tests/design-tokens.test.mjs holds the whole order,
+   * `--surface-list` included), and the *rendered* pairs the audit measured are
+   * 1.175:1 navigation-to-local-browser, 1.085:1 pane-header-to-local-browser
+   * body, and 1.186:1 local-browser-to-work-plane. The steps have to be this
+   * large because the eye is far better at detecting a thin high-contrast edge
+   * than a 2% area difference - so a small step plus a hairline reads as a table,
+   * while a large step plus no hairline reads as separated regions.
    *
-   * Measured, not eyeballed: each step of the *structural* ladder above is at
-   * least 1.08:1 from its neighbour (see the ordered ladder in
-   * frontend/tests/design-tokens.test.mjs). The steps have to be this large because
-   * the eye is far better at detecting a thin high-contrast edge than a 2% area
-   * difference - so a small step plus a hairline reads as a table, while a large
-   * step plus no hairline reads as separated regions. `--surface-list` is the one
-   * deliberate exception: it is a material difference *inside* one role rather than
-   * between two, so it is a small step by definition and it is therefore not part of
-   * the ordered ladder the contract measures.
+   * Navigation-to-Inspector is the tight step, at 1.0800:1 - it clears the floor
+   * by 0.00005 and there is no slack left anywhere in this ladder. Navigation
+   * cannot come down any further without `--line-control` failing its 3:1 floor on
+   * the plane that token exists for, and the Inspector cannot come up without
+   * breaking its step to the local object list. A future edit that wants room here
+   * has to move `--line-control` (and then `--muted-2`, which is spaced against
+   * the same plane) *with* the navigation plane, not one of them alone.
    */
   --bg-app: #cbcdcf;
-  --surface-nav: #d9dbdd;
-  --surface-detail: #e6e8e9;
-  /* the local object list's own body: one notch below the chrome bands, so a pane
-     header is a band over it and the browser stays plainly lighter than the sidebar
-     (see the ladder note above) */
-  --surface-list: #ededee;
+  --surface-nav: #d6d7d8;
+  --surface-detail: #dedfe0;
+  /* the local object list's own body: a plane of its own, one full step below the
+     chrome bands it is named by and one above persistent navigation */
+  --surface-list: #e7e8e9;
   --surface-chrome: #f0f1f2;
   --surface-workspace: #fbfbfc;
   /* controls, content objects, and floating surfaces stay plain white so they
@@ -137,24 +138,27 @@
    *
    * `--line-control` is the boundary for a control that can land on the
    * *navigation* plane - the project picker, and the startup token field on the
-   * window backdrop. On #d9dbdd this is already at 3.07:1, which is the floor:
-   * it cannot be quietened any further without failing on the exact plane it is
-   * reserved for.
+   * window backdrop. It is re-toned with the plane it is reserved for: on the
+   * navigation plane it measures 3.07:1, which is the floor, so its value is not
+   * free and it moves whenever that plane does. It cannot be quietened any
+   * further without failing on the exact plane it is reserved for.
    *
    * `--line-control-soft` is the boundary for every control that only ever sits
    * on a light plane - a toolbar button, a search field, a dialog field, the
    * BIM IFC actions. The binding plane is the darkest of those
    * (`--surface-detail`, where the Inspector's own fields sit) and it clears
-   * 3.02:1 there, 3.28:1 on chrome, 3.71:1 on white. It is roughly 13% lighter
-   * than `--line-control`, which is what stops every secondary control in the
-   * product reading as a native form outline.
+   * 3.05:1 there, 3.60:1 on chrome, 4.07:1 on white. It is a little lighter than
+   * `--line-control`, which is what stops every secondary control in the product
+   * reading as a native form outline - and the split is smaller than it used to
+   * be because the Inspector's plane came down with the rest of the ladder, so
+   * the room between the two boundaries narrowed with it.
    *
    * The rule is one direction only: `--line-control-soft` may never be spent on
-   * `--surface-nav` or `--bg-app`, where it measures 2.67:1 and 2.33:1.
+   * `--surface-nav` or `--bg-app`, where it measures 2.82:1 and 2.55:1.
    * frontend/tests/design-tokens.test.mjs holds both halves of it.
    */
-  --line-control: #787b7e;
-  --line-control-soft: #838586;
+  --line-control: #777879;
+  --line-control-soft: #7d7e7f;
   /* floating-surface edges. A menu or a dialog is identified by its surface and
      its shadow; this only has to close the shape. */
   --line-float: #c8cbce;
@@ -392,30 +396,34 @@
   --background: var(--bg-app);
   --workspace: var(--surface-workspace);
   /*
-   * Persistent navigation is part of the window's chrome, not a plane of its own.
+   * Persistent navigation takes the recessed navigation plane, and this is the
+   * assignment the surface pass corrected back.
    *
-   * It took the recessed navigation plane, one full step below the chrome bands,
-   * and that is exactly what it looked like: a tall grey slab bolted to the left
-   * of the application, 1.34:1 from the work plane and carrying nothing below its
-   * last row. Re-toning the plane could not fix it - the ladder is saturated, so
-   * the most --surface-nav could give back before it fell through its own 1.08:1
-   * floor against --surface-detail was about four percent, which the eye does not
-   * register. The assignment moved instead.
+   * It had been moved onto `--surface-chrome` to stop the column reading as a tall
+   * grey slab bolted to the left of the window - and the slab was real, but the
+   * cause was never the plane: the column was 248px wide, carried nothing below
+   * its last row, and had no material relationship with anything else on screen.
+   * The width and the row grammar were fixed where they belong (styles/shell.css),
+   * and the assignment then cost the product the one distinction a desktop
+   * application most needs: global navigation, every pane header, both toolbars,
+   * the timeline and the local object browser all rendered within 1.035:1 of each
+   * other. The Windows review called the result "several large nearly-white
+   * slabs", which is precisely what one value spent on five roles looks like.
    *
-   * On the chrome plane the sidebar is one material with the window band above
-   * it, which is the desktop composition this is: an L of window chrome around a
-   * single light work plane. What separates navigation from the work plane is now
-   * the same step that already separates every toolbar and every pane header from
-   * its own content (--surface-chrome -> --surface-workspace, 1.09:1) - one weak
-   * signal, spent the same way everywhere in the product, instead of a second
-   * darker material that only the sidebar ever used.
+   * On the navigation plane the column is the most recessed large surface on
+   * screen, the work plane is 1.39:1 lighter than it, and the local object browser
+   * beside it is a full step lighter (1.18:1) - so "global navigation" and "this
+   * tool's own browser" are two roles a reader can separate at a glance rather
+   * than two greys they have to compare. The column is not dark: it is the second
+   * lightest thing on screen after the work plane, and it is the window backdrop
+   * that stays dimmest.
    *
-   * Selection is not weakened by the move: --accent-muted on --surface-chrome is
-   * 1.21:1, the strongest step it takes on any plane (tests/design-tokens.test.mjs
-   * holds that floor), and the row grammar inside the column is what carries the
-   * hierarchy now (styles/shell.css).
+   * Selection is not weakened by the darker plane. --accent-muted measures 1.21:1
+   * on `--surface-chrome` and strengthens as the plane under it darkens, so a
+   * selected work package is a *stronger* step on the navigation plane than it
+   * was on chrome (tests/design-tokens.test.mjs holds the floor).
    */
-  --sidebar: var(--surface-chrome);
+  --sidebar: var(--surface-nav);
   --chrome: var(--surface-chrome);
   --surface-elevated: var(--surface);
   --border: var(--line);

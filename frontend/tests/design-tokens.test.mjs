@@ -69,14 +69,22 @@ function composite(name, over) {
 
 /**
  * The structural ladder, ordered from the dimmest plane to the work plane. The
- * order is the design: navigation is the most receded plane, then secondary
- * panes and recessed wells, then chrome bands and pane headers, and the surface
- * you work on is the lightest thing on screen.
+ * order is the design: navigation is the most receded plane, then the docked
+ * contextual pane, then a local object browser, then chrome bands and pane
+ * headers, and the surface you work on is the lightest thing on screen.
+ *
+ * `surface-list` is in this list rather than excluded from it, and the change is
+ * the point: while it was excluded, the local object browser was free to sit
+ * 1.035:1 from the chrome bands that name it and 1.051:1 from the Inspector's
+ * plane, which is what the rendered audit measured and what the Windows review
+ * saw as one slab. A plane a reader has to separate from four others is a plane
+ * of the ladder, and the contract says so now.
  */
 const planes = [
   "bg-app",
   "surface-nav",
   "surface-detail",
+  "surface-list",
   "surface-chrome",
   "surface-workspace",
 ];
@@ -300,12 +308,6 @@ test("the neutral ladder stays neutral, cool-stone, and never blue", () => {
   // band is wide enough to let the ladder carry a cool cast and no wider.
   const neutral = [
     ...planes,
-    // The local object list's own half step: a material difference *inside* one
-    // role rather than a step between two, so it is deliberately not part of the
-    // ordered ladder above - but it is a neutral on this axis and obeys the same
-    // rule, which is what stops a "just slightly different grey" from being
-    // smuggled in as a new plane.
-    "surface-list",
     "surface",
     "line",
     "line-soft",

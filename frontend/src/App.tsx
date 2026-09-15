@@ -109,7 +109,16 @@ export function App() {
       <PaneSplit id="shell">
         <Pane
           id="sidebar-pane"
-          className="sidebar-pane"
+          /*
+           * `pane-stack` is what makes the column fill the window. The library
+           * gives a pane a height but leaves it `display: block`, so a column
+           * declared without a height of its own is content-height and the
+           * shell paints its own background underneath - the empty lower
+           * half of the window the Windows review reported. The pane is the
+           * column's container, and a stack is how this product says so
+           * (frontend/src/styles/layout.css).
+           */
+          className="sidebar-pane pane-stack"
           panelRef={navPanel}
           collapsible
           collapsedSize="0px"
@@ -150,7 +159,7 @@ export function App() {
           dragging.
         */}
         <PaneDivider label="调整导航宽度" disabled={!navOpen} />
-        <Pane className="main-pane">
+        <Pane className="main-pane pane-stack">
           <main className="main-shell">
             <WorkspaceHeader
               data={data}

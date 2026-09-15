@@ -146,7 +146,7 @@ export function WorkspaceViews({
         </Pane>
         {detailsOpen && (
           <>
-            <PaneDivider />
+            <PaneDivider label="调整详情面板宽度" />
             <Pane
               id="inspector-pane"
               className="inspector-pane pane-stack"
@@ -154,7 +154,11 @@ export function WorkspaceViews({
                  constrained one gives its own column back to the content. */
               defaultSize={inspectorWidthFor(width)}
               minSize="240px"
-              maxSize="40%"
+              /* A pixel ceiling, for the reason the local browsers state: a
+                 percentage ceiling shrinks with the window and binds a width
+                 the user chose. 480px is the 40% of the 1440px window this
+                 layout is drawn at. */
+              maxSize="480px"
             >
               <Inspector
                 busy={busy}

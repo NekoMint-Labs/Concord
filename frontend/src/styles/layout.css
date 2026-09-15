@@ -37,6 +37,14 @@
  * `width`, not with `flex-basis`: the library writes its own `flexBasis` inline
  * on this element, and a rule that only set the flex basis would leave the pane
  * edge zero pixels wide and invisible.
+ *
+ * The cursor is the first and cheapest signal the boundary exists, so it is
+ * declared on the element rather than left to the library's hover tracking: a
+ * 1px rule inside a 9px target is not something a reader can be asked to aim
+ * at, but a pointer that turns into a resize cursor the moment it enters that
+ * target is the one affordance every desktop user already reads. The library's
+ * own drag cursor is injected with `!important` and still wins while a drag is
+ * running.
  */
 .pane-divider {
   position: relative;
@@ -44,6 +52,7 @@
   align-self: stretch;
   width: 1px;
   min-width: 1px;
+  cursor: col-resize;
   background: var(--border);
   transition: background var(--motion-instant) var(--ease);
 }
@@ -54,8 +63,38 @@
   inset-block: 0;
   inset-inline: -4px;
 }
+/*
+ * The grip. A 1px rule between two planes states where a region ends; it does
+ * not state that the edge moves, and the Windows review was the proof - the
+ * reviewer never found the boundary, because a hairline is a boundary and not an
+ * invitation. The grip is the smallest object that says "this edge is a control":
+ * 3px by 32px, centred on the rule, in the boundary tone, and invisible until the
+ * pointer or the keyboard arrives. It is deliberately not a resting rail - a
+ * permanent grey bar on every split is the enterprise splitter look this
+ * direction rejected - and it is not an icon, so it adds no decoration.
+ */
+.pane-divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 32px;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: var(--border-strong);
+  opacity: 0;
+  transition: opacity var(--motion-instant) var(--ease);
+}
 .pane-divider:hover {
   background: var(--border-strong);
+}
+/* the grip answers the pointer, the keyboard, and the drag alike: one object,
+   three states, so "this edge moves" is learned once */
+.pane-divider:hover::before,
+.pane-divider[data-separator="focus"]::before,
+.pane-divider[data-separator="active"]::before {
+  opacity: 1;
 }
 .pane-divider[data-separator="focus"] {
   background: var(--accent);
@@ -73,6 +112,7 @@
  */
 .pane-divider[data-separator="disabled"] {
   visibility: hidden;
+  cursor: default;
 }
 .pane-divider:focus-visible {
   outline: 2px solid var(--focus-ring);
@@ -85,6 +125,13 @@
  * A pane that owns a header and a scrolling body. The library already gives the
  * pane `overflow: auto` inline, so the body is what takes the scroll, and the
  * header stays where it is while the content under it moves.
+ *
+ * It is also the pane's *fill* contract, and that half is not optional: the
+ * library leaves a pane `display: block` and states only its height, so a pane
+ * whose single child is a column without a height of its own is content-height
+ * and the shell's own background shows below it. A stack pane is a column
+ * container, so its children stretch to the pane and a child that grows fills
+ * it. The shell's two panes rely on exactly this (App.tsx).
  */
 .pane-stack {
   display: flex;

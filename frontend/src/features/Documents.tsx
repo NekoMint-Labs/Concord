@@ -10,7 +10,6 @@ import { notify } from "../components/ui/AppToaster";
 import { statusLabel } from "../components/Status";
 import { icon } from "../components/ui/icon";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
-import { usePaneWidth } from "../layout/paneBudget";
 import { useMotion } from "../motion";
 
 /**
@@ -71,7 +70,6 @@ export function Documents({
   const [query, setQuery] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const cache = useQueryClient();
-  const width = usePaneWidth();
   const { transition, variants } = useMotion();
   const documents = useQuery({
     queryKey: ["documents", project],
@@ -282,22 +280,20 @@ export function Documents({
       defaultSize="264px"
       minSize="150px"
       /*
-       * The source list's share has a ceiling on a narrow window.
+       * The source list's share has a ceiling: it is the local browser for the
+       * document being read, not the reading surface, so it may not grow to
+       * half the window however wide the window gets.
        *
-       * It is a percentage, so as the window narrows the list's *proportion* held
-       * while everything else lost absolute width: at 1100px it was 30% of the
-       * view and the article it annotates was down to a 419px prose column. A
-       * pane that is a proportion of the window has no way to know that the thing
-       * beside it is a paragraph, so the ceiling states the one fact it can: below
-       * the width at which the shell itself gives the sidebar less room, this
-       * column stops growing and the article keeps the difference.
-       *
-       * It is a `maxSize` and not a `defaultSize` on purpose: the split persists
-       * the user's own layout by percentage, and a default only ever applies on
-       * the first mount. A ceiling is re-applied to every layout resolution, so
-       * the guard holds on a window that was resized after the layout was saved.
+       * The ceiling is stated in pixels, and it used to be a percentage (34%
+       * above 1150px, 200px below). A percentage ceiling is not a ceiling on
+       * this pane: it shrinks as the window narrows, so at 900px it was binding
+       * a source list the user had chosen to be 264px wide, and the split then
+       * carried the *clamped* width back to the wider window. 410px is the 34%
+       * of the 1440px window this layout is drawn at, expressed in the unit the
+       * ceiling is actually about (`Pane` keeps a pixel width across a resize -
+       * frontend/src/layout/PaneSplit.tsx). One number, no breakpoint.
        */
-      maxSize={width < 1150 ? "200px" : "34%"}
+      maxSize="410px"
     >
       <header className="pane-header">
         <span className="pane-header-label">来源</span>
@@ -411,7 +407,7 @@ export function Documents({
       ) : (
         <PaneSplit id="documents" persist>
           {sourceList}
-          <PaneDivider />
+          <PaneDivider label="调整来源列表宽度" />
           {reading}
         </PaneSplit>
       )}
