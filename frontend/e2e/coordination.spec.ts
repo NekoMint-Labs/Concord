@@ -224,6 +224,9 @@ test('the change composer supports keyboard selection and dismissal in the produ
   await expect(selected).toBeVisible();
   await expect(selected).toBeFocused();
   await page.keyboard.press('ArrowDown');
+  // Radix moves the arrow-key highlight on a deferred timer, so the move is waited
+  // for as the product state it is rather than assumed to have landed before Enter.
+  await expect(page.getByRole('option', { name: '班组人员不足' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(trigger).toContainText('班组人员不足');
 
