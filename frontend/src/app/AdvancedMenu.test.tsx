@@ -1,8 +1,40 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { expect, it, vi } from "vitest";
 import type { DTO } from "../api/client";
 import { AdvancedMenu } from "./AdvancedMenu";
 import type { WorkspaceTab } from "./WorkspaceTabs";
+
+/* The profile gate is our contract; Radix popup behavior is browser-covered. */
+vi.mock("../components/ui/AppMenu", () => ({
+  AppMenu: ({ children }: { children: ReactNode }) => (
+    <div role="menu">{children}</div>
+  ),
+  AppMenuLabel: ({ children }: { children: ReactNode }) => (
+    <div>{children}</div>
+  ),
+  AppMenuSeparator: () => <hr />,
+  AppMenuItem: ({
+    children,
+    onSelect,
+    disabled,
+    active = false,
+  }: {
+    children: ReactNode;
+    onSelect: () => void;
+    disabled?: boolean;
+    active?: boolean;
+  }) => (
+    <button
+      aria-current={active ? "page" : undefined}
+      disabled={disabled}
+      onClick={onSelect}
+      role="menuitem"
+    >
+      {children}
+    </button>
+  ),
+}));
 
 function menu(
   profile: DTO<"ProfileResponse"> | undefined,
@@ -19,26 +51,6 @@ function menu(
       onReset={() => {}}
     />
   );
-}
-
-/**
- * Opens 高级 the way a keyboard user does. jsdom has no real pointer stack, and
- * `fireEvent.keyDown` is the door `frontend/src/app/WorkspaceTabs.test.tsx`
- * already uses for this menu.
- *
- * The tests below keep one menu open and change only the profile, so that what
- * is asserted is the gate itself - including the transition from a local answer
- * to a desktop one - rather than five independent page loads.
- */
-function open(
-  profile: DTO<"ProfileResponse"> | undefined,
-  onTab: (tab: WorkspaceTab) => void = () => {},
-) {
-  const view = render(menu(profile, onTab));
-  fireEvent.keyDown(screen.getByRole("button", { name: "高级" }), {
-    key: "ArrowDown",
-  });
-  return view;
 }
 
 function answer(name: string): DTO<"ProfileResponse"> {
@@ -62,7 +74,7 @@ function answer(name: string): DTO<"ProfileResponse"> {
  */
 it("hides the demo tools while the profile query is still loading", () => {
   const onTab = vi.fn();
-  const view = open(undefined, onTab);
+  render(menu(undefined, onTab));
 
   expect(screen.queryByText("演示工具")).not.toBeInTheDocument();
   expect(screen.queryByText("重置演示")).not.toBeInTheDocument();
@@ -71,11 +83,10 @@ it("hides the demo tools while the profile query is still loading", () => {
   // not demo tools and keep their place in the menu.
   fireEvent.click(screen.getByRole("menuitem", { name: "运行记录" }));
   expect(onTab).toHaveBeenCalledWith("operations");
-  view.unmount();
 });
 
 it("shows the demo tools only when the profile positively reports local", () => {
-  const view = open(answer("local"));
+  const view = render(menu(answer("local")));
 
   expect(screen.getByText("演示工具")).toBeVisible();
   expect(screen.getByText("重置演示")).toBeVisible();

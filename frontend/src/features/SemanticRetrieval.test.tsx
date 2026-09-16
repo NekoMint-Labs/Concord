@@ -1,12 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 import { SemanticRetrieval } from "./SemanticRetrieval";
-
-/* jsdom has no layout, so Radix cannot scroll a focused option into view. */
-beforeAll(() => {
-  Element.prototype.scrollIntoView = () => {};
-});
 
 const mocks = vi.hoisted(() => ({ semanticSearch: vi.fn() }));
 vi.mock("../api/client", () => ({
@@ -18,6 +13,34 @@ vi.mock("../api/client", () => ({
     semanticSearch: mocks.semanticSearch,
   },
 }));
+
+/* Consent and stale-result handling are ours; the floating select is browser-covered. */
+vi.mock("../components/ui/AppSelect", () => ({
+  AppSelect: ({
+    label,
+    value,
+    onChange,
+    options,
+  }: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    options: { value: string; label: string }[];
+  }) => (
+    <select
+      aria-label={label}
+      onChange={(event) => onChange(event.target.value)}
+      value={value}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
 beforeEach(() => vi.clearAllMocks());
 
 const documents = [
@@ -25,8 +48,7 @@ const documents = [
   { id: "second", filename: "Second source" },
 ];
 
-/* the document list is seeded into the cache so the picker is populated on the
-   first render - the tests are about the consent/race semantics, not the fetch */
+/* The document list is seeded into the cache: these tests cover state, not fetch. */
 function setup() {
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -47,11 +69,10 @@ function setup() {
   fireEvent.click(screen.getByText("派生向量检索 / PostgreSQL"));
 }
 
-/* choosing means opening the Concord select and activating an option; both
-   steps are synchronous, so nothing waits while a floating surface is open */
 function chooseDocument(name: string) {
-  fireEvent.click(screen.getByRole("combobox", { name: "待索引文档" }));
-  fireEvent.click(screen.getByRole("option", { name }));
+  const select = screen.getByRole("combobox", { name: "待索引文档" });
+  const option = screen.getByRole("option", { name }) as HTMLOptionElement;
+  fireEvent.change(select, { target: { value: option.value } });
 }
 
 it("changing source or query clears the previous disclosure consent", () => {
@@ -67,16 +88,6 @@ it("changing source or query clears the previous disclosure consent", () => {
   expect(consent).not.toBeChecked();
 });
 
-/*
- * The one test in this suite that drives a Concord select while another request is
- * in flight. Measured cost of the awaited work around it in jsdom: ~21s, against a
- * 5s default budget, and shimming the frame loop (above) does not remove it - the
- * select's floating layer leaves the file's event loop busy for the tests that
- * follow. What that measures is the harness, not the product: a real browser opens
- * the same list in milliseconds, and `e2e/coordination.spec.ts` chooses a change
- * type through it end to end. So the test states the budget it needs; the follow-up
- * is recorded rather than hidden.
- */
 it("a late result for an old source cannot appear under the new source", async () => {
   let finish!: (value: unknown[]) => void;
   mocks.semanticSearch.mockReturnValue(
@@ -91,8 +102,7 @@ it("a late result for an old source cannot appear under the new source", async (
   fireEvent.click(screen.getByRole("button", { name: "搜索向量" }));
   expect(mocks.semanticSearch).toHaveBeenCalledTimes(1);
   chooseDocument("Second source");
-  /* the stale run's version no longer matches, so resolving it must not commit
-     a result; the microtasks let the awaited search continuation run first */
+  /* The stale run's version no longer matches, so resolution cannot commit it. */
   finish([
     {
       chunk_id: "old",
@@ -107,4 +117,4 @@ it("a late result for an old source cannot appear under the new source", async (
   await Promise.resolve();
   await Promise.resolve();
   expect(screen.queryByText("OLD SOURCE RESULT")).toBeNull();
-}, 60_000);
+});

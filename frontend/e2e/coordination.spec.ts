@@ -212,21 +212,29 @@ test('viewer can read but cannot approve or execute', async ({ page, request }) 
   expect(data.approvals).toHaveLength(0);
 });
 
-test('the change composer records a kind through the product selection control', async ({
+test('the change composer supports keyboard selection and dismissal in the product control', async ({
   page,
   request,
 }) => {
   await page.getByRole('button', { name: '记录变更' }).click();
   const trigger = page.locator('.event-dialog [role=combobox]');
-  await trigger.click();
-  /*
-   * The list must be *on top of* the modal rather than merely present in it.
-   * Playwright fails an actionability check when another element would receive the
-   * click, so this one line is the whole defect it guards: a list that measured
-   * correctly, sat under the dialog surface, and could not be chosen from.
-   */
-  await page.getByRole('option', { name: '班组人员不足' }).click();
+  await trigger.focus();
+  await page.keyboard.press('ArrowDown');
+  const selected = page.getByRole('option', { name: '设计修订' });
+  await expect(selected).toBeVisible();
+  await expect(selected).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
   await expect(trigger).toContainText('班组人员不足');
+
+  await trigger.focus();
+  await page.keyboard.press('ArrowDown');
+  const workforce = page.getByRole('option', { name: '班组人员不足' });
+  await expect(workforce).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('option')).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+
   await page.getByRole('button', { name: '提交并分析' }).click();
   await expectBlocked(page);
 

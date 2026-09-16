@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { expect, it, vi } from "vitest";
 import {
   WorkspaceTabs,
@@ -6,6 +7,41 @@ import {
   primaryTabs,
   secondaryTabs,
 } from "./WorkspaceTabs";
+
+/* Navigation state is the unit contract; Radix popup interaction is browser-covered. */
+vi.mock("../components/ui/AppMenu", () => ({
+  AppMenu: ({
+    children,
+    label,
+    trigger,
+  }: {
+    children: ReactNode;
+    label: string;
+    trigger?: ReactNode;
+  }) => (
+    <div>
+      <button aria-label={label}>{trigger ?? label}</button>
+      <div role="menu">{children}</div>
+    </div>
+  ),
+  AppMenuItem: ({
+    children,
+    onSelect,
+    active = false,
+  }: {
+    children: ReactNode;
+    onSelect: () => void;
+    active?: boolean;
+  }) => (
+    <button
+      aria-current={active ? "page" : undefined}
+      onClick={onSelect}
+      role="menuitem"
+    >
+      {children}
+    </button>
+  ),
+}));
 
 /**
  * What the view strip is allowed to offer.
@@ -55,18 +91,9 @@ it("states an advanced view as the current destination without offering it", () 
   expect(strip.querySelectorAll("button[aria-current='page']")).toHaveLength(0);
 });
 
-it("opens 更多 as exactly the secondary destinations and selects one", () => {
+it("lists exactly the secondary destinations and selects one", () => {
   const onTab = vi.fn();
   render(<WorkspaceTabs tab="gis" onTab={onTab} />);
-
-  /*
-   * A Radix menu opens on a primary pointer press or on a key. jsdom has no real
-   * pointer stack, so this opens it the way a keyboard user does - which is also
-   * one of the interactions this pass had to keep working.
-   */
-  const trigger = screen.getByRole("button", { name: "更多" });
-  trigger.focus();
-  fireEvent.keyDown(trigger, { key: "Enter" });
 
   const items = screen.getAllByRole("menuitem");
   expect(items.map((item) => item.textContent)).toEqual([
@@ -75,11 +102,9 @@ it("opens 更多 as exactly the secondary destinations and selects one", () => {
     "现场地图",
   ]);
   // The current destination is stated in the menu as well as in the strip.
-  expect(screen.getByRole("menuitem", { name: "现场地图" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+  const current = screen.getByRole("menuitem", { name: "现场地图" });
+  expect(current).toHaveAttribute("aria-current", "page");
 
-  fireEvent.click(screen.getByRole("menuitem", { name: "现场地图" }));
+  fireEvent.click(current);
   expect(onTab).toHaveBeenCalledWith("gis");
 });
