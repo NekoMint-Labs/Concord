@@ -202,11 +202,15 @@ def test_upgrade_existing_database_preserves_project_and_snapshot(tmp_path):
             "project_source_revisions",
             "baselines",
             "baseline_entries",
+            "project_agent_settings",
+            "investigations",
+            "agent_notices",
+            "source_imports",
         }.issubset(inspect(engine).get_table_names())
         with engine.connect() as connection:
             assert (
                 connection.execute(text("select version_num from alembic_version")).scalar_one()
-                == "0004"
+                == "0006"
             )
             assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
         with engine.begin() as connection:

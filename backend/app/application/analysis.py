@@ -1,3 +1,4 @@
+from app.application.investigations import InvestigationService
 from app.application.streaming import custom, emit
 from app.domain.actions import ActionProposal, AuditRecord
 from app.domain.errors import ProviderError, StaleSnapshotError
@@ -107,6 +108,7 @@ class AnalysisService:
         self, factory: RepositoryFactory, reasoning: ReasoningEngine, resolver: ResolutionEngine
     ) -> None:
         self.factory, self.reasoning, self.resolver = factory, reasoning, resolver
+        self.investigations: InvestigationService | None = None
 
     def analyze(self, run_id: str, *, generation: int | None = None) -> AgentRun:
         with self.factory.open() as repo:
@@ -119,6 +121,9 @@ class AnalysisService:
                 run = repo.run(run_id)
                 if run.status in {"CANCELLED", "EXPIRED"} or run.generation != generation:
                     return run
+                if run.category == "investigation" and self.investigations is not None:
+                    if not self.investigations.permitted(repo, run):
+                        return repo.run(run_id)
                 state = repo.state(run.project_id)
                 snapshot = ProjectSnapshot(
                     project_id=state.project.id, version=state.version, sources=state.sources
@@ -133,7 +138,16 @@ class AnalysisService:
                     {"snapshot_id": snapshot.id, "version": snapshot.version},
                 )
             # Provider/model work is deliberately outside the database write lock.
-            analysis = compute_analysis(state, snapshot, run.id, self.reasoning)
+            report = None
+            try:
+                if run.category == "investigation":
+                    if self.investigations is None:
+                        raise ProviderError("Investigation worker is not initialized")
+                    analysis, report = self.investigations.compute(state, snapshot, run)
+                else:
+                    analysis = compute_analysis(state, snapshot, run.id, self.reasoning)
+            except StaleSnapshotError:
+                continue
             with self.factory.open(run.project_id, write=True) as repo:
                 current_run = repo.run(run_id)
                 if (
@@ -142,6 +156,9 @@ class AnalysisService:
                 ):
                     return current_run
                 current = repo.state(run.project_id)
+                if run.category == "investigation" and self.investigations is not None:
+                    if not self.investigations.permitted(repo, current_run):
+                        return repo.run(run_id)
                 try:
                     check_fresh(snapshot, current)
                 except StaleSnapshotError:
@@ -159,5 +176,14 @@ class AnalysisService:
                     else:
                         return current_run
                 emit(repo, run.id, "STEP_FINISHED", stepName="capture-and-evaluate")
-                return persist_analysis(repo, current_run, state, analysis, self.resolver)
+                updated = persist_analysis(repo, current_run, state, analysis, self.resolver)
+                if report is not None:
+                    repo.save_investigation_report(report)
+                    custom(
+                        repo,
+                        run.id,
+                        "investigation-result",
+                        {"analysis_id": analysis.id, "tools": [t.tool for t in report.tools]},
+                    )
+                return updated
         raise StaleSnapshotError("Project changed during three consecutive analyses; retry the run")

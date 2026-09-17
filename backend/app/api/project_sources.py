@@ -17,9 +17,30 @@ from app.domain.project_sources import (
     ProjectSourceStatus,
     RevisionUploadResult,
 )
+from app.domain.runs import AgentRun
 from app.policies.actions import require
 
 router = APIRouter(prefix="/api/projects/{project_id}/sources", tags=["project-sources"])
+
+
+@router.post(
+    "/{source_id}/revisions/{revision_id}/import", response_model=AgentRun, status_code=202
+)
+def import_revision(
+    project_id: str, source_id: str, revision_id: str, user: CurrentUser, svc=Depends(services)
+):
+    return svc.source_imports.enqueue(project_id, source_id, revision_id, user)
+
+
+@router.get("/{source_id}/revisions/{revision_id}/import", response_model=AgentRun | None)
+def import_status(
+    project_id: str, source_id: str, revision_id: str, user: CurrentUser, svc=Depends(services)
+):
+    require(user, "read")
+    with svc.factory.open() as repo:
+        repo.source_revision(project_id, source_id, revision_id)
+        link = repo.source_import(revision_id)
+        return repo.run(link.run_id) if link else None
 
 
 @router.post("", response_model=ProjectSource, status_code=201)

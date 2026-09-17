@@ -73,6 +73,7 @@ const CAPABILITY: Record<string, string> = {
 /** Run categories. A technical word is kept inside the label where it is the object. */
 const CATEGORY: Record<string, string> = {
   coordination: "协调分析",
+  investigation: "范围调查",
   document_parse: "文档解析",
   bim_import: "BIM 导入",
   optimization: "排程优化",
@@ -158,6 +159,7 @@ const RUN_TRACE: Record<string, string> = {
   "action-rejected": "已拒绝",
   "action-result": "执行结果",
   "capability-result": "能力结果",
+  "investigation-result": "调查结果",
 };
 
 const SETS = {

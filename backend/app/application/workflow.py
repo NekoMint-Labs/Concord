@@ -49,7 +49,7 @@ class WorkflowCoordinator:
                 # Keep the exact proposal/approval identity when authoritative facts match.
                 return run.status
         try:
-            if run.category != "coordination":
+            if run.category not in {"coordination", "investigation"}:
                 if self.capabilities is None:
                     raise PermissionDenied("Capability worker is not initialized")
                 return self.capabilities.process(run_id, generation=run.generation)

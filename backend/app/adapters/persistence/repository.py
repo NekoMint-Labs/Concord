@@ -1,8 +1,10 @@
 from sqlalchemy import delete, select
 
 from app.adapters.persistence.action_records import ActionRecords
+from app.adapters.persistence.agent_records import AgentRecords
 from app.adapters.persistence.baseline_records import BaselineRecords
 from app.adapters.persistence.run_records import RunRecords
+from app.adapters.persistence.source_import_records import SourceImportRecords
 from app.adapters.persistence.source_records import SourceRecords
 from app.adapters.persistence.tables import (
     AnalysisRow,
@@ -19,7 +21,9 @@ from app.domain.retrieval import PreparedEmbeddingIndex
 from app.ports.providers import PreparedDocument
 
 
-class SQLCoordinationRepository(RunRecords, ActionRecords, SourceRecords, BaselineRecords):
+class SQLCoordinationRepository(
+    RunRecords, ActionRecords, SourceRecords, BaselineRecords, AgentRecords, SourceImportRecords
+):
     """Project facts and evidence plus the unchanged, single-session repository contract."""
 
     def state(self, project_id: str) -> ProjectState:
@@ -135,6 +139,16 @@ class SQLCoordinationRepository(RunRecords, ActionRecords, SourceRecords, Baseli
         from app.adapters.persistence.document_records import publish_document
 
         return publish_document(self.session, prepared)
+
+    def evidence_by_ids(self, project_id: str, identities: tuple[str, ...]) -> list[Evidence]:
+        if not identities:
+            return []
+        rows = self.session.scalars(
+            select(EvidenceRow)
+            .join(SnapshotRow, SnapshotRow.id == EvidenceRow.snapshot_id)
+            .where(SnapshotRow.project_id == project_id, EvidenceRow.id.in_(identities))
+        )
+        return [Evidence.model_validate(row.payload) for row in rows]
 
     def publish_embeddings(self, prepared: PreparedEmbeddingIndex) -> dict:
         from app.adapters.persistence.embedding_records import publish_embeddings

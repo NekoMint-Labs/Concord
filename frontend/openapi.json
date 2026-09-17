@@ -5,6 +5,337 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/projects/{project_id}/agent/settings": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Settings",
+        "operationId": "settings_api_projects__project_id__agent_settings_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSettings-Output"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Configure",
+        "operationId": "configure_api_projects__project_id__agent_settings_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentSettings-Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSettings-Output"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/agent/notices": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Notices",
+        "operationId": "notices_api_projects__project_id__agent_notices_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentNotice"
+                  },
+                  "title": "Response Notices Api Projects  Project Id  Agent Notices Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/agent/ask": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Ask",
+        "operationId": "ask_api_projects__project_id__agent_ask_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/agent/investigate": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Investigate",
+        "operationId": "investigate_api_projects__project_id__agent_investigate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/agent/investigations/{run_id}": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Report",
+        "operationId": "report_api_projects__project_id__agent_investigations__run_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvestigationReport"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Report Api Projects  Project Id  Agent Investigations  Run Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -467,6 +798,142 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkPackage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/sources/{source_id}/revisions/{revision_id}/import": {
+      "post": {
+        "tags": [
+          "project-sources"
+        ],
+        "summary": "Import Revision",
+        "operationId": "import_revision_api_projects__project_id__sources__source_id__revisions__revision_id__import_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          },
+          {
+            "name": "revision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Revision Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "project-sources"
+        ],
+        "summary": "Import Status",
+        "operationId": "import_status_api_projects__project_id__sources__source_id__revisions__revision_id__import_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          },
+          {
+            "name": "revision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Revision Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AgentRun"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Import Status Api Projects  Project Id  Sources  Source Id  Revisions  Revision Id  Import Get"
                 }
               }
             }
@@ -2645,6 +3112,159 @@
         ],
         "title": "ActionProposal"
       },
+      "AgentAnswer": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Summary"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Evidence Ids",
+            "default": []
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Limitations",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summary",
+          "evidence_ids",
+          "limitations"
+        ],
+        "title": "AgentAnswer"
+      },
+      "AgentNotice": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "revision_id": {
+            "type": "string",
+            "title": "Revision Id"
+          },
+          "from_revision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Revision Id"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "source_id",
+          "revision_id",
+          "from_revision_id",
+          "run_id",
+          "created_at"
+        ],
+        "title": "AgentNotice"
+      },
+      "AgentRequest": {
+        "properties": {
+          "instruction": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Instruction"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/AgentScope-Input"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "instruction"
+        ],
+        "title": "AgentRequest"
+      },
+      "AgentResponse": {
+        "properties": {
+          "answer": {
+            "$ref": "#/components/schemas/AgentAnswer"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/AgentScope-Output"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ToolTrace"
+            },
+            "type": "array",
+            "title": "Tools"
+          },
+          "persisted": {
+            "type": "boolean",
+            "title": "Persisted",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answer",
+          "scope",
+          "evidence",
+          "tools",
+          "persisted"
+        ],
+        "title": "AgentResponse"
+      },
       "AgentRun": {
         "properties": {
           "id": {
@@ -2712,6 +3332,7 @@
             "type": "string",
             "enum": [
               "coordination",
+              "investigation",
               "document_parse",
               "bim_import",
               "optimization",
@@ -2772,6 +3393,191 @@
           "updated_at"
         ],
         "title": "AgentRun"
+      },
+      "AgentScope-Input": {
+        "properties": {
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "from_revision_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Revision Id"
+          },
+          "to_revision_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Revision Id"
+          },
+          "work_package_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Work Package Ids",
+            "default": []
+          },
+          "area_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Area Ids",
+            "default": []
+          },
+          "element_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Element Ids",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AgentScope"
+      },
+      "AgentScope-Output": {
+        "properties": {
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "from_revision_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Revision Id"
+          },
+          "to_revision_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Revision Id"
+          },
+          "work_package_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Work Package Ids",
+            "default": []
+          },
+          "area_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Area Ids",
+            "default": []
+          },
+          "element_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Element Ids",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_id",
+          "from_revision_id",
+          "to_revision_id",
+          "work_package_ids",
+          "area_ids",
+          "element_ids"
+        ],
+        "title": "AgentScope"
+      },
+      "AgentSettings-Input": {
+        "properties": {
+          "initiative": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "suggest",
+              "auto-investigate"
+            ],
+            "title": "Initiative",
+            "default": "suggest"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AgentSettings"
+      },
+      "AgentSettings-Output": {
+        "properties": {
+          "initiative": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "suggest",
+              "auto-investigate"
+            ],
+            "title": "Initiative",
+            "default": "suggest"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "initiative"
+        ],
+        "title": "AgentSettings"
       },
       "Analysis": {
         "properties": {
@@ -3102,6 +3908,28 @@
       },
       "BIMImport": {
         "properties": {
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_revision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Revision Id"
+          },
           "kind": {
             "type": "string",
             "const": "bim_import",
@@ -3140,6 +3968,8 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "source_id",
+          "source_revision_id",
           "kind",
           "filename",
           "object_key",
@@ -3827,6 +4657,28 @@
       },
       "DocumentImport": {
         "properties": {
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_revision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Revision Id"
+          },
           "kind": {
             "type": "string",
             "const": "document_parse",
@@ -3853,6 +4705,8 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "source_id",
+          "source_revision_id",
           "kind",
           "filename",
           "object_key",
@@ -4490,6 +5344,60 @@
           "disciplines"
         ],
         "title": "Impact"
+      },
+      "InvestigationReport": {
+        "properties": {
+          "answer": {
+            "$ref": "#/components/schemas/AgentAnswer"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/AgentScope-Output"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ToolTrace"
+            },
+            "type": "array",
+            "title": "Tools"
+          },
+          "persisted": {
+            "type": "boolean",
+            "title": "Persisted",
+            "default": true
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "analysis_id": {
+            "type": "string",
+            "title": "Analysis Id"
+          },
+          "generation": {
+            "type": "integer",
+            "title": "Generation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answer",
+          "scope",
+          "evidence",
+          "tools",
+          "persisted",
+          "run_id",
+          "analysis_id",
+          "generation"
+        ],
+        "title": "InvestigationReport"
       },
       "OptimizationRequest": {
         "properties": {
@@ -5477,6 +6385,33 @@
           "payload"
         ],
         "title": "StreamEvent"
+      },
+      "ToolTrace": {
+        "properties": {
+          "tool": {
+            "type": "string",
+            "title": "Tool"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tool",
+          "evidence_ids",
+          "available"
+        ],
+        "title": "ToolTrace"
       },
       "ValidationError": {
         "properties": {

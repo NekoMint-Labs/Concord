@@ -4,9 +4,10 @@ from pydantic import Field
 
 from app.domain.models import Model, new_id
 from app.domain.scheduling import SchedulingProblem
+from app.domain.source_imports import SourceReference
 
 
-class DocumentImport(Model):
+class DocumentImport(SourceReference):
     kind: Literal["document_parse"] = "document_parse"
     filename: str
     object_key: str
@@ -14,7 +15,7 @@ class DocumentImport(Model):
     document_id: str = Field(default_factory=new_id)
 
 
-class BIMImport(Model):
+class BIMImport(SourceReference):
     kind: Literal["bim_import"] = "bim_import"
     filename: str
     object_key: str
@@ -60,7 +61,7 @@ class CapabilityJob(Model):
     result: dict | None = None
 
 
-class BIMIndex(Model):
+class BIMIndex(SourceReference):
     project_id: str
     revision: str
     object_key: str

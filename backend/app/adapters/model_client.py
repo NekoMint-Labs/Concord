@@ -93,7 +93,14 @@ def configured_model(
 
 
 async def bounded_call(
-    agent, prompt, *, deps=None, role: str, model_id: str, testing: bool = False
+    agent,
+    prompt,
+    *,
+    deps=None,
+    role: str,
+    model_id: str,
+    testing: bool = False,
+    request_limit: int = 4,
 ):
     kwargs: dict[str, Any] = {"model_settings": {"timeout": 25, "max_tokens": 1600}}
     if deps is not None:
@@ -101,7 +108,7 @@ async def bounded_call(
     if not testing:
         from pydantic_ai.usage import UsageLimits
 
-        kwargs["usage_limits"] = UsageLimits(request_limit=4, tool_calls_limit=6)
+        kwargs["usage_limits"] = UsageLimits(request_limit=request_limit, tool_calls_limit=6)
     started = time.monotonic()
     try:
         async with asyncio.timeout(85):

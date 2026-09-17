@@ -75,6 +75,8 @@ def prepare_capability_work(
     elif isinstance(request, BIMImport):
         elements = ifc.parse(read_verified_source(storage, request))
         bim_index = BIMIndex(
+            source_id=request.source_id,
+            source_revision_id=request.source_revision_id,
             project_id=job.project_id,
             revision=request.content_hash,
             object_key=request.object_key,
@@ -93,7 +95,7 @@ def prepare_capability_work(
             Evidence(
                 snapshot_id=snapshot.id,
                 provider="ifcopenshell",
-                source_id=request.object_key,
+                source_id=request.source_id or request.object_key,
                 source_revision=request.content_hash,
                 observed_at=utcnow(),
                 work_package_id=None,

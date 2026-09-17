@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.adapters.observability import configure_logging
 from app.api import (
+    agent,
     baselines,
     capability_jobs,
     project_lifecycle,
@@ -41,6 +42,7 @@ def create_app(settings: Settings | None = None, service_override=None) -> FastA
                 await asyncio.to_thread(app.state.services.close)
 
     app = FastAPI(title="Construction Coordination Agent", version="0.1.0", lifespan=lifespan)
+    app.include_router(agent.router)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

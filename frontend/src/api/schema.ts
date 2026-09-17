@@ -2,14 +2,22 @@
 export interface components { schemas: {
   "ActionExecution": { "operation_id": string; "proposal_id": string; "project_id": string; "before_version": number; "after_version": number; "status": "VERIFIED"; "mode": "simulated" | "external"; "principal_id": string; "result": string; "executed_at": string; };
   "ActionProposal": { "id": string; "operation_id": string; "project_id": string; "run_id": string; "generation": number; "snapshot_id": string; "snapshot_version": number; "work_package_id": string; "title": string; "risk": number; "resolution": components["schemas"]["ResolutionOption"]; "evidence_ids": Array<string>; "execution_mode": "simulated" | "external"; "created_at": string; };
-  "AgentRun": { "id": string; "project_id": string; "event_id": (string | null); "status": "QUEUED" | "RUNNING" | "WAITING_APPROVAL" | "COMPLETED" | "FAILED" | "CANCELLED" | "EXPIRED"; "runtime": string; "runtime_execution_id": (string | null); "generation": number; "runtime_generation": number; "category": "coordination" | "document_parse" | "bim_import" | "optimization" | "vision" | "embedding_index"; "analysis_id": (string | null); "error": (string | null); "created_at": string; "updated_at": string; };
+  "AgentAnswer": { "summary": string; "evidence_ids": Array<string>; "limitations": Array<string>; };
+  "AgentNotice": { "id": string; "project_id": string; "source_id": string; "revision_id": string; "from_revision_id": (string | null); "run_id": (string | null); "created_at": string; };
+  "AgentRequest": { "instruction": string; "scope"?: components["schemas"]["AgentScope-Input"]; };
+  "AgentResponse": { "answer": components["schemas"]["AgentAnswer"]; "scope": components["schemas"]["AgentScope-Output"]; "evidence": Array<components["schemas"]["Evidence"]>; "tools": Array<components["schemas"]["ToolTrace"]>; "persisted": boolean; };
+  "AgentRun": { "id": string; "project_id": string; "event_id": (string | null); "status": "QUEUED" | "RUNNING" | "WAITING_APPROVAL" | "COMPLETED" | "FAILED" | "CANCELLED" | "EXPIRED"; "runtime": string; "runtime_execution_id": (string | null); "generation": number; "runtime_generation": number; "category": "coordination" | "investigation" | "document_parse" | "bim_import" | "optimization" | "vision" | "embedding_index"; "analysis_id": (string | null); "error": (string | null); "created_at": string; "updated_at": string; };
+  "AgentScope-Input": { "source_id"?: (string | null); "from_revision_id"?: (string | null); "to_revision_id"?: (string | null); "work_package_ids"?: Array<string>; "area_ids"?: Array<string>; "element_ids"?: Array<string>; };
+  "AgentScope-Output": { "source_id": (string | null); "from_revision_id": (string | null); "to_revision_id": (string | null); "work_package_ids": Array<string>; "area_ids": Array<string>; "element_ids": Array<string>; };
+  "AgentSettings-Input": { "initiative"?: "manual" | "suggest" | "auto-investigate"; };
+  "AgentSettings-Output": { "initiative": "manual" | "suggest" | "auto-investigate"; };
   "Analysis": { "id": string; "run_id": string; "snapshot": components["schemas"]["ProjectSnapshot"]; "impact": components["schemas"]["Impact"]; "evidence": Array<components["schemas"]["Evidence"]>; "findings": Array<components["schemas"]["Finding"]>; "constraints": Array<components["schemas"]["Constraint"]>; "readiness": Array<components["schemas"]["Readiness"]>; "reasoning_summary": string; "reasoning_mode": string; "created_at": string; };
   "Approval": { "id": string; "proposal_id": string; "principal_id": string; "principal_role": string; "level": "standard" | "strong"; "confirmation": string; "created_at": string; };
   "ApprovalRequest": { "strong"?: boolean; "confirmation"?: string; };
   "Area": { "id": string; "name": string; "floor": string; };
   "AuditRecord": { "id": string; "project_id": string; "action": string; "actor": string; "run_id": (string | null); "snapshot_id": (string | null); "operation_id": (string | null); "detail": Record<string, (string | number | boolean | null)>; "created_at": string; };
   "BIMElement": { "id": string; "name": string; "type": string; "storey": (string | null); "space": (string | null); "properties": Record<string, unknown>; "related_ids": Array<string>; "revision": string; };
-  "BIMImport": { "kind": "bim_import"; "filename": string; "object_key": string; "content_hash": string; "base_revision": (string | null); "base_revision_bound": boolean; };
+  "BIMImport": { "source_id": (string | null); "source_revision_id": (string | null); "kind": "bim_import"; "filename": string; "object_key": string; "content_hash": string; "base_revision": (string | null); "base_revision_bound": boolean; };
   "Baseline": { "name": string; "entries": Array<components["schemas"]["BaselineEntry"]>; "id": string; "project_id": string; "sequence": number; "accepted_by": string; "created_at": string; };
   "BaselineEntry": { "source_id": string; "revision_id": string; };
   "Body_import_document_api_projects__project_id__documents_post": { "file": string; };
@@ -28,7 +36,7 @@ export interface components { schemas: {
   "Crew-Input": { "id": string; "workers": number; "qualifications": Array<string>; "available_from"?: number; "available_until"?: number; };
   "Crew-Output": { "id": string; "workers": number; "qualifications": Array<string>; "available_from": number; "available_until": number; };
   "DocumentChunk": { "id": string; "text": string; "page": (number | null); "location": (string | null); "source_hash": string; "parser": string; };
-  "DocumentImport": { "kind": "document_parse"; "filename": string; "object_key": string; "content_hash": string; "document_id": string; };
+  "DocumentImport": { "source_id": (string | null); "source_revision_id": (string | null); "kind": "document_parse"; "filename": string; "object_key": string; "content_hash": string; "document_id": string; };
   "DocumentMetadata": { "id": string; "project_id": string; "filename": string; "content_hash": string; "parser": string; "created_at": string; };
   "Effect": { "kind": "acknowledge_design" | "assign_crew" | "confirm_qualification" | "confirm_predecessor" | "confirm_material" | "confirm_equipment" | "record_inspection"; "work_package_id": string; "value": (string | number | boolean | Array<string>); "resource_id": (string | null); };
   "EmbeddingIndexRequest-Input": { "kind"?: "embedding_index"; "document_id": string; "chunk_ids"?: Array<string>; "consent"?: boolean; };
@@ -40,6 +48,7 @@ export interface components { schemas: {
   "Finding": { "id": string; "snapshot_id": string; "work_package_id": string; "conclusion": string; "evidence_ids": Array<string>; "reasoning_summary": string; "confidence": number; "limitations": Array<string>; "created_at": string; };
   "HTTPValidationError": { "detail"?: Array<components["schemas"]["ValidationError"]>; };
   "Impact": { "work_package_ids": Array<string>; "area_ids": Array<string>; "element_ids": Array<string>; "disciplines": Array<string>; };
+  "InvestigationReport": { "answer": components["schemas"]["AgentAnswer"]; "scope": components["schemas"]["AgentScope-Output"]; "evidence": Array<components["schemas"]["Evidence"]>; "tools": Array<components["schemas"]["ToolTrace"]>; "persisted": boolean; "run_id": string; "analysis_id": string; "generation": number; };
   "OptimizationRequest": { "kind": "optimization"; "problem": components["schemas"]["SchedulingProblem-Output"]; };
   "ProfileResponse": { "profile": string; "runtime": string; "reasoning": string; "storage": string; "database": string; "simulation": boolean; "authentication": string; };
   "Project": { "id": string; "name": string; "description": string; "timezone": string; };
@@ -61,6 +70,7 @@ export interface components { schemas: {
   "SemanticQuery": { "query": string; "document_id"?: (string | null); "source_hash"?: (string | null); "limit"?: number; "consent"?: boolean; };
   "SourceRevision": { "source": string; "revision": string; "observed_at": string; };
   "StreamEvent": { "sequence": number; "run_id": string; "payload": Record<string, unknown>; };
+  "ToolTrace": { "tool": string; "evidence_ids": Array<string>; "available": boolean; };
   "ValidationError": { "loc": Array<(string | number)>; "msg": string; "type": string; "input"?: unknown; "ctx"?: Record<string, unknown>; };
   "VisionRequest": { "kind": "vision"; "object_key": string; "content_hash": string; "media_type": string; "source_id": string; "consent": boolean; };
   "WorkPackage": { "id": string; "name": string; "area_id": string; "discipline": string; "element_ids": Array<string>; "predecessors": Array<string>; "complete": boolean; "design_revision": string; "accepted_revision": string; "required_workers": number; "available_workers": number; "required_qualifications": Array<string>; "qualifications": Array<string>; "materials": Record<string, boolean>; "equipment": Record<string, boolean>; "inspection_passed": boolean; "owner": string; };

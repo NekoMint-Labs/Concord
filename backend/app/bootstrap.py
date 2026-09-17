@@ -3,6 +3,7 @@ from contextlib import ExitStack
 from dataclasses import dataclass
 
 from app.adapters.actions_local import SimulatedActionExecutor
+from app.adapters.agent_offline import OfflineInvestigationEngine
 from app.adapters.demo import LocalGeoProvider, StructuredBIMProvider, demo_state
 from app.adapters.documents_light import LightweightDocumentParser
 from app.adapters.observability import Telemetry
@@ -18,12 +19,15 @@ from app.adapters.reasoning_offline import OfflineReasoningEngine
 from app.adapters.resolver_simple import SimpleResolver
 from app.adapters.storage_local import LocalFileStore
 from app.application.actions import ActionService
+from app.application.agent_control import AgentControlService
 from app.application.analysis import AnalysisService
 from app.application.baselines import BaselineService
 from app.application.capability_jobs import CapabilityJobService
 from app.application.coordination import CoordinationService
+from app.application.investigations import InvestigationService
 from app.application.project_sources import ProjectSourceService
 from app.application.projects import ProjectService
+from app.application.source_imports import SourceImportService
 from app.application.workflow import WorkflowCoordinator
 from app.bootstrap_capabilities import build_capability_jobs
 from app.domain.actions import Principal
@@ -50,6 +54,9 @@ class Services:
     projects: ProjectService
     sources: ProjectSourceService
     baselines: BaselineService
+    agent: AgentControlService
+    investigations: InvestigationService
+    source_imports: SourceImportService
 
     resources: ExitStack
 
@@ -109,9 +116,20 @@ def build_services(settings: Settings) -> Services:
 
             bim = IfcOpenShellBIMProvider(settings.ifc_path)
         documents = DocumentRepository(engine, storage, parser)
-        jobs = build_capability_jobs(
-            settings, factory, runtime_name, storage, documents, resources
-        )
+        investigator = OfflineInvestigationEngine()
+        if settings.reasoning == "pydantic-ai":
+            from app.adapters.agent_pydantic import PydanticAIInvestigationEngine
+
+            investigator = PydanticAIInvestigationEngine(
+                settings.reasoning_model,
+                settings.model_api_key,
+                settings.model_base_url,
+                provider=settings.model_provider,
+            )
+        resources.callback(investigator.close)
+        investigations = InvestigationService(factory, investigator, documents)
+        analysis.investigations = investigations
+        jobs = build_capability_jobs(settings, factory, runtime_name, storage, documents, resources)
         workflow.capabilities = jobs
         observed_workflow = ObservedWorkflow(workflow, telemetry)
         if settings.diagnostic_runtime:
@@ -138,6 +156,7 @@ def build_services(settings: Settings) -> Services:
                 factory=factory,
             )
         resources.callback(runtime.close)
+        agent_control = AgentControlService(factory, runtime, runtime_name)
         result = Services(
             settings,
             factory,
@@ -153,8 +172,11 @@ def build_services(settings: Settings) -> Services:
             storage,
             telemetry,
             ProjectService(factory),
-            ProjectSourceService(factory, storage, settings.max_upload_bytes),
+            ProjectSourceService(factory, storage, settings.max_upload_bytes, agent_control),
             BaselineService(factory),
+            agent_control,
+            investigations,
+            SourceImportService(factory, jobs, runtime),
             resources,
         )
         if settings.seed_demo:

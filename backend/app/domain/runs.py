@@ -22,7 +22,13 @@ class AgentRun(Model):
     generation: int = Field(default=0, ge=0)
     runtime_generation: int = Field(default=0, ge=0)
     category: Literal[
-        "coordination", "document_parse", "bim_import", "optimization", "vision", "embedding_index"
+        "coordination",
+        "investigation",
+        "document_parse",
+        "bim_import",
+        "optimization",
+        "vision",
+        "embedding_index",
     ] = "coordination"
     analysis_id: str | None = None
     error: str | None = None

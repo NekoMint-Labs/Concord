@@ -7,6 +7,7 @@ owns dispatch, retries and recovery. File/model/solver work stays outside DB loc
 import hashlib
 
 from app.application.capability_work import prepare_capability_work
+from app.application.source_imports import link_import, validate_import_source
 from app.application.streaming import custom, emit
 from app.domain.actions import AuditRecord, Principal
 from app.domain.errors import CapabilityUnavailable, Conflict, PermissionDenied
@@ -54,6 +55,9 @@ class CapabilityJobService:
             raise CapabilityUnavailable(f"Capability {request.kind} is disabled in this profile")
         with self.factory.open(project_id, write=True) as repo:
             repo.state(project_id)
+            previous = validate_import_source(repo, project_id, request)
+            if previous:
+                return repo.run(previous.run_id)
             if isinstance(request, BIMImport):
                 active = repo.bim_index(project_id)
                 request = request.model_copy(
@@ -69,6 +73,7 @@ class CapabilityJobService:
                     id=run.id, project_id=project_id, requested_by=principal.id, request=request
                 )
             )
+            link_import(repo, project_id, request, run.id)
             emit(repo, run.id, "RUN_STARTED")
             repo.audit(
                 AuditRecord(
@@ -183,16 +188,20 @@ class CapabilityJobService:
             if repo.job(run_id).result is not None:
                 return "COMPLETED"  # A concurrent durable retry already published the result.
             if prepared_document is not None:
+                if not isinstance(job.request, DocumentImport):
+                    raise Conflict("Document output does not match the requested capability")
                 # Metadata, FTS, evidence and completion commit together. Parsing
                 # and object staging happen above, outside the project write lock.
                 published = repo.publish_document(prepared_document)
                 result = published.metadata.model_dump(mode="json")
+                current_state = repo.state(job.project_id)
+                repo.save_state(revise(current_state, current_state.work_packages, set()))
                 for chunk in published.chunks:
                     evidence.append(
                         Evidence(
                             snapshot_id=snapshot.id,
                             provider=chunk.parser,
-                            source_id=published.metadata.id,
+                            source_id=job.request.source_id or published.metadata.id,
                             source_revision=chunk.source_hash,
                             observed_at=utcnow(),
                             work_package_id=None,
@@ -223,6 +232,9 @@ class CapabilityJobService:
                 repo.save_evidence(item)
             result["evidence_ids"] = [item.id for item in evidence]
             result["snapshot_id"] = snapshot.id
+            if isinstance(job.request, (BIMImport, DocumentImport)):
+                result["source_id"] = job.request.source_id
+                result["source_revision_id"] = job.request.source_revision_id
             repo.save_job(job.model_copy(update={"snapshot_id": snapshot.id, "result": result}))
             repo.save_run(
                 current.model_copy(
