@@ -41,12 +41,28 @@ jobs:
           if [ "$RUNNER_OS" = "Windows" ]; then SIDECAR="${SIDECAR}.exe"; fi
           uv run --frozen --no-sync python scripts/http_smoke.py --runtime dbos --profile desktop --sidecar "$SIDECAR" --crash-restart --output artifacts/native-sidecar.json
           uv run --frozen --no-sync python scripts/agent_lifecycle_smoke.py --sidecar "$SIDECAR" --output artifacts/native-agent.json
-      - name: Install the actual Linux WebDriver intermediary
-        if: runner.os == 'Linux'
+      - name: Install the native WebDriver intermediary
+        if: runner.os != 'macOS'
         run: cargo install tauri-driver --locked --version '^2.0'
+      - name: Install matching Windows WebView2 driver
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $runtime = Get-ChildItem "${env:ProgramFiles(x86)}/Microsoft/EdgeWebView/Application" -Directory |
+            Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
+            Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
+          if (-not $runtime) { throw 'WebView2 runtime is required for native qualification' }
+          $driverDir = Join-Path $env:RUNNER_TEMP 'concord-edge-driver'
+          $archive = Join-Path $env:RUNNER_TEMP 'concord-edge-driver.zip'
+          Invoke-WebRequest "https://msedgedriver.microsoft.com/$($runtime.Name)/edgedriver_win64.zip" -OutFile $archive
+          Expand-Archive -LiteralPath $archive -DestinationPath $driverDir
+          $driverDir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
       - name: Real packaged Tauri WebView and sidecar coordination
         if: runner.os == 'Linux'
         run: xvfb-run -a dbus-run-session -- uv run --frozen --no-sync python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent --output artifacts/native-webview.json
+      - name: Real packaged Windows WebView2 and sidecar coordination
+        if: runner.os == 'Windows'
+        run: uv run --frozen --no-sync python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent.exe --output artifacts/native-webview.json
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -58,4 +74,5 @@ jobs:
             artifacts/native-webview.json
             artifacts/native-webdriver.log
             artifacts/native-webview-failure.png
+            artifacts/native-webview-pass.png
           retention-days: 14

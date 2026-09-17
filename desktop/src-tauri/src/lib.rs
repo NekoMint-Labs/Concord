@@ -1,6 +1,7 @@
 mod backend;
 mod endpoint;
 mod commands;
+mod data_dir;
 
 use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use tauri::Manager;

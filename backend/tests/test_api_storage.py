@@ -69,7 +69,7 @@ def test_storage_rejects_path_traversal(tmp_path, key):
         store.put(key, b"secret")
 
 
-def test_storage_bounds_symlink_and_roundtrip(tmp_path):
+def test_storage_bounds_and_roundtrip(tmp_path):
     store = LocalFileStore(tmp_path / "files", 8)
     assert store.put("safe/object", b"abc") == hashlib.sha256(b"abc").hexdigest()
     assert store.read("safe/object") == b"abc"
@@ -77,9 +77,33 @@ def test_storage_bounds_symlink_and_roundtrip(tmp_path):
     store.delete("safe/object")
     with pytest.raises(DomainError):
         store.put("too-large", b"012345678")
-    (tmp_path / "files" / "link").symlink_to(tmp_path)
+
+
+def test_storage_rejects_symlink_escape(tmp_path):
+    store = LocalFileStore(tmp_path / "files")
+    try:
+        (tmp_path / "files" / "link").symlink_to(tmp_path, target_is_directory=True)
+    except OSError as exc:
+        if getattr(exc, "winerror", None) == 1314:
+            pytest.skip(
+                "Windows account lacks symlink privilege; junction escape is tested separately"
+            )
+        raise
     with pytest.raises(DomainError):
         store.put("link/outside", b"abc")
+
+
+def test_storage_rejects_windows_junction_escape(tmp_path):
+    winapi = pytest.importorskip("_winapi", reason="NTFS junctions are Windows-specific")
+    store = LocalFileStore(tmp_path / "files")
+    winapi.CreateJunction(str(tmp_path), str(tmp_path / "files" / "link"))
+    try:
+        with pytest.raises(DomainError):
+            store.put("link/outside", b"abc")
+        assert not (tmp_path / "outside").exists()
+    finally:
+        # Remove only the junction, never recurse into its external target.
+        (tmp_path / "files" / "link").rmdir()
 
 
 def test_server_and_desktop_tokens_fail_safe(tmp_path):

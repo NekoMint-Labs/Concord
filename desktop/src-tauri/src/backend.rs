@@ -19,7 +19,8 @@ pub struct Backend {
 pub type SharedBackend = Arc<Mutex<Backend>>;
 
 pub fn spawn(app: &AppHandle, shared: SharedBackend) -> Result<(), String> {
-    let data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let default = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let data = crate::data_dir::resolve(default, std::env::var_os("CCA_DESKTOP_DATA_DIR"))?;
     std::fs::create_dir_all(&data).map_err(|e| e.to_string())?;
     // Two independent UUIDs give a fresh secret on every launch. Never commit it.
     let token = format!("{}{}", uuid::Uuid::new_v4().simple(), uuid::Uuid::new_v4().simple());

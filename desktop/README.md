@@ -35,11 +35,11 @@ script derives the host triple from rustc; it does not assume Windows on Linux. 
 outputs platform bundles under `desktop/src-tauri/target/release/bundle`. A packaged end
 user does not install Python, Node, Docker, PostgreSQL, or model keys.
 
-Optional local parsers/solvers must first be installed through uv extras, then included
-with `--feature ifcopenshell`, `--feature ortools`, or `--feature docling` when invoking
-`scripts/build_desktop.py` (or `scripts/build_sidecar.py`). Docling model weights must
-be staged separately for offline PDF parsing. The default offline coordination demo does
-not require those features.
+The desktop extra and sidecar build include IfcOpenShell by default. Optional
+OR-Tools/Docling must first be installed through uv extras, then included with
+`--feature ortools` or `--feature docling`. Docling model weights must be staged
+separately for offline PDF parsing. Desktop startup does not seed a demo;
+`CCA_SEED_DEMO=true` is an explicit regression/demo opt-in.
 
 ## Runtime boundary
 
@@ -50,6 +50,34 @@ accepts only an explicitly selected regular file, checks extension and size befo
 after reading, and sends it to the authenticated API. On exit, Rust requests a graceful
 backend shutdown before killing any remaining child. Local database state lives in the
 operating-system application-data directory.
+
+A trusted launcher may set `CCA_DESKTOP_DATA_DIR` to an absolute directory for
+isolated qualification. Relative/empty values fail closed. This is deliberately
+separate from the Python development setting `CCA_DATA_DIR` and is not a renderer
+command or file permission. Windows WebView test storage is isolated separately
+using `WEBVIEW2_USER_DATA_FOLDER`; Linux uses the XDG environment variables.
+
+## Native WebView regression
+
+Build through `scripts/build_desktop.py` / the Tauri CLI, which embeds the frontend.
+A plain Cargo build can retain the development URL and is not a packaged UI test.
+Install `tauri-driver` and the native driver following the
+[official Tauri instructions](https://v2.tauri.app/develop/tests/webdriver/manual-setup/).
+Windows needs `msedgedriver` matching its WebView2 version; Linux needs
+`WebKitWebDriver` and a display (for example xvfb).
+
+```powershell
+python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent.exe --output artifacts/native-webview.json
+```
+
+This launches the real packaged WebView and sidecar with isolated synthetic data,
+submits a change through the current UI, verifies approval is required, executes
+the simulated action, and checks a fresh READY snapshot through the authenticated
+sidecar API. JSON, driver logs and a screenshot are written under `artifacts`;
+isolated application data stays in `.verification-work/native-webview-*` for
+inspection. The manual native CI workflow runs this on Windows and Linux. This
+regression does not claim new-project UI/IFC-diff joint acceptance or installation
+and signing qualification.
 
 ## Qualification and release
 

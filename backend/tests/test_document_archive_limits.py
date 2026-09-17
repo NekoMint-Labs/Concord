@@ -12,7 +12,12 @@ def archive(members):
     stream = io.BytesIO()
     with zipfile.ZipFile(stream, "w", zipfile.ZIP_DEFLATED) as output:
         for name, value in members:
-            output.writestr(name, value)
+            # Preserve hostile ZIP names verbatim on Windows too. ZipInfo's
+            # constructor otherwise normalizes backslashes before writing.
+            member = zipfile.ZipInfo()
+            member.filename = name
+            member.compress_type = zipfile.ZIP_DEFLATED
+            output.writestr(member, value)
     return stream.getvalue()
 
 
@@ -35,6 +40,7 @@ def test_office_bounds_use_expanded_bytes_not_small_compressed_size():
         "word/../content.xml",
         "word\\document.xml",
         "word//document.xml",
+        "word/document.xml\x00hidden",
     ],
 )
 def test_office_ambiguous_member_paths_are_rejected(name):

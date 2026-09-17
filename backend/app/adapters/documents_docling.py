@@ -138,12 +138,15 @@ def validate_office_archive(
                 raise DomainError("Office archive exceeds the expanded size or entry limit")
             seen = set()
             for item in entries:
-                name = item.filename
+                # filename is normalized by ZipInfo on Windows and truncated at
+                # NUL. Validate the original directory entry before conversion.
+                name = item.orig_filename
                 path = PurePosixPath(name)
                 if (
                     not name
                     or name.startswith("/")
                     or "\\" in name
+                    or "\x00" in name
                     or ":" in name
                     or ".." in path.parts
                     or path.as_posix().rstrip("/") != name.rstrip("/")
