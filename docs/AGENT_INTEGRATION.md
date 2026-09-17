@@ -124,6 +124,8 @@ sidecar build includes it without `--feature` or `CCA_BIM` switches. Existing
 demo regression scripts now opt into their synthetic data explicitly. Local
 development's existing demo default is retained; the product desktop default is
 empty. B's startup/project selection UI is needed to complete that product flow.
+The HTTP host explicitly serves module workers as JavaScript and WASM as
+`application/wasm`, independent of Windows file-type associations.
 
 ```powershell
 python scripts/agent_lifecycle_smoke.py --output artifacts/agent-dbos.json

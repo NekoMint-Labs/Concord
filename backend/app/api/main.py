@@ -8,7 +8,6 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from app.adapters.observability import configure_logging
 from app.api import (
@@ -21,6 +20,7 @@ from app.api import (
     resources,
     runs,
 )
+from app.api.web import mount_web
 from app.bootstrap import build_services
 from app.domain.errors import DomainError
 from app.settings import Settings
@@ -111,8 +111,7 @@ def create_app(settings: Settings | None = None, service_override=None) -> FastA
     app.include_router(capability_jobs.router)
     # The production UI is optional for API-only development. No source directory is served.
     web_dist = Path(__file__).resolve().parents[3] / "frontend" / "dist"
-    if web_dist.is_dir():
-        app.mount("/", StaticFiles(directory=web_dist, html=True), name="web")
+    mount_web(app, web_dist)
     return app
 
 
