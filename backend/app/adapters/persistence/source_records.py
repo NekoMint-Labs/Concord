@@ -1,6 +1,6 @@
 """Append-only artifact records; the repository factory owns commit/rollback."""
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, true
 
 from app.adapters.persistence.lifecycle_tables import ProjectSourceRevisionRow, ProjectSourceRow
 from app.adapters.persistence.record_session import SessionRecords
@@ -23,12 +23,13 @@ class SourceRecords(SessionRecords):
             raise NotFound("Source does not belong to this project")
         return ProjectSource.model_validate(row.payload)
 
-    def project_sources(self, project_id: str) -> list[ProjectSource]:
-        rows = self.session.scalars(
+    def project_sources(self, project_id: str, *, limit: int | None = None) -> list[ProjectSource]:
+        statement = (
             select(ProjectSourceRow)
             .where(ProjectSourceRow.project_id == project_id)
             .order_by(ProjectSourceRow.id)
         )
+        rows = self.session.scalars(statement.limit(limit) if limit is not None else statement)
         return [ProjectSource.model_validate(row.payload) for row in rows]
 
     def add_source_revision(self, revision: ProjectSourceRevision) -> None:
@@ -82,13 +83,20 @@ class SourceRecords(SessionRecords):
         )
         return ProjectSourceRevision.model_validate(row.payload) if row else None
 
-    def latest_source_revision_ids(self, project_id: str) -> dict[str, str]:
+    def latest_source_revision_ids(
+        self, project_id: str, *, source_ids: tuple[str, ...] | None = None
+    ) -> dict[str, str]:
         latest = (
             select(
                 ProjectSourceRevisionRow.source_id,
                 func.max(ProjectSourceRevisionRow.sequence).label("sequence"),
             )
             .where(ProjectSourceRevisionRow.project_id == project_id)
+            .where(
+                ProjectSourceRevisionRow.source_id.in_(source_ids)
+                if source_ids is not None
+                else true()
+            )
             .group_by(ProjectSourceRevisionRow.source_id)
             .subquery()
         )

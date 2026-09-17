@@ -50,11 +50,15 @@ def source_status(repo: CoordinationRepository, source: ProjectSource) -> Projec
     )
 
 
-def source_statuses(repo: CoordinationRepository, project_id: str) -> list[ProjectSourceStatus]:
-    sources = repo.project_sources(project_id)
+def source_statuses(
+    repo: CoordinationRepository, project_id: str, *, limit: int | None = None
+) -> list[ProjectSourceStatus]:
+    sources = repo.project_sources(project_id, limit=limit)
     if not sources:
         return []
-    latest_ids = repo.latest_source_revision_ids(project_id)
+    latest_ids = repo.latest_source_revision_ids(
+        project_id, source_ids=tuple(s.id for s in sources) if limit is not None else None
+    )
     baseline = repo.latest_baseline(project_id)
     accepted_ids = (
         {entry.source_id: entry.revision_id for entry in baseline.entries} if baseline else {}

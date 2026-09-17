@@ -1,13 +1,11 @@
 """Snapshot-bound, read-only tools shared by deterministic and model agents."""
 
 from app.application.agent_scope import package_ids
-from app.application.project_sources import source_statuses
 from app.domain.agent import AgentScope, ToolTrace
 from app.domain.agent_tools import (
     ReadResult,
     RevisionQuery,
     SearchQuery,
-    WorkPackageFact,
     WorkPackageQuery,
 )
 from app.domain.errors import Conflict, PermissionDenied, ProviderError
@@ -82,46 +80,9 @@ class ReadTools:
         return result
 
     def project_state(self) -> ReadResult:
-        with self.factory.open() as repo:
-            sources = tuple(
-                s
-                for s in source_statuses(repo, self.state.project.id)
-                if not self.scope.source_id or s.source.id == self.scope.source_id
-            )
-        if not self.scope.source_id and (
-            self.scope.work_package_ids or self.scope.area_ids or self.scope.element_ids
-        ):
-            sources = ()  # A project catalog is not evidence of source-to-WP association.
-        evidence, _, constraints, _, _ = self.evaluation
-        visible = self.allowed_packages
-        if self.scope.source_id and (
-            self.scope.element_ids or not (self.scope.work_package_ids or self.scope.area_ids)
-        ):
-            visible = frozenset()  # Source relevance requires actual persisted bindings.
-        facts = tuple(
-            WorkPackageFact(
-                id=p.id,
-                area_id=p.area_id,
-                discipline=p.discipline,
-                blocker_count=sum(c.work_package_id == p.id for c in constraints),
-            )
-            for p in self.state.work_packages
-            if p.id in visible
-        )
-        overview = self._fact(
-            f"Recorded project version {self.state.version}; {len(facts)} work packages in scope; "
-            f"{sum(s.has_pending_revision for s in sources)} sources differ from the baseline.",
-            self.state.project.id,
-            str(self.state.version),
-        )
-        return self.record(
-            "project_state",
-            ReadResult(
-                work_packages=facts,
-                sources=sources,
-                evidence=(overview,) + tuple(e for e in evidence if e.work_package_id in visible),
-            ),
-        )
+        from app.application.agent_catalog import project_state
+
+        return project_state(self)
 
     def validate_revision(self, query: RevisionQuery) -> None:
         scope = self.scope
@@ -229,7 +190,19 @@ class ReadTools:
             for source_id in {b.source_id for b in result.bindings}:
                 repo.project_source(self.state.project.id, source_id)
         result = result.model_copy(update={"changes": ()})
-        result = self._engineering_result(result)
+        # Bindings are source-level facts: confirmation on R1 remains valid for R2 -> R3.
+        # Every supporting record must identify a returned source/WP/element relationship.
+        if any(
+            not any(
+                e.work_package_id == b.work_package_id
+                and e.source_id == b.source_id
+                and b.global_id in e.element_ids
+                for b in result.bindings
+            )
+            for e in result.evidence
+        ):
+            raise ProviderError("Binding evidence must identify a returned source, element and WP")
+        result = self._engineering_result(result, revision_bound=False)
         if any(
             not any(
                 e.work_package_id == b.work_package_id
@@ -243,7 +216,7 @@ class ReadTools:
         self.binding_results.append(result)
         return self.record("work_package_bindings", result)
 
-    def _engineering_result(self, result: ReadResult) -> ReadResult:
+    def _engineering_result(self, result: ReadResult, *, revision_bound: bool = True) -> ReadResult:
         if not result.available and (result.changes or result.bindings):
             raise ProviderError("Unavailable engineering results cannot supply facts")
         # Provider facts must already be persisted and project-scoped.
@@ -255,7 +228,9 @@ class ReadTools:
                 )
             }
         for evidence in result.evidence:
-            if stored.get(evidence.id) != evidence or not self._in_scope(evidence):
+            if stored.get(evidence.id) != evidence or not self._in_scope(
+                evidence, revision_bound=revision_bound
+            ):
                 raise ProviderError("Engineering provider evidence is unpersisted or outside scope")
         if (result.changes or result.bindings) and not result.evidence:
             raise ProviderError("Engineering results require persisted supporting evidence")
@@ -283,7 +258,7 @@ class ReadTools:
             }
         )
 
-    def _in_scope(self, item: Evidence) -> bool:
+    def _in_scope(self, item: Evidence, *, revision_bound: bool = True) -> bool:
         if item.work_package_id and item.work_package_id not in self.allowed_packages:
             return False
         if self.scope.element_ids and not set(item.element_ids).intersection(
@@ -292,7 +267,11 @@ class ReadTools:
             return False
         if self.scope.source_id and item.source_id != self.scope.source_id:
             return False
-        if self.revision_hashes is not None and item.source_revision not in self.revision_hashes:
+        if (
+            revision_bound
+            and self.revision_hashes is not None
+            and (item.source_revision not in self.revision_hashes)
+        ):
             return False
         if (self.scope.work_package_ids or self.scope.area_ids) and not item.work_package_id:
             return False

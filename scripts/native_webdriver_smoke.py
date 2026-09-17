@@ -198,7 +198,7 @@ def exercise(application: Path, artifacts: Path, ifc_fixture: Path | None = None
                 deadline = time.monotonic() + 20
                 while True:
                     if driver.poll() is not None:
-                        raise WebDriverError("tauri-driver stopped; inspect native-webdriver.log")
+                        raise WebDriverError(f"tauri-driver stopped; inspect {log_name}")
                     try:
                         if client.get("/status", timeout=2).is_success:
                             break

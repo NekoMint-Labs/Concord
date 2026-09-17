@@ -213,3 +213,40 @@ def test_identical_global_id_in_another_source_does_not_create_impact(services, 
         analysis = repo.analysis(run.analysis_id)
         assert not analysis.impact.work_package_ids and not analysis.findings
         assert not repo.proposals(run.id)
+
+
+def test_source_binding_evidence_survives_later_revision_comparisons(services, admin, engineering):
+    project, packages, source, adapter = engineering
+    binding = adapter.bindings_result.evidence[0]
+    r2 = services.sources.upload(project.id, source.id, "r2.ifc", b"revision-two", admin).revision
+    r3 = services.sources.upload(project.id, source.id, "r3.ifc", b"revision-three", admin).revision
+    change = binding.model_copy(
+        update={
+            "id": "r3-comparison-evidence",
+            "source_revision": r3.sha256,
+            "fact": "R2 to R3 contract comparison: element removed.",
+        }
+    )
+    with services.factory.open(project.id, write=True) as repo:
+        repo.save_evidence(change)
+    adapter.changes_result = adapter.changes_result.model_copy(update={"evidence": (change,)})
+    run = services.agent.enqueue(
+        project.id,
+        AgentRequest(
+            instruction="Investigate changes",
+            scope=AgentScope(source_id=source.id, from_revision_id=r2.id, to_revision_id=r3.id),
+        ),
+        admin,
+    )
+    with services.factory.open() as repo:
+        analysis = repo.analysis(run.analysis_id)
+        assert analysis.impact.work_package_ids == (packages[0].id,)
+        supporting = {e.id: e for e in analysis.evidence}
+        assert any(
+            supporting[i].source_revision == binding.source_revision
+            for i in analysis.findings[0].evidence_ids
+        )
+        assert any(
+            supporting[i].source_revision == r3.sha256 for i in analysis.findings[0].evidence_ids
+        )
+        assert not repo.proposals(run.id)

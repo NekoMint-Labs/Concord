@@ -153,6 +153,26 @@ def test_real_pgvector_source_version_project_and_model_isolation(postgres_servi
     )
 
 
+def test_real_postgres_scoped_document_search_before_limit(postgres_services):
+    from app.domain.actions import Principal
+    from app.domain.agent import AgentScope
+    from app.domain.agent_tools import SearchQuery
+    from test_agent_read_boundaries import document_candidates, project, read_tools
+
+    svc = postgres_services
+    principal = Principal(id="postgres-search-admin", role="admin")
+    identity, source, revision = document_candidates(svc, principal)
+    result = read_tools(svc, identity, AgentScope(source_id=source.id)).relevant_documents(
+        SearchQuery(query="needle")
+    )
+    assert result.evidence
+    assert {e.source_revision for e in result.evidence} == {revision.sha256}
+    assert svc.documents.search(identity, "needle", source_hashes=()) == []
+    assert svc.documents.search(identity, "needle", source_hashes=("0" * 64,)) == []
+    other, _ = project(svc, principal)
+    assert svc.documents.search(other, "needle", source_hashes=(revision.sha256,)) == []
+
+
 def test_real_postgres_concurrent_approval_and_receipt(postgres_services):
     from concurrent.futures import ThreadPoolExecutor
 

@@ -2,7 +2,7 @@ import hashlib
 import re
 from pathlib import Path
 
-from sqlalchemy import select, text
+from sqlalchemy import bindparam, select, text
 from sqlalchemy.orm import Session
 
 from app.adapters.persistence.database import SQLRepositoryFactory
@@ -124,31 +124,53 @@ class DocumentRepository:
                 raise ProviderError("Stored document content failed its source hash check")
             return row.filename, content
 
-    def search(self, project_id: str, query: str, limit: int = 20) -> list[DocumentChunk]:
+    def search(
+        self,
+        project_id: str,
+        query: str,
+        limit: int = 20,
+        *,
+        source_hashes: tuple[str, ...] | None = None,
+    ) -> list[DocumentChunk]:
         words = re.findall(r"[\w-]+", query, flags=re.UNICODE)[:12]
-        if not words:
+        if not words or source_hashes == ():
             return []
         limit = max(1, min(limit, 100))
         with Session(self.engine) as session:
             if self.engine.dialect.name == "sqlite":
                 expression = " AND ".join('"' + word.replace('"', '""') + '"' for word in words)
-                ids = (
-                    session.execute(
-                        text(
-                            "SELECT chunk_id FROM document_fts WHERE document_fts MATCH "
-                            ":query AND project_id = :project ORDER BY rank LIMIT :limit"
-                        ),
-                        {"query": expression, "project": project_id, "limit": limit},
+                scoped = ""
+                parameters = {"query": expression, "project": project_id, "limit": limit}
+                if source_hashes is not None:
+                    scoped = (
+                        " AND chunk_id IN (SELECT c.id FROM document_chunks c "
+                        "JOIN documents d ON d.id = c.document_id "
+                        "WHERE c.project_id = :project AND d.project_id = :project "
+                        "AND d.content_hash IN :hashes)"
                     )
-                    .scalars()
-                    .all()
+                    parameters["hashes"] = source_hashes
+                statement = text(
+                    "SELECT chunk_id FROM document_fts WHERE document_fts MATCH "
+                    ":query AND project_id = :project" + scoped + " ORDER BY rank LIMIT :limit"
                 )
+                if source_hashes is not None:
+                    statement = statement.bindparams(bindparam("hashes", expanding=True))
+                ids = session.execute(statement, parameters).scalars().all()
                 if not ids:
                     return []
                 rows = session.scalars(select(ChunkRow).where(ChunkRow.id.in_(ids))).all()
                 mapping = {row.id: row for row in rows}
                 return [DocumentChunk.model_validate(mapping[i].payload) for i in ids]
             statement = select(ChunkRow).where(ChunkRow.project_id == project_id)
+            if source_hashes is not None:
+                statement = statement.where(
+                    ChunkRow.document_id.in_(
+                        select(DocumentRow.id).where(
+                            DocumentRow.project_id == project_id,
+                            DocumentRow.content_hash.in_(source_hashes),
+                        )
+                    )
+                )
             for word in words:
                 statement = statement.where(ChunkRow.text.ilike(f"%{word}%"))
             return [

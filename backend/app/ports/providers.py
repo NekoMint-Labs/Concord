@@ -73,7 +73,14 @@ class GeoProvider(Protocol):
 
 
 class SearchProvider(Protocol):
-    def search(self, project_id: str, query: str, limit: int = 20) -> list[DocumentChunk]: ...
+    def search(
+        self,
+        project_id: str,
+        query: str,
+        limit: int = 20,
+        *,
+        source_hashes: tuple[str, ...] | None = None,
+    ) -> list[DocumentChunk]: ...
 
 
 class VisionResult(Model):

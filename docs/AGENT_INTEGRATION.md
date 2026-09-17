@@ -53,6 +53,12 @@ source revision and original Evidence/snapshot reference in the derived fact.
 Read tools enforce scope, project/revision identities and snapshot freshness.
 Readiness rows describe only the investigated scope; a missing row does not mean READY.
 
+The project overview returns at most 50 sources, 50 work packages and 30 supporting
+records plus its catalog summary. Truncation is explicit; select a specific source
+or narrower WP scope for further work. Explicit source lookup does not depend on
+the catalog page. Overview evidence and blocker counts respect the intersection of
+source/revision, WP/area and element selectors.
+
 Act uses the existing `/api/proposals/{id}/approve` and `/execute` routes. Read the
 current proposal IDs from the project workspace; never treat answer text as an
 action command. R3/R4 approval, generation checks, receipts and fresh rechecks are
@@ -98,6 +104,12 @@ C's adapter must return read-only, project-owned `ReadResult` values:
 - Publication of changed BIM/binding facts must advance the project freshness
   fence. Do not silently run IfcDiff or create bindings in a read tool.
 
+Binding confirmation is source-level: evidence recorded on R1 can support a binding
+when comparing R2 to R3. Each such record must still be persisted in the same
+project and match a returned source/WP/element relationship and the selected scope.
+Comparison, document and generic historical-evidence reads retain their revision
+fences; this exception applies only to validated binding results.
+
 For source scopes, persisted source-level bindings determine element-to-WP
 membership, even when legacy `WorkPackage.element_ids` is empty. Explicit WP/area
 selectors still intersect and may never be enlarged by returned bindings. Element
@@ -116,7 +128,8 @@ does not mean READY. C's real adapter and agreed review/readiness rules remain
 necessary for the joint change-to-action acceptance.
 
 Document chunks without authoritative WP/element associations
-are unavailable in those narrow scopes; source scopes filter by revision hashes.
+are unavailable in those narrow scopes; source scopes filter by revision hashes
+inside the search query before ranking/limiting, on SQLite and PostgreSQL.
 Tool/source content is untrusted data. Model egress omits storage keys, raw files
 and personnel records, and sanitizes bounded excerpts.
 
