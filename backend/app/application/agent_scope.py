@@ -14,7 +14,13 @@ def package_ids(state: ProjectState, scope: AgentScope) -> frozenset[str]:
         for p in state.work_packages
         if (not scope.work_package_ids or p.id in scope.work_package_ids)
         and (not scope.area_ids or p.area_id in scope.area_ids)
-        and (not scope.element_ids or set(p.element_ids).intersection(scope.element_ids))
+        # Source-level bindings are authoritative for a source selection. Legacy
+        # WP.element_ids may be empty, or repeat an ID from a different model.
+        and (
+            not scope.element_ids
+            or scope.source_id
+            or set(p.element_ids).intersection(scope.element_ids)
+        )
     )
 
 
@@ -61,7 +67,7 @@ def bind_scope(
             )
     if (scope.work_package_ids or scope.area_ids) and not package_ids(state, scope):
         raise DomainError("The intersection of selected areas, work packages and elements is empty")
-    if scope.element_ids:
+    if scope.element_ids and not scope.source_id:
         index = repo.bim_index(project_id)
         known = {e for p in state.work_packages for e in p.element_ids}
         if index:

@@ -38,6 +38,8 @@ class ReadTools:
         self.evaluation = evaluate(state, snapshot)
         self.observations: list[ReadResult] = []
         self.trace: list[ToolTrace] = []
+        self.comparisons: list[tuple[RevisionQuery, ReadResult]] = []
+        self.binding_results: list[ReadResult] = []
         self.revision_hashes: set[str] | None = None
         if scope.source_id:
             with factory.open() as repo:
@@ -92,8 +94,8 @@ class ReadTools:
             sources = ()  # A project catalog is not evidence of source-to-WP association.
         evidence, _, constraints, _, _ = self.evaluation
         visible = self.allowed_packages
-        if self.scope.source_id and not (
-            self.scope.work_package_ids or self.scope.area_ids or self.scope.element_ids
+        if self.scope.source_id and (
+            self.scope.element_ids or not (self.scope.work_package_ids or self.scope.area_ids)
         ):
             visible = frozenset()  # Source relevance requires actual persisted bindings.
         facts = tuple(
@@ -197,7 +199,13 @@ class ReadTools:
                     )
                 }
             )
-        return self.record("bim_changes", self._engineering_result(result))
+        result = self._engineering_result(result)
+        if any(
+            not any(c.global_id in e.element_ids for e in result.evidence) for c in result.changes
+        ):
+            raise ProviderError("Each changed element requires its own supporting evidence")
+        self.comparisons.append((query, result))
+        return self.record("bim_changes", result)
 
     def work_package_bindings(self, query: WorkPackageQuery) -> ReadResult:
         if set(query.work_package_ids) - self.allowed_packages:
@@ -221,9 +229,23 @@ class ReadTools:
             for source_id in {b.source_id for b in result.bindings}:
                 repo.project_source(self.state.project.id, source_id)
         result = result.model_copy(update={"changes": ()})
-        return self.record("work_package_bindings", self._engineering_result(result))
+        result = self._engineering_result(result)
+        if any(
+            not any(
+                e.work_package_id == b.work_package_id
+                and e.source_id == b.source_id
+                and b.global_id in e.element_ids
+                for e in result.evidence
+            )
+            for b in result.bindings
+        ):
+            raise ProviderError("Each binding requires source, element and WP supporting evidence")
+        self.binding_results.append(result)
+        return self.record("work_package_bindings", result)
 
     def _engineering_result(self, result: ReadResult) -> ReadResult:
+        if not result.available and (result.changes or result.bindings):
+            raise ProviderError("Unavailable engineering results cannot supply facts")
         # Provider facts must already be persisted and project-scoped.
         with self.factory.open() as repo:
             stored = {

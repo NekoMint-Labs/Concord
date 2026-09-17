@@ -1,5 +1,6 @@
 """Read reasoning produces scoped analyses; existing action policy owns all effects."""
 
+from app.application.agent_impact import engineering_findings
 from app.application.agent_reads import ReadTools
 from app.application.agent_scope import bind_scope
 from app.application.streaming import custom
@@ -97,19 +98,16 @@ class InvestigationService:
             request = repo.investigation(run.id).request
         response, tools = self._reason(state, snapshot, request, run)
         allowed = tools.allowed_packages
-        if request.scope.source_id and not (
-            request.scope.work_package_ids or request.scope.area_ids or request.scope.element_ids
-        ):
-            changed = {c.global_id for result in tools.observations for c in result.changes}
-            allowed &= {
-                b.work_package_id
-                for result in tools.observations
-                for b in result.bindings
-                if b.global_id in changed
-            }
+        engineering, changed_elements = engineering_findings(
+            snapshot, tools.comparisons, tools.binding_results, allowed
+        )
+        changed_packages = {f.work_package_id for f in engineering}
+        if request.scope.source_id:
+            allowed &= changed_packages
         evidence, findings, constraints, readiness, _ = tools.evaluation
         constraints = tuple(c for c in constraints if c.work_package_id in allowed)
-        affected = {c.work_package_id for c in constraints}
+        blocked = {c.work_package_id for c in constraints}
+        affected = blocked | changed_packages
         packages = [p for p in state.work_packages if p.id in affected]
         items = {e.id: e for e in evidence if e.work_package_id in allowed}
         items.update((e.id, e) for e in response.evidence)
@@ -124,9 +122,11 @@ class InvestigationService:
                         {
                             e
                             for p in packages
+                            if p.id in blocked
                             for e in p.element_ids
                             if not request.scope.element_ids or e in request.scope.element_ids
                         }
+                        | changed_elements
                     )
                 ),
                 disciplines=tuple(sorted({p.discipline for p in packages})),
@@ -140,12 +140,39 @@ class InvestigationService:
                 )
                 for f in findings
                 if f.work_package_id in allowed
-            ),
+            )
+            + engineering,
             constraints=constraints,
-            readiness=tuple(r for r in readiness if r.work_package_id in allowed),
+            readiness=tuple(
+                r
+                for r in readiness
+                if r.work_package_id in allowed
+                and (r.work_package_id not in changed_packages or r.status == "BLOCKED")
+            ),
             reasoning_summary=response.answer.summary,
             reasoning_mode=self.engine.mode,
         )
+        if engineering:
+            limitation = (
+                "BIM impact is recorded. Readiness is omitted for affected WPs without "
+                "an authoritative blocking/review rule; absence does not mean READY."
+            )
+            response = response.model_copy(
+                update={
+                    "answer": response.answer.model_copy(
+                        update={
+                            "limitations": tuple(
+                                dict.fromkeys(
+                                    (
+                                        limitation,
+                                        *response.answer.limitations,
+                                    )
+                                )
+                            )[:30],
+                        }
+                    )
+                }
+            )
         report = InvestigationReport(
             **response.model_dump(exclude={"persisted"}),
             run_id=run.id,

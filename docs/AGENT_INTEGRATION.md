@@ -87,14 +87,32 @@ C's adapter must return read-only, project-owned `ReadResult` values:
   and persisted supporting Evidence belonging to the requested source and hashes.
 - `bindings(snapshot, scope, WorkPackageQuery)` returns `BindingFact`s for the
   queried WPs; an empty WP query means the bound source/selection's matching WPs.
-- Evidence IDs/content must exist in the same project's repository. The tool
-  rejects invented IDs, other revisions/sources and results outside scope.
+- Evidence IDs/content must exist in the same project's repository. Each change
+  needs Evidence naming its element; each binding needs Evidence naming its
+  source, element and WP together. The tool rejects invented IDs, other
+  revisions/sources, unrelated supporting records and unavailable results that
+  nevertheless claim facts.
 - Publication of changed BIM/binding facts must advance the project freshness
   fence. Do not silently run IfcDiff or create bindings in a read tool.
 
-Selected element scope currently recognizes the persisted current BIM index and
-recorded WP element membership. Revision-aware membership/readiness still needs
-C's integration. Document chunks without authoritative WP/element associations
+For source scopes, persisted source-level bindings determine element-to-WP
+membership, even when legacy `WorkPackage.element_ids` is empty. Explicit WP/area
+selectors still intersect and may never be enlarged by returned bindings. Element
+selectors are read queries against the selected source/revisions, so removed
+historical elements need not appear in the current BIM index. A source selection
+without validated changed-element/binding matches publishes no WP readiness rows
+or proposals. Without a source selector, existing current-index validation remains.
+
+The application joins changes and bindings by **source ID and GlobalId**, records
+affected WPs/elements, and persists Findings with both comparison and binding
+Evidence under the new snapshot. A raw BIM difference alone does not establish
+a blocking condition or authorize an action. Existing authoritative constraints
+still generate proposals; affected WPs without an applicable engineering rule
+have their readiness omitted with an explicit report limitation. Missing readiness
+does not mean READY. C's real adapter and agreed review/readiness rules remain
+necessary for the joint change-to-action acceptance.
+
+Document chunks without authoritative WP/element associations
 are unavailable in those narrow scopes; source scopes filter by revision hashes.
 Tool/source content is untrusted data. Model egress omits storage keys, raw files
 and personnel records, and sanitizes bounded excerpts.
@@ -140,6 +158,23 @@ approves/executes and checks a new analysis. It explicitly reports simulated
 actions, an unconnected engineering provider, and absence of Tauri WebView
 validation. Native CI also runs this against its packaged sidecar.
 
-The engineering-port tests use a clearly named contract fixture, not an IFC diff
-implementation. Model tests use real PydanticAI with FunctionModel and paid
-requests disabled. Full UI/IFC-diff joint acceptance remains pending B/C work.
+The engineering-port tests use clearly named contract fixtures, not an IFC diff
+implementation. They cover fresh projects without seeded blockers or legacy
+element membership, removed-element selection, persisted citation chains,
+unrelated evidence and identical GlobalIds in different sources. Model tests use
+real PydanticAI with FunctionModel and paid requests disabled. Full UI/IFC-diff
+joint acceptance remains pending B/C work.
+
+Windows native regression now drives the packaged Tauri WebView2 UI with matching
+Edge WebDriver, using current Chinese controls and isolated data. It verifies
+change submission, approval, simulated execution and fresh READY recheck; see
+`desktop/README.md` and `artifacts/native-webview.json`. This is a synthetic
+coordination regression, separate from the future B/C project/IFC workflow.
+
+The Windows follow-up also exercised the actual native file picker with a local
+text fixture, displayed its parsed content, closed normally, checked SQLite handle
+release, and read the same document after restarting the isolated desktop.
+The full local Windows backend run passed 310 tests with 14 explicit optional/
+platform skips; the subsequent final engineering contract subset passed 8 tests.
+The native host's four Rust tests passed. Native GUI checks do not imply installer
+installation, signing or the unfinished real engineering change-to-action flow.
