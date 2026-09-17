@@ -109,7 +109,9 @@ job insertion and a unique revision-to-run link share a transaction.
 
 BIM/document jobs carry `source_id` and `source_revision_id`, as do their results;
 the current BIM index carries the same identities. Document publication advances
-project freshness. A stored revision's immutable `import_status: STORED` describes
+project freshness. Approval of an older proposal returns 409 and requests a fresh
+analysis on its existing run; approve the new proposal after that recheck.
+A stored revision's immutable `import_status: STORED` describes
 the original upload, not parsing success: use the linked run/result for that.
 Import does not accept a baseline or create WP bindings. Historic per-revision
 BIM indexes and comparisons remain C's responsibility.

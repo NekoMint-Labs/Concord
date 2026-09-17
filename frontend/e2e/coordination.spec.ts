@@ -289,7 +289,7 @@ test('real local GIS renders and selects its linked work package', async ({ page
   await expect(page.locator('.maplibregl-canvas')).toHaveCount(0);
 });
 
-test('a disconnected event stream reconnects and preserves approvals behind a newer document job', async ({ page, request }) => {
+test('a disconnected event stream refreshes stale approvals behind a newer document job', async ({ page, request }) => {
   let attempts = 0;
   await page.route('**/api/runs/*/events', route => {
     attempts += 1;
@@ -317,10 +317,34 @@ test('a disconnected event stream reconnects and preserves approvals behind a ne
   expect(uploaded.run!.id).not.toBe(current.run!.id);
   expect(uploaded.analysis_run!.id).toBe(current.analysis_run!.id);
   expect(uploaded.analysis_run!.status).toBe('WAITING_APPROVAL');
+  expect(uploaded.state.version).toBeGreaterThan(current.state.version);
+  expect(uploaded.stale).toBe(true);
+  await expect(panel.getByRole('button', { name: /^批准 R/ })).toBeDisabled();
+
+  // Published document evidence invalidates the old snapshot. A stale approval
+  // must be rejected and trigger a fresh analysis on its existing durable run.
+  const rejected = await request.post(`/api/proposals/${proposal.id}/approve`, {
+    headers: authorization,
+    data: { strong: false, confirmation: '' },
+  });
+  expect(rejected.status()).toBe(409);
+  await expect.poll(async () => {
+    const refreshed = await workspace(request);
+    return !refreshed.stale && refreshed.analysis?.id !== current.analysis?.id;
+  }).toBe(true);
+  const refreshed = await workspace(request);
+  expect(refreshed.run!.id).toBe(uploaded.run!.id);
+  expect(refreshed.analysis_run!.id).toBe(current.analysis_run!.id);
+  expect(refreshed.analysis!.snapshot.version).toBe(refreshed.state.version);
+  expect(refreshed.approvals.some(item => item.proposal_id === proposal.id)).toBe(false);
+  const freshProposal = refreshed.proposals.find(item => item.work_package_id === 'WP-200')!;
+  expect(freshProposal.id).not.toBe(proposal.id);
+  await expect(panel.getByRole('button', { name: /^批准 R/ })).toBeEnabled();
+
   // This separate client does not trigger React Query invalidation in the tab.
-  // The approval owner's real stream must remain subscribed even though a newer,
-  // completed document job now owns the visible timeline.
-  const approved = await request.post(`/api/proposals/${proposal.id}/approve`, {
+  // The approval owner's real stream must deliver both the fresh analysis and
+  // its approval even while the completed document job owns the visible timeline.
+  const approved = await request.post(`/api/proposals/${freshProposal.id}/approve`, {
     headers: authorization,
     data: { strong: false, confirmation: '' },
   });
