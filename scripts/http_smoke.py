@@ -9,18 +9,18 @@ import argparse
 import json
 import os
 import queue
-import secrets
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from pathlib import Path
 from uuid import uuid4
 
 import httpx
+from smoke_report import run_smoke
 
 ROOT = Path(__file__).resolve().parents[1]
+STARTUP_TIMEOUT_SECONDS = 30
 
 
 def terminate_process_tree(process: subprocess.Popen[str], *, crash: bool) -> None:
@@ -91,32 +91,55 @@ class Server:
         if runtime == "diagnostic":
             command.append("--diagnostic-runtime")
         self.folder = folder
-        self.log = (folder / "server.log").open("a")
+        self.log = (folder / "server.log").open("a", encoding="utf-8")
         # Match the desktop host's total startup budget. A cold Windows bundle
         # with IFC can take over 12 seconds just to announce its endpoint.
-        startup_deadline = time.monotonic() + 30
-        self.process = subprocess.Popen(
-            command, cwd=folder, env=env, stdout=subprocess.PIPE, stderr=self.log, text=True
-        )
-        stdout = self.process.stdout
-        assert stdout is not None
+        started = time.monotonic()
+        startup_deadline = started + STARTUP_TIMEOUT_SECONDS
+        startup = {"stage": "launch", "budget_seconds": STARTUP_TIMEOUT_SECONDS}
         lines = queue.Queue()
 
         def collect():
-            for line in stdout:
-                lines.put(line.strip())
+            try:
+                with stdout, (folder / "server.stdout.log").open("a", encoding="utf-8") as log:
+                    for index, line in enumerate(stdout):
+                        log.write(line)
+                        log.flush()
+                        if index == 0:
+                            lines.put(line.strip())
+            finally:
+                lines.put(None)
 
-        self.reader = threading.Thread(target=collect, daemon=True)
-        self.reader.start()
         try:
+            self.process = subprocess.Popen(
+                command,
+                cwd=folder,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=self.log,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+            stdout = self.process.stdout
+            assert stdout is not None
+            startup["pid"] = self.process.pid
+            startup["stage"] = "endpoint"
+            self.reader = threading.Thread(target=collect, daemon=True)
+            self.reader.start()
             try:
                 line = lines.get(timeout=max(0, startup_deadline - time.monotonic()))
             except queue.Empty as exc:
                 raise RuntimeError(
-                    "Sidecar did not announce its endpoint within 30 seconds; inspect server.log"
+                    f"Sidecar did not announce its endpoint within {STARTUP_TIMEOUT_SECONDS} "
+                    "seconds; inspect the smoke report diagnostics"
                 ) from exc
+            if line is None:
+                raise RuntimeError("Sidecar stdout closed before announcing its endpoint")
             if not line.startswith("CCA_ENDPOINT=http://127.0.0.1:"):
                 raise RuntimeError(f"Unexpected sidecar endpoint announcement: {line}")
+            startup["endpoint_seconds"] = round(time.monotonic() - started, 3)
+            startup["stage"] = "health"
             self.url = line.split("=", 1)[1]
             self.client = httpx.Client(
                 base_url=self.url,
@@ -128,9 +151,19 @@ class Server:
                 lambda: self.client.get("/health").status_code == 200,
                 timeout=max(0, startup_deadline - time.monotonic()),
             )
+            startup["stage"] = "ready"
         except BaseException:
+            startup["elapsed_seconds"] = round(time.monotonic() - started, 3)
+            process = getattr(self, "process", None)
+            startup["failure_exit_code"] = process.poll() if process is not None else None
             self.close()
             raise
+        finally:
+            process = getattr(self, "process", None)
+            startup.setdefault("elapsed_seconds", round(time.monotonic() - started, 3))
+            startup["final_exit_code"] = process.poll() if process is not None else None
+            with (folder / "startup.jsonl").open("a", encoding="utf-8") as log:
+                log.write(json.dumps(startup) + "\n")
 
     def wait(self, predicate, timeout=20):
         until = time.monotonic() + timeout
@@ -164,14 +197,17 @@ class Server:
         client = getattr(self, "client", None)
         if client is not None:
             client.close()
-        if self.process.poll() is None:
+        process = getattr(self, "process", None)
+        if process is not None and process.poll() is None:
             terminate_process_tree(self.process, crash=crash)
             try:
                 self.process.wait(timeout=12)
             except subprocess.TimeoutExpired:
                 terminate_process_tree(self.process, crash=True)
                 self.process.wait(timeout=3)
-        self.reader.join(timeout=1)
+        reader = getattr(self, "reader", None)
+        if reader is not None:
+            reader.join(timeout=1)
         self.log.close()
         assert_sqlite_files_released(self.folder)
 
@@ -184,8 +220,8 @@ def exercise(
     executable: Path | None = None,
     profile: str = "local",
     temporal_address: str | None = None,
+    token: str,
 ) -> dict:
-    token = secrets.token_urlsafe(40)
     server = Server(
         folder,
         runtime,
@@ -316,7 +352,7 @@ def exercise(
         server.close()
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--runtime", choices=["dbos", "diagnostic", "temporal"], default="dbos")
     parser.add_argument("--output", type=Path)
@@ -342,21 +378,20 @@ def main():
             "http://" + args.temporal_address
         ).hostname not in {"localhost", "127.0.0.1", "::1"}:
             parser.error("Temporal smoke requires an explicit loopback --temporal-address")
-    with tempfile.TemporaryDirectory(prefix="cca-http-smoke-") as temporary:
-        result = exercise(
+    return run_smoke(
+        lambda folder, token: exercise(
             args.runtime,
-            Path(temporary),
+            folder,
             crash_restart=args.crash_restart,
             executable=args.sidecar,
             profile=args.profile,
             temporal_address=args.temporal_address,
-        )
-    text = json.dumps(result, indent=2)
-    if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(text + "\n")
-    print(text)
+            token=token,
+        ),
+        prefix="cca-http-smoke-",
+        output=args.output,
+    )
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

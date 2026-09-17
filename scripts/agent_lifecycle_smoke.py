@@ -5,12 +5,10 @@ delivery, not Tauri WebView interaction or C's still-separate IFC diff engine.
 """
 
 import argparse
-import json
-import secrets
-import tempfile
 from pathlib import Path
 
 from http_smoke import Server
+from smoke_report import run_smoke
 
 IFC = b"""ISO-10303-21;
 HEADER;
@@ -26,8 +24,7 @@ END-ISO-10303-21;
 """
 
 
-def exercise(folder: Path, executable: Path | None = None) -> dict:
-    token = secrets.token_urlsafe(40)
+def exercise(folder: Path, executable: Path | None = None, *, token: str) -> dict:
     server = Server(
         folder, "dbos", token, executable=executable, profile="desktop", seed_demo=False
     )
@@ -143,14 +140,11 @@ def main() -> int:
     parser.add_argument("--sidecar", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    with tempfile.TemporaryDirectory(prefix="cca-agent-smoke-") as temporary:
-        result = exercise(Path(temporary), args.sidecar)
-    rendered = json.dumps(result, indent=2)
-    if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(rendered + "\n", encoding="utf-8")
-    print(rendered)
-    return 0
+    return run_smoke(
+        lambda folder, token: exercise(folder, args.sidecar, token=token),
+        prefix="cca-agent-smoke-",
+        output=args.output,
+    )
 
 
 if __name__ == "__main__":

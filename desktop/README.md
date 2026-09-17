@@ -100,6 +100,14 @@ provider; only demo-project creation is opted in for this regression. WebDriver 
 selection does not qualify the OS file picker. This scenario also runs in the
 Windows/Linux native workflow, with separate JSON and screenshots.
 
+The packaged HTTP and Agent smoke commands also write their `--output` JSON on
+failure, before removing temporary fixture data. Reports retain startup stages
+(`launch`, `endpoint`, `health`, `ready`), endpoint/startup timings and child exit
+codes. Failure reports include bounded stdout/stderr tails with the per-run API
+token redacted. The existing CI artifact upload retains these JSON files even
+when a check fails. The sidecar's total startup budget remains 30 seconds; these
+diagnostics do not add retries or convert a failure into a pass.
+
 ## Qualification and release
 
 Full source/integration CI and Windows native qualification, including manual Windows
