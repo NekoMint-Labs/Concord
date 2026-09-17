@@ -41,15 +41,16 @@ class NativeSession:
             raise WebDriverError(f"WebDriver {code}: HTTP {response.status_code} {detail}")
         return value
 
-    def start(self, application: Path):
+    def start(self, application: Path, *, user_data_folder: Path | None = None):
+        options: dict = {"application": str(application.resolve())}
+        if user_data_folder is not None:
+            # Edge must know the same profile directory the WebView uses to find
+            # its automation endpoint. An environment override alone is insufficient.
+            options["webviewOptions"] = {"userDataFolder": str(user_data_folder.resolve())}
         value = self.request(
             "POST",
             "/session",
-            {
-                "capabilities": {
-                    "alwaysMatch": {"tauri:options": {"application": str(application.resolve())}}
-                }
-            },
+            {"capabilities": {"alwaysMatch": {"tauri:options": options}}},
             # A fresh Windows runner may initialize WebView2 longer than the
             # default command timeout. App/backend readiness retains its own limit.
             timeout=120,

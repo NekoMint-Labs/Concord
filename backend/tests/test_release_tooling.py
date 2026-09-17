@@ -153,12 +153,15 @@ def test_native_webdriver_contract_drives_real_element_protocol(tmp_path):
         base_url="http://127.0.0.1:12345", transport=httpx.MockTransport(respond)
     ) as client:
         session = module.NativeSession(client)
-        session.start(tmp_path / "application")
+        session.start(tmp_path / "application", user_data_folder=tmp_path / "webview")
         session.click(".inspector", "Approve R", startswith=True)
         session.close()
     assert calls[0][2]["capabilities"]["alwaysMatch"]["tauri:options"]["application"] == str(
         tmp_path / "application"
     )
+    assert calls[0][2]["capabilities"]["alwaysMatch"]["tauri:options"]["webviewOptions"] == {
+        "userDataFolder": str(tmp_path / "webview")
+    }
     assert ("POST", "/session/native-fixture/element/approve-element/click", {}) in calls
     assert calls[-1][:2] == ("DELETE", "/session/native-fixture")
 

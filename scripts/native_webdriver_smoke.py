@@ -209,7 +209,10 @@ def exercise(application: Path, artifacts: Path, ifc_fixture: Path | None = None
                     time.sleep(0.2)
                 session = NativeSession(client)
                 try:
-                    session.start(application)
+                    session.start(
+                        application,
+                        user_data_folder=folder / "webview" if sys.platform == "win32" else None,
+                    )
                     if ifc_fixture is None:
                         result = coordination(session, artifacts)
                     else:

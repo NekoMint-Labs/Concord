@@ -56,6 +56,9 @@ isolated qualification. Relative/empty values fail closed. This is deliberately
 separate from the Python development setting `CCA_DATA_DIR` and is not a renderer
 command or file permission. Windows WebView test storage is isolated separately
 using `WEBVIEW2_USER_DATA_FOLDER`; Linux uses the XDG environment variables.
+The Windows WebDriver session also receives that exact folder through Microsoft's
+[`webviewOptions.userDataFolder`](https://learn.microsoft.com/en-us/microsoft-edge/webdriver/capabilities-edge-options#webviewoptions-object)
+capability so the driver and WebView agree on their automation profile.
 
 ## Native WebView regression
 
