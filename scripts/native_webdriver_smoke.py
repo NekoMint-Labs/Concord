@@ -164,6 +164,11 @@ def exercise(application: Path, artifacts: Path, ifc_fixture: Path | None = None
     folder = Path(tempfile.mkdtemp(dir=work, prefix="native-webview-")).resolve()
     log_name = "native-ifc-webdriver.log" if ifc_fixture else "native-webdriver.log"
     with (artifacts / log_name).open("w", encoding="utf-8") as log:
+        native = shutil.which("msedgedriver" if sys.platform == "win32" else "WebKitWebDriver")
+        if sys.platform == "win32":
+            version = subprocess.check_output([native, "--version"], text=True, timeout=10)
+            log.write(f"Native driver: {native}\n{version}\n")
+            log.flush()
         driver = subprocess.Popen(
             [
                 shutil.which("tauri-driver"),
@@ -173,6 +178,8 @@ def exercise(application: Path, artifacts: Path, ifc_fixture: Path | None = None
                 str(native_port),
                 "--native-host",
                 "127.0.0.1",
+                "--native-driver",
+                native,
             ],
             cwd=folder,
             env=isolated_environment(folder, ifc=ifc_fixture is not None),

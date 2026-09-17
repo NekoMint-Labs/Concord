@@ -27,6 +27,10 @@ jobs:
       - run: python scripts/check_locks_present.py
       - run: uv lock --check
       - run: rustup default stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+          cache-on-failure: true
       - run: npm install --global pnpm@10.17.1
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf webkit2gtk-driver xvfb dbus-x11
@@ -57,6 +61,8 @@ jobs:
           Invoke-WebRequest "https://msedgedriver.microsoft.com/$($runtime.Name)/edgedriver_win64.zip" -OutFile $archive
           Expand-Archive -LiteralPath $archive -DestinationPath $driverDir
           $driverDir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          Write-Output "WebView2 runtime: $($runtime.Name)"
+          & (Join-Path $driverDir 'msedgedriver.exe') --version
       - name: Real packaged Tauri WebView and sidecar coordination
         if: runner.os == 'Linux'
         run: xvfb-run -a dbus-run-session -- uv run --frozen --no-sync python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent --output artifacts/native-webview.json

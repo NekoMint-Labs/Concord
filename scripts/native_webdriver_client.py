@@ -17,8 +17,11 @@ class NativeSession:
         self.client = client
         self.session_id = None
 
-    def request(self, method: str, path: str, payload=None):
-        response = self.client.request(method, path, json=payload)
+    def request(self, method: str, path: str, payload=None, *, timeout: float = 45):
+        try:
+            response = self.client.request(method, path, json=payload, timeout=timeout)
+        except httpx.TimeoutException as exc:
+            raise WebDriverError(f"WebDriver {method} {path} exceeded {timeout:g}s") from exc
         try:
             body = response.json()
         except ValueError as exc:
@@ -28,7 +31,14 @@ class NativeSession:
         value = body.get("value")
         if response.is_error or isinstance(value, dict) and value.get("error"):
             code = value.get("error", "unknown") if isinstance(value, dict) else "unknown"
-            raise WebDriverError(f"WebDriver {code}: HTTP {response.status_code}")
+            # Startup messages identify runtime/driver incompatibility. Never log
+            # script responses, which may contain authenticated application data.
+            detail = (
+                str(value.get("message", ""))[:1200]
+                if path == "/session" and isinstance(value, dict)
+                else ""
+            )
+            raise WebDriverError(f"WebDriver {code}: HTTP {response.status_code} {detail}")
         return value
 
     def start(self, application: Path):
@@ -40,6 +50,9 @@ class NativeSession:
                     "alwaysMatch": {"tauri:options": {"application": str(application.resolve())}}
                 }
             },
+            # A fresh Windows runner may initialize WebView2 longer than the
+            # default command timeout. App/backend readiness retains its own limit.
+            timeout=120,
         )
         if not isinstance(value, dict) or not isinstance(value.get("sessionId"), str):
             raise WebDriverError("Driver did not create a W3C session")
