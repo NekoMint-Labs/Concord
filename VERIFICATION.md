@@ -112,7 +112,9 @@ cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml
 ```
 
 The manual [native workflow](.github/workflows/native.yml) builds the packaged sidecar,
-exercises restart behavior, and performs the Linux WebView check where supported.
+exercises restart behavior, and performs Windows/Linux native WebView coordination
+and real IFC rendering/import checks. The IFC scenario uses the desktop provider
+default without an internal BIM switch; see [desktop/README.md](desktop/README.md).
 Windows native qualification and the manual Windows installer/startup/demo/restart
 acceptance are established for this baseline. Linux and macOS native qualification,
 code signing/notarization, and final production release qualification remain separate

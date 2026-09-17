@@ -1,8 +1,11 @@
 # Agent and revision-import integration (Issue #9)
 
-This follows PR #12's immutable source/baseline contracts. It does not close Issue
-#9: Issue #10 owns the startup/workspace UI, and Issue #11 owns persisted revision
-BIM snapshots, normalized IFC comparisons and source-level WP bindings.
+This follows PR #12's immutable source/baseline contracts. Platform work is developed
+and reviewed on top of that contract branch without waiting for its merge. The
+follow-up declares its dependency so maintainers can merge in order. Issue #10 owns
+the startup/workspace UI, and Issue #11 owns persisted revision BIM snapshots,
+normalized IFC comparisons and source-level WP bindings; their joint acceptance
+is separate from review of this platform contribution.
 
 ## Interaction APIs
 
@@ -178,3 +181,10 @@ The full local Windows backend run passed 310 tests with 14 explicit optional/
 platform skips; the subsequent final engineering contract subset passed 8 tests.
 The native host's four Rust tests passed. Native GUI checks do not imply installer
 installation, signing or the unfinished real engineering change-to-action flow.
+
+The native IFC scenario in `scripts/native_webdriver_smoke.py --ifc-fixture` also
+passed in the packaged Windows WebView: actual geometry/worker/WASM loading,
+local-open without publication, explicit UI import through the default desktop IFC
+provider, three parsed elements, byte-identical original download and model reopening.
+It is included in native CI for repeatability. The test uses a generated real IFC
+file and a synthetic project; it does not implement comparison, mapping or B's UI.

@@ -56,27 +56,45 @@ class NativeSession:
     def script(self, code: str, *args):
         return self.request("POST", self.path("execute/sync"), {"script": code, "args": list(args)})
 
-    def api(self, path: str):
+    def api(self, path: str, *, digest: bool = False):
         # The launch token stays in the WebView, never in test artifacts.
         result = self.request(
             "POST",
             self.path("execute/async"),
             {
                 "script": """
-                const path = arguments[0], done = arguments[arguments.length - 1];
+                const path = arguments[0], digest = arguments[1];
+                const done = arguments[arguments.length - 1];
                 window.__TAURI_INTERNALS__.invoke('connection_info').then(async info => {
                     const response = await fetch(info.endpoint + path, {
                         headers: {Authorization: 'Bearer ' + info.token}
                     });
-                    done({status: response.status, body: await response.json()});
+                    let body;
+                    if (digest && response.ok) {
+                        const hash = await crypto.subtle.digest(
+                            'SHA-256', await response.arrayBuffer());
+                        body = [...new Uint8Array(hash)]
+                            .map(b => b.toString(16).padStart(2, '0')).join('');
+                    } else {
+                        body = await response.json();
+                    }
+                    done({status: response.status, body});
                 }).catch(() => done({status: 0}));
             """,
-                "args": [path],
+                "args": [path, digest],
             },
         )
         if result.get("status") != 200:
             raise WebDriverError("Native authenticated API read failed")
         return result["body"]
+
+    def choose_file(self, selector: str, path: Path):
+        element = self.wait("return document.querySelector(arguments[0])", selector)
+        self.request(
+            "POST",
+            self.path(f"element/{element[ELEMENT_KEY]}/value"),
+            {"text": str(path.resolve())},
+        )
 
     def wait(self, code: str, *args, timeout: float = 45):
         deadline = time.monotonic() + timeout

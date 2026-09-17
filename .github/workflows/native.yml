@@ -63,6 +63,15 @@ jobs:
       - name: Real packaged Windows WebView2 and sidecar coordination
         if: runner.os == 'Windows'
         run: uv run --frozen --no-sync python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent.exe --output artifacts/native-webview.json
+      - name: Generate real IFC for the packaged WebView
+        if: runner.os != 'macOS'
+        run: uv run --frozen --no-sync python scripts/generate_ifc_fixture.py
+      - name: Real packaged Linux IFC rendering and import
+        if: runner.os == 'Linux'
+        run: xvfb-run -a dbus-run-session -- uv run --frozen --no-sync python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent --ifc-fixture fixtures/harbor-east.ifc --output artifacts/native-ifc.json
+      - name: Real packaged Windows IFC rendering and import
+        if: runner.os == 'Windows'
+        run: uv run --frozen --no-sync python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent.exe --ifc-fixture fixtures/harbor-east.ifc --output artifacts/native-ifc.json
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -75,4 +84,8 @@ jobs:
             artifacts/native-webdriver.log
             artifacts/native-webview-failure.png
             artifacts/native-webview-pass.png
+            artifacts/native-ifc.json
+            artifacts/native-ifc-webdriver.log
+            artifacts/native-ifc-pass.png
+            artifacts/native-ifc-failure.png
           retention-days: 14

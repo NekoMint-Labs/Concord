@@ -2,7 +2,8 @@
 
 Requires tauri-driver plus matching msedgedriver (Windows) or WebKitWebDriver
 and DISPLAY (Linux). Uses isolated desktop storage and explicit synthetic data.
-This regression does not qualify IFC diff, native file dialogs, or B/C integration.
+Use --ifc-fixture for the actual WebGL/import path with desktop-default IFC support.
+These regressions do not qualify IFC diff, native file dialogs, or B/C integration.
 """
 
 import argparse
@@ -44,7 +45,7 @@ def free_ports() -> tuple[int, int]:
         return first.getsockname()[1], second.getsockname()[1]
 
 
-def isolated_environment(folder: Path) -> dict[str, str]:
+def isolated_environment(folder: Path, *, ifc: bool = False) -> dict[str, str]:
     env = {key: value for key, value in os.environ.items() if not key.startswith("CCA_")}
     env.update(
         CCA_DESKTOP_DATA_DIR=str(folder / "data"),
@@ -53,8 +54,9 @@ def isolated_environment(folder: Path) -> dict[str, str]:
         XDG_CACHE_HOME=str(folder / "cache"),
         XDG_CONFIG_HOME=str(folder / "config"),
         CCA_SEED_DEMO="true",
-        CCA_BIM="structured",
     )
+    if not ifc:
+        env["CCA_BIM"] = "structured"
     return env
 
 
@@ -150,15 +152,18 @@ def screenshot(session: NativeSession, destination: Path):
     destination.write_bytes(base64.b64decode(encoded, validate=True))
 
 
-def exercise(application: Path, artifacts: Path) -> dict:
+def exercise(application: Path, artifacts: Path, ifc_fixture: Path | None = None) -> dict:
     prerequisites(application)
+    if ifc_fixture is not None and not ifc_fixture.is_file():
+        raise RuntimeError("Generate the real IFC fixture before native IFC qualification")
     artifacts.mkdir(parents=True, exist_ok=True)
     work = ROOT / ".verification-work"
     work.mkdir(exist_ok=True)
     port, native_port = free_ports()
     # Retain isolated files for investigation; the OS may still hold WebView files.
     folder = Path(tempfile.mkdtemp(dir=work, prefix="native-webview-")).resolve()
-    with (artifacts / "native-webdriver.log").open("w", encoding="utf-8") as log:
+    log_name = "native-ifc-webdriver.log" if ifc_fixture else "native-webdriver.log"
+    with (artifacts / log_name).open("w", encoding="utf-8") as log:
         driver = subprocess.Popen(
             [
                 shutil.which("tauri-driver"),
@@ -170,7 +175,7 @@ def exercise(application: Path, artifacts: Path) -> dict:
                 "127.0.0.1",
             ],
             cwd=folder,
-            env=isolated_environment(folder),
+            env=isolated_environment(folder, ifc=ifc_fixture is not None),
             stdout=log,
             stderr=subprocess.STDOUT,
             start_new_session=sys.platform != "win32",
@@ -198,15 +203,29 @@ def exercise(application: Path, artifacts: Path) -> dict:
                 session = NativeSession(client)
                 try:
                     session.start(application)
-                    result = coordination(session, artifacts)
+                    if ifc_fixture is None:
+                        result = coordination(session, artifacts)
+                    else:
+                        from native_ifc_smoke import import_ifc
+
+                        result = import_ifc(session, ifc_fixture)
+                        screenshot(session, artifacts / "native-ifc-pass.png")
                     assert tuple((folder / "data").glob("*.db")), (
                         "Desktop did not use isolated storage"
                     )
-                    return {**result, "application": application.name}
+                    return {**result, "application": application.name, "platform": sys.platform}
                 except BaseException:
                     if session.session_id:
                         try:
-                            screenshot(session, artifacts / "native-webview-failure.png")
+                            screenshot(
+                                session,
+                                artifacts
+                                / (
+                                    "native-ifc-failure.png"
+                                    if ifc_fixture
+                                    else "native-webview-failure.png"
+                                ),
+                            )
                         except Exception:
                             pass  # Preserve the test failure if capture also fails.
                     raise
@@ -222,11 +241,12 @@ def exercise(application: Path, artifacts: Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--application", required=True, type=Path)
+    parser.add_argument("--ifc-fixture", type=Path)
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts/native-webview.json")
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     try:
-        result = exercise(args.application.resolve(), args.output.parent)
+        result = exercise(args.application.resolve(), args.output.parent, args.ifc_fixture)
     except Exception as exc:
         result = {"status": "FAIL", "platform": sys.platform, "error": str(exc)}
     args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

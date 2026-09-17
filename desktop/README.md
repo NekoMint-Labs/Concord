@@ -68,6 +68,10 @@ Windows needs `msedgedriver` matching its WebView2 version; Linux needs
 
 ```powershell
 python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent.exe --output artifacts/native-webview.json
+
+# Real packaged WebGL/worker/WASM and explicit IFC import, with no CCA_BIM override:
+python scripts/generate_ifc_fixture.py
+python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent.exe --ifc-fixture fixtures/harbor-east.ifc --output artifacts/native-ifc.json
 ```
 
 This launches the real packaged WebView and sidecar with isolated synthetic data,
@@ -78,6 +82,14 @@ isolated application data stays in `.verification-work/native-webview-*` for
 inspection. The manual native CI workflow runs this on Windows and Linux. This
 regression does not claim new-project UI/IFC-diff joint acceptance or installation
 and signing qualification.
+
+The IFC scenario selects the generated real IFC through the WebView's native file
+input, renders its geometry, confirms opening a local file does not publish it,
+explicitly imports it, checks three parsed elements and the downloaded original's
+SHA-256, and reopens the persisted model. It uses the default desktop IfcOpenShell
+provider; only demo-project creation is opted in for this regression. WebDriver file
+selection does not qualify the OS file picker. This scenario also runs in the
+Windows/Linux native workflow, with separate JSON and screenshots.
 
 ## Qualification and release
 
