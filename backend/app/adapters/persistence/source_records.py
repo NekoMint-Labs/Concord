@@ -1,6 +1,6 @@
 """Append-only artifact records; the repository factory owns commit/rollback."""
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.adapters.persistence.lifecycle_tables import ProjectSourceRevisionRow, ProjectSourceRow
 from app.adapters.persistence.record_session import SessionRecords
@@ -81,3 +81,24 @@ class SourceRecords(SessionRecords):
             .limit(1)
         )
         return ProjectSourceRevision.model_validate(row.payload) if row else None
+
+    def latest_source_revision_ids(self, project_id: str) -> dict[str, str]:
+        latest = (
+            select(
+                ProjectSourceRevisionRow.source_id,
+                func.max(ProjectSourceRevisionRow.sequence).label("sequence"),
+            )
+            .where(ProjectSourceRevisionRow.project_id == project_id)
+            .group_by(ProjectSourceRevisionRow.source_id)
+            .subquery()
+        )
+        rows = self.session.execute(
+            select(ProjectSourceRevisionRow.source_id, ProjectSourceRevisionRow.id)
+            .join(
+                latest,
+                (ProjectSourceRevisionRow.source_id == latest.c.source_id)
+                & (ProjectSourceRevisionRow.sequence == latest.c.sequence),
+            )
+            .where(ProjectSourceRevisionRow.project_id == project_id)
+        )
+        return {source_id: revision_id for source_id, revision_id in rows}

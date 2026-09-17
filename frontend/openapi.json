@@ -888,10 +888,13 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Stored original file bytes",
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
               }
             }
           },

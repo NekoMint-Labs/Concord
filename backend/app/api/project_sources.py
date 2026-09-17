@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from app.api.auth import CurrentUser, services
 from app.api.capability_jobs import read_upload
-from app.application.project_sources import source_status
+from app.application.project_sources import source_status, source_statuses
 from app.domain.errors import DomainError
 from app.domain.project_sources import (
     CreateProjectSource,
@@ -34,7 +34,7 @@ def sources(project_id: str, user: CurrentUser, svc=Depends(services)):
     require(user, "read")
     with svc.factory.open() as repo:
         repo.state(project_id)
-        return [source_status(repo, source) for source in repo.project_sources(project_id)]
+        return source_statuses(repo, project_id)
 
 
 @router.get("/{source_id}", response_model=ProjectSourceStatus)
@@ -98,7 +98,18 @@ async def upload_revision(
     return result
 
 
-@router.get("/{source_id}/revisions/{revision_id}/content")
+@router.get(
+    "/{source_id}/revisions/{revision_id}/content",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "Stored original file bytes",
+            "content": {
+                "application/octet-stream": {"schema": {"type": "string", "format": "binary"}}
+            },
+        }
+    },
+)
 def revision_content(
     project_id: str, source_id: str, revision_id: str, user: CurrentUser, svc=Depends(services)
 ):

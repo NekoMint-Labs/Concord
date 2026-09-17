@@ -17,6 +17,22 @@ from app.ports.coordination import CoordinationRepository, RepositoryFactory
 from app.ports.services import FileStore
 
 
+def _source_status(
+    source: ProjectSource,
+    latest_revision_id: str | None,
+    accepted_revision_id: str | None,
+    baseline_id: str | None,
+) -> ProjectSourceStatus:
+    return ProjectSourceStatus(
+        source=source,
+        latest_revision_id=latest_revision_id,
+        accepted_revision_id=accepted_revision_id,
+        baseline_id=baseline_id,
+        has_pending_revision=latest_revision_id is not None
+        and latest_revision_id != accepted_revision_id,
+    )
+
+
 def source_status(repo: CoordinationRepository, source: ProjectSource) -> ProjectSourceStatus:
     latest = repo.latest_source_revision(source.project_id, source.id)
     baseline = repo.latest_baseline(source.project_id)
@@ -25,13 +41,25 @@ def source_status(repo: CoordinationRepository, source: ProjectSource) -> Projec
         if baseline
         else None
     )
-    return ProjectSourceStatus(
-        source=source,
-        latest_revision_id=latest.id if latest else None,
-        accepted_revision_id=accepted,
-        baseline_id=baseline.id if baseline else None,
-        has_pending_revision=latest is not None and latest.id != accepted,
+    return _source_status(
+        source, latest.id if latest else None, accepted, baseline.id if baseline else None
     )
+
+
+def source_statuses(repo: CoordinationRepository, project_id: str) -> list[ProjectSourceStatus]:
+    sources = repo.project_sources(project_id)
+    if not sources:
+        return []
+    latest_ids = repo.latest_source_revision_ids(project_id)
+    baseline = repo.latest_baseline(project_id)
+    accepted_ids = (
+        {entry.source_id: entry.revision_id for entry in baseline.entries} if baseline else {}
+    )
+    baseline_id = baseline.id if baseline else None
+    return [
+        _source_status(source, latest_ids.get(source.id), accepted_ids.get(source.id), baseline_id)
+        for source in sources
+    ]
 
 
 class ProjectSourceService:
