@@ -365,6 +365,7 @@ bim = [
     { name = "ifcopenshell" },
 ]
 desktop = [
+    { name = "ifcopenshell" },
     { name = "pyinstaller" },
 ]
 documents = [
@@ -413,6 +414,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "httpx", specifier = ">=0.28,<1" },
     { name = "ifcopenshell", marker = "extra == 'bim'", specifier = ">=0.8.5,<0.9" },
+    { name = "ifcopenshell", marker = "extra == 'desktop'", specifier = ">=0.8.5,<0.9" },
     { name = "minio", marker = "extra == 'storage'", specifier = ">=7.2.20,<8" },
     { name = "openai", marker = "extra == 'models'", specifier = ">=3.8,<4" },
     { name = "opentelemetry-exporter-otlp-proto-http", marker = "extra == 'telemetry'", specifier = ">=1.31,<2" },

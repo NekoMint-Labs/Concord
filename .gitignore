@@ -27,6 +27,7 @@ artifacts/
 .verification-work/
 frontend/public/viewer/
 desktop/src-tauri/binaries/
+desktop/src-tauri/gen/schemas/
 playwright-report-ifc/
 test-results-ifc/
 

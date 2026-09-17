@@ -73,6 +73,8 @@ jobs:
           python-version: '3.12'
       - run: npm install --global pnpm@10.17.1
       - run: uv sync --frozen --group dev --extra bim
+      - name: Real-project Agent, IFC import and DBOS process recovery
+        run: uv run --frozen --no-sync python scripts/agent_lifecycle_smoke.py --output artifacts/agent-dbos.json
       - run: pnpm --dir frontend install --frozen-lockfile
       - run: pnpm --dir frontend test:transport
       - name: Production TypeScript client against a real DBOS API
@@ -103,6 +105,7 @@ jobs:
             frontend/playwright-report-ifc/
             frontend/test-results-ifc/
             artifacts/node-api.json
+            artifacts/agent-dbos.json
           retention-days: 14
   quality:
     needs: prerequisites

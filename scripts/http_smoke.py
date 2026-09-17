@@ -41,11 +41,21 @@ def terminate_process_tree(process: subprocess.Popen[str], *, crash: bool) -> No
 
 def assert_sqlite_files_released(folder: Path) -> None:
     """Windows refuses this rename while a surviving process owns a SQLite file."""
-    for database in folder.glob("*.db*"):
-        if database.is_file():
-            probe = database.with_name(database.name + ".close-check")
-            database.replace(probe)
-            probe.replace(database)
+    deadline = time.monotonic() + 5
+    while True:
+        try:
+            for database in folder.glob("*.db*"):
+                if database.is_file():
+                    probe = database.with_name(database.name + ".close-check")
+                    database.replace(probe)
+                    probe.replace(database)
+            return
+        except PermissionError:
+            # Launcher exit can precede descendant/OS handle release on Windows.
+            # A bounded wait still fails if the database remains owned by a process.
+            if sys.platform != "win32" or time.monotonic() >= deadline:
+                raise
+            time.sleep(0.05)
 
 
 class Server:
@@ -58,6 +68,7 @@ class Server:
         executable: Path | None = None,
         profile: str = "local",
         temporal_address: str | None = None,
+        seed_demo: bool = True,
     ):
         env = {key: value for key, value in os.environ.items() if not key.startswith("CCA_")}
         env.update(
@@ -68,7 +79,10 @@ class Server:
             CCA_PORT="0",
             CCA_PROFILE=profile,
             CCA_RUNTIME="temporal" if runtime == "temporal" else "dbos",
+            CCA_SEED_DEMO="true" if seed_demo else "false",
         )
+        if seed_demo:
+            env["CCA_BIM"] = "structured"
         if temporal_address:
             env["CCA_TEMPORAL_ADDRESS"] = temporal_address
         command = (

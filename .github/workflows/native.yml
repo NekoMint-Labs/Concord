@@ -40,6 +40,7 @@ jobs:
           SIDECAR=artifacts/sidecar/cca-sidecar
           if [ "$RUNNER_OS" = "Windows" ]; then SIDECAR="${SIDECAR}.exe"; fi
           uv run --frozen --no-sync python scripts/http_smoke.py --runtime dbos --profile desktop --sidecar "$SIDECAR" --crash-restart --output artifacts/native-sidecar.json
+          uv run --frozen --no-sync python scripts/agent_lifecycle_smoke.py --sidecar "$SIDECAR" --output artifacts/native-agent.json
       - name: Install the actual Linux WebDriver intermediary
         if: runner.os == 'Linux'
         run: cargo install tauri-driver --locked --version '^2.0'
@@ -53,6 +54,7 @@ jobs:
           path: |
             desktop/src-tauri/target/release/bundle/
             artifacts/native-sidecar.json
+            artifacts/native-agent.json
             artifacts/native-webview.json
             artifacts/native-webdriver.log
             artifacts/native-webview-failure.png

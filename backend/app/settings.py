@@ -77,6 +77,10 @@ class Settings(BaseSettings):
         }:
             raise ValueError("Local/desktop may bind only to loopback")
         if self.profile == "desktop":
+            if "seed_demo" not in self.model_fields_set:
+                self.seed_demo = False
+            if "bim" not in self.model_fields_set:
+                self.bim = "ifcopenshell"
             if not self.database_url.startswith(
                 "sqlite:"
             ) or not self.runtime_database_url.startswith("sqlite:"):

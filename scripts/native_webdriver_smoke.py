@@ -142,6 +142,8 @@ def exercise(application: Path, artifacts: Path) -> dict:
         # Tauri's Linux app_data_dir resolves through XDG; never use real user data.
         env.update(
             XDG_DATA_HOME=str(folder / "data"),
+            CCA_SEED_DEMO="true",
+            CCA_BIM="structured",
             XDG_CACHE_HOME=str(folder / "cache"),
             XDG_CONFIG_HOME=str(folder / "config"),
         )
