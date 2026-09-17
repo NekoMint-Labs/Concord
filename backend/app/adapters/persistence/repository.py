@@ -1,7 +1,9 @@
 from sqlalchemy import delete, select
 
 from app.adapters.persistence.action_records import ActionRecords
+from app.adapters.persistence.baseline_records import BaselineRecords
 from app.adapters.persistence.run_records import RunRecords
+from app.adapters.persistence.source_records import SourceRecords
 from app.adapters.persistence.tables import (
     AnalysisRow,
     BIMIndexRow,
@@ -17,7 +19,7 @@ from app.domain.retrieval import PreparedEmbeddingIndex
 from app.ports.providers import PreparedDocument
 
 
-class SQLCoordinationRepository(RunRecords, ActionRecords):
+class SQLCoordinationRepository(RunRecords, ActionRecords, SourceRecords, BaselineRecords):
     """Project facts and evidence plus the unchanged, single-session repository contract."""
 
     def state(self, project_id: str) -> ProjectState:

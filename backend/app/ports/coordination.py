@@ -7,10 +7,11 @@ from app.domain.jobs import BIMIndex, CapabilityJob
 from app.domain.models import Analysis, Evidence, ProjectSnapshot, ProjectState
 from app.domain.retrieval import PreparedEmbeddingIndex
 from app.domain.runs import AgentRun, StreamEvent
+from app.ports.project_lifecycle import ProjectLifecycleRepository
 from app.ports.providers import PreparedDocument
 
 
-class CoordinationRepository(Protocol):
+class CoordinationRepository(ProjectLifecycleRepository, Protocol):
     def publish_embeddings(self, prepared: PreparedEmbeddingIndex) -> dict: ...
     def publish_document(self, prepared: PreparedDocument) -> PreparedDocument: ...
     def save_job(self, job: CapabilityJob) -> None: ...

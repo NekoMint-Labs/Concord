@@ -19,8 +19,11 @@ from app.adapters.resolver_simple import SimpleResolver
 from app.adapters.storage_local import LocalFileStore
 from app.application.actions import ActionService
 from app.application.analysis import AnalysisService
+from app.application.baselines import BaselineService
 from app.application.capability_jobs import CapabilityJobService
 from app.application.coordination import CoordinationService
+from app.application.project_sources import ProjectSourceService
+from app.application.projects import ProjectService
 from app.application.workflow import WorkflowCoordinator
 from app.bootstrap_capabilities import build_capability_jobs
 from app.domain.actions import Principal
@@ -44,6 +47,9 @@ class Services:
     jobs: CapabilityJobService
     storage: object
     telemetry: Telemetry
+    projects: ProjectService
+    sources: ProjectSourceService
+    baselines: BaselineService
 
     resources: ExitStack
 
@@ -146,6 +152,9 @@ def build_services(settings: Settings) -> Services:
             jobs,
             storage,
             telemetry,
+            ProjectService(factory),
+            ProjectSourceService(factory, storage, settings.max_upload_bytes),
+            BaselineService(factory),
             resources,
         )
         if settings.seed_demo:

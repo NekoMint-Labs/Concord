@@ -11,7 +11,15 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.adapters.observability import configure_logging
-from app.api import capability_jobs, projects, resources, runs
+from app.api import (
+    baselines,
+    capability_jobs,
+    project_lifecycle,
+    project_sources,
+    projects,
+    resources,
+    runs,
+)
 from app.bootstrap import build_services
 from app.domain.errors import DomainError
 from app.settings import Settings
@@ -93,6 +101,9 @@ def create_app(settings: Settings | None = None, service_override=None) -> FastA
         }
 
     app.include_router(projects.router)
+    app.include_router(project_lifecycle.router)
+    app.include_router(project_sources.router)
+    app.include_router(baselines.router)
     app.include_router(runs.router)
     app.include_router(resources.router)
     app.include_router(capability_jobs.router)
