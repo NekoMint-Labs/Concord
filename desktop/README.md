@@ -59,6 +59,12 @@ using `WEBVIEW2_USER_DATA_FOLDER`; Linux uses the XDG environment variables.
 The Windows WebDriver session also receives that exact folder through Microsoft's
 [`webviewOptions.userDataFolder`](https://learn.microsoft.com/en-us/microsoft-edge/webdriver/capabilities-edge-options#webviewoptions-object)
 capability so the driver and WebView agree on their automation profile.
+Windows CI invokes `scripts/windows_native_user.py` to restrict only the harness
+and its descendants to normal-user rights. WebView2 150+ intentionally ignores
+environment overrides from elevated hosts ([Microsoft explanation](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5640#issuecomment-4923662109)).
+The launcher uses Windows SAFER and Medium integrity under the same account;
+it changes no registry policy, filesystem ACL or product binary. Failures to
+create the restricted process fail qualification rather than skipping the test.
 
 ## Native WebView regression
 

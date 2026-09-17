@@ -68,7 +68,7 @@ jobs:
         run: xvfb-run -a dbus-run-session -- uv run --frozen --no-sync python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent --output artifacts/native-webview.json
       - name: Real packaged Windows WebView2 and sidecar coordination
         if: runner.os == 'Windows'
-        run: uv run --frozen --no-sync python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent.exe --output artifacts/native-webview.json
+        run: uv run --frozen --no-sync python scripts/windows_native_user.py --application desktop/src-tauri/target/release/construction-coordination-agent.exe --output artifacts/native-webview.json
       - name: Generate real IFC for the packaged WebView
         if: runner.os != 'macOS'
         run: uv run --frozen --no-sync python scripts/generate_ifc_fixture.py
@@ -77,7 +77,7 @@ jobs:
         run: xvfb-run -a dbus-run-session -- uv run --frozen --no-sync python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent --ifc-fixture fixtures/harbor-east.ifc --output artifacts/native-ifc.json
       - name: Real packaged Windows IFC rendering and import
         if: runner.os == 'Windows'
-        run: uv run --frozen --no-sync python scripts/native_webdriver_smoke.py --application desktop/src-tauri/target/release/construction-coordination-agent.exe --ifc-fixture fixtures/harbor-east.ifc --output artifacts/native-ifc.json
+        run: uv run --frozen --no-sync python scripts/windows_native_user.py --application desktop/src-tauri/target/release/construction-coordination-agent.exe --ifc-fixture fixtures/harbor-east.ifc --output artifacts/native-ifc.json
       - uses: actions/upload-artifact@v7
         if: always()
         with:
