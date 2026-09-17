@@ -16,7 +16,7 @@ def main() -> int:
         "--feature", action="append", choices=["ifcopenshell", "ortools", "docling"], default=[]
     )
     args = parser.parse_args()
-    for dependency in ["PyInstaller", "dbos", *args.feature]:
+    for dependency in ["PyInstaller", "dbos", "tzdata", *args.feature]:
         if importlib.util.find_spec(dependency) is None:
             raise SystemExit(
                 f"Missing {dependency}. Use uv sync --extra desktop "
@@ -50,6 +50,8 @@ def main() -> int:
         f"{ROOT / 'backend/migrations'}:migrations",
         "--collect-all",
         "dbos",
+        "--collect-all",
+        "tzdata",
         "--collect-submodules",
         "app",
         "--collect-all",
