@@ -92,6 +92,9 @@ class Server:
             command.append("--diagnostic-runtime")
         self.folder = folder
         self.log = (folder / "server.log").open("a")
+        # Match the desktop host's total startup budget. A cold Windows bundle
+        # with IFC can take over 12 seconds just to announce its endpoint.
+        startup_deadline = time.monotonic() + 30
         self.process = subprocess.Popen(
             command, cwd=folder, env=env, stdout=subprocess.PIPE, stderr=self.log, text=True
         )
@@ -106,7 +109,12 @@ class Server:
         self.reader = threading.Thread(target=collect, daemon=True)
         self.reader.start()
         try:
-            line = lines.get(timeout=12)
+            try:
+                line = lines.get(timeout=max(0, startup_deadline - time.monotonic()))
+            except queue.Empty as exc:
+                raise RuntimeError(
+                    "Sidecar did not announce its endpoint within 30 seconds; inspect server.log"
+                ) from exc
             if not line.startswith("CCA_ENDPOINT=http://127.0.0.1:"):
                 raise RuntimeError(f"Unexpected sidecar endpoint announcement: {line}")
             self.url = line.split("=", 1)[1]
@@ -116,7 +124,10 @@ class Server:
                 timeout=10,
                 trust_env=False,
             )
-            self.wait(lambda: self.client.get("/health").status_code == 200)
+            self.wait(
+                lambda: self.client.get("/health").status_code == 200,
+                timeout=max(0, startup_deadline - time.monotonic()),
+            )
         except BaseException:
             self.close()
             raise
