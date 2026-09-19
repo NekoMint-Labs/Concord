@@ -141,7 +141,7 @@ def test_revision_notices_are_durable_deduplicated_and_policy_controlled(
     if automatic:
         with services.factory.open() as repo:
             report = repo.investigation_report(runs[0].id)
-            assert any("not connected" in text for text in report.answer.limitations)
+            assert any("two imported BIM revisions" in text for text in report.answer.limitations)
             assert repo.proposals(runs[0].id) == []
 
 

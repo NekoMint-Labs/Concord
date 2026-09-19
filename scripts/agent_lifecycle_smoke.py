@@ -75,7 +75,9 @@ def exercise(folder: Path, executable: Path | None = None, *, token: str) -> dic
             200,
         )
         assert answer["persisted"] is False
-        assert any("not connected" in text for text in answer["answer"]["limitations"])
+        assert any(
+            "have not been compared" in text for text in answer["answer"]["limitations"]
+        )
         event = server.post(
             root + "/events",
             {
@@ -127,7 +129,7 @@ def exercise(folder: Path, executable: Path | None = None, *, token: str) -> dic
             ],
             "limitations": [
                 "Action executor is simulated",
-                "No BIM diff/binding provider connected",
+                "The selected BIM revisions have not been compared",
                 "Tauri WebView not exercised",
             ],
         }

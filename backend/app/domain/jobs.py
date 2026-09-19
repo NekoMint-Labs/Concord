@@ -20,6 +20,8 @@ class BIMImport(SourceReference):
     filename: str
     object_key: str
     content_hash: str
+    source_id: str | None = None
+    source_revision_id: str | None = None
     # Active model observed when accepting the import, not when parsing finishes.
     base_revision: str | None = None
     base_revision_bound: bool = False  # Legacy queued checkpoints bind once on first execution.
@@ -67,3 +69,5 @@ class BIMIndex(SourceReference):
     object_key: str
     filename: str
     elements: tuple[dict, ...]
+    source_id: str | None = None
+    source_revision_id: str | None = None

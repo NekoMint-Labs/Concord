@@ -21,6 +21,7 @@ class BIMElement(Model):
     properties: dict = Field(default_factory=dict)
     related_ids: tuple[str, ...] = ()
     revision: str
+    ifc_schema: str | None = None
 
 
 class DocumentChunk(Model):

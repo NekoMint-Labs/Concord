@@ -22,6 +22,8 @@ from app.application.actions import ActionService
 from app.application.agent_control import AgentControlService
 from app.application.analysis import AnalysisService
 from app.application.baselines import BaselineService
+from app.application.bim_bindings import BimBindingService
+from app.application.bim_revisions import BimRevisionService
 from app.application.capability_jobs import CapabilityJobService
 from app.application.coordination import CoordinationService
 from app.application.investigations import InvestigationService
@@ -57,6 +59,8 @@ class Services:
     agent: AgentControlService
     investigations: InvestigationService
     source_imports: SourceImportService
+    bim_bindings: BimBindingService
+    bim_revisions: BimRevisionService
 
     resources: ExitStack
 
@@ -127,7 +131,11 @@ def build_services(settings: Settings) -> Services:
                 provider=settings.model_provider,
             )
         resources.callback(investigator.close)
-        investigations = InvestigationService(factory, investigator, documents)
+        from app.adapters.bim_engineering import PersistedBimEngineering
+
+        investigations = InvestigationService(
+            factory, investigator, documents, PersistedBimEngineering(factory)
+        )
         analysis.investigations = investigations
         jobs = build_capability_jobs(settings, factory, runtime_name, storage, documents, resources)
         workflow.capabilities = jobs
@@ -177,6 +185,8 @@ def build_services(settings: Settings) -> Services:
             agent_control,
             investigations,
             SourceImportService(factory, jobs, runtime),
+            BimBindingService(factory),
+            BimRevisionService(factory, storage, _build_ifc_comparison()),
             resources,
         )
         if settings.seed_demo:
@@ -214,3 +224,9 @@ def build_services(settings: Settings) -> Services:
                 runtime.start(run.id)
         result.resources = resources.pop_all()
         return result
+
+
+def _build_ifc_comparison():
+    from app.adapters.ifc_diff import OfficialIfcDiffEngine
+
+    return OfficialIfcDiffEngine()
