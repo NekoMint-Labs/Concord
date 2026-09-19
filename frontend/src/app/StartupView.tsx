@@ -22,12 +22,20 @@ export function StartupView({
   pending,
   message,
   desktop,
+  connected = false,
+  demoAvailable = true,
+  onNewProject,
+  onOpenDemo,
   onReconnect,
   onToken,
 }: {
   pending: boolean;
   message?: string;
   desktop: boolean;
+  connected?: boolean;
+  demoAvailable?: boolean;
+  onNewProject?: () => void;
+  onOpenDemo?: () => void;
   onReconnect: () => void;
   onToken: (token: string) => void;
 }) {
@@ -39,6 +47,20 @@ export function StartupView({
       <h1>Concord</h1>
       {pending ? (
         <p>正在连接项目工作区…</p>
+      ) : connected ? (
+        <>
+          <p>开始一个本地工程工作区。</p>
+          <div className="startup-actions">
+            <Button onClick={onNewProject}>新建项目</Button>
+            <Button
+              variant="secondary"
+              disabled={!demoAvailable}
+              onClick={onOpenDemo}
+            >
+              {demoAvailable ? "打开演示项目" : "正在准备演示项目…"}
+            </Button>
+          </div>
+        </>
       ) : (
         <>
           <p role="alert">无法连接 Concord 本地服务。</p>

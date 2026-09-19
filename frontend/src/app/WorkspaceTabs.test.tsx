@@ -53,7 +53,12 @@ vi.mock("../components/ui/AppMenu", () => ({
  * places this product's work happens.
  */
 it("names navigation as workflow, secondary, and advanced", () => {
-  expect(primaryTabs.map((tab) => tab.label)).toEqual(["协调", "BIM", "文档"]);
+  expect(primaryTabs.map((tab) => tab.label)).toEqual([
+    "协调",
+    "项目来源",
+    "BIM",
+    "文档",
+  ]);
   expect(secondaryTabs.map((tab) => tab.label)).toEqual([
     "影响关系",
     "工作包",

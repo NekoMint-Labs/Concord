@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
 import { api, isDesktop, setToken, type DTO } from "./api/client";
@@ -17,39 +17,69 @@ import { WorkspaceHeader } from "./app/WorkspaceHeader";
 import { WorkspaceViews, type WorkspaceTab } from "./app/WorkspaceViews";
 import { useWorkspace } from "./app/useWorkspace";
 import { useWorkspaceMutation } from "./app/useWorkspaceMutation";
+import { useProjectLifecycle } from "./app/useProjectLifecycle";
+import {
+  NewProjectDialog,
+  OpenProjectDialog,
+  ProjectSettingsDialog,
+  ProjectStructureDialog,
+} from "./app/ProjectDialogs";
+import { ConcordAgent } from "./features/ConcordAgent";
+import { useConcordAgent } from "./features/useConcordAgent";
+import type { BimMappingContext } from "./features/BimMappingWorkspace";
 
 export function App() {
   const cache = useQueryClient();
-  const [project, setProject] = useState("harbor-east");
-  const [selected, setSelected] = useState("WP-200");
+  const lifecycle = useProjectLifecycle();
+  const project = lifecycle.project;
+  const [selected, setSelected] = useState("");
   const [selectedConstraint, setSelectedConstraint] = useState("");
   const [tab, setTab] = useState<WorkspaceTab>("coordination");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [inspectorView, setInspectorView] = useState<InspectorView>("blocker");
   const [eventDialog, setEventDialog] = useState(false);
-  /*
-   * Navigation is a frontend working posture, not project state: it says how much
-   * room this user wants for the work plane right now, changes nothing about the
-   * project, and is deliberately not sent anywhere.
-   *
-   * The column is a real pane now (`navPanel` below), so the posture is expressed
-   * with the pane's own collapse rather than with a CSS margin: the library keeps
-   * the width the user last chose in memory while the column is collapsed, and
-   * `expand()` returns to it, which is the session-only restore this pass wanted.
-   * Nothing is written to storage - a width remembered across launches is a
-   * preference, and preferences are their own pass.
-   */
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [openProjectOpen, setOpenProjectOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [structureOpen, setStructureOpen] = useState(false);
+  const [mappingMode, setMappingMode] = useState(false);
+  const [mappingContext, setMappingContext] = useState<BimMappingContext>();
   const [navOpen, setNavOpen] = useState(true);
   const navPanel = usePanelRef();
-  const { projects, workspace } = useWorkspace(project);
+  const { workspace } = useWorkspace(project);
   const { perform, busy, error, setError } = useWorkspaceMutation();
-  /*
-   * Demo fixture tools are shown for the local demonstration/development profile
-   * only, and only once that profile has actually answered - the gate and its
-   * reasoning live with the menu itself (frontend/src/app/AdvancedMenu.tsx).
-   */
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
+  const sourceCatalog = useQuery({
+    queryKey: ["sources", project],
+    queryFn: () => api.sourceStatuses(project),
+    enabled: !!project,
+  });
   const data = workspace.data;
+  const wp = data?.state.work_packages.find((item) => item.id === selected);
+  const agent = useConcordAgent({
+    project,
+    projectName: data?.state.project.name ?? project,
+    workPackageId: selected || undefined,
+    sources: sourceCatalog.data,
+  });
+
+  useEffect(() => {
+    setSelected("");
+    setSelectedConstraint("");
+    setDetailsOpen(false);
+    setMappingMode(false);
+    setMappingContext(undefined);
+  }, [project]);
+  useEffect(() => {
+    if (!data) return;
+    if (!data.state.work_packages.length) {
+      setSelected("");
+      setTab("sources");
+      return;
+    }
+    if (!data.state.work_packages.some((item) => item.id === selected))
+      setSelected(data.state.work_packages[0].id);
+  }, [data, selected]);
 
   function createEvent(event: DTO<"ProjectEvent-Input">) {
     setSelected(event.work_package_id);
@@ -60,17 +90,55 @@ export function App() {
     void perform(() => api.events(project, event), "变更已记录。");
   }
 
-  const wp =
-    data?.state.work_packages.find((item) => item.id === selected) ??
-    data?.state.work_packages[0];
-  /*
-   * The window before the workspace exists. A packaged desktop build starts its
-   * own local service and is handed a per-launch credential, so the failure copy
-   * and the recovery actions are product language, and the technical detail -
-   * including the manual credential entry browser development still needs - sits
-   * behind the diagnostics (frontend/src/app/StartupView.tsx).
-   */
-  if (!data || !wp)
+  const dialogs = (
+    <>
+      <NewProjectDialog
+        open={newProjectOpen}
+        onOpenChange={setNewProjectOpen}
+        onCreate={(input) => lifecycle.create.mutateAsync(input)}
+      />
+      <OpenProjectDialog
+        open={openProjectOpen}
+        projects={lifecycle.projects.data ?? []}
+        current={project}
+        onOpenChange={setOpenProjectOpen}
+        onProject={lifecycle.openProject}
+      />
+    </>
+  );
+
+  if (lifecycle.projects.isPending || lifecycle.projects.isError)
+    return (
+      <StartupView
+        pending={lifecycle.projects.isPending}
+        message={lifecycle.projects.error?.message}
+        desktop={isDesktop}
+        onReconnect={() => void cache.invalidateQueries()}
+        onToken={(next) => {
+          setToken(next);
+          void cache.invalidateQueries();
+        }}
+      />
+    );
+
+  if (!project)
+    return (
+      <>
+        <StartupView
+          pending={false}
+          connected
+          demoAvailable={!lifecycle.openDemo.isPending}
+          desktop={isDesktop}
+          onNewProject={() => setNewProjectOpen(true)}
+          onOpenDemo={() => lifecycle.openDemo.mutate()}
+          onReconnect={() => void cache.invalidateQueries()}
+          onToken={() => {}}
+        />
+        {dialogs}
+      </>
+    );
+
+  if (!data)
     return (
       <StartupView
         pending={workspace.isPending}
@@ -89,35 +157,9 @@ export function App() {
       className={`application-shell${navOpen ? "" : " is-nav-collapsed"}`}
       aria-busy={busy}
     >
-      {/*
-        The navigation column and the work plane are one adjustable pane split -
-        the same boundary the Inspector, the document source list and the BIM
-        element list already use (frontend/src/layout/PaneSplit.tsx). A column the
-        user works in beside other columns that resize is a column the user can
-        size.
-
-        200 / 232 / 320 is the range those numbers were checked against: 232 is
-        the width the column was designed around, 200 is the floor at which its
-        rows - a package name above its id and discipline - still read without
-        truncating, and 320 is where the column starts competing with the work
-        plane at the narrowest window this product supports.
-
-        `collapsible` makes that same pane the collapse: the control in the
-        column's own header closes it to nothing, and the work plane takes the
-        whole window.
-      */}
       <PaneSplit id="shell">
         <Pane
           id="sidebar-pane"
-          /*
-           * `pane-stack` is what makes the column fill the window. The library
-           * gives a pane a height but leaves it `display: block`, so a column
-           * declared without a height of its own is content-height and the
-           * shell paints its own background underneath - the empty lower
-           * half of the window the Windows review reported. The pane is the
-           * column's container, and a stack is how this product says so
-           * (frontend/src/styles/layout.css).
-           */
           className="sidebar-pane pane-stack"
           panelRef={navPanel}
           collapsible
@@ -125,25 +167,30 @@ export function App() {
           defaultSize="232px"
           minSize="200px"
           maxSize="320px"
-          /*
-           * The pane is the source of truth for whether the column is on screen: a
-           * drag that closes it is a collapse like any other, so the column's own
-           * `inert` state and the divider's place in the tab order have to follow
-           * the pointer as well as the button.
-           */
           onResize={(size) => setNavOpen(size.inPixels > 0)}
         >
           <ProjectSidebar
             data={data}
             project={project}
-            projects={projects.data}
-            selected={wp.id}
+            projects={lifecycle.projects.data}
+            recent={lifecycle.recent}
+            selected={selected}
             collapsed={!navOpen}
             onCollapse={() => {
               navPanel.current?.collapse();
               setNavOpen(false);
             }}
-            onProject={setProject}
+            onProject={lifecycle.openProject}
+            onNewProject={() => setNewProjectOpen(true)}
+            onOpenProject={() => setOpenProjectOpen(true)}
+            onProjectSettings={() => setSettingsOpen(true)}
+            onStructure={() => setStructureOpen(true)}
+            onLinkBim={(workPackageId) => {
+              setSelected(workPackageId);
+              setMappingMode(true);
+              setMappingContext(undefined);
+              setTab("bim");
+            }}
             onSelect={(id) => {
               setSelected(id);
               setSelectedConstraint("");
@@ -151,13 +198,6 @@ export function App() {
             }}
           />
         </Pane>
-        {/*
-          The divider stays mounted in both states and is disabled while the column
-          is collapsed. The library takes a disabled separator out of the tab order,
-          which is the guarantee needed here - there is no pane edge to grab - and
-          unmounting it instead would remove the element the pointer may still be
-          dragging.
-        */}
         <PaneDivider label="调整导航宽度" disabled={!navOpen} />
         <Pane className="main-pane pane-stack">
           <main className="main-shell">
@@ -170,23 +210,24 @@ export function App() {
                 setNavOpen(true);
               }}
             >
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={busy}
-                onClick={() => setEventDialog(true)}
-              >
-                {/* the one action in the shell that writes: a mark says "this
-                    records something" before the label is read */}
-                <PenLine {...icon} />
-                记录变更
-              </Button>
-              {/*
-                The one door to everything that is not the workflow: the
-                diagnostics and the demonstration tools live here rather than in
-                the view strip beside 协调 and BIM (frontend/src/app/
-                AdvancedMenu.tsx documents the containment).
-              */}
+              {wp && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => setEventDialog(true)}
+                >
+                  <PenLine {...icon} />
+                  记录变更
+                </Button>
+              )}
+              <ConcordAgent
+                project={project}
+                context={agent.context}
+                currentRun={agent.currentRun.data}
+                report={agent.investigation.data}
+                onRun={agent.rememberRun}
+              />
               <AdvancedMenu
                 tab={tab}
                 onTab={setTab}
@@ -202,13 +243,17 @@ export function App() {
                 }}
               />
             </WorkspaceHeader>
-            {/* Reserved for global failures; a stale judgement is a work-package
-                condition and is reported inside the coordination workspace. */}
-            {error && (
+            {(error || agent.error) && (
               <div className="alert" role="alert">
-                {error}
+                {error || agent.error}
                 <AppTooltip label="关闭提示">
-                  <button onClick={() => setError("")} aria-label="关闭提示">
+                  <button
+                    onClick={() => {
+                      setError("");
+                      agent.clearError();
+                    }}
+                    aria-label="关闭提示"
+                  >
                     ×
                   </button>
                 </AppTooltip>
@@ -217,14 +262,17 @@ export function App() {
             <WorkspaceViews
               project={project}
               data={data}
-              selected={wp.id}
+              selected={selected}
               selectedConstraint={selectedConstraint}
               tab={tab}
               busy={busy}
               detailsOpen={detailsOpen}
               inspectorView={inspectorView}
               perform={perform}
-              onTab={setTab}
+              onTab={(next) => {
+                if (next !== "bim") setMappingMode(false);
+                setTab(next);
+              }}
               onSelected={setSelected}
               onConstraint={(id) => {
                 setSelectedConstraint(id);
@@ -236,12 +284,56 @@ export function App() {
               onRecheck={() =>
                 void perform(() => api.recheck(project), "重新检查已提交。")
               }
+              mappingMode={mappingMode}
+              mappingContext={mappingContext}
+              report={agent.investigation.data}
+              onSourceContext={agent.sourceContext}
+              onBimContext={agent.bimContext}
+              onAgentRun={agent.rememberRun}
+              onInvestigateSource={(sourceId, revisionId) => {
+                agent.sourceContext(sourceId, revisionId);
+                void agent.startInvestigation("调查当前工程来源版本", {
+                  sourceId,
+                  revisionId,
+                });
+              }}
+              onInvestigateBim={(sourceId, revisionId, elementIds) => {
+                agent.bimContext(sourceId, revisionId, elementIds);
+                void agent.startInvestigation(
+                  "调查当前工作包与选中的 BIM 构件",
+                  {
+                    sourceId,
+                    revisionId,
+                    workPackageId: selected,
+                    elementIds,
+                  },
+                );
+              }}
+              onInspectImpact={(
+                sourceId,
+                revisionId,
+                workPackageId,
+                elementIds,
+              ) => {
+                setSelected(workPackageId);
+                setMappingMode(true);
+                setMappingContext({
+                  sourceId,
+                  revisionId,
+                  highlightIds: elementIds,
+                });
+                agent.bimContext(sourceId, revisionId, elementIds);
+                setTab("bim");
+              }}
             />
-            <Timeline run={data.run} perform={perform} />
+            <Timeline
+              run={agent.activeRun ? agent.currentRun.data : data.run}
+              perform={perform}
+            />
           </main>
         </Pane>
       </PaneSplit>
-      {eventDialog && (
+      {wp && eventDialog && (
         <EventComposer
           wp={wp}
           project={project}
@@ -249,8 +341,23 @@ export function App() {
           onClose={() => setEventDialog(false)}
         />
       )}
-      {/* The one toast mount point. Feedback is ephemeral; authoritative run,
-          readiness, and blocking state stays in the workspace itself. */}
+      {dialogs}
+      <ProjectSettingsDialog
+        open={settingsOpen}
+        project={data.state.project}
+        onOpenChange={setSettingsOpen}
+        onStructure={() => setStructureOpen(true)}
+      />
+      <ProjectStructureDialog
+        open={structureOpen}
+        project={project}
+        workspace={data}
+        onOpenChange={setStructureOpen}
+        onWorkPackage={(id) => {
+          setSelected(id);
+          setTab("coordination");
+        }}
+      />
       <AppToaster />
     </div>
   );

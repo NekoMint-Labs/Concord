@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
-import type { Workspace } from "../api/client";
+import type { AgentRun, InvestigationReport, Workspace } from "../api/client";
+import type { BimMappingContext } from "../features/BimMappingWorkspace";
 import { ViewerBoundary } from "../components/ViewerBoundary";
 import { icon } from "../components/ui/icon";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
@@ -19,6 +20,16 @@ import { WorkspaceTabs, type WorkspaceTab } from "./WorkspaceTabs";
 
 const ImpactGraph = lazy(() => import("../features/ImpactGraph"));
 const BIMWorkspace = lazy(() => import("../viewers/BIMWorkspace"));
+const BimMappingWorkspace = lazy(() =>
+  import("../features/BimMappingWorkspace").then((module) => ({
+    default: module.BimMappingWorkspace,
+  })),
+);
+const ProjectSources = lazy(() =>
+  import("../features/ProjectSources").then((module) => ({
+    default: module.ProjectSources,
+  })),
+);
 const GISWorkspace = lazy(() => import("../viewers/GISWorkspace"));
 
 /**
@@ -45,6 +56,15 @@ export function WorkspaceViews({
   onDetailsOpen,
   onInspectorView,
   onRecheck,
+  mappingMode = false,
+  mappingContext,
+  report,
+  onSourceContext,
+  onBimContext,
+  onAgentRun,
+  onInvestigateSource,
+  onInvestigateBim,
+  onInspectImpact,
 }: {
   project: string;
   data: Workspace;
@@ -61,6 +81,32 @@ export function WorkspaceViews({
   onDetailsOpen: (open: boolean) => void;
   onInspectorView: (view: InspectorView) => void;
   onRecheck: () => void;
+  mappingMode?: boolean;
+  mappingContext?: BimMappingContext;
+  report?: InvestigationReport | null;
+  onSourceContext: (
+    sourceId: string,
+    revisionId?: string,
+    revisionLabel?: string,
+  ) => void;
+  onBimContext: (
+    sourceId: string,
+    revisionId: string,
+    elementIds: string[],
+  ) => void;
+  onAgentRun: (run: AgentRun) => void;
+  onInvestigateSource: (sourceId: string, revisionId: string) => void;
+  onInvestigateBim: (
+    sourceId: string,
+    revisionId: string,
+    elementIds: string[],
+  ) => void;
+  onInspectImpact: (
+    sourceId: string,
+    revisionId: string,
+    workPackageId: string,
+    elementIds: string[],
+  ) => void;
 }) {
   /*
    * The pane budget: the Inspector is what the user just opened, so it always
@@ -93,18 +139,37 @@ export function WorkspaceViews({
             <Suspense
               fallback={<div className="loading-view">正在加载工作区…</div>}
             >
-              {tab === "coordination" && (
-                <CoordinationWorkspace
-                  workspace={data}
-                  selected={selected}
-                  busy={busy}
-                  onRecheck={onRecheck}
-                  onDetails={(view) => {
-                    onInspectorView(view);
-                    onDetailsOpen(true);
-                  }}
-                  onImpact={() => onTab("impact")}
-                />
+              {tab === "coordination" && !selected && (
+                <div className="empty-pane">
+                  <span>
+                    <strong>先创建工作包</strong>
+                    <small>使用项目侧栏的「添加」建立区域与工作包。</small>
+                  </span>
+                </div>
+              )}
+              {tab === "coordination" && !!selected && (
+                <>
+                  {report?.scope.work_package_ids.includes(selected) && (
+                    <section className="context-agent-result workspace-agent-result">
+                      <span className="eyebrow">Concord 调查结果</span>
+                      <p>{report.answer.summary}</p>
+                      <small>
+                        {report.evidence.length} 条已持久化 Evidence
+                      </small>
+                    </section>
+                  )}
+                  <CoordinationWorkspace
+                    workspace={data}
+                    selected={selected}
+                    busy={busy}
+                    onRecheck={onRecheck}
+                    onDetails={(view) => {
+                      onInspectorView(view);
+                      onDetailsOpen(true);
+                    }}
+                    onImpact={() => onTab("impact")}
+                  />
+                </>
               )}
               {tab === "operations" && (
                 <Operations project={project} perform={perform} />
@@ -127,7 +192,28 @@ export function WorkspaceViews({
                 />
               )}
               {tab === "capabilities" && <Capabilities />}
-              {tab === "bim" && (
+              {tab === "sources" && (
+                <ProjectSources
+                  project={project}
+                  report={report}
+                  onContext={onSourceContext}
+                  onRun={onAgentRun}
+                  onInvestigate={onInvestigateSource}
+                  onInspectImpact={onInspectImpact}
+                />
+              )}
+              {tab === "bim" && mappingMode && !!selected && (
+                <BimMappingWorkspace
+                  project={project}
+                  workPackageId={selected}
+                  initial={mappingContext}
+                  report={report}
+                  condensed={condensed}
+                  onContext={onBimContext}
+                  onInvestigate={onInvestigateBim}
+                />
+              )}
+              {tab === "bim" && !mappingMode && (
                 <BIMWorkspace
                   project={project}
                   impacted={data.analysis?.impact.element_ids ?? []}

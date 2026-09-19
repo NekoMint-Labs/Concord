@@ -24,7 +24,7 @@ export function WorkspaceHeader({
   children,
 }: {
   data: Workspace;
-  wp: WorkPackage;
+  wp?: WorkPackage;
   navCollapsed?: boolean;
   onToggleNav?: () => void;
   children?: ReactNode;
@@ -46,9 +46,15 @@ export function WorkspaceHeader({
       <div className="breadcrumb">
         <span>{data.state.project.name}</span>
         <span className="crumb-sep">/</span>
-        <span>{demoAreaName(wp.area_id, wp.area_id)}</span>
-        <span className="crumb-sep">/</span>
-        <strong>{wp.id}</strong>
+        {wp ? (
+          <>
+            <span>{demoAreaName(wp.area_id, wp.area_id)}</span>
+            <span className="crumb-sep">/</span>
+            <strong>{wp.id}</strong>
+          </>
+        ) : (
+          <strong>项目设置</strong>
+        )}
       </div>
       <div className="header-tools">{children}</div>
     </header>

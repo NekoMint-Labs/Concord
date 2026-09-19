@@ -78,3 +78,25 @@ it("states that it is connecting rather than failing while it is connecting", ()
   expect(screen.getByText("正在连接项目工作区…")).toBeVisible();
   expect(screen.queryByRole("button", { name: "重新连接" })).toBeNull();
 });
+
+it("shows the connected no-project entry separately from a connection failure", () => {
+  const onNewProject = vi.fn();
+  const onOpenDemo = vi.fn();
+  render(
+    <StartupView
+      pending={false}
+      connected
+      desktop={false}
+      onNewProject={onNewProject}
+      onOpenDemo={onOpenDemo}
+      onReconnect={() => {}}
+      onToken={() => {}}
+    />,
+  );
+
+  expect(screen.queryByRole("alert")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "新建项目" }));
+  fireEvent.click(screen.getByRole("button", { name: "打开演示项目" }));
+  expect(onNewProject).toHaveBeenCalledOnce();
+  expect(onOpenDemo).toHaveBeenCalledOnce();
+});

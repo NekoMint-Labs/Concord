@@ -1,7 +1,12 @@
 import { Building2, ChevronDown, PanelLeftClose } from "lucide-react";
 import type { DTO, Workspace } from "../api/client";
 import { Status } from "../components/Status";
-import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
+import {
+  AppMenu,
+  AppMenuItem,
+  AppMenuLabel,
+  AppMenuSeparator,
+} from "../components/ui/AppMenu";
 import { AppTooltip } from "../components/ui/AppTooltip";
 import { icon } from "../components/ui/icon";
 import {
@@ -17,23 +22,36 @@ export function ProjectSidebar({
   data,
   project,
   projects,
+  recent = [],
   selected,
   collapsed = false,
   onCollapse,
   onProject,
+  onNewProject,
+  onOpenProject,
+  onProjectSettings,
+  onStructure,
+  onLinkBim,
   onSelect,
 }: {
   data: Workspace;
   project: string;
   projects: DTO<"Project">[] | undefined;
+  recent?: DTO<"Project">[];
   selected: string;
   collapsed?: boolean;
   onCollapse: () => void;
   onProject: (id: string) => void;
+  onNewProject?: () => void;
+  onOpenProject?: () => void;
+  onProjectSettings?: () => void;
+  onStructure?: () => void;
+  onLinkBim?: (workPackageId: string) => void;
   onSelect: (id: string) => void;
 }) {
   const current =
     projects?.find((item) => item.id === project)?.name ?? project;
+  const demo = project === "harbor-east";
   return (
     /*
       Collapsed, the column is off the window's own edge rather than unmounted -
@@ -80,24 +98,68 @@ export function ProjectSidebar({
           trigger={
             <>
               <Building2 className="project-mark" {...icon} />
-              <span className="project-name">{current}</span>
+              <span className="project-name">
+                {current}
+                {demo && <small>演示 / 示例</small>}
+              </span>
               <ChevronDown className="project-chevron" {...icon} />
             </>
           }
         >
-          {projects?.map((item) => (
-            <AppMenuItem
-              key={item.id}
-              active={item.id === project}
-              onSelect={() => onProject(item.id)}
-            >
-              {item.name}
-            </AppMenuItem>
-          ))}
+          <AppMenuLabel>当前项目</AppMenuLabel>
+          <AppMenuItem active onSelect={() => onProject(project)}>
+            {current}
+            {project === "harbor-east" && " · 演示 / 示例"}
+          </AppMenuItem>
+          {recent.length > 0 && (
+            <>
+              <AppMenuSeparator />
+              <AppMenuLabel>最近项目</AppMenuLabel>
+              {recent
+                .filter((item) => item.id !== project)
+                .map((item) => (
+                  <AppMenuItem
+                    key={item.id}
+                    onSelect={() => onProject(item.id)}
+                  >
+                    {item.name}
+                    {item.id === "harbor-east" && " · 演示"}
+                  </AppMenuItem>
+                ))}
+            </>
+          )}
+          <AppMenuSeparator />
+          <AppMenuLabel>切换项目</AppMenuLabel>
+          {projects
+            ?.filter(
+              (item) =>
+                item.id !== project &&
+                !recent.some((recentItem) => recentItem.id === item.id),
+            )
+            .slice(0, 5)
+            .map((item) => (
+              <AppMenuItem key={item.id} onSelect={() => onProject(item.id)}>
+                {item.name}
+                {item.id === "harbor-east" && " · 演示"}
+              </AppMenuItem>
+            ))}
+          <AppMenuSeparator />
+          <AppMenuItem onSelect={() => onNewProject?.()}>新建项目</AppMenuItem>
+          <AppMenuItem onSelect={() => onOpenProject?.()}>
+            打开项目…
+          </AppMenuItem>
+          <AppMenuItem onSelect={() => onProjectSettings?.()}>
+            项目设置
+          </AppMenuItem>
         </AppMenu>
       </div>
       <nav className="sidebar-section" aria-label="工作包">
-        <div className="sidebar-label">工作包</div>
+        <div className="sidebar-label sidebar-label-action">
+          <span>工作包</span>
+          <button type="button" onClick={() => onStructure?.()}>
+            添加
+          </button>
+        </div>
         {data.state.areas.map((area) => (
           <div key={area.id} className="area-group">
             <div className="area-title">{demoAreaName(area.id, area.name)}</div>
@@ -109,20 +171,32 @@ export function ProjectSidebar({
                     (readiness) => readiness.work_package_id === item.id,
                   )?.status ?? "UNCHECKED";
                 return (
-                  <button
-                    key={item.id}
-                    className={`package-nav ${selected === item.id ? "selected" : ""}`}
-                    aria-current={selected === item.id ? "page" : undefined}
-                    onClick={() => onSelect(item.id)}
-                  >
-                    <span>
-                      <strong>{demoWorkPackageName(item.id, item.name)}</strong>
-                      <small>
-                        {item.id} · {demoDiscipline(item.discipline)}
-                      </small>
-                    </span>
-                    {notable.has(status) && <Status value={status} />}
-                  </button>
+                  <div className="package-nav-row" key={item.id}>
+                    <button
+                      className={`package-nav ${selected === item.id ? "selected" : ""}`}
+                      aria-current={selected === item.id ? "page" : undefined}
+                      onClick={() => onSelect(item.id)}
+                    >
+                      <span>
+                        <strong>
+                          {demoWorkPackageName(item.id, item.name)}
+                        </strong>
+                        <small>
+                          {item.id} · {demoDiscipline(item.discipline)}
+                        </small>
+                      </span>
+                      {notable.has(status) && <Status value={status} />}
+                    </button>
+                    {selected === item.id && (
+                      <button
+                        type="button"
+                        className="package-link-bim"
+                        onClick={() => onLinkBim?.(item.id)}
+                      >
+                        关联 BIM
+                      </button>
+                    )}
+                  </div>
                 );
               })}
           </div>
