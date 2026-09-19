@@ -3,6 +3,7 @@ from sqlalchemy import delete, select
 from app.adapters.persistence.action_records import ActionRecords
 from app.adapters.persistence.agent_records import AgentRecords
 from app.adapters.persistence.baseline_records import BaselineRecords
+from app.adapters.persistence.bim_revision_records import BimRevisionRecords
 from app.adapters.persistence.run_records import RunRecords
 from app.adapters.persistence.source_import_records import SourceImportRecords
 from app.adapters.persistence.source_records import SourceRecords
@@ -22,7 +23,13 @@ from app.ports.providers import PreparedDocument
 
 
 class SQLCoordinationRepository(
-    RunRecords, ActionRecords, SourceRecords, BaselineRecords, AgentRecords, SourceImportRecords
+    RunRecords,
+    ActionRecords,
+    SourceRecords,
+    BaselineRecords,
+    AgentRecords,
+    SourceImportRecords,
+    BimRevisionRecords,
 ):
     """Project facts and evidence plus the unchanged, single-session repository contract."""
 

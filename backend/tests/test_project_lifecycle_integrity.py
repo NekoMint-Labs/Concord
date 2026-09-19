@@ -206,18 +206,30 @@ def test_upgrade_existing_database_preserves_project_and_snapshot(tmp_path):
             "investigations",
             "agent_notices",
             "source_imports",
+            "bim_revisions",
+            "bim_element_snapshots",
+            "work_package_bim_bindings",
+            "revision_comparisons",
+            "bim_element_changes",
         }.issubset(inspect(engine).get_table_names())
         with engine.connect() as connection:
             assert (
                 connection.execute(text("select version_num from alembic_version")).scalar_one()
-                == "0006"
+                == "0007"
             )
             assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
         with engine.begin() as connection:
             config.attributes["connection"] = connection
-            command.downgrade(config, "0003")
+            command.downgrade(config, "0004")
+        assert "bim_revisions" not in inspect(engine).get_table_names()
         with factory.open() as repo:
             assert repo.state(state.project.id) == state
         migrate(engine)
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("select version_num from alembic_version")).scalar_one()
+                == "0007"
+            )
+            assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
     finally:
         engine.dispose()

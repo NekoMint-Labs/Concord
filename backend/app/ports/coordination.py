@@ -8,11 +8,14 @@ from app.domain.models import Analysis, Evidence, ProjectSnapshot, ProjectState
 from app.domain.retrieval import PreparedEmbeddingIndex
 from app.domain.runs import AgentRun, StreamEvent
 from app.ports.agent import AgentRepository
+from app.ports.bim_revisions import BimRevisionRepository
 from app.ports.project_lifecycle import ProjectLifecycleRepository
 from app.ports.providers import PreparedDocument
 
 
-class CoordinationRepository(ProjectLifecycleRepository, AgentRepository, Protocol):
+class CoordinationRepository(
+    ProjectLifecycleRepository, AgentRepository, BimRevisionRepository, Protocol
+):
     def publish_embeddings(self, prepared: PreparedEmbeddingIndex) -> dict: ...
     def publish_document(self, prepared: PreparedDocument) -> PreparedDocument: ...
     def save_job(self, job: CapabilityJob) -> None: ...

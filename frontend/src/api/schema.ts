@@ -2,6 +2,7 @@
 export interface components { schemas: {
   "ActionExecution": { "operation_id": string; "proposal_id": string; "project_id": string; "before_version": number; "after_version": number; "status": "VERIFIED"; "mode": "simulated" | "external"; "principal_id": string; "result": string; "executed_at": string; };
   "ActionProposal": { "id": string; "operation_id": string; "project_id": string; "run_id": string; "generation": number; "snapshot_id": string; "snapshot_version": number; "work_package_id": string; "title": string; "risk": number; "resolution": components["schemas"]["ResolutionOption"]; "evidence_ids": Array<string>; "execution_mode": "simulated" | "external"; "created_at": string; };
+  "AffectedWorkPackage": { "work_package_id": string; "changes": Array<components["schemas"]["BimElementChange"]>; };
   "AgentAnswer": { "summary": string; "evidence_ids": Array<string>; "limitations": Array<string>; };
   "AgentNotice": { "id": string; "project_id": string; "source_id": string; "revision_id": string; "from_revision_id": (string | null); "run_id": (string | null); "created_at": string; };
   "AgentRequest": { "instruction": string; "scope"?: components["schemas"]["AgentScope-Input"]; };
@@ -16,10 +17,15 @@ export interface components { schemas: {
   "ApprovalRequest": { "strong"?: boolean; "confirmation"?: string; };
   "Area": { "id": string; "name": string; "floor": string; };
   "AuditRecord": { "id": string; "project_id": string; "action": string; "actor": string; "run_id": (string | null); "snapshot_id": (string | null); "operation_id": (string | null); "detail": Record<string, (string | number | boolean | null)>; "created_at": string; };
-  "BIMElement": { "id": string; "name": string; "type": string; "storey": (string | null); "space": (string | null); "properties": Record<string, unknown>; "related_ids": Array<string>; "revision": string; };
+  "BIMElement": { "id": string; "name": string; "type": string; "storey": (string | null); "space": (string | null); "properties": Record<string, unknown>; "related_ids": Array<string>; "revision": string; "ifc_schema": (string | null); };
   "BIMImport": { "source_id": (string | null); "source_revision_id": (string | null); "kind": "bim_import"; "filename": string; "object_key": string; "content_hash": string; "base_revision": (string | null); "base_revision_bound": boolean; };
   "Baseline": { "name": string; "entries": Array<components["schemas"]["BaselineEntry"]>; "id": string; "project_id": string; "sequence": number; "accepted_by": string; "created_at": string; };
   "BaselineEntry": { "source_id": string; "revision_id": string; };
+  "BimBindingStatus": { "binding": components["schemas"]["WorkPackageBimBinding"]; "revision_id": (string | null); "element": (components["schemas"]["BimElementSnapshot"] | null); "state": "present" | "missing" | "not_imported"; };
+  "BimElementChange": { "comparison_id": string; "global_id": string; "change_kind": "added" | "deleted" | "changed"; "changed_aspects": Array<string>; };
+  "BimElementSnapshot": { "revision_id": string; "global_id": string; "ifc_class": string; "name": (string | null); "storey": (string | null); "space": (string | null); "properties": Record<string, unknown>; };
+  "BimRevisionSnapshot": { "project_id": string; "source_id": string; "revision_id": string; "ifc_schema": (string | null); "imported_at": string; "import_seconds": number; "elements": Array<components["schemas"]["BimElementSnapshot"]>; };
+  "BindingInput": { "work_package_id": string; "global_ids": Array<string>; };
   "Body_import_document_api_projects__project_id__documents_post": { "file": string; };
   "Body_import_ifc_api_projects__project_id__bim_import_post": { "file": string; };
   "Body_upload_revision_api_projects__project_id__sources__source_id__revisions_post": { "file": string; "external_label"?: (string | null); };
@@ -27,6 +33,9 @@ export interface components { schemas: {
   "Capability": { "name": string; "implementation": string; "status": "enabled" | "available_disabled" | "unavailable_dependency" | "unavailable_credential" | "unhealthy"; "enabled": boolean; "dependency_available": boolean; "credential_present": (boolean | null); "service_reachable": (boolean | null); "reason": string; "version": (string | null); };
   "CapabilityJob": { "id": string; "project_id": string; "requested_by": string; "request": (components["schemas"]["DocumentImport"] | components["schemas"]["BIMImport"] | components["schemas"]["OptimizationRequest"] | components["schemas"]["VisionRequest"] | components["schemas"]["EmbeddingIndexRequest-Output"]); "snapshot_id": (string | null); "result": (Record<string, unknown> | null); };
   "CapabilityResponse": { "capabilities": Array<components["schemas"]["Capability"]>; };
+  "CompareBimRevisions": { "from_revision_id": string; "to_revision_id": string; };
+  "ComparisonSummary": { "added": number; "deleted": number; "changed": number; "from_elements": number; "to_elements": number; "common_global_ids": number; "global_id_continuity": number; "warnings": Array<string>; "compare_seconds": number; };
+  "ConfirmBimBindings": { "revision_id": string; "bindings": Array<components["schemas"]["BindingInput"]>; };
   "Constraint": { "id": string; "snapshot_id": string; "work_package_id": string; "kind": "design" | "predecessor" | "workforce" | "qualification" | "material" | "equipment" | "inspection"; "description": string; "evidence_ids": Array<string>; "resource_id": (string | null); "blocking": boolean; };
   "CreateArea": { "name": string; "floor"?: string; };
   "CreateBaseline": { "name": string; "entries": Array<components["schemas"]["BaselineEntry"]>; };
@@ -61,6 +70,8 @@ export interface components { schemas: {
   "ProjectState": { "project": components["schemas"]["Project"]; "version": number; "areas": Array<components["schemas"]["Area"]>; "work_packages": Array<components["schemas"]["WorkPackage"]>; "sources": Array<components["schemas"]["SourceRevision"]>; };
   "Readiness": { "work_package_id": string; "status": "READY" | "BLOCKED"; "constraint_ids": Array<string>; "snapshot_id": string; };
   "ResolutionOption": { "id": string; "title": string; "explanation": string; "constraint_ids": Array<string>; "effects": Array<components["schemas"]["Effect"]>; "resolver": string; };
+  "RevisionComparison": { "id": string; "project_id": string; "source_id": string; "from_revision_id": string; "to_revision_id": string; "engine": string; "engine_version": string; "status": "COMPLETED"; "summary": components["schemas"]["ComparisonSummary"]; "raw_result_key": string; "evidence_ids": Array<string>; "created_at": string; };
+  "RevisionComparisonDetail": { "comparison": components["schemas"]["RevisionComparison"]; "changes": Array<components["schemas"]["BimElementChange"]>; "affected_work_packages": Array<components["schemas"]["AffectedWorkPackage"]>; };
   "RevisionUploadResult": { "revision": components["schemas"]["ProjectSourceRevision"]; "duplicate": boolean; };
   "ScheduleTask-Input": { "id": string; "duration": number; "workers"?: number; "qualifications"?: Array<string>; "predecessors"?: Array<string>; "equipment"?: Record<string, number>; "earliest"?: number; "latest_end"?: number; };
   "ScheduleTask-Output": { "id": string; "duration": number; "workers": number; "qualifications": Array<string>; "predecessors": Array<string>; "equipment": Record<string, number>; "earliest": number; "latest_end": number; };
@@ -74,5 +85,6 @@ export interface components { schemas: {
   "ValidationError": { "loc": Array<(string | number)>; "msg": string; "type": string; "input"?: unknown; "ctx"?: Record<string, unknown>; };
   "VisionRequest": { "kind": "vision"; "object_key": string; "content_hash": string; "media_type": string; "source_id": string; "consent": boolean; };
   "WorkPackage": { "id": string; "name": string; "area_id": string; "discipline": string; "element_ids": Array<string>; "predecessors": Array<string>; "complete": boolean; "design_revision": string; "accepted_revision": string; "required_workers": number; "available_workers": number; "required_qualifications": Array<string>; "qualifications": Array<string>; "materials": Record<string, boolean>; "equipment": Record<string, boolean>; "inspection_passed": boolean; "owner": string; };
+  "WorkPackageBimBinding": { "id": string; "project_id": string; "work_package_id": string; "source_id": string; "global_id": string; "confirmation_revision_id": string; "evidence_id": string; "origin": "human_confirmed"; "confirmed_by": string; "created_at": string; "retired_at": (string | null); };
   "WorkspaceResponse": { "state": components["schemas"]["ProjectState"]; "analysis": (components["schemas"]["Analysis"] | null); "run": (components["schemas"]["AgentRun"] | null); "analysis_run": (components["schemas"]["AgentRun"] | null); "proposals": Array<components["schemas"]["ActionProposal"]>; "approvals": Array<components["schemas"]["Approval"]>; "events": Array<components["schemas"]["ProjectEvent-Output"]>; "audit": Array<components["schemas"]["AuditRecord"]>; "stale": boolean; };
 }; }

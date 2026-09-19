@@ -95,6 +95,7 @@ it("renders the full condition set as labelled rows, never as JSON source", asyn
       storey: "L02-E",
       space: "L02-E-ZONE",
       revision: "V16",
+      ifc_schema: null,
       related_ids: [],
       properties: {
         FireRating: "120 min",

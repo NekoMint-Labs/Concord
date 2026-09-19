@@ -13,6 +13,7 @@ from app.adapters.observability import configure_logging
 from app.api import (
     agent,
     baselines,
+    bim_revisions,
     capability_jobs,
     project_lifecycle,
     project_sources,
@@ -106,6 +107,7 @@ def create_app(settings: Settings | None = None, service_override=None) -> FastA
     app.include_router(project_lifecycle.router)
     app.include_router(project_sources.router)
     app.include_router(baselines.router)
+    app.include_router(bim_revisions.router)
     app.include_router(runs.router)
     app.include_router(resources.router)
     app.include_router(capability_jobs.router)
