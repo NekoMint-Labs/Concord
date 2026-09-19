@@ -12,6 +12,11 @@ export type AgentRun = DTO<"AgentRun">;
 export type DocumentChunk = DTO<"DocumentChunk">;
 export type Capability = DTO<"Capability">;
 export type BIMElement = DTO<"BIMElement">;
+export type Project = DTO<"Project">;
+export type ProjectSourceStatus = DTO<"ProjectSourceStatus">;
+export type ProjectSourceRevision = DTO<"ProjectSourceRevision">;
+export type Baseline = DTO<"Baseline">;
+export type InvestigationReport = DTO<"InvestigationReport">;
 
 const loopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(
   location.hostname,
@@ -117,6 +122,23 @@ export async function request<T>(
 
 export const api = {
   projects: () => request<DTO<"Project">[]>("/api/projects"),
+  project: (project: string) =>
+    request<DTO<"ProjectState">>(`/api/projects/${project}`),
+  createProject: (input: DTO<"CreateProject">) =>
+    request<DTO<"Project">>("/api/projects", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  createArea: (project: string, input: DTO<"CreateArea">) =>
+    request<DTO<"Area">>(`/api/projects/${project}/areas`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  createWorkPackage: (project: string, input: DTO<"CreateWorkPackage">) =>
+    request<DTO<"WorkPackage">>(`/api/projects/${project}/work-packages`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   workspace: (project: string) =>
     request<Workspace>(`/api/projects/${project}/workspace`),
   profile: () => request<DTO<"ProfileResponse">>("/api/profile"),
@@ -150,6 +172,109 @@ export const api = {
   cancel: (id: string) => request(`/api/runs/${id}/cancel`, { method: "POST" }),
   resume: (id: string) =>
     request<AgentRun>(`/api/runs/${id}/resume`, { method: "POST" }),
+  sourceStatuses: (project: string) =>
+    request<DTO<"ProjectSourceStatus">[]>(`/api/projects/${project}/sources`),
+  createSource: (project: string, input: DTO<"CreateProjectSource">) =>
+    request<DTO<"ProjectSource">>(`/api/projects/${project}/sources`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  sourceRevisions: (project: string, source: string) =>
+    request<DTO<"ProjectSourceRevision">[]>(
+      `/api/projects/${project}/sources/${source}/revisions`,
+    ),
+  uploadRevision: (
+    project: string,
+    source: string,
+    file: File,
+    externalLabel = "",
+  ) => {
+    const body = new FormData();
+    body.append("file", file);
+    if (externalLabel) body.append("external_label", externalLabel);
+    return request<DTO<"RevisionUploadResult">>(
+      `/api/projects/${project}/sources/${source}/revisions`,
+      { method: "POST", body },
+    );
+  },
+  importRevision: (project: string, source: string, revision: string) =>
+    request<AgentRun>(
+      `/api/projects/${project}/sources/${source}/revisions/${revision}/import`,
+      { method: "POST" },
+    ),
+  revisionImport: (project: string, source: string, revision: string) =>
+    request<AgentRun | null>(
+      `/api/projects/${project}/sources/${source}/revisions/${revision}/import`,
+    ),
+  baselines: (project: string) =>
+    request<DTO<"Baseline">[]>(`/api/projects/${project}/baselines`),
+  createBaseline: (project: string, input: DTO<"CreateBaseline">) =>
+    request<DTO<"Baseline">>(`/api/projects/${project}/baselines`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  bimSnapshot: (project: string, source: string, revision: string) =>
+    request<DTO<"BimRevisionSnapshot">>(
+      `/api/projects/${project}/sources/${source}/revisions/${revision}/bim-snapshot`,
+    ),
+  bimBindings: (project: string, source: string, revision?: string) =>
+    request<DTO<"BimBindingStatus">[]>(
+      `/api/projects/${project}/sources/${source}/bim-bindings${revision ? `?revision_id=${encodeURIComponent(revision)}` : ""}`,
+    ),
+  confirmBimBindings: (
+    project: string,
+    source: string,
+    input: DTO<"ConfirmBimBindings">,
+  ) =>
+    request<DTO<"WorkPackageBimBinding">[]>(
+      `/api/projects/${project}/sources/${source}/bim-bindings`,
+      { method: "POST", body: JSON.stringify(input) },
+    ),
+  comparisons: (project: string, source: string) =>
+    request<DTO<"RevisionComparison">[]>(
+      `/api/projects/${project}/sources/${source}/bim-comparisons`,
+    ),
+  compareRevisions: (
+    project: string,
+    source: string,
+    input: DTO<"CompareBimRevisions">,
+  ) =>
+    request<DTO<"RevisionComparisonDetail">>(
+      `/api/projects/${project}/sources/${source}/bim-comparisons`,
+      { method: "POST", body: JSON.stringify(input) },
+    ),
+  comparison: (project: string, source: string, comparison: string) =>
+    request<DTO<"RevisionComparisonDetail">>(
+      `/api/projects/${project}/sources/${source}/bim-comparisons/${comparison}`,
+    ),
+  agentSettings: (project: string) =>
+    request<DTO<"AgentSettings-Output">>(
+      `/api/projects/${project}/agent/settings`,
+    ),
+  setAgentSettings: (
+    project: string,
+    initiative: DTO<"AgentSettings-Input">["initiative"],
+  ) =>
+    request<DTO<"AgentSettings-Output">>(
+      `/api/projects/${project}/agent/settings`,
+      { method: "POST", body: JSON.stringify({ initiative }) },
+    ),
+  agentNotices: (project: string) =>
+    request<DTO<"AgentNotice">[]>(`/api/projects/${project}/agent/notices`),
+  askAgent: (project: string, input: DTO<"AgentRequest">) =>
+    request<DTO<"AgentResponse">>(`/api/projects/${project}/agent/ask`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  investigate: (project: string, input: DTO<"AgentRequest">) =>
+    request<AgentRun>(`/api/projects/${project}/agent/investigate`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  investigation: (project: string, run: string) =>
+    request<DTO<"InvestigationReport"> | null>(
+      `/api/projects/${project}/agent/investigations/${run}`,
+    ),
   bim: (project: string) =>
     request<BIMElement[]>(`/api/projects/${project}/bim/elements`),
   geo: (project: string) =>

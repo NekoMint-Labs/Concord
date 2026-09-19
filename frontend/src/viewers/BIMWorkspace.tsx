@@ -30,10 +30,16 @@ export default function BIMWorkspace({
   project,
   impacted,
   condensed = false,
+  externalFile,
+  hideSourceActions = false,
+  onViewerSelected,
 }: {
   project: string;
   impacted: readonly string[];
   condensed?: boolean;
+  externalFile?: File | null;
+  hideSourceActions?: boolean;
+  onViewerSelected?: (id: string) => void;
 }) {
   const elements = useQuery({
     queryKey: ["bim", project],
@@ -52,6 +58,7 @@ export default function BIMWorkspace({
     openImported,
     chooseFile,
   } = useBIMSource(project);
+  const viewFile = externalFile === undefined ? file : externalFile;
   const { transition, variants } = useMotion();
   const fileInput = useRef<HTMLInputElement>(null);
   const item = elements.data?.find((e) => e.id === selected);
@@ -307,10 +314,13 @@ export default function BIMWorkspace({
       <div className="view-toolbar">
         <h2>BIM</h2>
         <span className="viewer-toolbar-note">
-          {file ? "本地 IFC / That Open Engine" : "结构化 BIM / 无需几何引擎"}
+          {viewFile
+            ? "项目 IFC / That Open Engine"
+            : "结构化 BIM / 无需几何引擎"}
         </span>
-        <div className="viewer-toolbar-actions">
-          {/*
+        {!hideSourceActions && (
+          <div className="viewer-toolbar-actions">
+            {/*
             The two ways into geometry, marked and explained.
 
             They stay labelled: "local file" and "the project's own IFC" are a
@@ -328,66 +338,67 @@ export default function BIMWorkspace({
             product that Tab could not reach; a real button is tabbable, takes the
             shared focus ring, and is what lets its own tooltip open on focus.
           */}
-          <AppTooltip label="在本机打开 IFC 文件，不导入项目">
-            <button
-              type="button"
-              className="import-button"
+            <AppTooltip label="在本机打开 IFC 文件，不导入项目">
+              <button
+                type="button"
+                className="import-button"
+                disabled={busy}
+                onClick={() => fileInput.current?.click()}
+              >
+                <FolderOpen {...icon} />
+                打开本地 IFC
+              </button>
+            </AppTooltip>
+            <input
+              ref={fileInput}
+              hidden
+              type="file"
+              accept=".ifc"
               disabled={busy}
-              onClick={() => fileInput.current?.click()}
-            >
-              <FolderOpen {...icon} />
-              打开本地 IFC
-            </button>
-          </AppTooltip>
-          <input
-            ref={fileInput}
-            hidden
-            type="file"
-            accept=".ifc"
-            disabled={busy}
-            aria-label="本地 IFC 文件"
-            onChange={(event) => {
-              chooseFile(event.target.files?.[0]);
-              event.target.value = "";
-            }}
-          />
-          <AppTooltip label="打开已导入当前项目的 IFC 文件">
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={busy}
-              onClick={() => void openImported()}
-            >
-              <PackageOpen {...icon} />
-              打开项目 IFC
-            </Button>
-          </AppTooltip>
-          {file && (
-            <AppTooltip label="把本地 IFC 发送到已配置的后端并导入当前项目">
+              aria-label="本地 IFC 文件"
+              onChange={(event) => {
+                chooseFile(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
+            <AppTooltip label="打开已导入当前项目的 IFC 文件">
               <Button
                 size="sm"
                 variant="secondary"
                 disabled={busy}
-                onClick={() => void importSource()}
+                onClick={() => void openImported()}
               >
-                {busy ? "处理中…" : "导入项目"}
+                <PackageOpen {...icon} />
+                打开项目 IFC
               </Button>
             </AppTooltip>
-          )}
-          {file && (
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={busy}
-              onClick={() => {
-                setFile(null);
-                setSelected("");
-              }}
-            >
-              结构化视图
-            </Button>
-          )}
-        </div>
+            {file && (
+              <AppTooltip label="把本地 IFC 发送到已配置的后端并导入当前项目">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => void importSource()}
+                >
+                  {busy ? "处理中…" : "导入项目"}
+                </Button>
+              </AppTooltip>
+            )}
+            {file && (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => {
+                  setFile(null);
+                  setSelected("");
+                }}
+              >
+                结构化视图
+              </Button>
+            )}
+          </div>
+        )}
       </div>
       {(error || imported.error) && (
         <div className="alert" role="alert">
@@ -414,13 +425,20 @@ export default function BIMWorkspace({
           {imported.data.error}
         </div>
       )}
-      {file ? (
+      {viewFile ? (
         <Suspense
           fallback={
             <div className="loading-view">正在加载本地 IFC 渲染器…</div>
           }
         >
-          <IFCViewer file={file} impacted={impacted} onSelected={setSelected} />
+          <IFCViewer
+            file={viewFile}
+            impacted={impacted}
+            onSelected={(id) => {
+              setSelected(id);
+              onViewerSelected?.(id);
+            }}
+          />
         </Suspense>
       ) : (
         <>

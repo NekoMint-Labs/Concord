@@ -70,6 +70,11 @@ async function openSecondaryView(page: Page, label: string) {
   await page.getByRole('menuitem', { name: label, exact: true }).click();
 }
 
+async function selectDemoPackage(page: Page) {
+  await page.getByText('东翼风管安装', { exact: true }).first().click();
+  await expect(page.getByRole('heading', { level: 2, name: '东翼风管安装' })).toBeVisible();
+}
+
 test.beforeEach(async ({ request, page }) => {
   const reset = await request.post('/api/demo/reset', { headers: authorization });
   expect(reset.status()).toBe(202);
@@ -79,9 +84,12 @@ test.beforeEach(async ({ request, page }) => {
     return current.run?.id === resetRun.id && current.run.status === 'COMPLETED'
       && !current.stale && current.analysis?.readiness.every(row => row.status === 'READY');
   }).toBe(true);
-  await page.addInitScript(() => { if (!sessionStorage.getItem('cca-token')) sessionStorage.setItem('cca-token', 'local-demo-admin'); });
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem('cca-token')) sessionStorage.setItem('cca-token', 'local-demo-admin');
+    localStorage.setItem('concord:last-project', 'harbor-east');
+  });
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 2, name: '东翼风管安装' })).toBeVisible();
+  await selectDemoPackage(page);
 });
 
 test('coordinates a design change through evidence, approval, receipt, and a fresh recheck', async ({ page, request }) => {
@@ -158,6 +166,7 @@ test('inspection R4 requires exact typed confirmation', async ({ page, request }
   } });
   expect(response.status()).toBe(202);
   await page.reload();
+  await selectDemoPackage(page);
   await expectBlocked(page);
   await page.getByRole('button', { name: '批准并继续' }).click();
   const panel = inspector(page);
@@ -176,6 +185,7 @@ test('an outdated judgement is raised beside the work package, not as a global b
   // judgement is no longer current.
   await event(request, { revision: 'V18' });
   await page.reload();
+  await selectDemoPackage(page);
   await expectBlocked(page);
   // The work package reports its own state; nothing is raised application-wide.
   await expect(page.locator('.alert')).toHaveCount(0);
@@ -201,6 +211,7 @@ test('viewer can read but cannot approve or execute', async ({ page, request }) 
   await event(request);
   await page.evaluate(() => sessionStorage.setItem('cca-token', 'local-demo-viewer'));
   await page.reload();
+  await selectDemoPackage(page);
   await expectBlocked(page);
   await page.getByRole('button', { name: '批准并继续' }).click();
   const panel = inspector(page);

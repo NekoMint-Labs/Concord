@@ -72,3 +72,21 @@ it("offers the way back only while the column is gone", () => {
   fireEvent.click(screen.getByRole("button", { name: "展开侧栏" }));
   expect(onToggleNav).toHaveBeenCalledTimes(1);
 });
+
+it("labels the demo project distinctly in the existing project picker", () => {
+  render(
+    <ProjectSidebar
+      data={data}
+      project="harbor-east"
+      projects={projects}
+      recent={[]}
+      selected="WP-200"
+      onCollapse={() => {}}
+      onProject={() => {}}
+      onSelect={() => {}}
+    />,
+  );
+
+  const trigger = screen.getByRole("button", { name: "项目" });
+  expect(within(trigger).getByText("演示 / 示例")).toBeVisible();
+});

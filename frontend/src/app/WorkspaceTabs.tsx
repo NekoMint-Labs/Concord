@@ -26,6 +26,7 @@ import { useMotion } from "../motion";
  */
 export const primaryTabs = [
   { id: "coordination", label: "协调" },
+  { id: "sources", label: "项目来源" },
   { id: "bim", label: "BIM" },
   { id: "documents", label: "文档" },
 ] as const;
