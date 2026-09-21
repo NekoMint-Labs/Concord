@@ -9,6 +9,7 @@ import sysconfig
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_FEATURES = frozenset({"ifcopenshell", "ifcdiff"})
 
 
 def native_target() -> str:
@@ -32,7 +33,7 @@ def main() -> int:
         "--feature", action="append", choices=["ifcopenshell", "ortools", "docling"], default=[]
     )
     args = parser.parse_args()
-    features = sorted({"ifcopenshell", *args.feature})
+    features = sorted(DEFAULT_FEATURES | set(args.feature))
     for dependency in ["PyInstaller", "dbos", "tzdata", *features]:
         if importlib.util.find_spec(dependency) is None:
             raise SystemExit(

@@ -7,6 +7,7 @@ Only the lifecycle service may publish the returned drafts under its run fence.
 import hashlib
 from dataclasses import dataclass
 
+from app.domain.bim_revisions import BimElementSnapshot, BimRevisionSnapshot
 from app.domain.errors import CapabilityUnavailable, Conflict, ProviderError
 from app.domain.jobs import (
     BIMImport,
@@ -37,6 +38,7 @@ class PreparedCapabilityWork:
     bim_index: BIMIndex | None
     document: PreparedDocument | None
     embeddings: PreparedEmbeddingIndex | None
+    bim_revision: BimRevisionSnapshot | None
 
 
 def read_verified_source(
@@ -64,6 +66,7 @@ def prepare_capability_work(
     bim_index = None
     prepared_document = None
     prepared_embeddings = None
+    bim_revision = None
     if isinstance(request, DocumentImport):
         prepared_document = documents.prepare_file(
             job.project_id,
@@ -73,16 +76,39 @@ def prepare_capability_work(
         )
         result = prepared_document.metadata.model_dump(mode="json")
     elif isinstance(request, BIMImport):
+        import time
+
+        started = time.perf_counter()
         elements = ifc.parse(read_verified_source(storage, request))
         bim_index = BIMIndex(
-            source_id=request.source_id,
-            source_revision_id=request.source_revision_id,
             project_id=job.project_id,
             revision=request.content_hash,
             object_key=request.object_key,
             filename=request.filename,
             elements=tuple(e.model_dump(mode="json") for e in elements),
+            source_id=request.source_id,
+            source_revision_id=request.source_revision_id,
         )
+        if request.source_id and request.source_revision_id:
+            bim_revision = BimRevisionSnapshot(
+                project_id=job.project_id,
+                source_id=request.source_id,
+                revision_id=request.source_revision_id,
+                ifc_schema=elements[0].ifc_schema if elements else None,
+                import_seconds=time.perf_counter() - started,
+                elements=tuple(
+                    BimElementSnapshot(
+                        revision_id=request.source_revision_id,
+                        global_id=element.id,
+                        ifc_class=element.type,
+                        name=element.name,
+                        storey=element.storey,
+                        space=element.space,
+                        properties=element.properties,
+                    )
+                    for element in elements
+                ),
+            )
         result = {
             "element_count": len(elements),
             "revision": request.content_hash,
@@ -142,5 +168,5 @@ def prepare_capability_work(
     else:
         raise Conflict("Unrecognized capability job type")
     return PreparedCapabilityWork(
-        result, evidence, bim_index, prepared_document, prepared_embeddings
+        result, evidence, bim_index, prepared_document, prepared_embeddings, bim_revision
     )

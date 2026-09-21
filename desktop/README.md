@@ -35,8 +35,9 @@ script derives the host triple from rustc; it does not assume Windows on Linux. 
 outputs platform bundles under `desktop/src-tauri/target/release/bundle`. A packaged end
 user does not install Python, Node, Docker, PostgreSQL, or model keys.
 
-The desktop extra and sidecar build include IfcOpenShell by default. Optional
-OR-Tools/Docling must first be installed through uv extras, then included with
+The desktop extra and sidecar build include IfcOpenShell and IfcDiff by default, so
+stored IFC revisions can be imported and compared without a separate Python install.
+Optional OR-Tools/Docling must first be installed through uv extras, then included with
 `--feature ortools` or `--feature docling`. Docling model weights must be staged
 separately for offline PDF parsing. Desktop startup does not seed a demo;
 `CCA_SEED_DEMO=true` is an explicit regression/demo opt-in.
@@ -100,7 +101,9 @@ provider; only demo-project creation is opted in for this regression. WebDriver 
 selection does not qualify the OS file picker. This scenario also runs in the
 Windows/Linux native workflow, with separate JSON and screenshots.
 
-The packaged HTTP and Agent smoke commands also write their `--output` JSON on
+The packaged Agent smoke imports two IFC revisions and creates a persisted comparison
+through official IfcDiff in the actual sidecar executable. The packaged HTTP and Agent
+smoke commands also write their `--output` JSON on
 failure, before removing temporary fixture data. Reports retain startup stages
 (`launch`, `endpoint`, `health`, `ready`), endpoint/startup timings and child exit
 codes. Failure reports include bounded stdout/stderr tails with the per-run API

@@ -180,6 +180,7 @@ class CapabilityJobService:
         )
         result, evidence = prepared.result, prepared.evidence
         bim_index = prepared.bim_index
+        bim_revision = prepared.bim_revision
         prepared_document, prepared_embeddings = prepared.document, prepared.embeddings
         with self.factory.open(job.project_id, write=True) as repo:
             current = repo.run(run_id)
@@ -227,6 +228,15 @@ class CapabilityJobService:
                     )
                 current_state = repo.state(job.project_id)
                 repo.save_bim_index(bim_index)
+                if bim_revision is not None:
+                    if (
+                        repo.bim_revision_snapshot(
+                            job.project_id, bim_revision.source_id, bim_revision.revision_id
+                        )
+                        is not None
+                    ):
+                        raise Conflict("This source revision was imported by another job")
+                    repo.add_bim_revision_snapshot(bim_revision)
                 repo.save_state(revise(current_state, current_state.work_packages, {"bim"}))
             for item in evidence:
                 repo.save_evidence(item)

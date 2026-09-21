@@ -146,6 +146,28 @@ class ReadTools:
                 for identity in (query.from_revision_id, query.to_revision_id)
                 if identity
             }
+            scoped_elements: frozenset[str] | None = None
+            if self.scope.work_package_ids or self.scope.area_ids:
+                change_ids = {change.global_id for change in result.changes}
+                bound_elements = {
+                    binding.global_id
+                    for binding in repo.bim_bindings(
+                        self.state.project.id, query.source_id, change_ids
+                    )
+                    if binding.work_package_id in self.allowed_packages
+                }
+                bound_elements.update(
+                    identity
+                    for evidence in result.evidence
+                    if evidence.work_package_id in self.allowed_packages
+                    for identity in evidence.element_ids
+                    if identity in change_ids
+                )
+                scoped_elements = frozenset(bound_elements)
+                if change_ids - scoped_elements:
+                    raise ProviderError(
+                        "Engineering provider returned changes outside scope or current WP bindings"
+                    )
         if any(
             e.source_id != query.source_id or e.source_revision not in hashes
             for e in result.evidence
@@ -160,7 +182,8 @@ class ReadTools:
                     )
                 }
             )
-        result = self._engineering_result(result)
+            scoped_elements = frozenset(change.global_id for change in result.changes)
+        result = self._engineering_result(result, evidence_element_ids=scoped_elements)
         if any(
             not any(c.global_id in e.element_ids for e in result.evidence) for c in result.changes
         ):
@@ -216,7 +239,13 @@ class ReadTools:
         self.binding_results.append(result)
         return self.record("work_package_bindings", result)
 
-    def _engineering_result(self, result: ReadResult, *, revision_bound: bool = True) -> ReadResult:
+    def _engineering_result(
+        self,
+        result: ReadResult,
+        *,
+        revision_bound: bool = True,
+        evidence_element_ids: frozenset[str] | None = None,
+    ) -> ReadResult:
         if not result.available and (result.changes or result.bindings):
             raise ProviderError("Unavailable engineering results cannot supply facts")
         # Provider facts must already be persisted and project-scoped.
@@ -229,14 +258,19 @@ class ReadTools:
             }
         for evidence in result.evidence:
             if stored.get(evidence.id) != evidence or not self._in_scope(
-                evidence, revision_bound=revision_bound
+                evidence,
+                revision_bound=revision_bound,
+                evidence_element_ids=evidence_element_ids,
             ):
                 raise ProviderError("Engineering provider evidence is unpersisted or outside scope")
         if (result.changes or result.bindings) and not result.evidence:
             raise ProviderError("Engineering results require persisted supporting evidence")
         return result.model_copy(
             update={
-                "evidence": tuple(self._historical(e) for e in result.evidence),
+                "evidence": tuple(
+                    self._historical(e, evidence_element_ids=evidence_element_ids)
+                    for e in result.evidence
+                ),
                 "work_packages": (),
                 "sources": (),
                 "bindings": tuple(
@@ -247,22 +281,42 @@ class ReadTools:
             }
         )
 
-    def _historical(self, item: Evidence) -> Evidence:
+    def _historical(
+        self, item: Evidence, *, evidence_element_ids: frozenset[str] | None = None
+    ) -> Evidence:
+        element_ids = item.element_ids
+        if evidence_element_ids is not None:
+            element_ids = tuple(
+                identity for identity in item.element_ids if identity in evidence_element_ids
+            )
         return item.model_copy(
             update={
                 "id": new_id(),
                 "snapshot_id": self.snapshot.id,
+                "element_ids": element_ids,
                 "fact": (
                     f"Recorded evidence {item.id} from snapshot {item.snapshot_id}: {item.fact}"
                 ),
             }
         )
 
-    def _in_scope(self, item: Evidence, *, revision_bound: bool = True) -> bool:
+    def _in_scope(
+        self,
+        item: Evidence,
+        *,
+        revision_bound: bool = True,
+        evidence_element_ids: frozenset[str] | None = None,
+    ) -> bool:
         if item.work_package_id and item.work_package_id not in self.allowed_packages:
             return False
-        if self.scope.element_ids and not set(item.element_ids).intersection(
-            self.scope.element_ids
+        if evidence_element_ids is not None and not evidence_element_ids.intersection(
+            item.element_ids
+        ):
+            return False
+        if (
+            evidence_element_ids is None
+            and self.scope.element_ids
+            and not set(item.element_ids).intersection(self.scope.element_ids)
         ):
             return False
         if self.scope.source_id and item.source_id != self.scope.source_id:
@@ -273,7 +327,11 @@ class ReadTools:
             and (item.source_revision not in self.revision_hashes)
         ):
             return False
-        if (self.scope.work_package_ids or self.scope.area_ids) and not item.work_package_id:
+        if (
+            (self.scope.work_package_ids or self.scope.area_ids)
+            and not item.work_package_id
+            and evidence_element_ids is None
+        ):
             return False
         return True
 

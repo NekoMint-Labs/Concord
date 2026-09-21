@@ -1540,6 +1540,404 @@
         }
       }
     },
+    "/api/projects/{project_id}/sources/{source_id}/revisions/{revision_id}/bim-snapshot": {
+      "get": {
+        "tags": [
+          "bim-revisions"
+        ],
+        "summary": "Revision Snapshot",
+        "operationId": "revision_snapshot_api_projects__project_id__sources__source_id__revisions__revision_id__bim_snapshot_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          },
+          {
+            "name": "revision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Revision Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BimRevisionSnapshot"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/sources/{source_id}/bim-bindings": {
+      "post": {
+        "tags": [
+          "bim-revisions"
+        ],
+        "summary": "Confirm Bindings",
+        "operationId": "confirm_bindings_api_projects__project_id__sources__source_id__bim_bindings_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmBimBindings"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkPackageBimBinding"
+                  },
+                  "title": "Response Confirm Bindings Api Projects  Project Id  Sources  Source Id  Bim Bindings Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "bim-revisions"
+        ],
+        "summary": "Binding Statuses",
+        "operationId": "binding_statuses_api_projects__project_id__sources__source_id__bim_bindings_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          },
+          {
+            "name": "revision_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Revision Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BimBindingStatus"
+                  },
+                  "title": "Response Binding Statuses Api Projects  Project Id  Sources  Source Id  Bim Bindings Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/sources/{source_id}/bim-comparisons": {
+      "post": {
+        "tags": [
+          "bim-revisions"
+        ],
+        "summary": "Compare Revisions",
+        "operationId": "compare_revisions_api_projects__project_id__sources__source_id__bim_comparisons_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareBimRevisions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionComparisonDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "bim-revisions"
+        ],
+        "summary": "Comparisons",
+        "operationId": "comparisons_api_projects__project_id__sources__source_id__bim_comparisons_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RevisionComparison"
+                  },
+                  "title": "Response Comparisons Api Projects  Project Id  Sources  Source Id  Bim Comparisons Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/sources/{source_id}/bim-comparisons/{comparison_id}": {
+      "get": {
+        "tags": [
+          "bim-revisions"
+        ],
+        "summary": "Comparison Detail",
+        "operationId": "comparison_detail_api_projects__project_id__sources__source_id__bim_comparisons__comparison_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          },
+          {
+            "name": "comparison_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Comparison Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionComparisonDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs/{run_id}": {
       "get": {
         "tags": [
@@ -3112,6 +3510,28 @@
         ],
         "title": "ActionProposal"
       },
+      "AffectedWorkPackage": {
+        "properties": {
+          "work_package_id": {
+            "type": "string",
+            "title": "Work Package Id"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/BimElementChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "work_package_id",
+          "changes"
+        ],
+        "title": "AffectedWorkPackage"
+      },
       "AgentAnswer": {
         "properties": {
           "summary": {
@@ -3890,6 +4310,17 @@
           "revision": {
             "type": "string",
             "title": "Revision"
+          },
+          "ifc_schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ifc Schema"
           }
         },
         "additionalProperties": false,
@@ -3902,7 +4333,8 @@
           "space",
           "properties",
           "related_ids",
-          "revision"
+          "revision",
+          "ifc_schema"
         ],
         "title": "BIMElement"
       },
@@ -4054,6 +4486,244 @@
           "revision_id"
         ],
         "title": "BaselineEntry"
+      },
+      "BimBindingStatus": {
+        "properties": {
+          "binding": {
+            "$ref": "#/components/schemas/WorkPackageBimBinding"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id"
+          },
+          "element": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BimElementSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "present",
+              "missing",
+              "not_imported"
+            ],
+            "title": "State"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "binding",
+          "revision_id",
+          "element",
+          "state"
+        ],
+        "title": "BimBindingStatus"
+      },
+      "BimElementChange": {
+        "properties": {
+          "comparison_id": {
+            "type": "string",
+            "title": "Comparison Id"
+          },
+          "global_id": {
+            "type": "string",
+            "title": "Global Id"
+          },
+          "change_kind": {
+            "type": "string",
+            "enum": [
+              "added",
+              "deleted",
+              "changed"
+            ],
+            "title": "Change Kind"
+          },
+          "changed_aspects": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changed Aspects",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "comparison_id",
+          "global_id",
+          "change_kind",
+          "changed_aspects"
+        ],
+        "title": "BimElementChange"
+      },
+      "BimElementSnapshot": {
+        "properties": {
+          "revision_id": {
+            "type": "string",
+            "title": "Revision Id"
+          },
+          "global_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Global Id"
+          },
+          "ifc_class": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Ifc Class"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "storey": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storey"
+          },
+          "space": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Space"
+          },
+          "properties": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Properties"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "revision_id",
+          "global_id",
+          "ifc_class",
+          "name",
+          "storey",
+          "space",
+          "properties"
+        ],
+        "title": "BimElementSnapshot"
+      },
+      "BimRevisionSnapshot": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "revision_id": {
+            "type": "string",
+            "title": "Revision Id"
+          },
+          "ifc_schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ifc Schema"
+          },
+          "imported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Imported At"
+          },
+          "import_seconds": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Import Seconds",
+            "default": 0
+          },
+          "elements": {
+            "items": {
+              "$ref": "#/components/schemas/BimElementSnapshot"
+            },
+            "type": "array",
+            "title": "Elements"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "project_id",
+          "source_id",
+          "revision_id",
+          "ifc_schema",
+          "imported_at",
+          "import_seconds",
+          "elements"
+        ],
+        "title": "BimRevisionSnapshot"
+      },
+      "BindingInput": {
+        "properties": {
+          "work_package_id": {
+            "type": "string",
+            "title": "Work Package Id"
+          },
+          "global_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Global Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "work_package_id",
+          "global_ids"
+        ],
+        "title": "BindingInput"
       },
       "Body_import_document_api_projects__project_id__documents_post": {
         "properties": {
@@ -4306,6 +4976,117 @@
           "capabilities"
         ],
         "title": "CapabilityResponse"
+      },
+      "CompareBimRevisions": {
+        "properties": {
+          "from_revision_id": {
+            "type": "string",
+            "title": "From Revision Id"
+          },
+          "to_revision_id": {
+            "type": "string",
+            "title": "To Revision Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "from_revision_id",
+          "to_revision_id"
+        ],
+        "title": "CompareBimRevisions"
+      },
+      "ComparisonSummary": {
+        "properties": {
+          "added": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Added"
+          },
+          "deleted": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Deleted"
+          },
+          "changed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Changed"
+          },
+          "from_elements": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "From Elements"
+          },
+          "to_elements": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "To Elements"
+          },
+          "common_global_ids": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Common Global Ids"
+          },
+          "global_id_continuity": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Global Id Continuity"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          },
+          "compare_seconds": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Compare Seconds",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "added",
+          "deleted",
+          "changed",
+          "from_elements",
+          "to_elements",
+          "common_global_ids",
+          "global_id_continuity",
+          "warnings",
+          "compare_seconds"
+        ],
+        "title": "ComparisonSummary"
+      },
+      "ConfirmBimBindings": {
+        "properties": {
+          "revision_id": {
+            "type": "string",
+            "title": "Revision Id"
+          },
+          "bindings": {
+            "items": {
+              "$ref": "#/components/schemas/BindingInput"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Bindings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "revision_id",
+          "bindings"
+        ],
+        "title": "ConfirmBimBindings"
       },
       "Constraint": {
         "properties": {
@@ -5982,6 +6763,110 @@
         ],
         "title": "ResolutionOption"
       },
+      "RevisionComparison": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "from_revision_id": {
+            "type": "string",
+            "title": "From Revision Id"
+          },
+          "to_revision_id": {
+            "type": "string",
+            "title": "To Revision Id"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "status": {
+            "type": "string",
+            "const": "COMPLETED",
+            "title": "Status",
+            "default": "COMPLETED"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ComparisonSummary"
+          },
+          "raw_result_key": {
+            "type": "string",
+            "title": "Raw Result Key"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids",
+            "default": []
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "source_id",
+          "from_revision_id",
+          "to_revision_id",
+          "engine",
+          "engine_version",
+          "status",
+          "summary",
+          "raw_result_key",
+          "evidence_ids",
+          "created_at"
+        ],
+        "title": "RevisionComparison"
+      },
+      "RevisionComparisonDetail": {
+        "properties": {
+          "comparison": {
+            "$ref": "#/components/schemas/RevisionComparison"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/BimElementChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "affected_work_packages": {
+            "items": {
+              "$ref": "#/components/schemas/AffectedWorkPackage"
+            },
+            "type": "array",
+            "title": "Affected Work Packages"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "comparison",
+          "changes",
+          "affected_work_packages"
+        ],
+        "title": "RevisionComparisonDetail"
+      },
       "RevisionUploadResult": {
         "properties": {
           "revision": {
@@ -6621,6 +7506,81 @@
           "owner"
         ],
         "title": "WorkPackage"
+      },
+      "WorkPackageBimBinding": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "work_package_id": {
+            "type": "string",
+            "title": "Work Package Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "global_id": {
+            "type": "string",
+            "title": "Global Id"
+          },
+          "confirmation_revision_id": {
+            "type": "string",
+            "title": "Confirmation Revision Id"
+          },
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id"
+          },
+          "origin": {
+            "type": "string",
+            "const": "human_confirmed",
+            "title": "Origin",
+            "default": "human_confirmed"
+          },
+          "confirmed_by": {
+            "type": "string",
+            "title": "Confirmed By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "retired_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retired At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "work_package_id",
+          "source_id",
+          "global_id",
+          "confirmation_revision_id",
+          "evidence_id",
+          "origin",
+          "confirmed_by",
+          "created_at",
+          "retired_at"
+        ],
+        "title": "WorkPackageBimBinding"
       },
       "WorkspaceResponse": {
         "properties": {

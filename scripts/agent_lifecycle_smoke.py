@@ -1,7 +1,7 @@
-"""Real HTTP/DBOS restart check for an empty project, IFC revisions and scoped Agent work.
+"""Real HTTP/DBOS check for IFC comparison, restart recovery and scoped Agent work.
 
-Pass --sidecar to exercise the actual packaged executable. This checks backend
-delivery, not Tauri WebView interaction or C's still-separate IFC diff engine.
+Pass --sidecar to exercise the actual packaged executable, including its bundled
+IfcOpenShell and IfcDiff dependencies. This does not exercise Tauri WebView interaction.
 """
 
 import argparse
@@ -60,6 +60,17 @@ def exercise(folder: Path, executable: Path | None = None, *, token: str) -> dic
         run = server.post(source_root + f"/revisions/{r2['id']}/import")
         server.wait(lambda: server.get(f"/api/runs/{run['id']}")["status"] == "COMPLETED")
         assert server.get(root + "/bim/elements")[0]["name"] == "Wall R2"
+        comparison = server.post(
+            source_root + "/bim-comparisons",
+            {"from_revision_id": r1["id"], "to_revision_id": r2["id"]},
+            201,
+        )
+        assert comparison["comparison"]["engine"] == "ifcdiff"
+        assert comparison["comparison"]["summary"]["changed"] == 1
+        assert [change["global_id"] for change in comparison["changes"]] == [
+            "1YvctVUKr0kugbFTf53O9L"
+        ]
+        assert comparison["changes"][0]["change_kind"] == "changed"
         assert server.get(root + f"/baselines/{baseline['id']}") == baseline
         assert len(server.get(root + "/agent/notices")) == 2
         answer = server.post(
@@ -75,7 +86,9 @@ def exercise(folder: Path, executable: Path | None = None, *, token: str) -> dic
             200,
         )
         assert answer["persisted"] is False
-        assert any("not connected" in text for text in answer["answer"]["limitations"])
+        assert all(
+            "have not been compared" not in text for text in answer["answer"]["limitations"]
+        )
         event = server.post(
             root + "/events",
             {
@@ -116,6 +129,7 @@ def exercise(folder: Path, executable: Path | None = None, *, token: str) -> dic
             "checks": [
                 "empty-project",
                 "ifc-revision-identity",
+                "official-ifcdiff-comparison",
                 "baseline-preserved",
                 "suggest-notices",
                 "read-only-ask",
@@ -127,7 +141,6 @@ def exercise(folder: Path, executable: Path | None = None, *, token: str) -> dic
             ],
             "limitations": [
                 "Action executor is simulated",
-                "No BIM diff/binding provider connected",
                 "Tauri WebView not exercised",
             ],
         }

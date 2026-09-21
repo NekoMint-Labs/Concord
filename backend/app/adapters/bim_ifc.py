@@ -95,6 +95,9 @@ class IfcOpenShellBIMProvider:
                         sorted(x.GlobalId for x in related if getattr(x, "GlobalId", None))
                     ),
                     revision=self.revision,
+                    ifc_schema=(
+                        str(schema) if (schema := getattr(model, "schema", None)) else None
+                    ),
                 )
             )
         return result

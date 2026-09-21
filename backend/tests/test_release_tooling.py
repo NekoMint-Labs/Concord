@@ -108,6 +108,37 @@ def test_desktop_resolves_only_installed_package_cli(tmp_path, monkeypatch, entr
             module.cli_command(tmp_path)
 
 
+def test_packaged_sidecar_collects_default_bim_comparison_dependencies(tmp_path, monkeypatch):
+    module = load("build_sidecar")
+    collected = []
+    discovered = []
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    monkeypatch.setattr(module, "native_target", lambda: "test-target")
+    monkeypatch.setattr(module.sys, "argv", ["build_sidecar.py"])
+    monkeypatch.setattr(
+        module.importlib.util,
+        "find_spec",
+        lambda name: discovered.append(name) or object(),
+    )
+
+    def package(command, **_kwargs):
+        collected.extend(command)
+        suffix = ".exe" if module.sys.platform == "win32" else ""
+        output = tmp_path / "artifacts/sidecar" / f"cca-sidecar{suffix}"
+        output.parent.mkdir(parents=True)
+        output.write_bytes(b"packaged")
+
+    monkeypatch.setattr(module.subprocess, "run", package)
+    assert module.main() == 0
+    assert {"ifcopenshell", "ifcdiff"} <= set(discovered)
+    collected_packages = {
+        collected[index + 1]
+        for index, argument in enumerate(collected[:-1])
+        if argument == "--collect-all"
+    }
+    assert {"ifcopenshell", "ifcdiff"} <= collected_packages
+
+
 @pytest.mark.parametrize(
     "body, valid",
     [

@@ -1,6 +1,7 @@
 """Real optional SDK tests. Missing packages produce explicit skips, not fake passes."""
 
 import hashlib
+import time
 from pathlib import Path
 
 import pytest
@@ -8,13 +9,37 @@ from app.adapters.bim_ifc import IfcOpenShellBIMProvider, LocalIFCImporter
 from app.adapters.demo import StructuredBIMProvider
 from app.adapters.demo_ids import DUCT_GUID, TRAY_GUID, WALL_GUID
 from app.adapters.documents_docling import DoclingDocumentParser
+from app.adapters.ifc_diff import OfficialIfcDiffEngine
 from app.adapters.ifc_fixture import generate_ifc_fixture
 from app.adapters.resolver_ortools import ORToolsResolver
 from app.adapters.scheduling_fixture import coordination_fixture
-from app.domain.errors import ProviderError
+from app.domain.errors import CapabilityUnavailable, ProviderError
 from app.domain.scheduling import validate_solution
 
 pytestmark = pytest.mark.integration
+
+
+def _write_comparison_fixture(path: Path, schema: str, *, revised: bool) -> int:
+    ifcopenshell = pytest.importorskip("ifcopenshell")
+    model = ifcopenshell.file(schema=schema)
+    stable_id = "0JYqfQ6zP6LQxgT6eT8v1A"
+    removed_id = "1JYqfQ6zP6LQxgT6eT8v1B"
+    added_id = "2JYqfQ6zP6LQxgT6eT8v1C"
+    model.create_entity(
+        "IfcProject", GlobalId="3JYqfQ6zP6LQxgT6eT8v1D", Name="Unfamiliar clinic project"
+    )
+    model.create_entity(
+        "IfcWall",
+        GlobalId=stable_id,
+        Name="Clinic partition revised" if revised else "Clinic partition",
+    )
+    model.create_entity(
+        "IfcWall",
+        GlobalId=added_id if revised else removed_id,
+        Name="New service wall" if revised else "Temporary wall",
+    )
+    model.write(str(path))
+    return len(model.by_type("IfcElement"))
 
 
 def test_real_ortools_capacity_precedence_and_qualification():
@@ -91,6 +116,53 @@ def test_real_ifc_rejects_malformed_input(tmp_path):
     path.write_text("not an IFC file")
     with pytest.raises(ProviderError):
         IfcOpenShellBIMProvider(path).elements()
+
+
+@pytest.mark.parametrize("schema", ["IFC4", "IFC2X3"])
+def test_official_ifcdiff_normalizes_revision_changes(tmp_path, schema, record_property):
+    pytest.importorskip("ifcdiff")
+    old_path = tmp_path / f"clinic-{schema}-r1.ifc"
+    new_path = tmp_path / f"clinic-{schema}-r2.ifc"
+    old_count = _write_comparison_fixture(old_path, schema, revised=False)
+    new_count = _write_comparison_fixture(new_path, schema, revised=True)
+
+    started = time.perf_counter()
+    old_elements = LocalIFCImporter().parse(old_path.read_bytes())
+    old_import_seconds = time.perf_counter() - started
+    started = time.perf_counter()
+    new_elements = LocalIFCImporter().parse(new_path.read_bytes())
+    new_import_seconds = time.perf_counter() - started
+    result = OfficialIfcDiffEngine().compare(old_path.read_bytes(), new_path.read_bytes())
+
+    assert len(old_elements) == old_count == 2
+    assert len(new_elements) == new_count == 2
+    assert result.engine == "ifcdiff"
+    assert result.engine_version != "unknown"
+    assert result.added == frozenset({"2JYqfQ6zP6LQxgT6eT8v1C"})
+    assert result.deleted == frozenset({"1JYqfQ6zP6LQxgT6eT8v1B"})
+    assert "attributes" in result.changed["0JYqfQ6zP6LQxgT6eT8v1A"]
+    assert result.compare_seconds > 0
+    record_property("ifc_schema", schema)
+    record_property("from_element_count", old_count)
+    record_property("to_element_count", new_count)
+    record_property("from_import_seconds", old_import_seconds)
+    record_property("to_import_seconds", new_import_seconds)
+    record_property("compare_seconds", result.compare_seconds)
+
+
+def test_official_ifcdiff_reports_missing_sdk(monkeypatch):
+    def missing(_name):
+        raise ImportError
+
+    monkeypatch.setattr("app.adapters.ifc_diff.import_module", missing)
+    with pytest.raises(CapabilityUnavailable):
+        OfficialIfcDiffEngine().compare(b"old", b"new")
+
+
+def test_official_ifcdiff_rejects_malformed_revisions():
+    pytest.importorskip("ifcdiff")
+    with pytest.raises(ProviderError):
+        OfficialIfcDiffEngine().compare(b"not an IFC", b"also not an IFC")
 
 
 def test_real_docling_preserves_source_and_item_location():

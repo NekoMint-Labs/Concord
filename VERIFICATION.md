@@ -121,6 +121,11 @@ code signing/notarization, and final production release qualification remain sep
 future release work. A successful source build is not evidence of a signed, notarized,
 or distributable production release.
 
+The native workflow's packaged Agent smoke imports two IFC revisions and creates a
+persisted R1-to-R2 comparison with official IfcDiff through the built sidecar. This
+qualifies the Desktop package's default IFC import and revision-comparison dependencies,
+not only the source SDK environment.
+
 ## Regression coverage
 
 The regression suites cover worker fencing, cancellation/resume generations, stale
