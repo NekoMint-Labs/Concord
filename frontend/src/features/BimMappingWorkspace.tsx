@@ -8,6 +8,7 @@ import {
 } from "../api/client";
 import { Button } from "../components/ui/button";
 import BIMWorkspace from "../viewers/BIMWorkspace";
+import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
 
 export function filterBimCandidates(
   elements: readonly DTO<"BimElementSnapshot">[],
@@ -39,6 +40,7 @@ export function BimMappingWorkspace({
   condensed,
   onContext,
   onInvestigate,
+  onOpenInvestigation,
 }: {
   project: string;
   workPackageId: string;
@@ -59,6 +61,7 @@ export function BimMappingWorkspace({
     elementIds: string[],
     fromRevisionId?: string,
   ) => void;
+  onOpenInvestigation?: () => void;
 }) {
   const cache = useQueryClient();
   const sources = useQuery({
@@ -187,222 +190,244 @@ export function BimMappingWorkspace({
 
   return (
     <section className="mapping-workspace">
-      <div className="mapping-controls">
-        <header>
-          <div>
-            <span className="eyebrow">{workPackageId}</span>
-            <h2>关联 BIM</h2>
-          </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={!sourceId || !revisionId}
-            onClick={() =>
-              onInvestigate(
-                sourceId,
-                revisionId,
-                intentIds,
-                inspectionMode ? initial?.fromRevisionId : undefined,
-              )
-            }
-          >
-            让 Concord 调查当前选择
-          </Button>
-        </header>
-        <label className="form-label">
-          BIM 来源
-          <select
-            value={sourceId}
-            onChange={(event) => {
-              setSourceId(event.target.value);
-              setSelected([]);
-            }}
-          >
-            <option value="">选择已上传来源</option>
-            {bimSources.map((item) => (
-              <option key={item.source.id} value={item.source.id}>
-                {item.source.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {!bimSources.length && (
-          <div className="impact-empty">
-            <strong>尚无 BIM 来源</strong>
-            <span>先在「项目来源」创建 BIM 来源并上传 IFC。</span>
-          </div>
-        )}
-        {snapshot.isError && (
-          <div className="impact-empty is-error">
-            <strong>此版本尚未导入</strong>
-            <span>原始文件已保存，但 IFC 解析尚未完成。</span>
-          </div>
-        )}
-        {changes.length > 0 && (
-          <section className="existing-bindings" aria-label="比较变更构件">
-            <span className="fact-label">比较变更构件</span>
-            {changes.map((change) => {
-              const renderable = elements.some(
-                (element) => element.global_id === change.global_id,
-              );
-              return (
-                <div key={`${change.change_kind}:${change.global_id}`}>
-                  <code>{change.global_id}</code>
-                  <span className={`binding-state is-${change.change_kind}`}>
-                    {change.change_kind}
-                    {!renderable && change.change_kind === "deleted"
-                      ? " · 目标版本无几何（历史变更保留）"
-                      : !renderable
-                        ? " · 目标版本不可渲染"
-                        : " · 可在目标版本中定位"}
-                  </span>
-                </div>
-              );
-            })}
-          </section>
-        )}
-        {snapshot.data && (
-          <>
-            <div className="mapping-filters">
-              <label>
-                楼层
-                <select
-                  value={storey}
-                  onChange={(e) => setStorey(e.target.value)}
-                >
-                  <option value="">全部</option>
-                  {values("storey").map((value) => (
-                    <option key={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                空间
-                <select
-                  value={space}
-                  onChange={(e) => setSpace(e.target.value)}
-                >
-                  <option value="">全部</option>
-                  {values("space").map((value) => (
-                    <option key={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                IFC 类型
-                <select
-                  value={ifcClass}
-                  onChange={(e) => setIfcClass(e.target.value)}
-                >
-                  <option value="">全部</option>
-                  {values("ifc_class").map((value) => (
-                    <option key={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
+      <PaneSplit id="bim-mapping" persist>
+        <Pane
+          className="mapping-controls"
+          defaultSize="320px"
+          minSize="260px"
+          maxSize="440px"
+        >
+          <header>
+            <div>
+              <span className="eyebrow">{workPackageId}</span>
+              <h2>关联 BIM</h2>
             </div>
-            {!inspectionMode && (
-              <div className="candidate-heading">
-                <strong>{candidates.length} 个候选构件</strong>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelected(candidates.map((item) => item.global_id))
-                  }
-                >
-                  选择全部
-                </button>
-                <button type="button" onClick={() => setSelected([])}>
-                  清除选择
-                </button>
-              </div>
-            )}
-            {inspectionMode && (
-              <p className="viewer-status">
-                影响检查为只读；只有从工作包主动进入「关联 BIM」后才能确认绑定。
-              </p>
-            )}
-            <div className="candidate-list">
-              {candidates.map((item) => (
-                <label key={item.global_id}>
-                  <input
-                    type="checkbox"
-                    checked={
-                      inspectionMode
-                        ? inspectionIds.includes(item.global_id)
-                        : selected.includes(item.global_id)
-                    }
-                    disabled={inspectionMode}
-                    onChange={(event) =>
-                      setSelected((items) =>
-                        event.target.checked
-                          ? [...items, item.global_id]
-                          : items.filter((id) => id !== item.global_id),
-                      )
-                    }
-                  />
-                  <span>
-                    <strong>{item.name || item.ifc_class}</strong>
-                    <small>
-                      {item.ifc_class} · {item.storey || "无楼层"} ·{" "}
-                      {item.space || "无空间"}
-                    </small>
-                    <small className="mono">{item.global_id}</small>
-                  </span>
-                </label>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!sourceId || !revisionId}
+              onClick={() =>
+                onInvestigate(
+                  sourceId,
+                  revisionId,
+                  intentIds,
+                  inspectionMode ? initial?.fromRevisionId : undefined,
+                )
+              }
+            >
+              让 Concord 调查当前选择
+            </Button>
+          </header>
+          <label className="form-label">
+            BIM 来源
+            <select
+              value={sourceId}
+              onChange={(event) => {
+                setSourceId(event.target.value);
+                setSelected([]);
+              }}
+            >
+              <option value="">选择已上传来源</option>
+              {bimSources.map((item) => (
+                <option key={item.source.id} value={item.source.id}>
+                  {item.source.name}
+                </option>
               ))}
+            </select>
+          </label>
+          {!bimSources.length && (
+            <div className="impact-empty">
+              <strong>尚无 BIM 来源</strong>
+              <span>先在「项目来源」创建 BIM 来源并上传 IFC。</span>
             </div>
-            {!inspectionMode && (
-              <Button
-                disabled={!selected.length || confirm.isPending}
-                onClick={() => confirm.mutate()}
-              >
-                确认关联 {selected.length} 个构件
-              </Button>
+          )}
+          {snapshot.isError && (
+            <div className="impact-empty is-error">
+              <strong>此版本尚未导入</strong>
+              <span>原始文件已保存，但 IFC 解析尚未完成。</span>
+            </div>
+          )}
+          {changes.length > 0 && (
+            <section className="existing-bindings" aria-label="比较变更构件">
+              <span className="fact-label">比较变更构件</span>
+              {changes.map((change) => {
+                const renderable = elements.some(
+                  (element) => element.global_id === change.global_id,
+                );
+                return (
+                  <div key={`${change.change_kind}:${change.global_id}`}>
+                    <code>{change.global_id}</code>
+                    <span className={`binding-state is-${change.change_kind}`}>
+                      {change.change_kind}
+                      {!renderable && change.change_kind === "deleted"
+                        ? " · 目标版本无几何（历史变更保留）"
+                        : !renderable
+                          ? " · 目标版本不可渲染"
+                          : " · 可在目标版本中定位"}
+                    </span>
+                  </div>
+                );
+              })}
+            </section>
+          )}
+          {snapshot.data && (
+            <>
+              <div className="mapping-filters">
+                <label>
+                  楼层
+                  <select
+                    value={storey}
+                    onChange={(e) => setStorey(e.target.value)}
+                  >
+                    <option value="">全部</option>
+                    {values("storey").map((value) => (
+                      <option key={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  空间
+                  <select
+                    value={space}
+                    onChange={(e) => setSpace(e.target.value)}
+                  >
+                    <option value="">全部</option>
+                    {values("space").map((value) => (
+                      <option key={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  IFC 类型
+                  <select
+                    value={ifcClass}
+                    onChange={(e) => setIfcClass(e.target.value)}
+                  >
+                    <option value="">全部</option>
+                    {values("ifc_class").map((value) => (
+                      <option key={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {!inspectionMode && (
+                <div className="candidate-heading">
+                  <strong>{candidates.length} 个候选构件</strong>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelected(candidates.map((item) => item.global_id))
+                    }
+                  >
+                    选择全部
+                  </button>
+                  <button type="button" onClick={() => setSelected([])}>
+                    清除选择
+                  </button>
+                </div>
+              )}
+              {inspectionMode && (
+                <p className="viewer-status">
+                  影响检查为只读；只有从工作包主动进入「关联
+                  BIM」后才能确认绑定。
+                </p>
+              )}
+              <div className="candidate-list">
+                {candidates.map((item) => (
+                  <label key={item.global_id}>
+                    <input
+                      type="checkbox"
+                      checked={
+                        inspectionMode
+                          ? inspectionIds.includes(item.global_id)
+                          : selected.includes(item.global_id)
+                      }
+                      disabled={inspectionMode}
+                      onChange={(event) =>
+                        setSelected((items) =>
+                          event.target.checked
+                            ? [...items, item.global_id]
+                            : items.filter((id) => id !== item.global_id),
+                        )
+                      }
+                    />
+                    <span>
+                      <strong>{item.name || item.ifc_class}</strong>
+                      <small>
+                        {item.ifc_class} · {item.storey || "无楼层"} ·{" "}
+                        {item.space || "无空间"}
+                      </small>
+                      <small className="mono">{item.global_id}</small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {!inspectionMode && (
+                <Button
+                  disabled={!selected.length || confirm.isPending}
+                  onClick={() => confirm.mutate()}
+                >
+                  确认关联 {selected.length} 个构件
+                </Button>
+              )}
+            </>
+          )}
+          <section className="existing-bindings">
+            <span className="fact-label">现有绑定</span>
+            {existing.map((item) => (
+              <div key={item.binding.id}>
+                <code>{item.binding.global_id}</code>
+                <span className={`binding-state is-${item.state}`}>
+                  {item.state === "present"
+                    ? "当前版本存在"
+                    : item.state === "missing"
+                      ? "当前版本缺失（保留历史绑定）"
+                      : "版本尚未导入"}
+                </span>
+              </div>
+            ))}
+            {!existing.length && (
+              <p className="quiet-message">尚未确认绑定。</p>
             )}
-          </>
-        )}
-        <section className="existing-bindings">
-          <span className="fact-label">现有绑定</span>
-          {existing.map((item) => (
-            <div key={item.binding.id}>
-              <code>{item.binding.global_id}</code>
-              <span className={`binding-state is-${item.state}`}>
-                {item.state === "present"
-                  ? "当前版本存在"
-                  : item.state === "missing"
-                    ? "当前版本缺失（保留历史绑定）"
-                    : "版本尚未导入"}
-              </span>
-            </div>
-          ))}
-          {!existing.length && <p className="quiet-message">尚未确认绑定。</p>}
-        </section>
-        {confirm.error && <p className="alert">{confirm.error.message}</p>}
-        {report?.scope.work_package_ids.includes(workPackageId) && (
-          <section className="context-agent-result">
-            <span className="eyebrow">Concord 调查结果</span>
-            <p>{report.answer.summary}</p>
-            <small>{report.evidence.length} 条已持久化 Evidence</small>
           </section>
-        )}
-      </div>
-      <div className="mapping-viewer">
-        {fileError && <p className="alert">{fileError}</p>}
-        <BIMWorkspace
-          project={project}
-          impacted={intentIds}
-          condensed={condensed}
-          externalFile={file}
-          hideSourceActions
-          onViewerSelected={(id) => {
-            if (inspectionMode) return;
-            setSelected((items) =>
-              id && !items.includes(id) ? [...items, id] : items,
-            );
-          }}
-        />
-      </div>
+          {confirm.error && <p className="alert">{confirm.error.message}</p>}
+          {report?.scope.work_package_ids.includes(workPackageId) && (
+            <section className="context-agent-result">
+              <span className="eyebrow">Concord 调查结果</span>
+              <p>{report.answer.summary}</p>
+              <div className="context-agent-result-footer">
+                <small>{report.evidence.length} 条已持久化 Evidence</small>
+                {onOpenInvestigation && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={onOpenInvestigation}
+                  >
+                    查看调查结果
+                  </Button>
+                )}
+              </div>
+            </section>
+          )}
+        </Pane>
+        <PaneDivider label="调整 BIM 关联面板宽度" />
+        <Pane className="mapping-viewer">
+          {fileError && <p className="alert">{fileError}</p>}
+          <BIMWorkspace
+            project={project}
+            impacted={intentIds}
+            condensed={condensed}
+            externalFile={file}
+            hideSourceActions
+            onViewerSelected={(id) => {
+              if (inspectionMode) return;
+              setSelected((items) =>
+                id && !items.includes(id) ? [...items, id] : items,
+              );
+            }}
+          />
+        </Pane>
+      </PaneSplit>
     </section>
   );
 }

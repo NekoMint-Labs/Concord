@@ -148,8 +148,11 @@
   letter-spacing: 0.08em;
   color: var(--muted-2);
 }
+.sidebar-header {
+  flex-shrink: 0;
+}
 .project-picker {
-  padding: 0 8px 10px;
+  padding: 0 8px 8px;
 }
 /*
  * The picker is a wide control, not a menu label: the trigger owns the row.
@@ -176,7 +179,7 @@
   align-items: center;
   gap: var(--icon-gap);
   width: 100%;
-  height: var(--control-h);
+  height: 34px;
   padding: 0 6px 0 8px;
   border: 0;
   border-radius: var(--radius-md);
@@ -233,10 +236,33 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.15;
 }
-.sidebar-section {
-  padding: 10px 8px 20px;
+.project-trigger .project-name small {
+  display: block;
+  margin-bottom: 1px;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+  font-weight: 400;
+}
+.project-trigger .project-name strong {
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 600;
+}
+.project-trigger .project-name > span {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 400;
+}
+.sidebar-content {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
+}
+.sidebar-group {
+  padding: 10px 8px 20px;
 }
 /*
  * Three levels, three treatments, so the hierarchy is legible without a single
@@ -258,12 +284,42 @@
  * is not touched on either - both carry Chinese product text, where a 500-to-600
  * difference renders as identical (frontend/src/styles/base.css).
  */
-.sidebar-label {
-  padding: 0 8px 8px;
+.sidebar-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 25px;
+  padding: 0 4px 6px 8px;
   color: var(--muted-2);
   font-size: var(--fs-label);
   font-weight: 500;
   letter-spacing: 0.08em;
+}
+.sidebar-group-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 25px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  letter-spacing: 0;
+}
+.sidebar-group-create:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.package-nav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sidebar-empty {
+  padding: 8px;
 }
 /*
  * The section opens the list with the largest gap in the column, and the group

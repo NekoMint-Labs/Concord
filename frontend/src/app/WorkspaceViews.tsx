@@ -1,8 +1,9 @@
 import { lazy, Suspense } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import type { AgentRun, InvestigationReport, Workspace } from "../api/client";
 import type { BimMappingContext } from "../features/BimMappingWorkspace";
 import { ViewerBoundary } from "../components/ViewerBoundary";
+import { Button } from "../components/ui/button";
 import { icon } from "../components/ui/icon";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
 import {
@@ -11,7 +12,12 @@ import {
   usePaneWidth,
 } from "../layout/paneBudget";
 import { CoordinationWorkspace } from "../features/CoordinationWorkspace";
-import { Inspector, type InspectorView } from "../features/Inspector";
+import { Inspector } from "../features/Inspector";
+import {
+  InvestigationInspector,
+  type WorkspaceInspectorView,
+} from "../features/InvestigationInspector";
+import type { ConcordContext } from "../features/ConcordAgent";
 import { WorkPackages } from "../features/WorkPackages";
 import { Documents } from "../features/Documents";
 import { Capabilities } from "../features/Capabilities";
@@ -56,9 +62,12 @@ export function WorkspaceViews({
   onDetailsOpen,
   onInspectorView,
   onRecheck,
+  onStructure,
   mappingMode = false,
   mappingContext,
   report,
+  run,
+  investigationContext,
   onSourceContext,
   onBimContext,
   onAgentRun,
@@ -73,17 +82,20 @@ export function WorkspaceViews({
   tab: WorkspaceTab;
   busy: boolean;
   detailsOpen: boolean;
-  inspectorView: InspectorView;
+  inspectorView: WorkspaceInspectorView;
   perform: (operation: () => Promise<unknown>) => Promise<void>;
   onTab: (tab: WorkspaceTab) => void;
   onSelected: (id: string) => void;
   onConstraint: (id: string) => void;
   onDetailsOpen: (open: boolean) => void;
-  onInspectorView: (view: InspectorView) => void;
+  onInspectorView: (view: WorkspaceInspectorView) => void;
   onRecheck: () => void;
+  onStructure: () => void;
   mappingMode?: boolean;
   mappingContext?: BimMappingContext;
   report?: InvestigationReport | null;
+  run?: AgentRun | null;
+  investigationContext: ConcordContext;
   onSourceContext: (
     sourceId: string,
     revisionId?: string,
@@ -124,6 +136,10 @@ export function WorkspaceViews({
    */
   const width = usePaneWidth();
   const condensed = condensedFor(width, detailsOpen);
+  const openInvestigation = () => {
+    onInspectorView("investigation");
+    onDetailsOpen(true);
+  };
   return (
     <>
       <WorkspaceTabs tab={tab} onTab={onTab} />
@@ -148,12 +164,7 @@ export function WorkspaceViews({
               fallback={<div className="loading-view">正在加载工作区…</div>}
             >
               {tab === "coordination" && !selected && (
-                <div className="empty-pane">
-                  <span>
-                    <strong>先创建工作包</strong>
-                    <small>使用项目侧栏的「添加」建立区域与工作包。</small>
-                  </span>
-                </div>
+                <EmptyWorkPackages onCreate={onStructure} />
               )}
               {tab === "coordination" && !!selected && (
                 <>
@@ -161,9 +172,18 @@ export function WorkspaceViews({
                     <section className="context-agent-result workspace-agent-result">
                       <span className="eyebrow">Concord 调查结果</span>
                       <p>{report.answer.summary}</p>
-                      <small>
-                        {report.evidence.length} 条已持久化 Evidence
-                      </small>
+                      <div className="context-agent-result-footer">
+                        <small>
+                          {report.evidence.length} 条已持久化 Evidence
+                        </small>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={openInvestigation}
+                        >
+                          查看调查结果
+                        </Button>
+                      </div>
                     </section>
                   )}
                   <CoordinationWorkspace
@@ -208,6 +228,7 @@ export function WorkspaceViews({
                   onRun={onAgentRun}
                   onInvestigate={onInvestigateSource}
                   onInspectImpact={onInspectImpact}
+                  onOpenInvestigation={openInvestigation}
                 />
               )}
               {tab === "bim" && mappingMode && !!selected && (
@@ -219,6 +240,7 @@ export function WorkspaceViews({
                   condensed={condensed}
                   onContext={onBimContext}
                   onInvestigate={onInvestigateBim}
+                  onOpenInvestigation={openInvestigation}
                 />
               )}
               {tab === "bim" && !mappingMode && (
@@ -254,20 +276,42 @@ export function WorkspaceViews({
                  layout is drawn at. */
               maxSize="480px"
             >
-              <Inspector
-                busy={busy}
-                workspace={data}
-                selected={selected}
-                selectedConstraint={selectedConstraint}
-                view={inspectorView}
-                perform={perform}
-                onClose={() => onDetailsOpen(false)}
-                onView={onInspectorView}
-              />
+              {inspectorView === "investigation" ? (
+                <InvestigationInspector
+                  report={report}
+                  run={run}
+                  context={investigationContext}
+                  onClose={() => onDetailsOpen(false)}
+                />
+              ) : (
+                <Inspector
+                  busy={busy}
+                  workspace={data}
+                  selected={selected}
+                  selectedConstraint={selectedConstraint}
+                  view={inspectorView}
+                  perform={perform}
+                  onClose={() => onDetailsOpen(false)}
+                  onView={onInspectorView}
+                />
+              )}
             </Pane>
           </>
         )}
       </PaneSplit>
     </>
+  );
+}
+
+export function EmptyWorkPackages({ onCreate }: { onCreate: () => void }) {
+  return (
+    <section className="workspace-empty" aria-labelledby="empty-work-packages">
+      <span className="eyebrow">工作包</span>
+      <h2 id="empty-work-packages">还没有工作包</h2>
+      <p>创建区域和工作包后，可以关联 BIM、跟踪变更并运行协调检查。</p>
+      <Button onClick={onCreate}>
+        <Plus {...icon} /> 创建工作包
+      </Button>
+    </section>
   );
 }

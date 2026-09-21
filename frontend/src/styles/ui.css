@@ -142,9 +142,16 @@
     color var(--motion-instant) var(--ease);
 }
 .menu-item-label {
+  display: flex;
+  align-items: center;
+  gap: var(--icon-gap);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.menu-item-label > svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
 }
 .menu-item-hint {
   flex-shrink: 0;

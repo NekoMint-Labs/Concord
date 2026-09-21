@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { ChevronRight } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type DTO, type Workspace } from "../api/client";
 import { AppDialog, DialogClose } from "../components/ui/AppDialog";
@@ -18,22 +19,24 @@ export function NewProjectDialog({
   const [timezone, setTimezone] = useState(
     Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
   );
+  const [advanced, setAdvanced] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!name.trim() || busy) return;
+    if (!name.trim() || !timezone.trim() || busy) return;
     setBusy(true);
     setError("");
     try {
       await onCreate({
         name: name.trim(),
         description: description.trim(),
-        timezone,
+        timezone: timezone.trim(),
       });
       setName("");
       setDescription("");
+      setAdvanced(false);
       onOpenChange(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "项目创建失败");
@@ -46,12 +49,11 @@ export function NewProjectDialog({
     <AppDialog
       open={open}
       onOpenChange={onOpenChange}
-      eyebrow={<span className="eyebrow">真实工程</span>}
       title="新建项目"
-      description="项目、区域和工作包将保存在 Concord 本地服务中。"
+      className="project-dialog"
     >
       <form className="project-form" onSubmit={submit}>
-        <label className="form-label">
+        <label className="form-label project-name-field">
           项目名称
           <input
             required
@@ -61,29 +63,47 @@ export function NewProjectDialog({
           />
         </label>
         <label className="form-label">
-          说明
+          说明 <span className="optional-label">（可选）</span>
           <textarea
+            rows={3}
             maxLength={1000}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
         </label>
-        <label className="form-label">
-          时区
-          <input
-            required
-            maxLength={80}
-            value={timezone}
-            onChange={(event) => setTimezone(event.target.value)}
-          />
-        </label>
+        <button
+          type="button"
+          className="advanced-settings-toggle"
+          aria-expanded={advanced}
+          aria-controls="new-project-advanced"
+          onClick={() => setAdvanced((value) => !value)}
+        >
+          <ChevronRight aria-hidden="true" />
+          高级设置
+        </button>
+        {advanced && (
+          <div className="advanced-settings" id="new-project-advanced">
+            <label className="form-label">
+              时区
+              <input
+                required
+                maxLength={80}
+                value={timezone}
+                onChange={(event) => setTimezone(event.target.value)}
+              />
+            </label>
+          </div>
+        )}
         {error && <p className="alert">{error}</p>}
         <div className="dialog-actions">
           <DialogClose asChild>
             <Button variant="secondary">取消</Button>
           </DialogClose>
-          <Button type="submit" disabled={busy || !name.trim()}>
-            {busy ? "正在创建…" : "创建并打开"}
+          <Button
+            type="submit"
+            disabled={busy || !name.trim() || !timezone.trim()}
+          >
+            {busy ? "正在创建…" : "创建项目"}
           </Button>
         </div>
       </form>

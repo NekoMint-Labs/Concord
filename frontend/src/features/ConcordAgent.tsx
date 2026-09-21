@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
+import { ScanSearch } from "lucide-react";
 import {
   api,
   type AgentRun,
   type DTO,
   type InvestigationReport,
 } from "../api/client";
-import { AppPopover } from "../components/ui/AppPopover";
+import { AppPopover, AppPopoverClose } from "../components/ui/AppPopover";
 import { Button } from "../components/ui/button";
 import { icon } from "../components/ui/icon";
 import { Status } from "../components/Status";
@@ -40,12 +40,14 @@ export function ConcordAgent({
   currentRun,
   report,
   onRun,
+  onOpenReport,
 }: {
   project: string;
   context: ConcordContext;
   currentRun?: AgentRun | null;
   report?: InvestigationReport | null;
   onRun: (run: AgentRun) => void;
+  onOpenReport?: () => void;
 }) {
   const cache = useQueryClient();
   const [question, setQuestion] = useState("");
@@ -93,7 +95,7 @@ export function ConcordAgent({
       side="bottom"
       trigger={
         <Button variant="secondary" size="sm">
-          <Sparkles {...icon} /> Concord
+          <ScanSearch {...icon} /> Concord
         </Button>
       }
     >
@@ -249,6 +251,13 @@ export function ConcordAgent({
               {report.evidence.length} 条已持久化 Evidence · 第{" "}
               {report.generation} 代
             </small>
+            {onOpenReport && (
+              <AppPopoverClose>
+                <Button size="sm" variant="ghost" onClick={onOpenReport}>
+                  查看调查结果
+                </Button>
+              </AppPopoverClose>
+            )}
           </section>
         )}
         {!!notices.data?.length && (

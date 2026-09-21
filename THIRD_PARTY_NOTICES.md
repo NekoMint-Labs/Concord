@@ -12,3 +12,57 @@
 
 IfcDiff is an optional BIM dependency. It is not vendored into this repository. The upstream
 license and source remain available at the links above.
+
+## Frontend interaction references
+
+The Concord workspace uses project-owned React and CSS. No source package from the
+projects below is vendored or installed. Their public implementations were reviewed
+for established interaction patterns and are attributed here so the design lineage is
+explicit.
+
+### shadcn/ui
+
+- Project: shadcn/ui
+- Source revision: `98a1fe67c2d35929c704ba1f86e8ef9799430d3b`
+- Source: https://github.com/shadcn-ui/ui/tree/98a1fe67c2d35929c704ba1f86e8ef9799430d3b/apps/v4/registry/bases/base/blocks/sidebar-07
+- Referenced files: `components/app-sidebar.tsx`, `components/team-switcher.tsx`, `components/nav-main.tsx`, `components/nav-projects.tsx`, and `page.tsx`
+- License: MIT, https://github.com/shadcn-ui/ui/blob/98a1fe67c2d35929c704ba1f86e8ef9799430d3b/LICENSE.md
+- Use: sidebar header/content grouping, compact project switcher, and explicit switcher actions
+- Modification: interaction structure was adapted to Concord's existing components, project lifecycle, work-package hierarchy, and Chinese interface; no upstream component was copied verbatim
+
+### Supabase Studio
+
+- Project: Supabase Studio
+- Source revision: `aaa1b8c07a03f0b18ad2fe88b427a7a305950604`
+- Sources:
+  - https://github.com/supabase/supabase/blob/aaa1b8c07a03f0b18ad2fe88b427a7a305950604/apps/studio/components/layouts/DefaultLayout.tsx
+  - https://github.com/supabase/supabase/tree/aaa1b8c07a03f0b18ad2fe88b427a7a305950604/apps/studio/components/layouts/ProjectLayout
+  - https://github.com/supabase/supabase/blob/aaa1b8c07a03f0b18ad2fe88b427a7a305950604/apps/studio/components/interfaces/ProjectCreation/ProjectCreationForm.tsx
+  - https://github.com/supabase/supabase/blob/aaa1b8c07a03f0b18ad2fe88b427a7a305950604/apps/studio/components/interfaces/Functions/FunctionsEmptyState.tsx
+  - https://github.com/supabase/supabase/blob/aaa1b8c07a03f0b18ad2fe88b427a7a305950604/apps/studio/components/interfaces/Settings/Logs/LogTable.tsx
+- License: Apache-2.0, https://github.com/supabase/supabase/blob/aaa1b8c07a03f0b18ad2fe88b427a7a305950604/LICENSE
+- Use: compact project creation flow, first-run empty-state hierarchy, persistent list/detail layout, and dense revision rows
+- Modification: patterns were reimplemented with Concord's existing dialog, split-pane, button, and API contracts; no Supabase package or source file was copied
+
+### Trigger.dev
+
+- Project: Trigger.dev
+- Source revision: `d8c3530cbe2cf42cb6c946c5ea98fcdc401c933f`
+- Sources:
+  - https://github.com/triggerdotdev/trigger.dev/blob/d8c3530cbe2cf42cb6c946c5ea98fcdc401c933f/apps/webapp/app/components/navigation/SideMenu.tsx
+  - https://github.com/triggerdotdev/trigger.dev/tree/d8c3530cbe2cf42cb6c946c5ea98fcdc401c933f/apps/webapp/app/routes/_app.orgs.%24organizationSlug.projects.%24projectParam.env.%24envParam.runs.%24runParam
+  - https://github.com/triggerdotdev/trigger.dev/tree/d8c3530cbe2cf42cb6c946c5ea98fcdc401c933f/apps/webapp/app/routes/_app.orgs.%24organizationSlug.projects.%24projectParam.env.%24envParam.webhooks.deliveries.%24deliveryParam
+- License: Apache-2.0, https://github.com/triggerdotdev/trigger.dev/blob/d8c3530cbe2cf42cb6c946c5ea98fcdc401c933f/LICENSE
+- Use: durable-run status placement, investigation timeline, property table, and evidence-oriented detail pane
+- Modification: the detail pattern was reimplemented for Concord's existing `AgentRun` and `InvestigationReport` records; no Trigger.dev package or source file was copied
+
+### Twenty UI
+
+- Project: Twenty UI
+- Source revision: `413ae94b2e7c226b174d22d8bd3deedddc6bbf88`
+- Sources:
+  - https://github.com/twentyhq/twenty/blob/413ae94b2e7c226b174d22d8bd3deedddc6bbf88/packages/twenty-ui/design-tokens/spacing.ts
+  - https://github.com/twentyhq/twenty/blob/413ae94b2e7c226b174d22d8bd3deedddc6bbf88/packages/twenty-ui/design-tokens/table.ts
+- License: MIT, https://github.com/twentyhq/twenty/blob/413ae94b2e7c226b174d22d8bd3deedddc6bbf88/packages/twenty-ui/LICENSE
+- Use: visual reference only for compact spacing and table density
+- Modification: no Twenty application code, component, or token value was copied

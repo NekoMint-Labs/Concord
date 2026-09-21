@@ -18,6 +18,7 @@ vi.mock("../components/ui/AppPopover", () => ({
       <div>{children}</div>
     </div>
   ),
+  AppPopoverClose: ({ children }: { children: ReactNode }) => children,
 }));
 
 const context: ConcordContext = {

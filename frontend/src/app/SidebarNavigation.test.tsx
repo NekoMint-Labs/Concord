@@ -1,9 +1,48 @@
+import type { ReactNode } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
 import type { DTO, Workspace } from "../api/client";
 import { ProjectSidebar } from "./ProjectSidebar";
 import { WorkspaceHeader } from "./WorkspaceHeader";
+
+vi.mock("../components/ui/AppMenu", () => ({
+  AppMenu: ({
+    label,
+    trigger,
+    children,
+  }: {
+    label: string;
+    trigger: ReactNode;
+    children: ReactNode;
+  }) => (
+    <div>
+      <button aria-label={label}>{trigger}</button>
+      <div role="menu">{children}</div>
+    </div>
+  ),
+  AppMenuLabel: ({ children }: { children: ReactNode }) => (
+    <div>{children}</div>
+  ),
+  AppMenuSeparator: () => <hr />,
+  AppMenuItem: ({
+    children,
+    onSelect,
+    active,
+  }: {
+    children: ReactNode;
+    onSelect: () => void;
+    active?: boolean;
+  }) => (
+    <button
+      role="menuitem"
+      aria-current={active ? "page" : undefined}
+      onClick={onSelect}
+    >
+      {children}
+    </button>
+  ),
+}));
 
 /**
  * The navigation chrome of the desktop pass.
@@ -18,6 +57,7 @@ const data = structuredClone(fixture.waiting) as unknown as Workspace;
 const wp = data.state.work_packages.find((item) => item.id === "WP-200")!;
 const projects = [
   { id: "harbor-east", name: "Harbor East / Building A" },
+  { id: "campus-west", name: "Campus West" },
 ] as unknown as DTO<"Project">[];
 
 function sidebar({ collapsed = false, onCollapse = vi.fn() } = {}) {
@@ -89,4 +129,55 @@ it("labels the demo project distinctly in the existing project picker", () => {
 
   const trigger = screen.getByRole("button", { name: "项目" });
   expect(within(trigger).getByText("演示 / 示例")).toBeVisible();
+});
+
+it("keeps project actions and switching discoverable in the project switcher", async () => {
+  const onProject = vi.fn();
+  const onNewProject = vi.fn();
+  const onOpenProject = vi.fn();
+  const onProjectSettings = vi.fn();
+  render(
+    <ProjectSidebar
+      data={data}
+      project="harbor-east"
+      projects={projects}
+      selected="WP-200"
+      onCollapse={() => {}}
+      onProject={onProject}
+      onNewProject={onNewProject}
+      onOpenProject={onOpenProject}
+      onProjectSettings={onProjectSettings}
+      onSelect={() => {}}
+    />,
+  );
+
+  expect(
+    await screen.findByRole("menuitem", { name: /新建项目/ }),
+  ).toBeVisible();
+  expect(screen.getByRole("menuitem", { name: /打开项目/ })).toBeVisible();
+  expect(screen.getByRole("menuitem", { name: /项目设置/ })).toBeVisible();
+
+  fireEvent.click(screen.getByRole("menuitem", { name: /新建项目/ }));
+  expect(onNewProject).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Campus West" }));
+  expect(onProject).toHaveBeenCalledWith("campus-west");
+});
+
+it("labels work-package creation as an explicit sidebar action", () => {
+  const onStructure = vi.fn();
+  render(
+    <ProjectSidebar
+      data={data}
+      project="harbor-east"
+      projects={projects}
+      selected="WP-200"
+      onCollapse={() => {}}
+      onProject={() => {}}
+      onStructure={onStructure}
+      onSelect={() => {}}
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "新建工作包" }));
+  expect(onStructure).toHaveBeenCalledOnce();
 });

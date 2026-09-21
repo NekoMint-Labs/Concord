@@ -8,7 +8,7 @@ import { AppToaster } from "./components/ui/AppToaster";
 import { AppTooltip } from "./components/ui/AppTooltip";
 import { Timeline } from "./features/Timeline";
 import { EventComposer } from "./features/EventComposer";
-import type { InspectorView } from "./features/Inspector";
+import type { WorkspaceInspectorView } from "./features/InvestigationInspector";
 import { Pane, PaneDivider, PaneSplit, usePanelRef } from "./layout/PaneSplit";
 import { AdvancedMenu } from "./app/AdvancedMenu";
 import { ProjectSidebar } from "./app/ProjectSidebar";
@@ -36,7 +36,8 @@ export function App() {
   const [selectedConstraint, setSelectedConstraint] = useState("");
   const [tab, setTab] = useState<WorkspaceTab>("coordination");
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [inspectorView, setInspectorView] = useState<InspectorView>("blocker");
+  const [inspectorView, setInspectorView] =
+    useState<WorkspaceInspectorView>("blocker");
   const [eventDialog, setEventDialog] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [openProjectOpen, setOpenProjectOpen] = useState(false);
@@ -74,7 +75,7 @@ export function App() {
     if (!data) return;
     if (!data.state.work_packages.length) {
       setSelected("");
-      setTab("sources");
+      setTab("coordination");
       return;
     }
     if (!data.state.work_packages.some((item) => item.id === selected))
@@ -227,6 +228,10 @@ export function App() {
                 currentRun={agent.currentRun.data}
                 report={agent.investigation.data}
                 onRun={agent.rememberRun}
+                onOpenReport={() => {
+                  setInspectorView("investigation");
+                  setDetailsOpen(true);
+                }}
               />
               <AdvancedMenu
                 tab={tab}
@@ -284,9 +289,12 @@ export function App() {
               onRecheck={() =>
                 void perform(() => api.recheck(project), "重新检查已提交。")
               }
+              onStructure={() => setStructureOpen(true)}
               mappingMode={mappingMode}
               mappingContext={mappingContext}
               report={agent.investigation.data}
+              run={agent.currentRun.data}
+              investigationContext={agent.context}
               onSourceContext={agent.sourceContext}
               onBimContext={agent.bimContext}
               onAgentRun={agent.rememberRun}
