@@ -16,6 +16,8 @@ export type ConcordContext = {
   projectName: string;
   sourceId?: string;
   sourceName?: string;
+  fromRevisionId?: string;
+  fromRevisionLabel?: string;
   revisionId?: string;
   revisionLabel?: string;
   workPackageId?: string;
@@ -25,6 +27,7 @@ export type ConcordContext = {
 function scopeFor(context: ConcordContext): DTO<"AgentScope-Input"> {
   return {
     source_id: context.sourceId ?? null,
+    from_revision_id: context.fromRevisionId ?? null,
     to_revision_id: context.revisionId ?? null,
     work_package_ids: context.workPackageId ? [context.workPackageId] : [],
     element_ids: context.elementIds,
@@ -130,8 +133,12 @@ export function ConcordAgent({
           )}
           {context.revisionLabel && (
             <>
-              <dt>版本</dt>
-              <dd>{context.revisionLabel}</dd>
+              <dt>{context.fromRevisionLabel ? "比较" : "版本"}</dt>
+              <dd>
+                {context.fromRevisionLabel
+                  ? `${context.fromRevisionLabel} → ${context.revisionLabel}`
+                  : context.revisionLabel}
+              </dd>
             </>
           )}
           {context.workPackageId && (

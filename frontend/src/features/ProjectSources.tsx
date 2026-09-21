@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type DTO, type InvestigationReport } from "../api/client";
 import { Button } from "../components/ui/button";
 import { useProjectSources } from "./useProjectSources";
+import { BaselineHistory } from "./BaselineHistory";
+import type { BimMappingContext } from "./BimMappingWorkspace";
 import { CreateSourceDialog } from "./CreateSourceDialog";
 import { RevisionImpact } from "./RevisionImpact";
 
@@ -39,15 +41,19 @@ export function ProjectSources({
     sourceId: string,
     revisionId?: string,
     revisionLabel?: string,
+    fromRevisionId?: string,
+    fromRevisionLabel?: string,
   ) => void;
   onRun: (run: DTO<"AgentRun">) => void;
-  onInvestigate: (sourceId: string, revisionId: string) => void;
-  onInspectImpact: (
+  onInvestigate: (
     sourceId: string,
     revisionId: string,
-    workPackageId: string,
-    elementIds: string[],
+    fromRevisionId?: string,
+    elementIds?: string[],
+    revisionLabel?: string,
+    fromRevisionLabel?: string,
   ) => void;
+  onInspectImpact: (workPackageId: string, context: BimMappingContext) => void;
 }) {
   const [sourceId, setSourceId] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -201,6 +207,13 @@ export function ProjectSources({
                   const notice = notices.data?.find(
                     (item) => item.revision_id === revision.id,
                   );
+                  const fromRevisionId =
+                    notice?.from_revision_id ??
+                    (current.has_pending_revision &&
+                    revision.id === current.latest_revision_id &&
+                    current.accepted_revision_id !== revision.id
+                      ? (current.accepted_revision_id ?? undefined)
+                      : undefined);
                   return (
                     <article key={revision.id} className="revision-row">
                       <div className="revision-identity">
@@ -241,7 +254,18 @@ export function ProjectSources({
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => onInvestigate(sourceId, revision.id)}
+                          onClick={() =>
+                            onInvestigate(
+                              sourceId,
+                              revision.id,
+                              fromRevisionId,
+                              undefined,
+                              `R${revision.sequence}`,
+                              fromRevisionId
+                                ? `R${revisions.find((item) => item.id === fromRevisionId)?.sequence ?? fromRevisionId.slice(0, 8)}`
+                                : undefined,
+                            )
+                          }
                         >
                           让 Concord 调查
                         </Button>
@@ -251,7 +275,18 @@ export function ProjectSources({
                           Concord 检测到比当前基线更新的版本。
                           <button
                             type="button"
-                            onClick={() => onInvestigate(sourceId, revision.id)}
+                            onClick={() =>
+                              onInvestigate(
+                                sourceId,
+                                revision.id,
+                                fromRevisionId,
+                                undefined,
+                                `R${revision.sequence}`,
+                                fromRevisionId
+                                  ? `R${revisions.find((item) => item.id === fromRevisionId)?.sequence ?? fromRevisionId.slice(0, 8)}`
+                                  : undefined,
+                              )
+                            }
                           >
                             调查此版本
                           </button>
@@ -281,14 +316,53 @@ export function ProjectSources({
                       to_revision_id,
                     })
                   }
-                  onInspect={(workPackageId, elementIds) =>
-                    onInspectImpact(
+                  onSelectComparison={(comparison) => {
+                    const from = revisions.find(
+                      (item) => item.id === comparison.from_revision_id,
+                    );
+                    const to = revisions.find(
+                      (item) => item.id === comparison.to_revision_id,
+                    );
+                    onContext(
                       sourceId,
-                      current.latest_revision_id!,
-                      workPackageId,
+                      comparison.to_revision_id,
+                      to ? `R${to.sequence}` : undefined,
+                      comparison.from_revision_id,
+                      from ? `R${from.sequence}` : undefined,
+                    );
+                  }}
+                  onInvestigate={(comparison, elementIds) =>
+                    onInvestigate(
+                      sourceId,
+                      comparison.to_revision_id,
+                      comparison.from_revision_id,
                       elementIds,
+                      `R${revisions.find((item) => item.id === comparison.to_revision_id)?.sequence ?? comparison.to_revision_id.slice(0, 8)}`,
+                      `R${revisions.find((item) => item.id === comparison.from_revision_id)?.sequence ?? comparison.from_revision_id.slice(0, 8)}`,
                     )
                   }
+                  onInspect={({
+                    workPackageId,
+                    fromRevisionId,
+                    toRevisionId,
+                    changes,
+                  }) => {
+                    const from = revisions.find(
+                      (item) => item.id === fromRevisionId,
+                    );
+                    const to = revisions.find(
+                      (item) => item.id === toRevisionId,
+                    );
+                    onInspectImpact(workPackageId, {
+                      sourceId,
+                      fromRevisionId,
+                      fromRevisionLabel: from ? `R${from.sequence}` : undefined,
+                      revisionId: toRevisionId,
+                      revisionLabel: to ? `R${to.sequence}` : undefined,
+                      highlightIds: changes.map((change) => change.global_id),
+                      changes,
+                    });
+                  }}
                 />
               )}
               {report?.scope.source_id === sourceId && (
@@ -312,38 +386,11 @@ export function ProjectSources({
           )}
         </div>
       </div>
-      <section className="baseline-register">
-        <header>
-          <h3>基线历史</h3>
-          <span className="count">
-            {sourceData.baselines.data?.length ?? 0}
-          </span>
-        </header>
-        {sourceData.baselines.data?.map((baseline) => (
-          <details key={baseline.id}>
-            <summary>
-              <strong>{baseline.name}</strong>
-              <span>{baseline.entries.length} 个来源版本</span>
-            </summary>
-            {baseline.entries.map((entry) => (
-              <code key={`${entry.source_id}:${entry.revision_id}`}>
-                {statuses.find((item) => item.source.id === entry.source_id)
-                  ?.source.name ?? entry.source_id}
-                ：R
-                {entry.revision_id ===
-                statuses.find((item) => item.source.id === entry.source_id)
-                  ?.latest_revision_id
-                  ? (revisions.find((item) => item.id === entry.revision_id)
-                      ?.sequence ?? entry.revision_id)
-                  : entry.revision_id.slice(0, 8)}
-              </code>
-            ))}
-          </details>
-        ))}
-        {!sourceData.baselines.data?.length && (
-          <p className="quiet-message">尚未接受工程基线。</p>
-        )}
-      </section>
+      <BaselineHistory
+        baselines={sourceData.baselines.data ?? []}
+        statuses={statuses}
+        revisions={sourceData.revisionCatalog}
+      />
       <CreateSourceDialog
         open={createOpen}
         onOpenChange={setCreateOpen}

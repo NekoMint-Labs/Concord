@@ -23,8 +23,12 @@ export function filterBimCandidates(
 
 export type BimMappingContext = {
   sourceId?: string;
+  fromRevisionId?: string;
+  fromRevisionLabel?: string;
   revisionId?: string;
+  revisionLabel?: string;
   highlightIds?: string[];
+  changes?: DTO<"BimElementChange">[];
 };
 
 export function BimMappingWorkspace({
@@ -45,11 +49,15 @@ export function BimMappingWorkspace({
     sourceId: string,
     revisionId: string,
     elementIds: string[],
+    fromRevisionId?: string,
+    revisionLabel?: string,
+    fromRevisionLabel?: string,
   ) => void;
   onInvestigate: (
     sourceId: string,
     revisionId: string,
     elementIds: string[],
+    fromRevisionId?: string,
   ) => void;
 }) {
   const cache = useQueryClient();
@@ -80,9 +88,7 @@ export function BimMappingWorkspace({
   const [storey, setStorey] = useState("");
   const [space, setSpace] = useState("");
   const [ifcClass, setIfcClass] = useState("");
-  const [selected, setSelected] = useState<string[]>(
-    initial?.highlightIds ?? [],
-  );
+  const [selected, setSelected] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
 
@@ -90,8 +96,13 @@ export function BimMappingWorkspace({
     if (!sourceId && bimSources[0]) setSourceId(bimSources[0].source.id);
   }, [bimSources, sourceId]);
   useEffect(() => {
-    setSelected(initial?.highlightIds ?? []);
-  }, [initial?.highlightIds]);
+    if (!initial?.sourceId) return;
+    setSourceId(initial.sourceId);
+    setSelected([]);
+    setStorey("");
+    setSpace("");
+    setIfcClass("");
+  }, [initial?.sourceId, initial?.revisionId]);
   useEffect(() => {
     setFile(null);
     setFileError("");
@@ -121,14 +132,42 @@ export function BimMappingWorkspace({
     () => filterBimCandidates(elements, { storey, space, ifcClass }),
     [elements, ifcClass, space, storey],
   );
+  const inspectionMode =
+    !!initial?.fromRevisionId && initial.sourceId === sourceId;
+  const inspectionIds = useMemo(
+    () => (inspectionMode ? (initial?.highlightIds ?? []) : []),
+    [initial?.highlightIds, inspectionMode],
+  );
+  const changes = inspectionMode ? (initial?.changes ?? []) : [];
   const intentIds = useMemo(
     () =>
-      selected.length ? selected : candidates.map((item) => item.global_id),
-    [candidates, selected],
+      inspectionMode
+        ? inspectionIds
+        : selected.length
+          ? selected
+          : candidates.map((item) => item.global_id),
+    [candidates, inspectionIds, inspectionMode, selected],
   );
   useEffect(() => {
-    if (sourceId && revisionId) onContext(sourceId, revisionId, intentIds);
-  }, [intentIds, onContext, revisionId, sourceId]);
+    if (sourceId && revisionId)
+      onContext(
+        sourceId,
+        revisionId,
+        intentIds,
+        inspectionMode ? initial?.fromRevisionId : undefined,
+        inspectionMode ? initial?.revisionLabel : undefined,
+        inspectionMode ? initial?.fromRevisionLabel : undefined,
+      );
+  }, [
+    initial?.fromRevisionId,
+    initial?.fromRevisionLabel,
+    initial?.revisionLabel,
+    inspectionMode,
+    intentIds,
+    onContext,
+    revisionId,
+    sourceId,
+  ]);
 
   const confirm = useMutation({
     mutationFn: () =>
@@ -158,7 +197,14 @@ export function BimMappingWorkspace({
             size="sm"
             variant="ghost"
             disabled={!sourceId || !revisionId}
-            onClick={() => onInvestigate(sourceId, revisionId, intentIds)}
+            onClick={() =>
+              onInvestigate(
+                sourceId,
+                revisionId,
+                intentIds,
+                inspectionMode ? initial?.fromRevisionId : undefined,
+              )
+            }
           >
             让 Concord 调查当前选择
           </Button>
@@ -191,6 +237,29 @@ export function BimMappingWorkspace({
             <strong>此版本尚未导入</strong>
             <span>原始文件已保存，但 IFC 解析尚未完成。</span>
           </div>
+        )}
+        {changes.length > 0 && (
+          <section className="existing-bindings" aria-label="比较变更构件">
+            <span className="fact-label">比较变更构件</span>
+            {changes.map((change) => {
+              const renderable = elements.some(
+                (element) => element.global_id === change.global_id,
+              );
+              return (
+                <div key={`${change.change_kind}:${change.global_id}`}>
+                  <code>{change.global_id}</code>
+                  <span className={`binding-state is-${change.change_kind}`}>
+                    {change.change_kind}
+                    {!renderable && change.change_kind === "deleted"
+                      ? " · 目标版本无几何（历史变更保留）"
+                      : !renderable
+                        ? " · 目标版本不可渲染"
+                        : " · 可在目标版本中定位"}
+                  </span>
+                </div>
+              );
+            })}
+          </section>
         )}
         {snapshot.data && (
           <>
@@ -232,26 +301,38 @@ export function BimMappingWorkspace({
                 </select>
               </label>
             </div>
-            <div className="candidate-heading">
-              <strong>{candidates.length} 个候选构件</strong>
-              <button
-                type="button"
-                onClick={() =>
-                  setSelected(candidates.map((item) => item.global_id))
-                }
-              >
-                选择全部
-              </button>
-              <button type="button" onClick={() => setSelected([])}>
-                清除选择
-              </button>
-            </div>
+            {!inspectionMode && (
+              <div className="candidate-heading">
+                <strong>{candidates.length} 个候选构件</strong>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelected(candidates.map((item) => item.global_id))
+                  }
+                >
+                  选择全部
+                </button>
+                <button type="button" onClick={() => setSelected([])}>
+                  清除选择
+                </button>
+              </div>
+            )}
+            {inspectionMode && (
+              <p className="viewer-status">
+                影响检查为只读；只有从工作包主动进入「关联 BIM」后才能确认绑定。
+              </p>
+            )}
             <div className="candidate-list">
               {candidates.map((item) => (
                 <label key={item.global_id}>
                   <input
                     type="checkbox"
-                    checked={selected.includes(item.global_id)}
+                    checked={
+                      inspectionMode
+                        ? inspectionIds.includes(item.global_id)
+                        : selected.includes(item.global_id)
+                    }
+                    disabled={inspectionMode}
                     onChange={(event) =>
                       setSelected((items) =>
                         event.target.checked
@@ -271,12 +352,14 @@ export function BimMappingWorkspace({
                 </label>
               ))}
             </div>
-            <Button
-              disabled={!selected.length || confirm.isPending}
-              onClick={() => confirm.mutate()}
-            >
-              确认关联 {selected.length} 个构件
-            </Button>
+            {!inspectionMode && (
+              <Button
+                disabled={!selected.length || confirm.isPending}
+                onClick={() => confirm.mutate()}
+              >
+                确认关联 {selected.length} 个构件
+              </Button>
+            )}
           </>
         )}
         <section className="existing-bindings">
@@ -312,11 +395,12 @@ export function BimMappingWorkspace({
           condensed={condensed}
           externalFile={file}
           hideSourceActions
-          onViewerSelected={(id) =>
+          onViewerSelected={(id) => {
+            if (inspectionMode) return;
             setSelected((items) =>
               id && !items.includes(id) ? [...items, id] : items,
-            )
-          }
+            );
+          }}
         />
       </div>
     </section>

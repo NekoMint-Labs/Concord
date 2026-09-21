@@ -267,19 +267,35 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   );
 
   await rows.last().getByRole("button", { name: "让 Concord 调查" }).click();
+  let investigationRun: { id: string; status: string } | undefined;
   await expect
     .poll(
       async () => {
         const runs = await request.get(`${projectPath}/runs`, { headers });
-        return (await runs.json())
+        investigationRun = (await runs.json())
           .filter(
             (run: { category: string }) => run.category === "investigation",
           )
-          .at(-1)?.status;
+          .at(-1);
+        return investigationRun?.status;
       },
       { timeout: 30_000 },
     )
     .toMatch(/COMPLETED|WAITING_APPROVAL/);
+  expect(investigationRun).toBeTruthy();
+  const investigation = await request.get(
+    `${projectPath}/agent/investigations/${investigationRun!.id}`,
+    { headers },
+  );
+  expect(investigation.ok()).toBeTruthy();
+  const report = await investigation.json();
+  expect(report.scope).toMatchObject({
+    source_id: source.source.id,
+    from_revision_id: r1.id,
+    to_revision_id: r2.id,
+  });
+  expect(report.persisted).toBe(true);
+  expect(report.evidence.length).toBeGreaterThan(0);
   await page.reload();
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
 

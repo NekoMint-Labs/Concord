@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type DTO } from "../api/client";
 import { Button } from "../components/ui/button";
@@ -11,6 +11,8 @@ export function RevisionImpact({
   comparing,
   error,
   onCompare,
+  onSelectComparison,
+  onInvestigate,
   onInspect,
 }: {
   project: string;
@@ -20,13 +22,27 @@ export function RevisionImpact({
   comparing: boolean;
   error?: Error | null;
   onCompare: (from: string, to: string) => void;
-  onInspect: (workPackageId: string, elementIds: string[]) => void;
+  onSelectComparison: (comparison: DTO<"RevisionComparison">) => void;
+  onInvestigate: (
+    comparison: DTO<"RevisionComparison">,
+    elementIds: string[],
+  ) => void;
+  onInspect: (input: {
+    workPackageId: string;
+    fromRevisionId: string;
+    toRevisionId: string;
+    changes: DTO<"BimElementChange">[];
+  }) => void;
 }) {
   const [comparisonId, setComparisonId] = useState("");
+  const onSelectComparisonRef = useRef(onSelectComparison);
+  onSelectComparisonRef.current = onSelectComparison;
   const latest = comparisons.at(-1);
   useEffect(() => {
-    if (latest && !comparisons.some((item) => item.id === comparisonId))
+    if (latest && !comparisons.some((item) => item.id === comparisonId)) {
       setComparisonId(latest.id);
+      onSelectComparisonRef.current(latest);
+    }
   }, [comparisonId, comparisons, latest]);
   const detail = useQuery({
     queryKey: ["comparison", project, source, comparisonId],
@@ -74,6 +90,12 @@ export function RevisionImpact({
     return <div className="loading-view">正在读取版本影响…</div>;
 
   const { comparison, affected_work_packages: packages } = detail.data;
+  const from = revisions.find(
+    (revision) => revision.id === comparison.from_revision_id,
+  );
+  const to = revisions.find(
+    (revision) => revision.id === comparison.to_revision_id,
+  );
   const noImpact =
     comparison.summary.added +
       comparison.summary.deleted +
@@ -86,23 +108,45 @@ export function RevisionImpact({
         <select
           aria-label="版本比较"
           value={comparisonId}
-          onChange={(event) => setComparisonId(event.target.value)}
+          onChange={(event) => {
+            const selected = comparisons.find(
+              (item) => item.id === event.target.value,
+            );
+            setComparisonId(event.target.value);
+            if (selected) onSelectComparison(selected);
+          }}
         >
           {comparisons.map((item) => {
-            const from = revisions.find(
+            const optionFrom = revisions.find(
               (revision) => revision.id === item.from_revision_id,
             );
-            const to = revisions.find(
+            const optionTo = revisions.find(
               (revision) => revision.id === item.to_revision_id,
             );
             return (
               <option key={item.id} value={item.id}>
-                R{from?.sequence ?? "?"} → R{to?.sequence ?? "?"}
+                R{optionFrom?.sequence ?? "?"} → R{optionTo?.sequence ?? "?"}
               </option>
             );
           })}
         </select>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() =>
+            onInvestigate(
+              comparison,
+              detail.data.changes.map((change) => change.global_id),
+            )
+          }
+        >
+          让 Concord 调查
+        </Button>
       </div>
+      <p className="viewer-toolbar-note">
+        R{from?.sequence ?? comparison.from_revision_id.slice(0, 8)} → R
+        {to?.sequence ?? comparison.to_revision_id.slice(0, 8)}
+      </p>
       <div className="impact-summary">
         <span>
           <strong>{comparison.summary.added}</strong> 新增
@@ -132,14 +176,21 @@ export function RevisionImpact({
               type="button"
               key={item.work_package_id}
               onClick={() =>
-                onInspect(
-                  item.work_package_id,
-                  item.changes.map((change) => change.global_id),
-                )
+                onInspect({
+                  workPackageId: item.work_package_id,
+                  fromRevisionId: comparison.from_revision_id,
+                  toRevisionId: comparison.to_revision_id,
+                  changes: item.changes,
+                })
               }
             >
               <strong>{item.work_package_id}</strong>
               <span>{item.changes.length} 个变更构件 · 在 BIM 中查看</span>
+              {item.changes.map((change) => (
+                <small key={`${change.change_kind}:${change.global_id}`}>
+                  {change.change_kind} · {change.global_id}
+                </small>
+              ))}
             </button>
           ))}
         </div>

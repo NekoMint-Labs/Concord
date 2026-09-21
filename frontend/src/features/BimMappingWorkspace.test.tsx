@@ -1,6 +1,11 @@
-import { expect, it } from "vitest";
-import type { DTO } from "../api/client";
-import { filterBimCandidates } from "./BimMappingWorkspace";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+import { api, type DTO } from "../api/client";
+import {
+  BimMappingWorkspace,
+  filterBimCandidates,
+} from "./BimMappingWorkspace";
 
 const elements = [
   {
@@ -47,4 +52,105 @@ it("intersects storey, space, and IFC type filters without inventing membership"
       ifcClass: "",
     }),
   ).toHaveLength(2);
+});
+
+afterEach(() => vi.restoreAllMocks());
+
+it("updates mounted inspection context and keeps deleted changes visible without binding", async () => {
+  vi.spyOn(api, "sourceStatuses").mockResolvedValue([
+    {
+      source: {
+        id: "source-1",
+        project_id: "project",
+        name: "MEP",
+        kind: "BIM",
+        created_at: "2026-01-01T00:00:00Z",
+      },
+      latest_revision_id: "r1",
+      accepted_revision_id: "r1",
+      baseline_id: "b1",
+      has_pending_revision: false,
+    },
+    {
+      source: {
+        id: "source-2",
+        project_id: "project",
+        name: "Structure",
+        kind: "BIM",
+        created_at: "2026-01-01T00:00:00Z",
+      },
+      latest_revision_id: "r3",
+      accepted_revision_id: "r2",
+      baseline_id: "b1",
+      has_pending_revision: true,
+    },
+  ]);
+  vi.spyOn(api, "bimSnapshot").mockImplementation(
+    async (_project, source, revision) => ({
+      project_id: "project",
+      source_id: source,
+      revision_id: revision,
+      ifc_schema: "IFC4",
+      imported_at: "2026-01-01T00:00:00Z",
+      import_seconds: 0.1,
+      elements: source === "source-1" ? elements : [],
+    }),
+  );
+  vi.spyOn(api, "bimBindings").mockResolvedValue([]);
+  const onContext = vi.fn();
+  const queryClient = new QueryClient();
+  const { rerender } = render(
+    <QueryClientProvider client={queryClient}>
+      <BimMappingWorkspace
+        project="project"
+        workPackageId="WP-1"
+        initial={{ sourceId: "source-1", revisionId: "r1" }}
+        onContext={onContext}
+        onInvestigate={() => {}}
+      />
+    </QueryClientProvider>,
+  );
+  await waitFor(() =>
+    expect(screen.getByLabelText("BIM 来源")).toHaveValue("source-1"),
+  );
+
+  const deleted: DTO<"BimElementChange"> = {
+    comparison_id: "comparison",
+    global_id: "deleted-guid",
+    change_kind: "deleted",
+    changed_aspects: [],
+  };
+  rerender(
+    <QueryClientProvider client={queryClient}>
+      <BimMappingWorkspace
+        project="project"
+        workPackageId="WP-1"
+        initial={{
+          sourceId: "source-2",
+          fromRevisionId: "r2",
+          revisionId: "r3",
+          highlightIds: ["deleted-guid"],
+          changes: [deleted],
+        }}
+        onContext={onContext}
+        onInvestigate={() => {}}
+      />
+    </QueryClientProvider>,
+  );
+
+  await waitFor(() =>
+    expect(screen.getByLabelText("BIM 来源")).toHaveValue("source-2"),
+  );
+  expect(await screen.findByText(/目标版本无几何/)).toBeVisible();
+  expect(screen.queryByRole("button", { name: /确认关联/ })).toBeNull();
+  await waitFor(() =>
+    expect(onContext).toHaveBeenCalledWith(
+      "source-2",
+      "r3",
+      ["deleted-guid"],
+      "r2",
+      undefined,
+      undefined,
+    ),
+  );
 });

@@ -20,7 +20,13 @@ export function useConcordAgent({
   const [scope, setScope] = useState<
     Pick<
       ConcordContext,
-      "sourceId" | "sourceName" | "revisionId" | "revisionLabel" | "elementIds"
+      | "sourceId"
+      | "sourceName"
+      | "fromRevisionId"
+      | "fromRevisionLabel"
+      | "revisionId"
+      | "revisionLabel"
+      | "elementIds"
     >
   >({ elementIds: [] });
   const [activeRun, setActiveRun] = useState<{
@@ -95,11 +101,21 @@ export function useConcordAgent({
     [project],
   );
   const sourceContext = useCallback(
-    (sourceId: string, revisionId?: string, revisionLabel?: string) => {
+    (
+      sourceId: string,
+      revisionId?: string,
+      revisionLabel?: string,
+      fromRevisionId?: string,
+      fromRevisionLabel?: string,
+    ) => {
       const source = sources?.find((item) => item.source.id === sourceId);
       setScope({
         sourceId,
         sourceName: source?.source.name ?? sourceId,
+        fromRevisionId,
+        fromRevisionLabel:
+          fromRevisionLabel ??
+          (fromRevisionId ? fromRevisionId.slice(0, 8) : undefined),
         revisionId,
         revisionLabel:
           revisionLabel ?? (revisionId ? revisionId.slice(0, 8) : undefined),
@@ -109,13 +125,24 @@ export function useConcordAgent({
     [sources],
   );
   const bimContext = useCallback(
-    (sourceId: string, revisionId: string, elementIds: string[]) => {
+    (
+      sourceId: string,
+      revisionId: string,
+      elementIds: string[],
+      fromRevisionId?: string,
+      revisionLabel?: string,
+      fromRevisionLabel?: string,
+    ) => {
       const source = sources?.find((item) => item.source.id === sourceId);
       setScope({
         sourceId,
         sourceName: source?.source.name ?? sourceId,
+        fromRevisionId,
+        fromRevisionLabel:
+          fromRevisionLabel ??
+          (fromRevisionId ? fromRevisionId.slice(0, 8) : undefined),
         revisionId,
-        revisionLabel: revisionId.slice(0, 8),
+        revisionLabel: revisionLabel ?? revisionId.slice(0, 8),
         elementIds,
       });
     },
@@ -126,6 +153,7 @@ export function useConcordAgent({
       instruction: string,
       context: {
         sourceId?: string;
+        fromRevisionId?: string;
         revisionId?: string;
         workPackageId?: string;
         elementIds?: string[];
@@ -138,6 +166,7 @@ export function useConcordAgent({
             instruction,
             scope: {
               source_id: context.sourceId ?? null,
+              from_revision_id: context.fromRevisionId ?? null,
               to_revision_id: context.revisionId ?? null,
               work_package_ids: context.workPackageId
                 ? [context.workPackageId]

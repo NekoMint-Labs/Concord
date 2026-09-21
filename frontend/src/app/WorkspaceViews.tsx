@@ -88,25 +88,33 @@ export function WorkspaceViews({
     sourceId: string,
     revisionId?: string,
     revisionLabel?: string,
+    fromRevisionId?: string,
+    fromRevisionLabel?: string,
   ) => void;
   onBimContext: (
     sourceId: string,
     revisionId: string,
     elementIds: string[],
+    fromRevisionId?: string,
+    revisionLabel?: string,
+    fromRevisionLabel?: string,
   ) => void;
   onAgentRun: (run: AgentRun) => void;
-  onInvestigateSource: (sourceId: string, revisionId: string) => void;
+  onInvestigateSource: (
+    sourceId: string,
+    revisionId: string,
+    fromRevisionId?: string,
+    elementIds?: string[],
+    revisionLabel?: string,
+    fromRevisionLabel?: string,
+  ) => void;
   onInvestigateBim: (
     sourceId: string,
     revisionId: string,
     elementIds: string[],
+    fromRevisionId?: string,
   ) => void;
-  onInspectImpact: (
-    sourceId: string,
-    revisionId: string,
-    workPackageId: string,
-    elementIds: string[],
-  ) => void;
+  onInspectImpact: (workPackageId: string, context: BimMappingContext) => void;
 }) {
   /*
    * The pane budget: the Inspector is what the user just opened, so it always

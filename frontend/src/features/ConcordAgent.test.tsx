@@ -24,6 +24,8 @@ const context: ConcordContext = {
   projectName: "Campus Lab",
   sourceId: "source-1",
   sourceName: "MEP Model",
+  fromRevisionId: "r1",
+  fromRevisionLabel: "R1",
   revisionId: "r2",
   revisionLabel: "R2",
   workPackageId: "WP-27",
@@ -69,7 +71,7 @@ it("keeps Ask read-only and only Investigate returns the current durable run", a
     },
     scope: {
       source_id: "source-1",
-      from_revision_id: null,
+      from_revision_id: "r1",
       to_revision_id: "r2",
       work_package_ids: ["WP-27"],
       area_ids: [],
@@ -107,10 +109,31 @@ it("keeps Ask read-only and only Investigate returns the current durable run", a
   expect(await screen.findByText(/R2 is newer/)).toBeVisible();
   expect(screen.getByText(/未保存为 Evidence/)).toBeVisible();
   expect(ask).toHaveBeenCalledOnce();
+  expect(ask).toHaveBeenCalledWith("project", {
+    instruction: "Why is this pending?",
+    scope: {
+      source_id: "source-1",
+      from_revision_id: "r1",
+      to_revision_id: "r2",
+      work_package_ids: ["WP-27"],
+      element_ids: ["gid-1"],
+    },
+  });
   expect(onRun).not.toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole("button", { name: "调查此工作包" }));
-  await waitFor(() => expect(investigate).toHaveBeenCalledOnce());
+  await waitFor(() =>
+    expect(investigate).toHaveBeenCalledWith("project", {
+      instruction: "调查当前工作包",
+      scope: {
+        source_id: "source-1",
+        from_revision_id: "r1",
+        to_revision_id: "r2",
+        work_package_ids: ["WP-27"],
+        element_ids: ["gid-1"],
+      },
+    }),
+  );
 });
 
 it("does not present an old run result as the current operation", () => {

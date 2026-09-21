@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api, type DTO } from "../api/client";
 
 export function useProjectSources(project: string, sourceId: string) {
@@ -11,6 +16,13 @@ export function useProjectSources(project: string, sourceId: string) {
     queryKey: ["source-revisions", project, sourceId],
     queryFn: () => api.sourceRevisions(project, sourceId),
     enabled: !!sourceId,
+  });
+  const revisionCatalog = useQueries({
+    queries: (sources.data ?? []).map((item) => ({
+      queryKey: ["source-revisions", project, item.source.id],
+      queryFn: () => api.sourceRevisions(project, item.source.id),
+    })),
+    combine: (queries) => queries.flatMap((query) => query.data ?? []),
   });
   const baselines = useQuery({
     queryKey: ["baselines", project],
@@ -85,6 +97,7 @@ export function useProjectSources(project: string, sourceId: string) {
   return {
     sources,
     revisions,
+    revisionCatalog,
     baselines,
     comparisons,
     createSource,

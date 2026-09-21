@@ -290,39 +290,65 @@ export function App() {
               onSourceContext={agent.sourceContext}
               onBimContext={agent.bimContext}
               onAgentRun={agent.rememberRun}
-              onInvestigateSource={(sourceId, revisionId) => {
-                agent.sourceContext(sourceId, revisionId);
-                void agent.startInvestigation("调查当前工程来源版本", {
+              onInvestigateSource={(
+                sourceId,
+                revisionId,
+                fromRevisionId,
+                elementIds,
+                revisionLabel,
+                fromRevisionLabel,
+              ) => {
+                agent.sourceContext(
                   sourceId,
                   revisionId,
+                  revisionLabel,
+                  fromRevisionId,
+                  fromRevisionLabel,
+                );
+                void agent.startInvestigation("调查当前工程来源版本", {
+                  sourceId,
+                  fromRevisionId,
+                  revisionId,
+                  elementIds,
                 });
               }}
-              onInvestigateBim={(sourceId, revisionId, elementIds) => {
-                agent.bimContext(sourceId, revisionId, elementIds);
+              onInvestigateBim={(
+                sourceId,
+                revisionId,
+                elementIds,
+                fromRevisionId,
+              ) => {
+                agent.bimContext(
+                  sourceId,
+                  revisionId,
+                  elementIds,
+                  fromRevisionId,
+                );
                 void agent.startInvestigation(
                   "调查当前工作包与选中的 BIM 构件",
                   {
                     sourceId,
+                    fromRevisionId,
                     revisionId,
                     workPackageId: selected,
                     elementIds,
                   },
                 );
               }}
-              onInspectImpact={(
-                sourceId,
-                revisionId,
-                workPackageId,
-                elementIds,
-              ) => {
+              onInspectImpact={(workPackageId, context) => {
                 setSelected(workPackageId);
                 setMappingMode(true);
-                setMappingContext({
-                  sourceId,
-                  revisionId,
-                  highlightIds: elementIds,
-                });
-                agent.bimContext(sourceId, revisionId, elementIds);
+                setMappingContext(context);
+                if (context.sourceId && context.revisionId) {
+                  agent.bimContext(
+                    context.sourceId,
+                    context.revisionId,
+                    context.highlightIds ?? [],
+                    context.fromRevisionId,
+                    context.revisionLabel,
+                    context.fromRevisionLabel,
+                  );
+                }
                 setTab("bim");
               }}
             />
