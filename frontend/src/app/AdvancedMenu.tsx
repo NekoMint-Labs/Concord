@@ -1,3 +1,4 @@
+import { Ellipsis } from "lucide-react";
 import { useState } from "react";
 import type { DTO } from "../api/client";
 import {
@@ -8,23 +9,16 @@ import {
 } from "../components/ui/AppMenu";
 import { AppDialog } from "../components/ui/AppDialog";
 import { Button } from "../components/ui/button";
+import { icon } from "../components/ui/icon";
 import { advancedTabs, type WorkspaceTab } from "./WorkspaceTabs";
 
 /**
  * 高级: the one door to everything that is not the workflow.
  *
- * Two things used to sit in the window's own chrome as if they were workflow. The
- * diagnostics (运行, 能力) were peers of 协调 and BIM in the view strip, and the
- * demo fixture tools were a top-level 演示选项 button beside 记录变更 - which is
- * how a working product reads as a demonstration build: the second most prominent
- * control in the window rewrote the fixture.
- *
- * Neither capability is removed. Both move behind one explicitly separated entry,
- * which is the smallest honest containment available before the full settings
- * surface exists (the next pass: a Settings window with 常规 / 外观 / AI / 高级;
- * runtime information, run history, capability diagnostics and demo tools are its
- * 高级 section). What this file is, then, is that section, temporarily hung off
- * the window's actions band.
+ * Capability diagnostics used to sit in the window chrome as a workflow peer.
+ * Run checks now have an explicit primary destination; capability health remains
+ * behind this separated entry because it diagnoses the installation rather than
+ * the selected work package.
  *
  * Demo tools are additionally gated on the profile the backend is actually
  * running under: `api.profile()` is the one honest signal, and it reports `local`
@@ -64,7 +58,11 @@ export function AdvancedMenu({
   const demo = profile?.profile === "local";
   return (
     <>
-      <AppMenu label="高级">
+      <AppMenu
+        label="高级"
+        trigger={<Ellipsis {...icon} />}
+        triggerClassName="icon-button advanced-menu-trigger"
+      >
         <AppMenuLabel>诊断</AppMenuLabel>
         {advancedTabs.map(({ id, label }) => (
           <AppMenuItem key={id} active={tab === id} onSelect={() => onTab(id)}>

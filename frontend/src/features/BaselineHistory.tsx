@@ -3,6 +3,7 @@ import type {
   ProjectSourceRevision,
   ProjectSourceStatus,
 } from "../api/client";
+import { AppDisclosure } from "../components/ui/AppDisclosure";
 
 export function baselineEntryLabel(
   entry: Baseline["entries"][number],
@@ -34,17 +35,11 @@ export function BaselineHistory({
       </header>
       <div className="baseline-list">
         {baselines.map((baseline) => (
-          <details key={baseline.id}>
-            <summary>
-              <span className="baseline-name">
-                <strong>{baseline.name}</strong>
-                <small className="mono">B{baseline.sequence}</small>
-              </span>
-              <span>{baseline.entries.length} 个来源版本</span>
-              <time dateTime={baseline.created_at}>
-                {new Date(baseline.created_at).toLocaleString()}
-              </time>
-            </summary>
+          <AppDisclosure
+            key={baseline.id}
+            className="baseline-entry"
+            label={`B${baseline.sequence} · ${baseline.name} · ${baseline.entries.length} 个来源版本 · ${new Date(baseline.created_at).toLocaleString("zh-CN")}`}
+          >
             <div className="baseline-entries">
               {baseline.entries.map((entry) => (
                 <code key={`${entry.source_id}:${entry.revision_id}`}>
@@ -52,7 +47,7 @@ export function BaselineHistory({
                 </code>
               ))}
             </div>
-          </details>
+          </AppDisclosure>
         ))}
         {!baselines.length && (
           <p className="quiet-message">尚未接受工程基线。</p>

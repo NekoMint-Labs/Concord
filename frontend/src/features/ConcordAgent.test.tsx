@@ -21,6 +21,32 @@ vi.mock("../components/ui/AppPopover", () => ({
   AppPopoverClose: ({ children }: { children: ReactNode }) => children,
 }));
 
+vi.mock("../components/ui/AppSelect", () => ({
+  AppSelect: ({
+    label,
+    value,
+    onChange,
+    options,
+  }: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    options: { value: string; label: ReactNode }[];
+  }) => (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(event) => onChange(event.currentTarget.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
 const context: ConcordContext = {
   projectName: "Campus Lab",
   sourceId: "source-1",
@@ -50,10 +76,8 @@ it("defaults initiative to Suggest and persists an explicit mode change", async 
     .spyOn(api, "setAgentSettings")
     .mockResolvedValue({ initiative: "manual" });
   view();
-  expect(await screen.findByLabelText("Concord 主动模式")).toHaveValue(
-    "suggest",
-  );
-  fireEvent.change(screen.getByLabelText("Concord 主动模式"), {
+  expect(await screen.findByLabelText("调查方式")).toHaveTextContent("建议");
+  fireEvent.change(screen.getByLabelText("调查方式"), {
     target: { value: "manual" },
   });
   await waitFor(() =>
@@ -103,12 +127,12 @@ it("keeps Ask read-only and only Investigate returns the current durable run", a
       <ConcordAgent project="project" context={context} onRun={onRun} />
     </QueryClientProvider>,
   );
-  fireEvent.change(screen.getByPlaceholderText(/解释当前上下文/), {
+  fireEvent.change(screen.getByPlaceholderText(/当前为什么不能施工/), {
     target: { value: "Why is this pending?" },
   });
   fireEvent.click(screen.getByRole("button", { name: "询问" }));
   expect(await screen.findByText(/R2 is newer/)).toBeVisible();
-  expect(screen.getByText(/未保存为 Evidence/)).toBeVisible();
+  expect(screen.getByText(/不写入项目依据/)).toBeVisible();
   expect(ask).toHaveBeenCalledOnce();
   expect(ask).toHaveBeenCalledWith("project", {
     instruction: "Why is this pending?",
@@ -122,10 +146,10 @@ it("keeps Ask read-only and only Investigate returns the current durable run", a
   });
   expect(onRun).not.toHaveBeenCalled();
 
-  fireEvent.click(screen.getByRole("button", { name: "调查此工作包" }));
+  fireEvent.click(screen.getByRole("button", { name: "检查 1 个已选构件" }));
   await waitFor(() =>
     expect(investigate).toHaveBeenCalledWith("project", {
-      instruction: "调查当前工作包",
+      instruction: "调查当前选中的 BIM 构件",
       scope: {
         source_id: "source-1",
         from_revision_id: "r1",

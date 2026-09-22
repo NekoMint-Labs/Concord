@@ -267,10 +267,10 @@
 .dialog-surface {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  width: 470px;
+  gap: 14px;
+  width: 440px;
   max-width: 94vw;
-  padding: var(--space-5) var(--space-5) 22px;
+  padding: 20px;
   border-radius: var(--radius-xl);
   background: var(--surface);
   box-shadow: var(--shadow-modal);

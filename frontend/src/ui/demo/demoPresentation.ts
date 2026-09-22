@@ -33,6 +33,14 @@ export function setDemoLocale(next: DemoLocale): void {
   locale = next;
 }
 
+const PROJECT_NAMES: Record<string, string> = {
+  "harbor-east": "A 栋项目",
+};
+
+const PROJECT_DESCRIPTIONS: Record<string, string> = {
+  "harbor-east": "合成施工协调参考项目",
+};
+
 const WORK_PACKAGE_NAMES: Record<string, string> = {
   "WP-100": "结构交接",
   "WP-200": "东翼风管安装",
@@ -64,6 +72,8 @@ const SOURCE_LABELS: Record<string, string> = {
   material: "材料",
   equipment: "设备",
   inspection: "验收",
+  project_state: "项目状态",
+  "harbor-east": "A 栋项目",
 };
 
 const CONSTRAINT_KINDS: Record<string, string> = {
@@ -142,6 +152,17 @@ const SOURCE_KINDS: Record<string, string[]> = {
   inspection: ["inspection"],
 };
 
+export function demoProjectName(id: string, fallback: string): string {
+  return locale === "zh" ? (PROJECT_NAMES[id] ?? fallback) : fallback;
+}
+
+export function demoProjectDescription(
+  id: string,
+  fallback: string,
+): string {
+  return locale === "zh" ? (PROJECT_DESCRIPTIONS[id] ?? fallback) : fallback;
+}
+
 export function demoWorkPackageName(id: string, fallback: string): string {
   return locale === "zh" ? (WORK_PACKAGE_NAMES[id] ?? fallback) : fallback;
 }
@@ -198,6 +219,17 @@ export function demoConstraintText(
   return match ? rule!.zh(...match.slice(1)) : text;
 }
 
+export function demoInvestigationText(text: string): string {
+  if (locale !== "zh") return text;
+  const projectState =
+    /^Recorded project version (\d+); showing (\d+) scoped work packages; (\d+) returned sources differ from baseline\.$/.exec(
+      text,
+    );
+  return projectState
+    ? `已记录项目版本 ${projectState[1]}；当前范围包含 ${projectState[2]} 个工作包；${projectState[3]} 个工程来源与基准不同。`
+    : text;
+}
+
 /**
  * Evidence carries no kind, so only the kinds its deterministic source prefix
  * can produce are considered. An unrecognized source passes through unchanged.
@@ -208,7 +240,7 @@ export function demoEvidenceFact(sourceId: string, fact: string): string {
     const translated = demoConstraintText(kind, fact);
     if (translated !== fact) return translated;
   }
-  return fact;
+  return demoInvestigationText(fact);
 }
 
 /** Human label for the source an evidence row came from. */

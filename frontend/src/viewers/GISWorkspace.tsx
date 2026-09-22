@@ -88,7 +88,7 @@ export default function GISWorkspace({
             {
               id: "background",
               type: "background",
-              paint: { "background-color": "#eef2ef" },
+              paint: { "background-color": "#f3f4f4" },
             },
           ],
         },
@@ -105,14 +105,14 @@ export default function GISWorkspace({
             type: "fill",
             source: "site",
             filter: ["==", ["geometry-type"], "Polygon"],
-            paint: { "fill-color": "#b3d0c4", "fill-opacity": 0.6 },
+            paint: { "fill-color": "#dce3e8", "fill-opacity": 0.72 },
           });
           created.addLayer({
             id: "outline",
             type: "line",
             source: "site",
             filter: ["==", ["geometry-type"], "Polygon"],
-            paint: { "line-color": "#5f8f7e", "line-width": 2 },
+            paint: { "line-color": "#71818c", "line-width": 1.5 },
           });
           created.addLayer({
             id: "packages",
@@ -120,10 +120,10 @@ export default function GISWorkspace({
             source: "site",
             filter: ["==", ["geometry-type"], "Point"],
             paint: {
-              "circle-radius": 8,
-              "circle-color": "#236f61",
-              "circle-stroke-color": "#fff",
-              "circle-stroke-width": 3,
+              "circle-radius": 7,
+              "circle-color": "#315f7d",
+              "circle-stroke-color": "#ffffff",
+              "circle-stroke-width": 2,
             },
           });
           created.on("click", "packages", (event) => {
@@ -172,18 +172,20 @@ export default function GISWorkspace({
       instance.setPaintProperty("packages", "circle-radius", [
         "case",
         ["==", ["get", "work_package_id"], selected],
-        12,
-        8,
+        11,
+        7,
       ]);
   }, [selected, data.data, ready]);
   return (
     <section className="gis-workspace">
-      <div className="viewer-toolbar">
-        <strong>现场地图</strong>
-        <span>项目现场与工作包位置</span>
-        <span role="status">
-          {failed ? "地图不可用" : ready ? "地图已就绪" : "正在加载地图"}
-        </span>
+      <div className="view-toolbar">
+        <h2>现场地图</h2>
+        <span className="viewer-toolbar-note">项目现场与工作包位置</span>
+        <div className="viewer-toolbar-actions">
+          <span className="viewer-toolbar-note" role="status">
+            {failed ? "地图不可用" : ready ? "地图已就绪" : "正在加载地图"}
+          </span>
+        </div>
       </div>
       {/* Minimum context so a reader can tell what they are looking at: what the
           polygon is, what the points are, and which work package is current. Not
@@ -214,7 +216,7 @@ export default function GISWorkspace({
       </div>
       <div className="map-stage" ref={target} aria-label="项目现场地图" />
       <p className="viewer-note">
-        数据来源：本地 GeoJSON 合成位置，未接入商业地图瓦片。
+        数据来源：项目本地 GeoJSON；未连接外部商业地图服务。
       </p>
       {failed && (
         <div className="viewer-message" role="alert">

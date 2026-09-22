@@ -97,7 +97,7 @@
   flex-direction: column;
 }
 /*
- * The sidebar header and the topbar are both 40px and both sit on the chrome
+   * The sidebar header and the application header are both 40px and both sit on the chrome
  * plane, so the two read as one band of window chrome spanning the whole window -
  * the top edge of the L the shell is composed as. Because they are now one
  * material rather than two, the seam between them is carried by the vertical
@@ -113,7 +113,7 @@
  * sharing one baseline with 7px between them, which the eye read as a single grey
  * string. They are now two type tiers apart - name at the section step in full
  * ink, descriptor at the label step in faint ink with tracking - and the band
- * stays 40px so it still opens the same window chrome row as the topbar beside it.
+   * stays 40px so it still opens the same window chrome row as the application header beside it.
  *
  * The collapse control sits at the far end of that band rather than in a header of
  * its own, which is where a desktop application keeps it: the column states its
@@ -124,35 +124,48 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
   flex-shrink: 0;
-  height: 40px;
-  padding: 0 8px 0 14px;
+  height: 42px;
+  padding: 0 8px 0 12px;
 }
 /* the identity pair: two sizes, one baseline, so the gloss hangs off the name */
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 11px;
+  font-weight: 600;
+}
 .brand-name {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 5px;
   min-width: 0;
   margin-right: auto;
 }
 .brand-name strong {
+  color: var(--ink);
   font-size: var(--fs-section);
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--ink);
 }
 .brand-name span {
-  font-size: var(--fs-label);
-  letter-spacing: 0.08em;
   color: var(--muted-2);
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 .sidebar-header {
   flex-shrink: 0;
 }
 .project-picker {
-  padding: 0 8px 8px;
+  padding: 0 8px 6px;
 }
 /*
  * The picker is a wide control, not a menu label: the trigger owns the row.
@@ -179,7 +192,7 @@
   align-items: center;
   gap: var(--icon-gap);
   width: 100%;
-  height: 34px;
+  height: 32px;
   padding: 0 6px 0 8px;
   border: 0;
   border-radius: var(--radius-md);
@@ -256,13 +269,83 @@
   font-size: var(--fs-label);
   font-weight: 400;
 }
+.sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  margin: 0 8px 6px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-search);
+  color: var(--muted-2);
+}
+.sidebar-search input {
+  min-width: 0;
+  width: 100%;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-meta);
+}
+.sidebar-search input::placeholder {
+  color: var(--muted-2);
+}
 .sidebar-content {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
 }
+.sidebar-primary {
+  display: grid;
+  gap: 2px;
+  padding: 8px 8px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.sidebar-section-label {
+  padding: 0 8px 5px;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+.sidebar-primary button,
+.sidebar-footer button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 30px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--fs-action);
+  text-align: left;
+}
+.sidebar-primary button:hover,
+.sidebar-footer button:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.sidebar-primary button.active {
+  background: var(--accent-muted);
+  color: var(--ink);
+  font-weight: 600;
+}
+.sidebar-footer {
+  flex-shrink: 0;
+  padding: 8px;
+  border-top: 1px solid var(--line);
+}
 .sidebar-group {
-  padding: 10px 8px 20px;
+  padding: 8px 8px 20px;
 }
 /*
  * Three levels, three treatments, so the hierarchy is legible without a single
@@ -301,7 +384,9 @@
   align-items: center;
   gap: 4px;
   height: 25px;
-  padding: 0 5px;
+  width: 25px;
+  justify-content: center;
+  padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -437,90 +522,80 @@
   /* clips the detail pane as it enters from the surface's own right edge */
   overflow: hidden;
 }
-/*
- * Window identity band. It carries the project path on the left and the
- * application's own actions on the right, and it is closed by the plane step to
- * the work surface rather than by a rule.
- *
- * The band also owns the way back to a collapsed navigation column. The control
- * appears only while the sidebar is gone, at the window's own top-left corner -
- * the corner the navigation column vacated - so exactly one sidebar control is on
- * screen at a time and it is always where the column's own edge is.
- */
-.topbar {
-  height: 40px;
+/* Project context, destination navigation, and local actions are deliberately
+ * separate. The first row answers where; the second answers where next and what
+ * can be done here. */
+.app-header {
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: 0 18px;
+  background: var(--surface-chrome);
+  border-bottom: 1px solid var(--line-soft);
 }
-.breadcrumb,
-.header-tools {
+.context-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: var(--fs-meta);
+  gap: var(--space-2);
+  min-height: 30px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  overflow: hidden;
   color: var(--muted);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+}
+.breadcrumb span,
+.breadcrumb strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.breadcrumb strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+.breadcrumb code {
+  color: var(--muted-2);
+  font-size: var(--fs-label);
 }
 .crumb-sep {
   color: var(--muted-2);
 }
-/* The path absorbs the band's free width, so the actions stay at the right edge
-   whether or not the restore control is on screen. */
-.breadcrumb {
-  flex: 1 1 auto;
+.destination-bar {
+  display: flex;
+  align-items: stretch;
   min-width: 0;
+  min-height: 42px;
+  padding: 0 12px 0 8px;
 }
-.breadcrumb strong {
-  color: var(--ink);
-  font-weight: 600;
-}
-.header-tools {
-  gap: var(--space-2);
-}
-
-/*
- * View navigation. Three primary destinations, stated as tabs.
- *
- * The active view is said twice, and only twice: the label takes full ink and
- * real weight, and a 2px accent rail moves along the bottom edge of the strip.
- * This replaces an accent-tinted rectangle behind the label, which - at 10% over
- * the chrome plane - rendered as a grey box rather than as a slate one, and read
- * exactly like a browser settings tab. The tint was the right idea at the wrong
- * density: on a row this short there is not enough area for a tint to be the
- * signal, so the area goes back to being the label's, and position is carried by
- * a rail plus typography instead.
- *
- * The rail is a real element with a shared `layoutId`, not a ::after that scales
- * under its own tab: switching views *moves* one continuous object along the
- * strip rather than switching one mark off and another on. Its inset matches the
- * button's own padding, so the rail underlines the word rather than the target.
- */
 .workspace-tabs {
   display: flex;
   align-items: stretch;
-  gap: var(--space-1);
-  padding: 0 16px;
-  height: 36px;
-  flex-shrink: 0;
+  gap: 2px;
+  min-width: 0;
+  height: 42px;
   overflow-x: auto;
+  scrollbar-width: none;
+}
+.workspace-tabs::-webkit-scrollbar {
+  display: none;
 }
 .workspace-tabs button {
   position: relative;
   display: flex;
-  gap: 6px;
   align-items: center;
-  padding: 2px 10px 0;
-  font-size: var(--fs-action);
-  border: none;
-  border-radius: 0;
-  color: var(--muted);
-  background: transparent;
-  white-space: nowrap;
+  gap: 6px;
   flex-shrink: 0;
-  transition: color var(--motion-fast) var(--ease);
+  padding: 2px 9px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-action);
+  white-space: nowrap;
 }
 .workspace-tabs button:hover {
   color: var(--ink-2);
@@ -535,39 +610,46 @@
 }
 .tab-surface {
   position: absolute;
-  left: 10px;
-  right: 10px;
+  left: 9px;
+  right: 9px;
   bottom: 0;
   height: 2px;
-  border-radius: 1px;
   background: var(--accent);
 }
-/* the destination of the menu below: it owns only its own placement, because the
-   trigger and the surface are both owned by components/ui/AppMenu */
 .more-views {
-  margin-left: auto;
   align-self: center;
+  margin-left: 2px;
 }
-/*
- * The current advanced view, named in the strip without becoming a destination in
- * it. Four characters of grey beside five characters of ink is the whole
- * treatment: it says where the user is, and it is deliberately not a button,
- * because the strip's buttons are the places this product's work happens and the
- * way back is the 高级 entry the view was opened from.
- */
 .advanced-view-chip {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
   padding: 0 10px;
-  font-size: var(--fs-action);
   color: var(--ink);
+  font-size: var(--fs-action);
 }
 .advanced-view-chip .advanced-view-eyebrow {
   color: var(--muted-2);
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+}
+.local-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  min-height: 42px;
+  margin-left: auto;
+  padding-left: 10px;
+  border-left: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--surface-detail) 52%, transparent);
+}
+.local-actions > .button {
+  color: var(--ink-2);
+}
+.advanced-menu-trigger {
+  color: var(--muted);
 }
 /*
  * The work surface is the left pane of the workspace split, and the detail pane
@@ -578,397 +660,615 @@
   min-width: 0;
   min-height: 160px;
   position: relative;
+  container: workspace / inline-size;
   overflow: auto;
   background: var(--surface-workspace);
-  /*
-   * The analysis footer is a chrome band laid out below this region
-   * (.timeline), and its height is content-driven rather than fixed, so the
-   * scroll region states the footer's requirement as its own bottom scroll
-   * padding. Anything scrolled to - a focused control, an anchor, the end of the
-   * content - stops clear of the band instead of landing flush against it. The
-   * footer and this reserve read the same token, so the two cannot drift apart.
-   */
-  scroll-padding-bottom: var(--status-bar-h);
 }
 
-/* ---------- work item ---------- */
-
-/*
- * One work item, composed as a readout rather than as a paragraph.
- *
- * The region owns the width; the body keeps a measure so a line of Chinese or a
- * sentence of product copy does not run the full width of a 1200px pane. The
- * composition is: identity, then the record - what the judgement is on the left,
- * the package's condition on the right, and the action spanning both underneath -
- * and then, behind a disclosure, the rest of the conditions. READY and BLOCKED are
- * the same composition in two states, so a change of state does not move the page
- * under the reader.
- *
- * The body's bottom padding is the region's own breathing room plus the footer's
- * requirement, so the end of the record can always be brought clear of the band
- * rather than stopping at it.
- *
- * The measure is declared once here and consumed by both the header and the body,
- * because the two have to agree: the state tag is the header's own right edge, and
- * a header allowed to run wider than the record put that tag in empty space 200px
- * past the object it describes.
- *
- * 820px, down from 900. The record is a well, so its whole rectangle is a surface
- * whether or not there is text in it, and at 900 the conclusion and the four
- * facts together filled about two thirds of it: the remaining third read as the
- * empty right-hand half of a form. Narrowing the measure does not shrink the
- * content, it deletes the part of the well that had nothing to say.
- */
+/* ---------- selected work package overview ---------- */
 .coordination-workspace {
-  --coordination-measure: 820px;
+  width: min(1240px, 100%);
   min-height: 100%;
-  padding: var(--space-5) var(--space-6)
-    calc(var(--space-6) + var(--status-bar-h));
+  margin: 0 auto;
+  padding: 18px 22px 40px;
 }
-/*
- * At 1440 the record was 820px inside a 1144px work region, and the remaining
- * third read as a page that had stopped rather than as a deliberate margin. The
- * fix is not more content and not a fourth rail (the Inspector already owns the
- * right-hand contextual space when it is open) - it is to let the information
- * that is already on the page take the width it can use.
- *
- * 960px opens above the four-column floor, which is the one width in this product
- * that already means "every pane fits, nothing has yielded". At 1280 the work
- * region is 984px, so the record still stops 24px short of its own padding; at
- * 1440 it leaves a 184px margin, and that margin is intended - a professional
- * desktop application does not have to fill the viewport, it has to look like it
- * decided where to stop. Below the floor the measure stays 820: a narrower window
- * has no width to give away, and the record's own columns wrap before then in any
- * case.
- */
-@media (min-width: 1280px) {
-  .coordination-workspace {
-    --coordination-measure: 960px;
-  }
-}
-.coordination-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  max-width: var(--coordination-measure);
-  margin-top: 20px;
-}
-/*
- * Object identity: the title and its state form one row across the region with
- * the state pushed to the far edge. There is no rule under it - the state is the
- * header's own right edge, and the gap to the body is what separates the two.
- * The title takes the display step and a real gap under it, because it is the one
- * line that names what the page is about and it was previously the same visual
- * size as the metadata beneath it.
- */
-.coordination-head {
+.work-object-header {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-4);
-  max-width: var(--coordination-measure);
+  justify-content: space-between;
+  gap: var(--space-5);
+  margin-bottom: 14px;
 }
-.coordination-identity {
-  min-width: 0;
-}
-.coordination-identity h2 {
-  letter-spacing: -0.015em;
-}
-.coordination-head p {
-  margin-top: 5px;
-  color: var(--muted);
-  font-size: var(--fs-meta);
-}
-.coordination-state-tag {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
-  margin-left: auto;
-  min-height: var(--control-h);
-}
-.state-text {
-  font-size: var(--fs-action);
-  font-weight: 600;
-  color: var(--ink-2);
-}
-.state-text.is-blocked {
-  color: var(--warn-fg);
-}
-
-/*
- * The record: one work-package record, not a pair of objects.
- *
- * This is the composition the whole page rests on. It used to be two independent
- * boxes - a grey conclusion block on the left and a fact stack on the right, with
- * the recommendation as a third card below both - and the reader had to work out
- * that they were about the same work package. They now sit inside one well, on one
- * top edge, with one label tier across both columns, so the conclusion and the
- * condition matrix read as the two halves of a single statement.
- *
- * The step is `--surface-chrome`, the quietest plane that still groups: the well
- * has to cut into the work plane without becoming the page's largest object. At
- * `--surface-detail` the rectangle carried more weight than the conclusion
- * written inside it, and the record read as a disabled form - the container
- * arrived before the content. One step lighter and the well recedes behind what
- * it groups, which is what lets the conclusion, the facts and the recommendation
- * be read as one statement.
- *
- * The well is now 820px wide with an 18px inset instead of 900px with 24px, and
- * the two columns are sized so they *fill* it: the conclusion takes the first
- * 460px and the fact grid sits immediately beside it rather than being pushed
- * against the far edge. The remaining piece of the "disabled form" reading was
- * not the surface at all - it was the empty grey between the conclusion and the
- * facts, which the old 1 1 280px column produced whenever the facts wrapped into
- * two columns.
- *
- * Flex wrapping is the collapse, not a breakpoint: no media query has to guess the
- * pane's width, so the Inspector opening at a constrained window is handled by the
- * same rule as a narrow window. The wrap threshold is ~790px of record width, so
- * the record stacks wherever it did before and at the 860px window with the
- * Inspector open.
- */
-.coordination-record {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3) var(--space-5);
-  padding: 13px 18px 15px;
-  border-radius: var(--radius-md);
-  background: var(--surface-chrome);
-}
-/*
- * BLOCKED. The exception colour is spent on a 3px rail down the record's own
- * left edge, plus the badge and the one or two values that are actually wrong.
- * This replaces a full amber panel, which at that area stopped reading as a
- * warning and started reading as a sticky note - it out-shouted the page it was
- * warning about. The rail is a surface, so it states the exception in area the way
- * every other state in this product is stated; it is inset so it costs no layout
- * and cannot shift the text beside it.
- */
-.coordination-record.is-blocked {
-  box-shadow: inset 3px 0 0 0 var(--warn-line);
-}
-/*
- * The record is two columns of *one* statement: the left column carries the whole
- * of the judgement - what changed, what is blocked, what it rests on, what is
- * recommended, and the one action - and the right column carries the work
- * package's condition. It reads that way because the left column is a single text
- * column: the recommendation used to span both columns as a full-width footer,
- * which is what made the well read as a form with a button row under it rather
- * than as one record with a decision at the end of it.
- *
- * The columns are still flex items, so the wrap is the collapse rather than a
- * breakpoint: when the record has no room for both, each column takes its own
- * line and the left one fills it. The wrap threshold stays where it was - the
- * left column's 460px basis against the fact column's 280px - so the record
- * stacks wherever it stacked before, including at 860px with the Inspector open.
- *
- * At 960px, which is what the wide-screen measure opens to, the split lands at
- * about 580 / 320: the judgement gets a real reading measure and the condition
- * grid keeps the two columns it needs (--surface-chrome, the quietest plane that
- * still groups, so the well recedes behind what it holds).
- */
-.coordination-record > .record-main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  flex: 1 1 460px;
-  min-width: 0;
-}
-.coordination-record > .fact-list {
-  /*
-   * The condition column absorbs the record's spare width, up to the width at
-   * which its own grid would break into a third column - 3 x 120px plus two 16px
-   * gaps is 392, so the cap sits at 320 and the grid stays the two columns it was
-   * designed as. On a wide window that is the difference between a record that
-   * opened to make room and then left 300px of bare well between the judgement and
-   * the facts, and one where the facts are using the room.
-   */
-  flex: 1 1 280px;
-  max-width: 320px;
-  min-width: 0;
-  align-self: flex-start;
-}
-
-/*
- * The conclusion. It is no longer its own object: inside the record well it is the
- * left half of the record, and it states itself with type - a conclusion at the
- * section step in full ink, the facts it rests on at the meta step in muted ink -
- * rather than with a surface of its own.
- */
-.state-block {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.ready-line {
-  font-size: var(--fs-section);
-  font-weight: 600;
-  line-height: 1.45;
-  color: var(--ink);
-}
-/* the state object's own supporting line: a timestamp, the snapshot a judgement
-   rests on, and how many sources it read */
-.state-meta {
-  color: var(--muted);
-  font-size: var(--fs-meta);
-  line-height: 1.6;
-}
-/*
- * READY's next action, in one quiet line at the same tier as the provenance
- * above it.
- *
- * The state object states the conclusion and what it rests on, and a first-time
- * reader was then left to work out what the product expects of them - the one
- * thing in this workspace that was legible to someone who already knew the
- * workflow and not to anyone else. It names the inputs that would invalidate the
- * judgement and the two steps that follow, in the register the rest of the record
- * is written in, and it is deliberately not a control: the action it names is
- * 记录变更 in the window band, and a second control under the same name on the
- * same page is what turns a quiet READY into a dashboard.
- */
-.ready-guidance {
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: var(--fs-meta);
-  line-height: 1.6;
-}
-.revision-line {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: var(--fs-body);
-  color: var(--muted);
-}
-.revision-line strong {
-  color: var(--ink);
-  font-weight: 600;
-}
-.blocking-fact {
-  /* The blocked record's conclusion, at the same step the ready record states
-     its own: in both states the sentence the record exists to say is the largest
-     text in the left column, so the two are one composition in two states rather
-     than a conclusion and a note. */
-  font-size: var(--fs-section);
-  line-height: 1.65;
-  color: var(--ink);
-}
-/*
- * Scope line: how wide this judgement reaches, and the way into the graph that
- * shows it. A fact and its action on one line, so "12 elements are affected" is
- * never a dead end.
- */
-.scope-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  font-size: var(--fs-action);
-  color: var(--muted);
-}
-.stale-note {
-  font-size: var(--fs-meta);
-  color: var(--warn-fg);
-}
-
-/*
- * Facts. A label spine and a value, repeated on a grid, which is the one shape
- * this product uses to state engineering values outside a table. Labels are the
- * small label tier and values are body text, so a reader can scan the left
- * column and read the right one.
- *
- * The column floor is 120px, which is the widest a value at this tier can need
- * ("机电 / 陈", "4 / 4 人") and narrow enough that the grid answers the space it is
- * actually given: two columns beside the conclusion on a wide window, four across
- * the record once the columns wrap on a narrow one. A wider floor would let the
- * condition matrix collapse into a single tall stack in exactly the layout where
- * the page has no room to spare for one.
- */
-.fact-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--space-3) var(--space-4);
-  max-width: 720px;
-  min-width: 0;
-}
-.fact {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.fact-label {
+.object-kicker,
+.section-label {
+  display: block;
   color: var(--muted-2);
   font-size: var(--fs-label);
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
 }
-.fact-value {
+.work-object-header h1 {
+  margin-top: 2px;
   color: var(--ink);
-  font-size: var(--fs-action);
-  line-height: 1.5;
-  overflow-wrap: anywhere;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
-.fact-value.is-attention {
-  color: var(--warn-fg);
-}
-
-/*
- * The recommendation. It is the closing paragraph of the record's left column,
- * directly under the blocker it answers, with no surface of its own: it used to be
- * a separate grey card below the record, and then a full-width footer inside it,
- * and both made the answer look like an unrelated second object rather than the
- * last thing the record says.
- *
- * The measure is capped so a suggestion stays a sentence rather than a line, and
- * the cap is only reached on a wide window: the column it now lives in is the
- * thing that holds it.
- */
-.recommendation {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  max-width: 640px;
-}
-.recommendation p {
-  font-size: var(--fs-body);
-  line-height: 1.7;
-  color: var(--ink-2);
-}
-.recommendation p.approval-line {
+.work-object-header p {
+  margin-top: 4px;
+  color: var(--muted);
   font-size: var(--fs-meta);
+}
+.overview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: stretch;
+}
+.overview-main {
+  min-width: 0;
+}
+.readiness-summary {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--surface-detail);
+}
+.readiness-summary.is-ready {
+  border-color: color-mix(in srgb, var(--success) 14%, transparent);
+  background: color-mix(in srgb, var(--success) 6%, var(--surface-workspace));
+}
+.readiness-summary.is-blocked,
+.readiness-summary.is-stale {
+  border-color: color-mix(in srgb, var(--warning) 16%, transparent);
+  background: color-mix(in srgb, var(--warning) 5%, var(--surface-workspace));
+}
+.readiness-summary > svg {
+  width: 23px;
+  height: 23px;
+  margin-top: 3px;
   color: var(--muted);
 }
-/* an action answers the paragraph directly above it, so it takes the smaller of
-   the two gaps in the column: the record's own rhythm when it is the READY
-   record's last element, this one when it closes a recommendation */
-.coordination-actions {
+.readiness-summary.is-ready > svg {
+  color: var(--success);
+}
+.readiness-summary.is-blocked > svg,
+.readiness-summary.is-stale > svg {
+  color: var(--warning);
+}
+.readiness-summary.is-running > svg {
+  color: var(--accent);
+}
+.readiness-summary .is-spinning {
+  animation: state-spin 900ms linear infinite;
+}
+.readiness-title-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 8px;
 }
-.recommendation .coordination-actions {
-  margin-top: var(--space-1);
-}
-/* analyzing: an inline activity statement, not a state block */
-.coordination-body.is-activity {
-  gap: 6px;
-}
-.activity-line {
-  font-size: var(--fs-body);
+.readiness-title-row h2 {
   color: var(--ink);
+  font-size: var(--fs-heading);
+  font-weight: 600;
 }
-.activity-line p {
-  margin-top: 6px;
+.readiness-title-row span {
+  color: var(--accent);
+  font-size: var(--fs-label);
+}
+.readiness-copy h3 {
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.readiness-copy > p {
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  line-height: 1.55;
+}
+.readiness-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 15px;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.readiness-actions,
+.decision-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.overview-decision {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-left: 2px solid var(--warn-line);
+  background: var(--surface-chrome);
+}
+.decision-copy h3 {
+  margin-top: 3px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.decision-copy p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.overview-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.overview-section-header h2 {
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: var(--fs-section);
+  font-weight: 600;
+}
+.model-context {
+  margin-top: 18px;
+}
+.model-context-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(220px, 0.75fr);
+  min-height: 252px;
+  margin-top: 9px;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-detail);
+}
+.overview-model-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 252px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface-detail) 76%, var(--bg-app));
+}
+.overview-model-stage .bim-stage {
+  height: 100%;
+  min-height: 252px;
+}
+.overview-model-stage .viewer-actions {
+  top: 10px;
+  left: 10px;
+}
+.overview-model-stage .viewer-message {
+  right: 12px;
+  bottom: 10px;
+  left: 12px;
+  max-width: none;
+  padding: 7px 10px;
+}
+.model-stage-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 100%;
+  padding: 28px;
+  color: var(--muted);
+  text-align: left;
+}
+.model-stage-state > svg {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-chrome);
+  color: var(--muted);
+}
+.model-stage-state strong {
+  display: block;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.model-stage-state p {
+  max-width: 400px;
+  margin-top: 5px;
   color: var(--muted);
   font-size: var(--fs-meta);
   line-height: 1.6;
 }
-.activity-note {
-  margin-top: 6px;
+.model-context-fallback .model-stage-state {
+  min-height: 150px;
+  margin-top: 9px;
+  background: var(--surface-detail);
+}
+.linked-element-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  border-left: 1px solid var(--line-soft);
+  background: var(--surface-workspace);
+}
+.linked-element-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-chrome);
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+}
+.linked-element-panel > header small {
+  color: var(--muted-2);
+  font-weight: 500;
+}
+.linked-element-list {
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 6px;
+}
+.linked-element-list > button {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 8px;
+  gap: 8px;
+  align-items: start;
+  width: 100%;
+  padding: 7px 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+}
+.linked-element-list > button:hover {
+  background: var(--hover);
+}
+.linked-element-list > button.selected {
+  background: var(--accent-muted);
+}
+.element-index {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-detail);
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.element-copy {
+  min-width: 0;
+}
+.element-copy strong,
+.element-copy small,
+.element-copy code {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.element-copy strong {
+  color: var(--ink);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+}
+.element-copy small,
+.element-copy code {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.element-signal {
+  width: 6px;
+  height: 6px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+.element-signal.is-affected {
+  background: var(--warning);
+}
+.linked-element-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 8px;
   color: var(--muted);
   font-size: var(--fs-meta);
 }
-
+.model-change-summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 58px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--surface-chrome);
+}
+.model-change-summary > svg {
+  flex-shrink: 0;
+  color: var(--muted-2);
+}
+.model-change-summary strong,
+.model-change-summary small {
+  display: block;
+}
+.model-change-summary strong {
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+}
+.model-change-summary small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.relevant-change-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 66px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--surface-chrome);
+}
+.relevant-change-strip h3 {
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+}
+.relevant-change-strip p {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.construction-conditions,
+.overview-basis {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+}
+.condition-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.condition-metrics article {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 8px;
+  min-height: 82px;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface-workspace);
+}
+.condition-metrics article > svg {
+  margin-top: 2px;
+  color: var(--muted);
+}
+.condition-metrics span,
+.condition-metrics strong,
+.condition-metrics small {
+  display: block;
+}
+.condition-metrics span {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.condition-metrics strong {
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.condition-metrics small {
+  margin-top: 3px;
+  color: var(--muted-2);
+  font-size: var(--fs-label);
+}
+.condition-metrics small.is-ready {
+  color: var(--success);
+}
+.construction-conditions > .disclosure-block {
+  margin-top: 9px;
+}
+.overview-basis .property-table {
+  margin-top: 9px;
+}
+.readiness-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+}
+.readiness-label > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+.readiness-label.is-ready > span {
+  background: var(--success);
+}
+.readiness-label.is-blocked > span,
+.readiness-label.is-stale > span {
+  background: var(--warning);
+}
+.readiness-label.is-running > span {
+  background: var(--accent);
+}
+.overview-inspector {
+  position: sticky;
+  top: 0;
+  min-width: 0;
+  min-height: calc(100dvh - 88px);
+  overflow: hidden;
+  border-left: 1px solid var(--line-soft);
+  background: var(--surface-detail);
+}
+.overview-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 54px;
+  padding: 10px 14px;
+  background: var(--surface-chrome);
+}
+.overview-inspector-header h2 {
+  margin-top: 2px;
+  font-size: var(--fs-heading);
+  font-weight: 600;
+}
+.overview-inspector-tabs {
+  display: flex;
+  min-width: 0;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-chrome);
+}
+.overview-inspector-tabs button {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 36px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  white-space: nowrap;
+}
+.overview-inspector-tabs button.active {
+  color: var(--ink);
+  font-weight: 600;
+}
+.overview-inspector-tabs button.active::after {
+  position: absolute;
+  right: 5px;
+  bottom: 0;
+  left: 5px;
+  height: 2px;
+  background: var(--accent);
+  content: "";
+}
+.overview-inspector-body {
+  padding: 14px 16px 18px;
+}
+.overview-inspector-body .property-row {
+  min-height: 31px;
+  padding-block: 6px;
+}
+.overview-inspector-body .property-row dd {
+  font-size: var(--fs-action);
+}
+.overview-inspector-body .shared-property-group + .shared-property-group {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+.overview-inspector-body .button {
+  margin-top: 10px;
+}
+.overview-source-list {
+  display: grid;
+  margin-top: 7px;
+}
+.overview-source-list > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--fs-meta);
+}
+.overview-source-list code {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+@container workspace (max-width: 1050px) {
+  .overview-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .overview-inspector {
+    position: static;
+    min-height: 0;
+    border-top: 1px solid var(--line-soft);
+    border-left: 0;
+  }
+  .overview-inspector-body {
+    min-height: 190px;
+  }
+}
+@media (max-width: 1180px) {
+  .coordination-workspace {
+    padding: 16px 18px 32px;
+  }
+  .overview-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .overview-inspector {
+    position: static;
+  }
+}
+@media (max-width: 900px) {
+  .coordination-workspace {
+    padding: 15px 14px 28px;
+  }
+  .work-object-header h1 {
+    font-size: 21px;
+  }
+  .readiness-summary {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+  .readiness-actions {
+    grid-column: 2;
+    margin-top: 2px;
+  }
+  .model-context-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .overview-model-stage {
+    min-height: 250px;
+  }
+  .linked-element-panel {
+    grid-template-columns: minmax(0, 1fr) minmax(210px, 0.55fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    border-top: 1px solid var(--line-soft);
+    border-left: 0;
+  }
+  .linked-element-panel > header {
+    grid-column: 1 / -1;
+  }
+  .model-change-summary {
+    border-left: 1px solid var(--line-soft);
+  }
+  .condition-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .overview-decision {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
 /* ---------- startup ---------- */
 
 .startup {
@@ -1052,26 +1352,33 @@
  * to be guaranteed at every width is that the work plane beside the column still
  * reads, and that is what this floor states.
  */
-@media (max-width: 1150px) {
-  .coordination-workspace {
-    padding: 20px 20px calc(26px + var(--status-bar-h));
+@media (max-width: 1100px) {
+  .context-bar {
+    padding-inline: 12px;
+  }
+  .breadcrumb code {
+    display: none;
+  }
+  .destination-bar {
+    padding-right: 8px;
+  }
+  .workspace-tabs button {
+    padding-inline: 7px;
+  }
+  .more-view-label {
+    display: none;
+  }
+  .local-actions {
+    padding-left: 8px;
   }
 }
 @media (max-width: 850px) {
   .application-shell {
     min-width: 720px;
   }
-  .brand {
-    padding: 0 8px 0 12px;
-  }
-  .topbar,
-  .workspace-tabs,
   .view-toolbar,
   .viewer-toolbar {
     padding-left: 14px;
     padding-right: 14px;
-  }
-  .coordination-workspace {
-    padding: 16px 14px calc(24px + var(--status-bar-h));
   }
 }

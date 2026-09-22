@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { Search, Upload } from "lucide-react";
 import { api, isDesktop, readSource, type AgentRun } from "../api/client";
+import { WorkspaceState } from "../components/WorkspaceState";
 import { Button } from "../components/ui/button";
 import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
 import { AppTooltip } from "../components/ui/AppTooltip";
@@ -218,7 +219,20 @@ export function Documents({
       </header>
       <div className="pane-body">
         {(chunks.error || results.error || documents.error) && (
-          <p role="alert">文档请求失败。请检查连接与能力状态。</p>
+          <WorkspaceState
+            kind="error"
+            compact
+            title="文档依据不可用"
+            description="请检查连接与能力状态后重试。"
+          />
+        )}
+        {(documents.isLoading || (!!current && chunks.isLoading)) && !query && (
+          <WorkspaceState
+            kind="loading"
+            compact
+            title="正在读取文档依据"
+            description="正在准备解析内容与来源信息。"
+          />
         )}
         {/*
           Keyed by the reading subject, so switching source mounts a new reading
@@ -267,8 +281,17 @@ export function Documents({
               </div>
             </article>
           ))}
-          {visible?.length === 0 && (
-            <p className="quiet-message">没有匹配的文档依据。</p>
+          {visible?.length === 0 && !documents.isLoading && (
+            <WorkspaceState
+              kind="empty"
+              compact
+              title={query ? "没有匹配的文档依据" : "当前文档没有解析内容"}
+              description={
+                query
+                  ? "调整关键词，或清除搜索返回当前文档。"
+                  : "重新导入文档后，解析内容会显示在这里。"
+              }
+            />
           )}
         </motion.div>
       </div>
@@ -326,7 +349,12 @@ export function Documents({
           </button>
         ))}
         {documents.data?.length === 0 && (
-          <p className="quiet-message pane-empty">尚未导入文档。</p>
+          <WorkspaceState
+            kind="empty"
+            compact
+            title="尚未导入文档"
+            description="导入工程文档后，可在本机搜索并核对依据。"
+          />
         )}
       </div>
     </Pane>

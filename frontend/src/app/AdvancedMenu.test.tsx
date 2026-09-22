@@ -79,10 +79,9 @@ it("hides the demo tools while the profile query is still loading", () => {
   expect(screen.queryByText("演示工具")).not.toBeInTheDocument();
   expect(screen.queryByText("重置演示")).not.toBeInTheDocument();
 
-  // A missing answer hides the fixtures and nothing else: the diagnostics are
-  // not demo tools and keep their place in the menu.
-  fireEvent.click(screen.getByRole("menuitem", { name: "运行记录" }));
-  expect(onTab).toHaveBeenCalledWith("operations");
+  // A missing answer hides the fixtures and leaves diagnostics available.
+  fireEvent.click(screen.getByRole("menuitem", { name: "能力诊断" }));
+  expect(onTab).toHaveBeenCalledWith("capabilities");
 });
 
 it("shows the demo tools only when the profile positively reports local", () => {
@@ -90,8 +89,7 @@ it("shows the demo tools only when the profile positively reports local", () => 
 
   expect(screen.getByText("演示工具")).toBeVisible();
   expect(screen.getByText("重置演示")).toBeVisible();
-  // The diagnostics are still there beside them.
-  expect(screen.getByRole("menuitem", { name: "运行记录" })).toBeVisible();
+  // Capability diagnostics remain available beside them.
   expect(screen.getByRole("menuitem", { name: "能力诊断" })).toBeVisible();
 
   for (const name of ["desktop", "server", "full"]) {

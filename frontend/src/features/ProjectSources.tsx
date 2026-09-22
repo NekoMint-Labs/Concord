@@ -8,6 +8,7 @@ import type { BimMappingContext } from "./BimMappingWorkspace";
 import { CreateSourceDialog } from "./CreateSourceDialog";
 import { RevisionImpact } from "./RevisionImpact";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
+import { demoInvestigationText } from "../ui/demo/demoPresentation";
 
 export function revisionState(
   status: DTO<"ProjectSourceStatus">,
@@ -26,6 +27,13 @@ const stateLabel = {
   accepted: "已接受基线",
   "latest-accepted": "最新 · 已接受",
   historical: "历史版本",
+};
+
+const sourceKindLabel: Record<string, string> = {
+  BIM: "BIM 模型",
+  DOCUMENT: "工程文档",
+  DRAWING: "施工图纸",
+  SCHEDULE: "进度计划",
 };
 
 export function ProjectSources({
@@ -112,7 +120,7 @@ export function ProjectSources({
       <div className="view-toolbar">
         <h2>项目来源</h2>
         <span className="viewer-toolbar-note">
-          逻辑来源、不可变版本与工程基线
+          工程来源、不可变版本与接受基线
         </span>
         <div className="viewer-toolbar-actions">
           <Button
@@ -127,7 +135,7 @@ export function ProjectSources({
             disabled={!statuses.some((item) => item.latest_revision_id)}
             onClick={() => void sourceData.acceptBaseline.mutateAsync()}
           >
-            接受为 B{(sourceData.baselines.data?.length ?? 0) + 1}
+            接受当前版本为 B{(sourceData.baselines.data?.length ?? 0) + 1}
           </Button>
         </div>
       </div>
@@ -164,7 +172,9 @@ export function ProjectSources({
                 }}
               >
                 <strong>{item.source.name}</strong>
-                <span>{item.source.kind}</span>
+                <span>
+                  {sourceKindLabel[item.source.kind] ?? item.source.kind}
+                </span>
                 <small>
                   {item.latest_revision_id
                     ? item.has_pending_revision
@@ -186,7 +196,10 @@ export function ProjectSources({
               <>
                 <header className="source-detail-heading">
                   <div>
-                    <span className="eyebrow">{current.source.kind}</span>
+                    <span className="eyebrow">
+                      {sourceKindLabel[current.source.kind] ??
+                        current.source.kind}
+                    </span>
                     <h3>{current.source.name}</h3>
                   </div>
                   <div>
@@ -289,7 +302,7 @@ export function ProjectSources({
                               )
                             }
                           >
-                            让 Concord 调查
+                            调查版本
                           </Button>
                         </div>
                         {notice && current.has_pending_revision && (
@@ -391,11 +404,11 @@ export function ProjectSources({
                 )}
                 {report?.scope.source_id === sourceId && (
                   <section className="context-agent-result">
-                    <span className="eyebrow">Concord 调查结果</span>
-                    <p>{report.answer.summary}</p>
+                    <span className="eyebrow">版本调查结果</span>
+                    <p>{demoInvestigationText(report.answer.summary)}</p>
                     <div className="context-agent-result-footer">
                       <small>
-                        已持久化 · {report.evidence.length} 条 Evidence · 运行{" "}
+                        已持久化 · {report.evidence.length} 条依据 · 运行{" "}
                         {report.run_id.slice(0, 8)}
                       </small>
                       <Button

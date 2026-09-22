@@ -160,6 +160,7 @@ const RUN_TRACE: Record<string, string> = {
   "action-result": "执行结果",
   "capability-result": "能力结果",
   "investigation-result": "调查结果",
+  project_state: "项目状态",
 };
 
 const SETS = {

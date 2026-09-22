@@ -44,10 +44,12 @@ export { usePanelRef, type PanelImperativeHandle };
 export function PaneSplit({
   id,
   persist = false,
+  orientation = "horizontal",
   children,
 }: {
   id: string;
   persist?: boolean;
+  orientation?: "horizontal" | "vertical";
   children: ReactNode;
 }) {
   /*
@@ -76,6 +78,7 @@ export function PaneSplit({
     <Group
       id={id}
       className="pane-split"
+      orientation={orientation}
       defaultLayout={persist ? saved.defaultLayout : undefined}
       onLayoutChanged={persist ? saved.onLayoutChanged : undefined}
     >

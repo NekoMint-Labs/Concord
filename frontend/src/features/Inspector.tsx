@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { X } from "lucide-react";
 import { api, type Workspace } from "../api/client";
+import { DetailInspectorHeader } from "../components/DetailInspector";
+import { PropertyRow, PropertyTable } from "../components/PropertyTable";
 import { Button } from "../components/ui/button";
 import { AppDisclosure } from "../components/ui/AppDisclosure";
-import { AppTooltip } from "../components/ui/AppTooltip";
-import { icon } from "../components/ui/icon";
 import { useMotion } from "../motion";
 import {
   demoConstraintKind,
@@ -103,41 +102,22 @@ export function Inspector({
         nothing. Chrome band above a recessed surface is what makes this read as
         a pane instead of as another grey column with a line beside it.
       */}
-      <header className="pane-header is-stacked inspector-header">
-        <div className="pane-header-row">
-          <span className="mono inspector-scope">{wp.id}</span>
-          <span className="pane-header-actions">
-            <AppTooltip label="关闭详情" side="left">
-              <button
-                className="icon-button"
-                onClick={onClose}
-                aria-label="关闭详情"
-              >
-                <X {...icon} />
-              </button>
-            </AppTooltip>
-          </span>
-        </div>
-
-        <nav className="inspector-switch" aria-label="详情类型">
-          {views.map((item) => (
-            <button
-              key={item.id}
-              className={view === item.id ? "active" : ""}
-              aria-current={view === item.id ? "true" : undefined}
-              onClick={() => onView(item.id)}
-            >
-              {item.label}
-              {item.id === "blocker" && constraints.length > 0 && (
-                <span className="count">{constraints.length}</span>
-              )}
-              {item.id === "evidence" && evidence.length > 0 && (
-                <span className="count">{evidence.length}</span>
-              )}
-            </button>
-          ))}
-        </nav>
-      </header>
+      <DetailInspectorHeader
+        eyebrow="工作包"
+        title={wp.id}
+        tabs={views.map((item) => ({
+          ...item,
+          count:
+            item.id === "blocker"
+              ? constraints.length
+              : item.id === "evidence"
+                ? evidence.length
+                : undefined,
+        }))}
+        activeTab={view}
+        onTab={onView}
+        onClose={onClose}
+      />
 
       {/* the pane's own scroll, so the header stays put while detail moves */}
       <div className="inspector-body">
@@ -193,30 +173,21 @@ export function Inspector({
                 className="supplementary-details"
                 label="工作包属性"
               >
-                <div className="fact-list">
-                  <div className="fact">
-                    <span className="fact-label">区域</span>
-                    <span className="fact-value">{wp.area_id}</span>
-                  </div>
-                  <div className="fact">
-                    <span className="fact-label">负责人</span>
-                    <span className="fact-value">
-                      {demoOwner(wp.id, wp.owner)}
-                    </span>
-                  </div>
-                  <div className="fact">
-                    <span className="fact-label">修订</span>
-                    <span className="fact-value">
-                      {wp.accepted_revision} / {wp.design_revision}
-                    </span>
-                  </div>
-                  <div className="fact">
-                    <span className="fact-label">班组</span>
-                    <span className="fact-value">
-                      {wp.available_workers} / {wp.required_workers}
-                    </span>
-                  </div>
-                </div>
+                <PropertyTable>
+                  <PropertyRow label="区域" value={wp.area_id} />
+                  <PropertyRow
+                    label="负责人"
+                    value={demoOwner(wp.id, wp.owner)}
+                  />
+                  <PropertyRow
+                    label="修订"
+                    value={`${wp.accepted_revision} / ${wp.design_revision}`}
+                  />
+                  <PropertyRow
+                    label="班组"
+                    value={`${wp.available_workers} / ${wp.required_workers}`}
+                  />
+                </PropertyTable>
               </AppDisclosure>
             </>
           )}

@@ -1,4 +1,4 @@
-import { Fragment, lazy, Suspense, useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { FolderOpen, MousePointerClick, PackageOpen } from "lucide-react";
@@ -8,6 +8,11 @@ import { useBIMSource } from "./useBIMSource";
 import { OTHER_PROPERTIES_TITLE, propertySections } from "./bimProperties";
 import { statusLabel } from "../ui/labels";
 import { demoElementName } from "../ui/demo/demoPresentation";
+import {
+  PropertyGroup,
+  PropertyRow,
+  PropertyTable,
+} from "../components/PropertyTable";
 import { Button } from "../components/ui/button";
 import { notify } from "../components/ui/AppToaster";
 import { AppDisclosure } from "../components/ui/AppDisclosure";
@@ -67,6 +72,15 @@ export default function BIMWorkspace({
   /* The full condition set, structured as rows rather than printed as JSON
      source (see ./bimProperties.ts, which owns the label and format logic). */
   const attributeSections = item ? propertySections(item.properties) : [];
+  useEffect(() => {
+    if (
+      elements.data?.length &&
+      !elements.data.some((element) => element.id === selected)
+    ) {
+      setSelected(elements.data[0].id);
+    }
+  }, [elements.data, selected, setSelected]);
+
   // The import notice stays in the pane's chrome; the toast only reports that
   // the job the user started has finished.
   useEffect(() => {
@@ -129,59 +143,61 @@ export default function BIMWorkspace({
         animate="visible"
         transition={transition("fast")}
       >
-        <div className="property-group">
-          <span className="property-group-title">标识与类型</span>
-          <dl className="bim-property-list">
-            <dt>类型</dt>
-            <dd>{item.type}</dd>
-            <dt>标识</dt>
-            <dd className="mono">{item.id}</dd>
-            <dt>版本</dt>
-            <dd className="mono">{item.revision}</dd>
-          </dl>
-        </div>
-        <div className="property-group">
-          <span className="property-group-title">位置</span>
-          <dl className="property-values">
-            <dt>楼层</dt>
-            <dd>{item.storey ?? "未分配"}</dd>
-            <dt>空间</dt>
-            <dd>{item.space ?? "无"}</dd>
-          </dl>
-        </div>
-        <div className="property-group">
-          <span className="property-group-title">关系</span>
-          <dl className="property-values">
-            <dt>关联构件</dt>
-            <dd>{item.related_ids.length} 个</dd>
-            <dt>受影响</dt>
-            <dd
-              className={selectedImpacted ? "property-value is-attention" : ""}
-            >
-              {selectedImpacted ? "是" : "否"}
-            </dd>
-          </dl>
-        </div>
+        <PropertyGroup
+          className="property-group"
+          title={<span className="property-group-title">标识与类型</span>}
+        >
+          <PropertyTable>
+            <PropertyRow label="类型" value={item.type} />
+            <PropertyRow label="标识" value={item.id} mono />
+            <PropertyRow label="版本" value={item.revision} mono />
+          </PropertyTable>
+        </PropertyGroup>
+        <PropertyGroup
+          className="property-group"
+          title={<span className="property-group-title">位置</span>}
+        >
+          <PropertyTable>
+            <PropertyRow label="楼层" value={item.storey ?? "未分配"} />
+            <PropertyRow label="空间" value={item.space ?? "无"} />
+          </PropertyTable>
+        </PropertyGroup>
+        <PropertyGroup
+          className="property-group"
+          title={<span className="property-group-title">关系</span>}
+        >
+          <PropertyTable>
+            <PropertyRow label="关联构件" value={`${item.related_ids.length} 个`} />
+            <PropertyRow
+              label="受影响"
+              value={selectedImpacted ? "是" : "否"}
+              attention={selectedImpacted}
+            />
+          </PropertyTable>
+        </PropertyGroup>
       </motion.div>
       <AppDisclosure label="全部属性">
         {attributeSections.length > 0 ? (
           attributeSections.map((section, sectionIndex) => (
-            <div
+            <PropertyGroup
               className="property-group"
               key={section.title ?? `own-${sectionIndex}`}
+              title={
+                <span className="property-group-title">
+                  {section.title ?? OTHER_PROPERTIES_TITLE}
+                </span>
+              }
             >
-              <span className="property-group-title">
-                {section.title ?? OTHER_PROPERTIES_TITLE}
-              </span>
-              <dl className="property-values">
+              <PropertyTable>
                 {section.fields.map((field, fieldIndex) => (
-                  <Fragment key={`${field.label}-${fieldIndex}`}>
-                    <dt>{field.label}</dt>
-                    <dd>{field.value}</dd>
-                  </Fragment>
+                  <PropertyRow
+                    key={`${field.label}-${fieldIndex}`}
+                    label={field.label}
+                    value={field.value}
+                  />
                 ))}
-              </dl>
-            </div>
+              </PropertyTable>
+            </PropertyGroup>
           ))
         ) : (
           <p className="quiet-message">该构件没有附加属性。</p>
@@ -314,9 +330,7 @@ export default function BIMWorkspace({
       <div className="view-toolbar">
         <h2>BIM</h2>
         <span className="viewer-toolbar-note">
-          {viewFile
-            ? "项目 IFC / That Open Engine"
-            : "结构化 BIM / 无需几何引擎"}
+          {viewFile ? "项目 IFC 几何视图" : `结构化构件 · ${count} 项`}
         </span>
         {!hideSourceActions && (
           <div className="viewer-toolbar-actions">
@@ -346,7 +360,7 @@ export default function BIMWorkspace({
                 onClick={() => fileInput.current?.click()}
               >
                 <FolderOpen {...icon} />
-                打开本地 IFC
+                打开本机 IFC
               </button>
             </AppTooltip>
             <input
@@ -444,9 +458,8 @@ export default function BIMWorkspace({
         <>
           {structured}
           <p className="viewer-note">
-            结构化关系视图不是三维模型。打开 IFC
-            文件可使用单独加载的几何查看器；打开文件仅停留在本机 Tauri
-            WebView，导入项目才会显式发送到已配置的后端。
+            打开 IFC 文件可进入几何视图；文件默认仅在本机 Tauri WebView
+            中处理，只有“导入项目”会发送到已配置的后端。
           </p>
         </>
       )}

@@ -111,7 +111,7 @@ it("updates mounted inspection context and keeps deleted changes visible without
     </QueryClientProvider>,
   );
   await waitFor(() =>
-    expect(screen.getByLabelText("BIM 来源")).toHaveValue("source-1"),
+    expect(screen.getByLabelText("BIM 来源")).toHaveTextContent("MEP"),
   );
 
   const deleted: DTO<"BimElementChange"> = {
@@ -139,7 +139,7 @@ it("updates mounted inspection context and keeps deleted changes visible without
   );
 
   await waitFor(() =>
-    expect(screen.getByLabelText("BIM 来源")).toHaveValue("source-2"),
+    expect(screen.getByLabelText("BIM 来源")).toHaveTextContent("Structure"),
   );
   expect(await screen.findByText(/目标版本无几何/)).toBeVisible();
   expect(screen.queryByRole("button", { name: /确认关联/ })).toBeNull();

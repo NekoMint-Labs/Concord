@@ -50,19 +50,32 @@
  * is a comment, not a design. The right inset is one step tighter than the left
  * because the close control is a 26px square and reads as its own inset.
  */
-.pane-header.inspector-header {
-  padding: 6px 8px 6px 10px;
+.pane-header.detail-inspector-header {
+  gap: 6px;
+  padding: 7px 9px 5px 12px;
 }
-/*
- * The pane's own name: the work package this pane is reporting on. Scoped under
- * `.inspector-header` so it is not demoted to the label tier by the shared
- * `.pane-header .mono` rule, which quiets a right-edge identifier - here the
- * identifier is the pane's subject, so it ranks at the meta tier in ink-2, above
- * the quiet switch labels beneath it.
- */
-.inspector-header .inspector-scope {
-  color: var(--ink-2);
-  font-size: var(--fs-meta);
+.detail-inspector-header .pane-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.detail-inspector-title {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  margin-right: auto;
+}
+.detail-inspector-title strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--fs-section);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.detail-inspector-meta {
+  flex-shrink: 0;
 }
 /*
  * The close control is an `.icon-button`, which now lives in components.css: it
@@ -315,17 +328,6 @@
   background: var(--surface);
 }
 
-.investigation-header {
-  min-height: 48px;
-  padding: 8px 10px 8px 14px;
-  border-bottom: 1px solid var(--line);
-}
-
-.investigation-header h3 {
-  margin: 1px 0 0;
-  font-size: var(--fs-heading);
-}
-
 .investigation-body {
   min-height: 0;
   overflow: auto;
@@ -361,28 +363,14 @@
   color: var(--muted);
 }
 
-.investigation-properties {
-  display: grid;
+.investigation-properties.property-table {
+  margin-top: 0;
+}
+.investigation-properties .property-row {
   grid-template-columns: 78px minmax(0, 1fr);
-  margin: 0;
-  font-size: var(--fs-meta);
 }
-
-.investigation-properties dt,
-.investigation-properties dd {
-  min-width: 0;
-  margin: 0;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.investigation-properties dt {
-  color: var(--muted);
-}
-
-.investigation-properties dd {
-  overflow-wrap: anywhere;
-  color: var(--ink);
+.investigation-properties .property-row dd {
+  text-align: left;
 }
 
 .investigation-section-heading {

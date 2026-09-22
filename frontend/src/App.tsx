@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PenLine } from "lucide-react";
+import { Link2, PenLine } from "lucide-react";
 import { api, isDesktop, setToken, type DTO } from "./api/client";
 import { Button } from "./components/ui/button";
 import { icon } from "./components/ui/icon";
 import { AppToaster } from "./components/ui/AppToaster";
 import { AppTooltip } from "./components/ui/AppTooltip";
-import { Timeline } from "./features/Timeline";
 import { EventComposer } from "./features/EventComposer";
 import type { WorkspaceInspectorView } from "./features/InvestigationInspector";
 import { Pane, PaneDivider, PaneSplit, usePanelRef } from "./layout/PaneSplit";
@@ -165,9 +164,9 @@ export function App() {
           panelRef={navPanel}
           collapsible
           collapsedSize="0px"
-          defaultSize="232px"
-          minSize="200px"
-          maxSize="320px"
+          defaultSize="196px"
+          minSize="176px"
+          maxSize="264px"
           onResize={(size) => setNavOpen(size.inPixels > 0)}
         >
           <ProjectSidebar
@@ -176,6 +175,7 @@ export function App() {
             projects={lifecycle.projects.data}
             recent={lifecycle.recent}
             selected={selected}
+            tab={tab}
             collapsed={!navOpen}
             onCollapse={() => {
               navPanel.current?.collapse();
@@ -186,16 +186,15 @@ export function App() {
             onOpenProject={() => setOpenProjectOpen(true)}
             onProjectSettings={() => setSettingsOpen(true)}
             onStructure={() => setStructureOpen(true)}
-            onLinkBim={(workPackageId) => {
-              setSelected(workPackageId);
-              setMappingMode(true);
-              setMappingContext(undefined);
-              setTab("bim");
-            }}
             onSelect={(id) => {
               setSelected(id);
               setSelectedConstraint("");
               setDetailsOpen(false);
+              setTab("coordination");
+            }}
+            onTab={(next) => {
+              if (next !== "bim") setMappingMode(false);
+              setTab(next);
             }}
           />
         </Pane>
@@ -205,6 +204,11 @@ export function App() {
             <WorkspaceHeader
               data={data}
               wp={wp}
+              tab={tab}
+              onTab={(next) => {
+                if (next !== "bim") setMappingMode(false);
+                setTab(next);
+              }}
               navCollapsed={!navOpen}
               onToggleNav={() => {
                 navPanel.current?.expand();
@@ -220,6 +224,19 @@ export function App() {
                 >
                   <PenLine {...icon} />
                   记录变更
+                </Button>
+              )}
+              {wp && tab === "bim" && !mappingMode && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setMappingContext(undefined);
+                    setMappingMode(true);
+                  }}
+                >
+                  <Link2 {...icon} />
+                  关联构件
                 </Button>
               )}
               <ConcordAgent
@@ -359,10 +376,6 @@ export function App() {
                 }
                 setTab("bim");
               }}
-            />
-            <Timeline
-              run={agent.activeRun ? agent.currentRun.data : data.run}
-              perform={perform}
             />
           </main>
         </Pane>

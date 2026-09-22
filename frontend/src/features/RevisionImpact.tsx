@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type DTO } from "../api/client";
 import { Button } from "../components/ui/button";
+import { AppSelect } from "../components/ui/AppSelect";
 
 export function RevisionImpact({
   project,
@@ -105,31 +106,28 @@ export function RevisionImpact({
     <section className="revision-impact" aria-label="版本影响">
       <div className="impact-heading">
         <h3>版本影响</h3>
-        <select
-          aria-label="版本比较"
+        <AppSelect
+          label="版本比较"
           value={comparisonId}
-          onChange={(event) => {
-            const selected = comparisons.find(
-              (item) => item.id === event.target.value,
-            );
-            setComparisonId(event.target.value);
+          onChange={(value) => {
+            const selected = comparisons.find((item) => item.id === value);
+            setComparisonId(value);
             if (selected) onSelectComparison(selected);
           }}
-        >
-          {comparisons.map((item) => {
+          options={comparisons.map((item) => {
             const optionFrom = revisions.find(
               (revision) => revision.id === item.from_revision_id,
             );
             const optionTo = revisions.find(
               (revision) => revision.id === item.to_revision_id,
             );
-            return (
-              <option key={item.id} value={item.id}>
-                R{optionFrom?.sequence ?? "?"} → R{optionTo?.sequence ?? "?"}
-              </option>
-            );
+            return {
+              value: item.id,
+              label: `R${optionFrom?.sequence ?? "?"} → R${optionTo?.sequence ?? "?"}`,
+              hint: `${item.summary.added + item.summary.deleted + item.summary.changed} 项变更`,
+            };
           })}
-        </select>
+        />
         <Button
           size="sm"
           variant="ghost"
@@ -140,7 +138,7 @@ export function RevisionImpact({
             )
           }
         >
-          让 Concord 调查
+          调查此比较
         </Button>
       </div>
       <p className="viewer-toolbar-note">
@@ -201,7 +199,7 @@ export function RevisionImpact({
         </div>
       )}
       <div className="evidence-register">
-        <span className="fact-label">比较 Evidence</span>
+        <span className="fact-label">比较依据</span>
         {comparison.evidence_ids.map((id) => (
           <code key={id}>{id}</code>
         ))}

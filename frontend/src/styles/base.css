@@ -109,14 +109,14 @@
    * has to move `--line-control` (and then `--muted-2`, which is spaced against
    * the same plane) *with* the navigation plane, not one of them alone.
    */
-  --bg-app: #cbcdcf;
-  --surface-nav: #d6d7d8;
-  --surface-detail: #dedfe0;
+  --bg-app: #eceeef;
+  --surface-nav: #f4f5f6;
+  --surface-detail: #f6f7f8;
   /* the local object list's own body: a plane of its own, one full step below the
      chrome bands it is named by and one above persistent navigation */
-  --surface-list: #e7e8e9;
-  --surface-chrome: #f0f1f2;
-  --surface-workspace: #fbfbfc;
+  --surface-list: #f7f8f9;
+  --surface-chrome: #fafafa;
+  --surface-workspace: #ffffff;
   /* controls, content objects, and floating surfaces stay plain white so they
      read as objects sitting on a region rather than as another region */
   --surface: #fff;
@@ -127,9 +127,9 @@
    */
   /* content rules: table rows, evidence boundaries. Decorative, so no
      contrast floor - but it must stay visible on the work plane it is drawn on */
-  --line: #d8dbdd;
+  --line: #d7d9db;
   /* the quieter content rule, for a second-order separation on a light plane */
-  --line-soft: #e5e8e9;
+  --line-soft: #e0e2e4;
   /*
    * Control boundaries. Two tokens, and the split is a placement rule rather
    * than a tone preference: a boundary has to clear WCAG 1.4.11 (3:1) against
@@ -157,24 +157,25 @@
    * `--surface-nav` or `--bg-app`, where it measures 2.82:1 and 2.55:1.
    * frontend/tests/design-tokens.test.mjs holds both halves of it.
    */
-  --line-control: #777879;
-  --line-control-soft: #7d7e7f;
+  --line-control: #85888b;
+  --line-control-soft: #898c8f;
   /* floating-surface edges. A menu or a dialog is identified by its surface and
      its shadow; this only has to close the shape. */
   --line-float: #c8cbce;
 
-  --ink: #17191b;
+  --ink: #17191c;
   --ink-2: #373a3d;
-  --muted: #525558;
+  --muted: #606467;
   /* The text ladder is spaced against the *darkest* structural plane a token can
      land on (--surface-nav), not against the work plane. Spacing it against the
      work plane is how muted-2 previously sat at 2.96:1 while carrying product
      text - a value that looked fine on paper and failed wherever it was used.
      Moving the ladder darker in this pass is what pulled muted-2 down with it. */
-  --muted-2: #5a5d60;
+  --muted-2: #626568;
 
   /* interaction overlays are neutral ink at low alpha, so a hover reads as the
      same material darkening under the pointer rather than as grey paint */
+  --surface-search: rgba(255, 255, 255, 0.62);
   --hover: rgba(23, 25, 27, 0.05);
   /*
    * The second depth of the same overlay, and the reason it exists is that a
@@ -243,7 +244,7 @@
    * was answering "where am I" in a value the eye had already spent on the
    * metadata beneath it.
    */
-  --accent-muted: rgba(61, 90, 128, 0.13);
+  --accent-muted: rgba(61, 90, 128, 0.09);
   /*
    * The same family, one step denser, for the one job the selection tint cannot
    * do: a highlight inside running text. At 10% a mark inside a paragraph
@@ -310,12 +311,12 @@
    *
    * The hierarchy is spent on weight and colour instead (see --font-ui).
    */
-  --fs-display: 20px; /* the application's own name, on the startup surface */
+  --fs-display: 18px; /* the application's own name, on the startup surface */
   --fs-title: 18px; /* object title: the selected work package, a document */
-  --fs-section: 14.5px; /* a pane's or a section's own heading */
-  --fs-body: 13.5px; /* body text and engineering values */
+  --fs-section: 15px; /* a pane's or a section's own heading */
+  --fs-body: 14px; /* body text and engineering values */
   --fs-action: 13px; /* controls, list-row titles */
-  --fs-meta: 12.5px; /* metadata, timestamps, counts, gutters */
+  --fs-meta: 12px; /* metadata, timestamps, counts, gutters */
   --fs-label: 12px; /* the small label tier: eyebrows, group titles, pane headers */
 
   /*

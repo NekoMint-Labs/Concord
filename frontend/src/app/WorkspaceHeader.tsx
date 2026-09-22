@@ -1,62 +1,69 @@
 import type { ReactNode } from "react";
 import { PanelLeftOpen } from "lucide-react";
-import type { Workspace, WorkPackage } from "../api/client";
+import type { WorkPackage, Workspace } from "../api/client";
 import { AppTooltip } from "../components/ui/AppTooltip";
 import { icon } from "../components/ui/icon";
-import { demoAreaName } from "../ui/demo/demoPresentation";
+import {
+  demoAreaName,
+  demoProjectName,
+  demoWorkPackageName,
+} from "../ui/demo/demoPresentation";
+import { WorkspaceTabs, type WorkspaceTab } from "./WorkspaceTabs";
 
-/**
- * Global chrome only. The selected work package's title, status, and actions
- * belong to the coordination workspace, not here.
- *
- * The band also owns the way back to a collapsed navigation column. That control
- * appears only while the column is gone, in the window's own top-left corner - the
- * corner the navigation vacated - so there is exactly one sidebar control on
- * screen at a time and it is always where the column's edge is. The path beside it
- * absorbs the band's free width (`styles/shell.css`), which is what keeps the
- * actions pinned to the right edge in both states instead of sliding with it.
- */
+/** Project context, destination navigation, and local actions are separate bands. */
 export function WorkspaceHeader({
   data,
   wp,
+  tab,
+  onTab,
   navCollapsed = false,
   onToggleNav,
   children,
 }: {
   data: Workspace;
   wp?: WorkPackage;
+  tab?: WorkspaceTab;
+  onTab?: (tab: WorkspaceTab) => void;
   navCollapsed?: boolean;
   onToggleNav?: () => void;
   children?: ReactNode;
 }) {
   return (
-    <header className="topbar">
-      {navCollapsed && (
-        <AppTooltip label="展开侧栏">
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="展开侧栏"
-            onClick={onToggleNav}
-          >
-            <PanelLeftOpen {...icon} />
-          </button>
-        </AppTooltip>
-      )}
-      <div className="breadcrumb">
-        <span>{data.state.project.name}</span>
-        <span className="crumb-sep">/</span>
-        {wp ? (
-          <>
-            <span>{demoAreaName(wp.area_id, wp.area_id)}</span>
-            <span className="crumb-sep">/</span>
-            <strong>{wp.id}</strong>
-          </>
-        ) : (
-          <strong>项目设置</strong>
+    <header className="app-header">
+      <div className="context-bar">
+        {navCollapsed && (
+          <AppTooltip label="展开侧栏">
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="展开侧栏"
+              onClick={onToggleNav}
+            >
+              <PanelLeftOpen {...icon} />
+            </button>
+          </AppTooltip>
         )}
+        <div className="breadcrumb" aria-label="当前工程上下文">
+          <span>
+            {demoProjectName(data.state.project.id, data.state.project.name)}
+          </span>
+          {wp && (
+            <>
+              <span className="crumb-sep">/</span>
+              <span>{demoAreaName(wp.area_id, wp.area_id)}</span>
+              <span className="crumb-sep">/</span>
+              <strong>{demoWorkPackageName(wp.id, wp.name)}</strong>
+              <code>{wp.id}</code>
+            </>
+          )}
+        </div>
       </div>
-      <div className="header-tools">{children}</div>
+      <div className="destination-bar">
+        {tab && onTab && <WorkspaceTabs tab={tab} onTab={onTab} />}
+        <div className="local-actions" aria-label="当前工作区操作">
+          {children}
+        </div>
+      </div>
     </header>
   );
 }

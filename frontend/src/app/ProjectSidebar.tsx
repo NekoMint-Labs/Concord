@@ -1,11 +1,19 @@
+import { useState } from "react";
 import {
+  Box,
   Building2,
   ChevronsUpDown,
+  CircleDot,
+  FileText,
   FolderOpen,
+  History,
+  Home,
   PanelLeftClose,
   Plus,
+  Search,
   Settings2,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { DTO, Workspace } from "../api/client";
 import { Status } from "../components/Status";
 import {
@@ -19,11 +27,25 @@ import { icon } from "../components/ui/icon";
 import {
   demoAreaName,
   demoDiscipline,
+  demoProjectName,
   demoWorkPackageName,
 } from "../ui/demo/demoPresentation";
+import type { WorkspaceTab } from "./WorkspaceTabs";
 
 /** Abnormal states earn the only labels here; normal rows stay plain text. */
 const notable = new Set(["BLOCKED", "WAITING_APPROVAL", "STALE"]);
+
+const workspaceLinks: {
+  tab: WorkspaceTab;
+  label: string;
+  icon: LucideIcon;
+}[] = [
+  { tab: "coordination", label: "概览", icon: Home },
+  { tab: "bim", label: "模型", icon: Box },
+  { tab: "packages", label: "问题", icon: CircleDot },
+  { tab: "documents", label: "文档", icon: FileText },
+  { tab: "operations", label: "运行记录", icon: History },
+];
 
 export function ProjectSidebar({
   data,
@@ -31,6 +53,7 @@ export function ProjectSidebar({
   projects,
   recent = [],
   selected,
+  tab = "coordination",
   collapsed = false,
   onCollapse,
   onProject,
@@ -38,14 +61,15 @@ export function ProjectSidebar({
   onOpenProject,
   onProjectSettings,
   onStructure,
-  onLinkBim,
   onSelect,
+  onTab,
 }: {
   data: Workspace;
   project: string;
   projects: DTO<"Project">[] | undefined;
   recent?: DTO<"Project">[];
   selected: string;
+  tab?: WorkspaceTab;
   collapsed?: boolean;
   onCollapse: () => void;
   onProject: (id: string) => void;
@@ -53,11 +77,13 @@ export function ProjectSidebar({
   onOpenProject?: () => void;
   onProjectSettings?: () => void;
   onStructure?: () => void;
-  onLinkBim?: (workPackageId: string) => void;
   onSelect: (id: string) => void;
+  onTab?: (tab: WorkspaceTab) => void;
 }) {
-  const current =
+  const [query, setQuery] = useState("");
+  const storedName =
     projects?.find((item) => item.id === project)?.name ?? project;
+  const current = demoProjectName(project, storedName);
   const demo = project === "harbor-east";
   const otherProjects = projects
     ?.filter(
@@ -66,14 +92,23 @@ export function ProjectSidebar({
         !recent.some((recentItem) => recentItem.id === item.id),
     )
     .slice(0, 5);
+  const search = query.trim().toLocaleLowerCase();
+  const visiblePackages = data.state.work_packages.filter((item) =>
+    `${demoWorkPackageName(item.id, item.name)} ${item.id} ${demoDiscipline(item.discipline)}`
+      .toLocaleLowerCase()
+      .includes(search),
+  );
 
   return (
     <aside className="sidebar" aria-label="项目与工作包" inert={collapsed}>
       <header className="sidebar-header">
         <div className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            C
+          </span>
           <span className="brand-name">
             <strong>Concord</strong>
-            <span>施工协同</span>
+            <span>工程协同</span>
           </span>
           <AppTooltip label="收起侧栏" side="right">
             <button
@@ -95,7 +130,6 @@ export function ProjectSidebar({
               <>
                 <Building2 className="project-mark" {...icon} />
                 <span className="project-name">
-                  <small>当前项目</small>
                   <strong>{current}</strong>
                   {demo && <span>演示 / 示例</span>}
                 </span>
@@ -117,7 +151,7 @@ export function ProjectSidebar({
             <AppMenuLabel>当前项目</AppMenuLabel>
             <AppMenuItem active onSelect={() => onProject(project)}>
               {current}
-              {demo && " · 演示 / 示例"}
+              {demo && " · 演示"}
             </AppMenuItem>
             {recent.some((item) => item.id !== project) && (
               <>
@@ -153,27 +187,64 @@ export function ProjectSidebar({
             )}
           </AppMenu>
         </div>
+        <label className="sidebar-search">
+          <Search {...icon} />
+          <span className="sr-only">搜索工作包</span>
+          <input
+            type="search"
+            placeholder="搜索工作包"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
       </header>
 
       <div className="sidebar-content">
+        <nav className="sidebar-primary" aria-label="主要工作区">
+          <span className="sidebar-section-label">工作区</span>
+          {workspaceLinks.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.tab}
+                type="button"
+                className={tab === item.tab ? "active" : ""}
+                aria-current={tab === item.tab ? "page" : undefined}
+                onClick={() => onTab?.(item.tab)}
+              >
+                <Icon {...icon} />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
         <nav className="sidebar-group" aria-label="工作包">
           <div className="sidebar-group-heading">
             <span>工作包</span>
-            <button
-              type="button"
-              className="sidebar-group-create"
-              onClick={() => onStructure?.()}
-            >
-              <Plus {...icon} /> 新建工作包
-            </button>
+            <AppTooltip label="新建工作包" side="right">
+              <button
+                type="button"
+                className="sidebar-group-create"
+                aria-label="新建工作包"
+                onClick={() => onStructure?.()}
+              >
+                <Plus {...icon} />
+              </button>
+            </AppTooltip>
           </div>
-          {data.state.areas.map((area) => (
-            <section key={area.id} className="area-group">
-              <h2 className="area-title">{demoAreaName(area.id, area.name)}</h2>
-              <ul className="package-nav-list">
-                {data.state.work_packages
-                  .filter((item) => item.area_id === area.id)
-                  .map((item) => {
+          {data.state.areas.map((area) => {
+            const packages = visiblePackages.filter(
+              (item) => item.area_id === area.id,
+            );
+            if (search && !packages.length) return null;
+            return (
+              <section key={area.id} className="area-group">
+                <h2 className="area-title">
+                  {demoAreaName(area.id, area.name)}
+                </h2>
+                <ul className="package-nav-list">
+                  {packages.map((item) => {
                     const status =
                       data.analysis?.readiness.find(
                         (readiness) => readiness.work_package_id === item.id,
@@ -197,26 +268,27 @@ export function ProjectSidebar({
                           </span>
                           {notable.has(status) && <Status value={status} />}
                         </button>
-                        {selected === item.id && (
-                          <button
-                            type="button"
-                            className="package-link-bim"
-                            onClick={() => onLinkBim?.(item.id)}
-                          >
-                            关联 BIM
-                          </button>
-                        )}
                       </li>
                     );
                   })}
-              </ul>
-            </section>
-          ))}
-          {!data.state.areas.length && (
-            <p className="quiet-message sidebar-empty">还没有区域或工作包。</p>
+                </ul>
+              </section>
+            );
+          })}
+          {!visiblePackages.length && (
+            <p className="quiet-message sidebar-empty">
+              {search ? "没有匹配的工作包。" : "还没有区域或工作包。"}
+            </p>
           )}
         </nav>
       </div>
+
+      <footer className="sidebar-footer">
+        <button type="button" onClick={() => onProjectSettings?.()}>
+          <Settings2 {...icon} />
+          项目设置
+        </button>
+      </footer>
     </aside>
   );
 }

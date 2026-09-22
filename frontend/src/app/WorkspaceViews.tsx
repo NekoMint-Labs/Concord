@@ -1,8 +1,9 @@
 import { lazy, Suspense } from "react";
-import { ArrowLeft, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { AgentRun, InvestigationReport, Workspace } from "../api/client";
 import type { BimMappingContext } from "../features/BimMappingWorkspace";
 import { ViewerBoundary } from "../components/ViewerBoundary";
+import { WorkspaceState } from "../components/WorkspaceState";
 import { Button } from "../components/ui/button";
 import { icon } from "../components/ui/icon";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
@@ -12,6 +13,7 @@ import {
   usePaneWidth,
 } from "../layout/paneBudget";
 import { CoordinationWorkspace } from "../features/CoordinationWorkspace";
+import { WorkPackageModelContext } from "../features/WorkPackageModelContext";
 import { Inspector } from "../features/Inspector";
 import {
   InvestigationInspector,
@@ -22,7 +24,7 @@ import { WorkPackages } from "../features/WorkPackages";
 import { Documents } from "../features/Documents";
 import { Capabilities } from "../features/Capabilities";
 import { Operations } from "../features/Operations";
-import { WorkspaceTabs, type WorkspaceTab } from "./WorkspaceTabs";
+import type { WorkspaceTab } from "./WorkspaceTabs";
 
 const ImpactGraph = lazy(() => import("../features/ImpactGraph"));
 const BIMWorkspace = lazy(() => import("../viewers/BIMWorkspace"));
@@ -136,32 +138,37 @@ export function WorkspaceViews({
    */
   const width = usePaneWidth();
   const condensed = condensedFor(width, detailsOpen);
+  const stackedInspector = detailsOpen && width <= 1120;
   const openInvestigation = () => {
     onInspectorView("investigation");
     onDetailsOpen(true);
   };
   return (
     <>
-      <WorkspaceTabs tab={tab} onTab={onTab} />
       {/*
         The workspace and its detail pane are one adjustable split. The pane is a
         real desktop pane: it can be dragged, it can be moved with the arrow keys
         while the divider has focus, and it states its own minimum so it can never
         be collapsed into an unreadable strip.
       */}
-      <PaneSplit id="workspace">
-        <Pane className="central-workspace">
-          {tab === "impact" && (
-            <button
-              className="canvas-back text-button"
-              onClick={() => onTab("coordination")}
-            >
-              <ArrowLeft {...icon} size={13} /> 返回协调
-            </button>
-          )}
+      <PaneSplit
+        id={`workspace-${stackedInspector ? "stacked" : "wide"}`}
+        orientation={stackedInspector ? "vertical" : "horizontal"}
+      >
+        <Pane
+          className="central-workspace"
+          minSize={stackedInspector ? "300px" : "480px"}
+          maxSize={stackedInspector ? "75%" : undefined}
+        >
           <ViewerBoundary key={`${project}:${tab}`}>
             <Suspense
-              fallback={<div className="loading-view">正在加载工作区…</div>}
+              fallback={
+                <WorkspaceState
+                  kind="loading"
+                  title="正在加载工作区"
+                  description="正在准备工程数据与视图。"
+                />
+              }
             >
               {tab === "coordination" && !selected && (
                 <EmptyWorkPackages onCreate={onStructure} />
@@ -169,13 +176,13 @@ export function WorkspaceViews({
               {tab === "coordination" && !!selected && (
                 <>
                   {report?.scope.work_package_ids.includes(selected) && (
-                    <section className="context-agent-result workspace-agent-result">
-                      <span className="eyebrow">Concord 调查结果</span>
-                      <p>{report.answer.summary}</p>
-                      <div className="context-agent-result-footer">
-                        <small>
-                          {report.evidence.length} 条已持久化 Evidence
-                        </small>
+                     <section className="context-agent-result workspace-agent-result">
+                       <span className="eyebrow">工程调查</span>
+                       <strong>调查结果已保存到当前工作包</strong>
+                       <div className="context-agent-result-footer">
+                         <small>
+                           {report.evidence.length} 条判断依据 · {report.tools.length} 个调查步骤
+                         </small>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -196,6 +203,28 @@ export function WorkspaceViews({
                       onDetailsOpen(true);
                     }}
                     onImpact={() => onTab("impact")}
+                    onModel={() => onTab("bim")}
+                    modelContext={
+                      <WorkPackageModelContext
+                        project={project}
+                        elementIds={
+                          data.state.work_packages.find(
+                            (item) => item.id === selected,
+                          )?.element_ids ?? []
+                        }
+                        impacted={data.analysis?.impact.element_ids ?? []}
+                        revision={
+                          data.analysis?.snapshot.sources.find(
+                            (source) => source.source === "bim",
+                          )?.revision ??
+                          data.state.work_packages.find(
+                            (item) => item.id === selected,
+                          )?.design_revision ??
+                          "—"
+                        }
+                        onOpenModel={() => onTab("bim")}
+                      />
+                    }
                   />
                 </>
               )}
@@ -262,19 +291,23 @@ export function WorkspaceViews({
         </Pane>
         {detailsOpen && (
           <>
-            <PaneDivider label="调整详情面板宽度" />
+            <PaneDivider
+              label={
+                stackedInspector
+                  ? "调整详情面板高度"
+                  : "调整详情面板宽度"
+              }
+            />
             <Pane
               id="inspector-pane"
               className="inspector-pane pane-stack"
               /* A wide window can afford the Inspector's designed width; a
                  constrained one gives its own column back to the content. */
-              defaultSize={inspectorWidthFor(width)}
-              minSize="240px"
-              /* A pixel ceiling, for the reason the local browsers state: a
-                 percentage ceiling shrinks with the window and binds a width
-                 the user chose. 480px is the 40% of the 1440px window this
-                 layout is drawn at. */
-              maxSize="480px"
+              defaultSize={
+                stackedInspector ? "250px" : inspectorWidthFor(width)
+              }
+              minSize={stackedInspector ? "180px" : "240px"}
+              maxSize={stackedInspector ? "50%" : "480px"}
             >
               {inspectorView === "investigation" ? (
                 <InvestigationInspector
@@ -305,13 +338,15 @@ export function WorkspaceViews({
 
 export function EmptyWorkPackages({ onCreate }: { onCreate: () => void }) {
   return (
-    <section className="workspace-empty" aria-labelledby="empty-work-packages">
-      <span className="eyebrow">工作包</span>
-      <h2 id="empty-work-packages">还没有工作包</h2>
-      <p>创建区域和工作包后，可以关联 BIM、跟踪变更并运行协调检查。</p>
-      <Button onClick={onCreate}>
-        <Plus {...icon} /> 创建工作包
-      </Button>
-    </section>
+    <WorkspaceState
+      kind="empty"
+      title="还没有工作包"
+      description="创建区域和工作包后，可以关联模型、跟踪变更并运行协调检查。"
+      action={
+        <Button onClick={onCreate}>
+          <Plus {...icon} /> 新建工作包
+        </Button>
+      }
+    />
   );
 }

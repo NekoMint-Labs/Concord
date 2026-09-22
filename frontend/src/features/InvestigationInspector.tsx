@@ -1,8 +1,16 @@
-import { X } from "lucide-react";
 import type { AgentRun, InvestigationReport } from "../api/client";
+import { DetailInspectorHeader } from "../components/DetailInspector";
+import {
+  PropertyRow,
+  PropertyTable,
+} from "../components/PropertyTable";
 import { Status } from "../components/Status";
-import { AppTooltip } from "../components/ui/AppTooltip";
-import { icon } from "../components/ui/icon";
+import { domainLabel } from "../ui/labels";
+import {
+  demoEvidenceFact,
+  demoInvestigationText,
+  demoSourceLabel,
+} from "../ui/demo/demoPresentation";
 import type { InspectorView } from "./Inspector";
 import type { ConcordContext } from "./ConcordAgent";
 
@@ -38,30 +46,20 @@ export function InvestigationInspector({
   const elements = scope?.element_ids ?? [];
 
   return (
-    <aside className="investigation-inspector" aria-label="Concord 调查详情">
-      <header className="pane-header investigation-header">
-        <div>
-          <span className="eyebrow">Concord</span>
-          <h3>调查详情</h3>
-        </div>
-        <AppTooltip label="关闭详情" side="left">
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="关闭详情"
-            onClick={onClose}
-          >
-            <X {...icon} />
-          </button>
-        </AppTooltip>
-      </header>
+    <aside className="investigation-inspector" aria-label="工程调查详情">
+      <DetailInspectorHeader
+        eyebrow="工程调查"
+        title="调查详情"
+        meta={run ? <Status value={run.status} /> : undefined}
+        onClose={onClose}
+      />
 
       <div className="investigation-body">
         {report ? (
           <>
             <section className="investigation-answer">
               <span className="fact-label">调查结论</span>
-              <p>{report.answer.summary}</p>
+              <p>{demoInvestigationText(report.answer.summary)}</p>
               {report.answer.limitations.map((item) => (
                 <small key={item}>{item}</small>
               ))}
@@ -69,52 +67,61 @@ export function InvestigationInspector({
 
             <section aria-labelledby="investigation-properties">
               <h4 id="investigation-properties">上下文</h4>
-              <dl className="investigation-properties">
-                <dt>状态</dt>
-                <dd>
-                  {run ? (
-                    <Status value={run.status} />
-                  ) : report.persisted ? (
-                    "已持久化"
-                  ) : (
-                    "只读"
-                  )}
-                </dd>
-                <dt>来源</dt>
-                <dd>{source || "当前项目"}</dd>
+              <PropertyTable className="investigation-properties">
+                <PropertyRow
+                  label="状态"
+                  value={
+                    run ? (
+                      <Status value={run.status} />
+                    ) : report.persisted ? (
+                      "已持久化"
+                    ) : (
+                      "只读"
+                    )
+                  }
+                />
+                <PropertyRow label="来源" value={source || "当前项目"} />
                 {(scope?.from_revision_id || scope?.to_revision_id) && (
-                  <>
-                    <dt>版本</dt>
-                    <dd className="mono">
-                      {scope.from_revision_id
+                  <PropertyRow
+                    label="版本"
+                    value={
+                      scope.from_revision_id
                         ? `${fromRevision} → ${toRevision}`
-                        : toRevision}
-                    </dd>
-                  </>
+                        : toRevision
+                    }
+                    mono
+                  />
                 )}
-                <dt>工作包</dt>
-                <dd>{workPackages.length ? workPackages.join("、") : "—"}</dd>
-                <dt>BIM 构件</dt>
-                <dd>{elements.length ? `${elements.length} 个` : "—"}</dd>
-                <dt>Evidence</dt>
-                <dd>{report.evidence.length} 条</dd>
-                <dt>运行</dt>
-                <dd className="mono">{shortId(report.run_id)}</dd>
-                <dt>分析</dt>
-                <dd className="mono">{shortId(report.analysis_id)}</dd>
-                <dt>代次</dt>
-                <dd>{report.generation}</dd>
+                <PropertyRow
+                  label="工作包"
+                  value={workPackages.length ? workPackages.join("、") : "—"}
+                />
+                <PropertyRow
+                  label="BIM 构件"
+                  value={elements.length ? `${elements.length} 个` : "—"}
+                />
+                <PropertyRow
+                  label="判断依据"
+                  value={`${report.evidence.length} 条`}
+                />
+                <PropertyRow label="运行" value={shortId(report.run_id)} mono />
+                <PropertyRow
+                  label="分析"
+                  value={shortId(report.analysis_id)}
+                  mono
+                />
+                <PropertyRow label="代次" value={report.generation} />
                 {run && (
-                  <>
-                    <dt>更新时间</dt>
-                    <dd>
+                  <PropertyRow
+                    label="更新时间"
+                    value={
                       <time dateTime={run.updated_at}>
-                        {new Date(run.updated_at).toLocaleString()}
+                        {new Date(run.updated_at).toLocaleString("zh-CN")}
                       </time>
-                    </dd>
-                  </>
+                    }
+                  />
                 )}
-              </dl>
+              </PropertyTable>
             </section>
 
             <section aria-labelledby="investigation-trace">
@@ -128,10 +135,10 @@ export function InvestigationInspector({
                     <li key={`${tool.tool}:${index}`}>
                       <span className="investigation-step" aria-hidden="true" />
                       <div>
-                        <strong>{tool.tool}</strong>
+                        <strong>{domainLabel("runTrace", tool.tool)}</strong>
                         <small>
                           {tool.available ? "已完成" : "不可用"} ·{" "}
-                          {tool.evidence_ids.length} 条 Evidence
+                          {tool.evidence_ids.length} 条依据
                         </small>
                       </div>
                     </li>
@@ -144,7 +151,7 @@ export function InvestigationInspector({
 
             <section aria-labelledby="investigation-evidence">
               <div className="investigation-section-heading">
-                <h4 id="investigation-evidence">Evidence</h4>
+                <h4 id="investigation-evidence">判断依据</h4>
                 <span className="count">{report.evidence.length}</span>
               </div>
               {report.evidence.length ? (
@@ -155,10 +162,13 @@ export function InvestigationInspector({
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <div>
-                        <strong>{evidence.source_id}</strong>
-                        <p>{evidence.fact}</p>
+                        <strong>{demoSourceLabel(evidence.source_id)}</strong>
+                        <p>
+                          {demoEvidenceFact(evidence.source_id, evidence.fact)}
+                        </p>
                         <small>
-                          {evidence.source_revision} · {evidence.quality} ·{" "}
+                          {evidence.source_revision} ·{" "}
+                          {domainLabel("quality", evidence.quality)} ·{" "}
                           {evidence.location || "无位置"}
                         </small>
                       </div>
@@ -166,7 +176,7 @@ export function InvestigationInspector({
                   ))}
                 </ol>
               ) : (
-                <p className="quiet-message">本次调查没有持久化 Evidence。</p>
+                <p className="quiet-message">本次调查没有持久化判断依据。</p>
               )}
             </section>
           </>
@@ -174,7 +184,7 @@ export function InvestigationInspector({
           <div className="investigation-pending">
             {run && <Status value={run.status} />}
             <strong>调查正在进行</strong>
-            <p>完成后将在此显示上下文、调查步骤和 Evidence。</p>
+            <p>完成后将在此显示上下文、调查步骤和判断依据。</p>
           </div>
         )}
       </div>

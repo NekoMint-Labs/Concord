@@ -154,9 +154,8 @@ it("keeps a selected historical comparison pair for BIM inspection and investiga
   });
 
   expect(await screen.findByText("WP-23")).toBeVisible();
-  fireEvent.change(screen.getByLabelText("版本比较"), {
-    target: { value: r1ToR2.id },
-  });
+  fireEvent.click(screen.getByLabelText("版本比较"));
+  fireEvent.click(screen.getByRole("option", { name: /R1 → R2/ }));
   fireEvent.click(await screen.findByText("WP-12"));
 
   expect(onInspect).toHaveBeenCalledWith({
@@ -166,7 +165,7 @@ it("keeps a selected historical comparison pair for BIM inspection and investiga
     changes: [deleted],
   });
   expect(onSelectComparison).toHaveBeenCalledWith(r1ToR2);
-  fireEvent.click(screen.getByRole("button", { name: "让 Concord 调查" }));
+  fireEvent.click(screen.getByRole("button", { name: "调查此比较" }));
   await waitFor(() =>
     expect(onInvestigate).toHaveBeenCalledWith(r1ToR2, ["gid-deleted"]),
   );

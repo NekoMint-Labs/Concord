@@ -54,43 +54,41 @@ vi.mock("../components/ui/AppMenu", () => ({
  */
 it("names navigation as workflow, secondary, and advanced", () => {
   expect(primaryTabs.map((tab) => tab.label)).toEqual([
-    "协调",
-    "项目来源",
-    "BIM",
+    "概览",
+    "模型",
+    "变更",
+    "问题",
     "文档",
+    "运行检查",
   ]);
   expect(secondaryTabs.map((tab) => tab.label)).toEqual([
-    "影响关系",
-    "工作包",
+    "项目来源",
     "现场地图",
   ]);
   // 现场地图 rather than 现场: the destination opens a map, and a user should be
   // able to tell what opens before clicking it.
   expect(secondaryTabs.find((tab) => tab.id === "gis")?.label).toBe("现场地图");
-  expect(advancedTabs.map((tab) => tab.label)).toEqual([
-    "运行记录",
-    "能力诊断",
-  ]);
+  expect(advancedTabs.map((tab) => tab.label)).toEqual(["能力诊断"]);
 });
 
 it("offers the workflow destinations in the strip and nothing else", () => {
   render(<WorkspaceTabs tab="coordination" onTab={() => {}} />);
 
   const strip = screen.getByRole("navigation", { name: "工作区视图" });
-  for (const label of ["协调", "BIM", "文档", "更多"])
+  for (const label of ["概览", "模型", "变更", "问题", "文档", "运行检查"])
     expect(strip).toHaveTextContent(label);
   // The diagnostics are not destinations in the strip, and neither is the word a
   // user would have clicked to find them there.
-  for (const label of ["运行记录", "能力诊断", "能力"])
+  for (const label of ["能力诊断", "能力"])
     expect(strip).not.toHaveTextContent(label);
 });
 
 it("states an advanced view as the current destination without offering it", () => {
-  render(<WorkspaceTabs tab="operations" onTab={() => {}} />);
+  render(<WorkspaceTabs tab="capabilities" onTab={() => {}} />);
 
   const strip = screen.getByRole("navigation", { name: "工作区视图" });
   const chip = strip.querySelector(".advanced-view-chip");
-  expect(chip).toHaveTextContent("运行记录");
+  expect(chip).toHaveTextContent("能力诊断");
   expect(chip).toHaveAttribute("aria-current", "page");
   // The workflow tabs stay on offer and none of them claims to be current.
   expect(strip.querySelectorAll("button[aria-current='page']")).toHaveLength(0);
@@ -102,8 +100,7 @@ it("lists exactly the secondary destinations and selects one", () => {
 
   const items = screen.getAllByRole("menuitem");
   expect(items.map((item) => item.textContent)).toEqual([
-    "影响关系",
-    "工作包",
+    "项目来源",
     "现场地图",
   ]);
   // The current destination is stated in the menu as well as in the strip.

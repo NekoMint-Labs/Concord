@@ -3,6 +3,7 @@ import {
   demoAreaName,
   demoConstraintText,
   demoEvidenceFact,
+  demoInvestigationText,
   demoProposalExplanation,
   demoProposalTitle,
   demoSourceLabel,
@@ -45,6 +46,12 @@ it("localizes known deterministic fixture content in Chinese", () => {
     ),
   ).toBe("缺少资质：electrician。");
   expect(demoSourceLabel("drawing/WP-200")).toBe("图纸");
+  expect(demoSourceLabel("project_state")).toBe("项目状态");
+  expect(
+    demoInvestigationText(
+      "Recorded project version 1; showing 1 scoped work packages; 0 returned sources differ from baseline.",
+    ),
+  ).toBe("已记录项目版本 1；当前范围包含 1 个工作包；0 个工程来源与基准不同。");
   expect(
     demoProposalTitle("WP-200", "Coordinate East-wing duct installation"),
   ).toBe("协调东翼风管安装");

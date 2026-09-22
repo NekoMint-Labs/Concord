@@ -1,14 +1,27 @@
-import type { ReactNode } from "react";
-import { motion } from "motion/react";
+import { useState, type ReactNode } from "react";
+import {
+  Box,
+  CircleAlert,
+  CircleCheck,
+  ClipboardCheck,
+  LoaderCircle,
+  Package,
+  Users,
+  Wrench,
+} from "lucide-react";
+import {
+  PropertyGroup,
+  PropertyRow,
+  PropertyTable,
+} from "../components/PropertyTable";
 import type { Workspace } from "../api/client";
 import { Button } from "../components/ui/button";
 import { AppDisclosure } from "../components/ui/AppDisclosure";
-import { statusLabel } from "../components/Status";
+import { icon } from "../components/ui/icon";
 import {
   activeCoordinationEvent,
   activeCoordinationRun,
 } from "../app/coordination";
-import { useMotion } from "../motion";
 import type { InspectorView } from "./Inspector";
 import {
   demoAreaName,
@@ -16,55 +29,24 @@ import {
   demoDiscipline,
   demoOwner,
   demoProposalExplanation,
+  demoSourceLabel,
   demoWorkPackageName,
 } from "../ui/demo/demoPresentation";
 
 function checkedAt(value?: string | null) {
-  if (!value) return null;
+  if (!value) return "—";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  // Locale-independent engineering timestamp rather than a locale date format.
-  const pad = (part: number) => String(part).padStart(2, "0");
-  return (
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-    ` ${pad(date.getHours())}:${pad(date.getMinutes())}`
-  );
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
-/** One labelled engineering value. Labels scan; values read. */
-function Fact({
-  label,
-  value,
-  attention = false,
-}: {
-  label: string;
-  value: ReactNode;
-  attention?: boolean;
-}) {
-  return (
-    <div className="fact">
-      <span className="fact-label">{label}</span>
-      <span className={attention ? "fact-value is-attention" : "fact-value"}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-/**
- * One work item, composed as a readout rather than as a paragraph.
- *
- * The shape is the same in both states, so a change of state does not move the
- * page under the reader: identity, one state object that states the conclusion,
- * the few facts the decision needs, and - one action away - the rest of the
- * conditions already present in the workspace response.
- *
- * READY stays quiet. It states the conclusion, when it was reached, and what it
- * rests on; it does not become a readiness dashboard, because a page that
- * reports everything reports nothing. BLOCKED carries more, because a blocked
- * package is the one state that asks the user to act: the change, its reach, the
- * blocking fact, the evidence behind it, and the recommendation.
- */
 export function CoordinationWorkspace({
   workspace,
   selected,
@@ -72,6 +54,8 @@ export function CoordinationWorkspace({
   onRecheck,
   onDetails,
   onImpact,
+  onModel,
+  modelContext,
 }: {
   workspace: Workspace;
   selected: string;
@@ -79,10 +63,14 @@ export function CoordinationWorkspace({
   onRecheck: () => void;
   onDetails: (view: InspectorView) => void;
   onImpact: () => void;
+  onModel?: () => void;
+  modelContext?: ReactNode;
 }) {
-  const wp = workspace.state.work_packages.find(
-    (item) => item.id === selected,
-  )!;
+  const [inspectorTab, setInspectorTab] = useState<
+    "properties" | "sources" | "resources"
+  >("properties");
+  const wp = workspace.state.work_packages.find((item) => item.id === selected)!;
+  const area = workspace.state.areas.find((item) => item.id === wp.area_id);
   const readiness = workspace.analysis?.readiness.find(
     (item) => item.work_package_id === selected,
   );
@@ -91,7 +79,6 @@ export function CoordinationWorkspace({
   const constraints = (workspace.analysis?.constraints ?? []).filter(
     (item) => item.work_package_id === selected && item.blocking,
   );
-  const blocker = constraints[0];
   const proposal = workspace.proposals.find(
     (item) => item.work_package_id === selected,
   );
@@ -99,340 +86,437 @@ export function CoordinationWorkspace({
     !!activeEvent &&
     !!activeRun &&
     ["QUEUED", "RUNNING"].includes(activeRun.status);
-  // An active run belongs to the work package its event names; another package
-  // must not inherit its analysis or approval state.
   const blocked =
     readiness?.status === "BLOCKED" ||
     (!!activeEvent && activeRun?.status === "WAITING_APPROVAL");
   const stale = workspace.stale && !analyzing;
-  const revision = activeEvent?.change.revision;
-  const area = workspace.state.areas.find((item) => item.id === wp.area_id);
-  const name = demoWorkPackageName(wp.id, wp.name);
-  const impactCount = workspace.analysis?.impact.element_ids.length ?? 0;
-  const checked = checkedAt(workspace.analysis?.snapshot.captured_at);
-
-  const stateText = blocked
-    ? statusLabel("BLOCKED")
-    : stale
-      ? statusLabel("STALE")
-      : statusLabel(readiness?.status ?? "UNCHECKED");
-  // An in-flight re-check has produced no new judgement yet, so the recorded
-  // one is labelled as the previous state instead of being read as the
-  // current authoritative state.
-  const stateDisplay = analyzing ? `上次状态：${stateText}` : stateText;
-
-  /*
-   * The facts a decision actually needs, drawn from the work package the
-   * response already carries. These are the four values a site engineer asks
-   * for after "can we start": who owns it, whether the crew is there, whether
-   * acceptance has passed, and how much geometry is involved. Everything else
-   * stays behind the disclosure rather than being printed at equal weight.
-   */
-  const qualifications = wp.required_qualifications ?? [];
-  const held = wp.qualifications ?? [];
-  const missing = qualifications.filter((item) => !held.includes(item));
-  const available = (map?: Record<string, boolean>) =>
-    Object.values(map ?? {}).filter(Boolean).length;
-  const defined = (map?: Record<string, boolean>) =>
-    Object.keys(map ?? {}).length;
-  const snapshotVersion = workspace.analysis?.snapshot.version;
+  const snapshot = workspace.analysis?.snapshot;
+  const impactedIds = workspace.analysis?.impact.element_ids ?? [];
+  const impactCount = wp.element_ids.filter((id) => impactedIds.includes(id)).length;
   const sourceCount = workspace.state.sources.length;
-  // What the judgement rests on. Stated in the state object itself, because
-  // "based on what?" is the first question a recorded conclusion has to answer -
-  // and it is the one piece of context READY is allowed to spend a line on.
-  const provenance =
-    snapshotVersion === undefined
-      ? `${sourceCount} 份来源`
-      : `快照 v${snapshotVersion} · ${sourceCount} 份来源`;
-
-  const conditions = [
-    <Fact
-      key="revision"
-      label="修订"
-      value={`${wp.accepted_revision} / ${wp.design_revision}`}
-    />,
-    <Fact
-      key="discipline"
-      label="专业"
-      value={demoDiscipline(wp.discipline)}
-    />,
-    <Fact
-      key="predecessors"
-      label="前置工作包"
-      value={wp.predecessors?.length ? wp.predecessors.join("、") : "无"}
-    />,
-    <Fact
-      key="qualifications"
-      label="资质"
-      value={missing.length ? `缺少 ${missing.join("、")}` : "齐备"}
-      attention={missing.length > 0}
-    />,
-    <Fact
-      key="materials"
-      label="材料"
-      value={`${available(wp.materials)} / ${defined(wp.materials)} 可用`}
-    />,
-    <Fact
-      key="equipment"
-      label="设备"
-      value={`${available(wp.equipment)} / ${defined(wp.equipment)} 可用`}
-    />,
-    <Fact
-      key="complete"
-      label="工作包"
-      value={wp.complete ? "已完成" : "进行中"}
-    />,
+  const missingQualifications = (wp.required_qualifications ?? []).filter(
+    (item) => !(wp.qualifications ?? []).includes(item),
+  );
+  const available = (values?: Record<string, boolean>) =>
+    Object.values(values ?? {}).filter(Boolean).length;
+  const defined = (values?: Record<string, boolean>) =>
+    Object.keys(values ?? {}).length;
+  const state = analyzing
+    ? {
+        label: "检查中",
+        title: "正在重新核对施工条件",
+        description: activeEvent?.change.revision
+          ? `正在根据 ${activeEvent.change.revision} 评估最新工程事实。`
+          : "正在汇集最新工程事实并重新判断。",
+        icon: LoaderCircle,
+        tone: "running",
+      }
+    : blocked
+      ? {
+          label: "已阻塞",
+          title: `${constraints.length || 1} 个未解决阻塞条件`,
+          description: constraints[0]
+            ? demoConstraintText(
+                constraints[0].kind,
+                constraints[0].description,
+              )
+            : "存在尚未解决的施工约束。",
+          icon: CircleAlert,
+          tone: "blocked",
+        }
+      : stale
+        ? {
+            label: "需复核",
+            title: activeEvent
+              ? "工程变化可能影响当前工作包"
+              : "工程事实已变化，需要重新检查",
+            description: "当前判断基于较早快照，复核后再继续施工。",
+            icon: CircleAlert,
+            tone: "stale",
+          }
+        : {
+            label: "可施工",
+            title: "当前没有未解决的阻塞条件",
+            description: "图纸、班组或现场条件变化时，记录变更并重新检查。",
+            icon: CircleCheck,
+            tone: "ready",
+          };
+  const StateIcon = state.icon;
+  const openModel = () => (onModel ?? onImpact)();
+  const metrics = [
+    {
+      label: "班组",
+      value: `${wp.available_workers} / ${wp.required_workers} 人`,
+      status:
+        wp.available_workers >= wp.required_workers ? "已就绪" : "人员不足",
+      ready: wp.available_workers >= wp.required_workers,
+      icon: Users,
+    },
+    {
+      label: "材料",
+      value: `${available(wp.materials)} / ${defined(wp.materials)} 可用`,
+      status: defined(wp.materials)
+        ? available(wp.materials) === defined(wp.materials)
+          ? "已就绪"
+          : "待补充"
+        : "未配置",
+      ready:
+        defined(wp.materials) > 0 &&
+        available(wp.materials) === defined(wp.materials),
+      icon: Package,
+    },
+    {
+      label: "设备",
+      value: `${available(wp.equipment)} / ${defined(wp.equipment)} 可用`,
+      status: defined(wp.equipment)
+        ? available(wp.equipment) === defined(wp.equipment)
+          ? "已就绪"
+          : "待补充"
+        : "未配置",
+      ready:
+        defined(wp.equipment) > 0 &&
+        available(wp.equipment) === defined(wp.equipment),
+      icon: Wrench,
+    },
+    {
+      label: "验收",
+      value: wp.inspection_passed ? "已通过" : "未通过",
+      status: wp.inspection_passed ? "检查有效" : "需要处理",
+      ready: wp.inspection_passed,
+      icon: ClipboardCheck,
+    },
   ];
 
-  const facts = (
-    <div className="fact-list">
-      <Fact label="负责人" value={demoOwner(wp.id, wp.owner)} />
-      <Fact
-        label="班组"
-        value={`${wp.available_workers} / ${wp.required_workers} 人`}
-        attention={wp.available_workers < wp.required_workers}
-      />
-      <Fact
-        label="验收"
-        value={wp.inspection_passed ? "已通过" : "未通过"}
-        attention={!wp.inspection_passed}
-      />
-      <Fact label="构件" value={`${wp.element_ids.length} 个`} />
-    </div>
-  );
-
-  const { transition, variants } = useMotion();
-
   return (
-    <section className="coordination-workspace" aria-label="协调工作区">
-      <header className="coordination-head">
-        <div className="coordination-identity">
-          <h2>{name}</h2>
-          <p>
-            {wp.id} · {demoAreaName(wp.area_id, area?.name ?? wp.area_id)}
-          </p>
-        </div>
-        <div className="coordination-state-tag">
-          {/*
-           * The re-check lives in the state object (READY) or is absent because the
-           * body owns the action (BLOCKED, through the recommendation). The header
-           * carries one only when the body has none - a stale blocked package, where
-           * the recorded judgement is not actionable until it is refreshed. Two
-           * controls with the same name on one page is not a quiet READY.
-           *
-           * It is the same `secondary` control the READY record carries rather than
-           * the ghost it used to be: this is the same action, and an explicit
-           * re-check without primary workflow authority is one role with one
-           * appearance. A ghost here made one control look like two things depending
-           * on which state the package happened to be in.
-           */}
-          {stale && blocked && (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={busy}
-              onClick={onRecheck}
-            >
-              重新检查
-            </Button>
-          )}
-          {/*
-           * The state word is keyed by its own text, so a re-check that changes the
-           * conclusion crossfades the word in place rather than rewriting it. The
-           * record beneath settles separately - the body is keyed by the state it is
-           * reporting - and this is the one line the reader looks at first, so it is
-           * the one part of the page that changes without the page moving.
-           */}
-          <motion.span
-            key={stateDisplay}
-            className={`state-text ${blocked ? "is-blocked" : ""}`}
-            variants={variants.detailSwap}
-            initial="hidden"
-            animate="visible"
-            transition={transition("fast")}
-          >
-            {stateDisplay}
-          </motion.span>
-        </div>
-      </header>
-
-      {/*
-        The body is keyed by the record *and* by the state it is reporting, so a
-        re-check that changes the conclusion is something the reader watches
-        arrive rather than something they discover already finished. This is the
-        one motion in the coordination surface, and it is attached to the
-        product's central loop rather than to a control.
-      */}
-      <motion.div
-        key={`${wp.id}:${blocked ? "blocked" : analyzing ? "activity" : "ready"}`}
-        className={
-          analyzing ? "coordination-body is-activity" : "coordination-body"
-        }
-        variants={variants.recordEnter}
-        initial="hidden"
-        animate="visible"
-        transition={transition()}
-      >
-        {analyzing ? (
-          <>
-            <p className="activity-line">
-              {activeRun?.status === "QUEUED" ? "准备重新检查" : "正在重新检查"}
-            </p>
-            <p>
-              {revision
-                ? `根据 ${revision} 重新评估施工条件。`
-                : "汇集最新项目事实并核对施工条件。"}
-            </p>
-            {blocked && (
-              <p className="activity-note">上次判断为阻塞，分析完成后更新。</p>
-            )}
-            <button className="text-button" onClick={onImpact}>
-              查看影响
-            </button>
-          </>
-        ) : blocked ? (
-          <>
-            {stale && (
-              <p className="stale-note">判断基于过期快照，重新检查后再处理。</p>
-            )}
-            <div className="coordination-record is-blocked">
-              {/*
-                One judgement, one column. What changed, what is blocked, what it
-                rests on, what is recommended, and the one action are a single
-                read down the record's left column; the work package's condition
-                sits beside them. The recommendation used to be a full-width
-                footer under both columns, which is what made the well read as a
-                form with a button row beneath it.
-              */}
-              <div className="record-main">
-                <div className="state-block">
-                  {revision ? (
-                    <p className="revision-line">
-                      {wp.accepted_revision} → <strong>{revision}</strong>
-                    </p>
-                  ) : (
-                    activeEvent && (
-                      <p className="revision-line">{activeEvent.title}</p>
-                    )
-                  )}
-
-                  <p className="scope-line">
-                    {impactCount > 0 && (
-                      <span>{impactCount} 个构件需要协调</span>
-                    )}
-                    <button className="text-button" onClick={onImpact}>
-                      查看影响
-                    </button>
-                  </p>
-
-                  <p className="blocking-fact">
-                    {blocker
-                      ? demoConstraintText(blocker.kind, blocker.description)
-                      : "存在尚未解决的施工约束。"}
-                  </p>
-
-                  {blocker && (
-                    <p className="scope-line">
-                      <span>{blocker.evidence_ids.length} 项判断依据</span>
-                      <button
-                        className="text-button"
-                        onClick={() => onDetails("evidence")}
-                      >
-                        查看依据
-                      </button>
-                    </p>
-                  )}
-
-                  <p className="state-meta">{provenance}</p>
-                </div>
-
-                {/*
-                  The recommendation is the record's own closing paragraph
-                  rather than a second card: it answers the blocker directly
-                  above it, so it sits in the same column, under the same text
-                  measure, with no surface of its own. It is also its own object
-                  in one respect - it is the only part of the page that asks for
-                  a decision.
-                */}
-                <div className="recommendation">
-                  <span className="fact-label">建议</span>
-                  <p>
-                    {proposal
-                      ? demoProposalExplanation(proposal.resolution.explanation)
-                      : "处理方案准备后将在此显示。"}
-                  </p>
-                  {proposal && (
-                    <p className="approval-line">
-                      需批准后执行 · R{proposal.risk}
-                    </p>
-                  )}
-                  <div className="coordination-actions">
-                    <Button
-                      disabled={busy || !proposal}
-                      onClick={() => onDetails("action")}
-                    >
-                      批准并继续
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {facts}
+    <section className="coordination-workspace" aria-label="工作包概览">
+      <div className="overview-layout">
+        <main className="overview-main">
+          <header className="work-object-header">
+            <div>
+              <span className="object-kicker">{wp.id}</span>
+              <h1>{demoWorkPackageName(wp.id, wp.name)}</h1>
+              <p>
+                {demoAreaName(wp.area_id, area?.name ?? wp.area_id)} ·{" "}
+                {demoDiscipline(wp.discipline)} · 负责人 {demoOwner(wp.id, wp.owner)}
+              </p>
             </div>
+          </header>
+          <section className={`readiness-summary is-${state.tone}`}>
+            <StateIcon
+              {...icon}
+              className={analyzing ? "is-spinning" : undefined}
+              aria-hidden="true"
+            />
+            <div className="readiness-copy">
+              <div className="readiness-title-row">
+                <h2>{state.label}</h2>
+                {analyzing && <span>正在运行</span>}
+              </div>
+              <h3>{state.title}</h3>
+              <p>{state.description}</p>
+              <div className="readiness-meta">
+                <span>上次检查 {checkedAt(snapshot?.captured_at)}</span>
+                <span>快照 {snapshot ? `v${snapshot.version}` : "—"}</span>
+                <span>{sourceCount} 份工程来源</span>
+              </div>
+            </div>
+            <div className="readiness-actions">
+              {!analyzing && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={busy}
+                  onClick={onRecheck}
+                >
+                  重新检查
+                </Button>
+              )}
+              {(blocked || impactCount > 0 || analyzing) && (
+                <Button variant="ghost" size="sm" onClick={onImpact}>
+                  查看影响
+                </Button>
+              )}
+            </div>
+          </section>
 
-            <AppDisclosure label="其他施工条件">
-              <div className="fact-list">{conditions}</div>
-            </AppDisclosure>
-          </>
-        ) : (
-          <>
-            {stale && (
-              <p className="stale-note">判断基于过期快照，重新检查后再处理。</p>
-            )}
-            <div className="coordination-record">
-              <div className="record-main">
-                <div className="state-block">
-                  <p className="ready-line">当前没有阻塞施工的条件</p>
-                  {checked && <p className="state-meta">上次检查：{checked}</p>}
-                  <p className="state-meta">{provenance}</p>
-                  {/*
-                    READY is a resting state, not an end state, and nothing on
-                    the page said so: the reader was left to work out what
-                    Concord expected next. This line names the inputs that would
-                    make the judgement wrong and the two steps that follow from
-                    them. It is guidance rather than a call to action, so it
-                    carries no control of its own - the action it names is
-                    记录变更 in the window band, and a second control with the
-                    same name on the same page would make a quiet READY loud.
-                  */}
-                  <p className="ready-guidance">
-                    图纸、班组或现场条件变化时，记录变更并重新检查。
-                  </p>
-                </div>
-                {/*
-                  READY closes with its own action in the same column the blocked
-                  record closes its recommendation in, so the two states are one
-                  composition rather than two layouts that happen to share a
-                  page.
-                */}
-                <div className="coordination-actions">
+          {blocked && !analyzing && (
+            <section className="overview-decision">
+              <div className="decision-copy">
+                <span className="section-label">建议处理</span>
+                <h3>
+                  {proposal
+                    ? demoProposalExplanation(proposal.resolution.explanation)
+                    : "等待协调方案"}
+                </h3>
+                <p>
+                  {proposal
+                    ? `R${proposal.risk} · 批准后执行并重新检查`
+                    : "处理方案准备后会显示在详情中。"}
+                </p>
+              </div>
+              <div className="decision-actions">
+                {constraints[0] && (
                   <Button
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={onRecheck}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDetails("evidence")}
                   >
-                    重新检查
+                    {constraints[0].evidence_ids.length} 项判断依据
                   </Button>
+                )}
+                <Button
+                  size="sm"
+                  disabled={busy || !proposal}
+                  onClick={() => onDetails("action")}
+                >
+                  审查处理方案
+                </Button>
+              </div>
+            </section>
+          )}
+
+          {modelContext ?? (
+            <section className="model-context model-context-fallback">
+              <header className="overview-section-header">
+                <div>
+                  <span className="section-label">模型上下文</span>
+                  <h2>{wp.element_ids.length} 个关联构件</h2>
+                </div>
+                <Button variant="ghost" size="sm" onClick={openModel}>
+                  打开模型
+                </Button>
+              </header>
+              <div className="model-stage-state">
+                <Box {...icon} aria-hidden="true" />
+                <div>
+                  <strong>模型上下文将在项目工作区中加载</strong>
+                  <p>打开模型可查看关联构件、属性与变化范围。</p>
                 </div>
               </div>
-              {facts}
+            </section>
+          )}
+
+          <section className="relevant-change-strip">
+            <div>
+              <span className="section-label">最近相关变化</span>
+              <h3>
+                {activeEvent?.title ??
+                  (impactCount
+                    ? `${impactCount} 个关联构件进入当前影响范围`
+                    : "当前没有影响本工作包的模型变化")}
+              </h3>
+              <p>
+                {activeEvent?.change.revision
+                  ? `${wp.accepted_revision} → ${activeEvent.change.revision}`
+                  : `${wp.accepted_revision} / ${wp.design_revision}`}
+              </p>
+            </div>
+            {(activeEvent || impactCount > 0) && (
+              <Button variant="ghost" size="sm" onClick={onImpact}>
+                查看变化
+              </Button>
+            )}
+          </section>
+
+          <section className="construction-conditions">
+            <header className="overview-section-header">
+              <div>
+                <span className="section-label">施工条件</span>
+                <h2>现场准备状态</h2>
+              </div>
+            </header>
+            <div className="condition-metrics">
+              {metrics.map((metric) => {
+                const MetricIcon = metric.icon;
+                return (
+                  <article key={metric.label}>
+                    <MetricIcon {...icon} aria-hidden="true" />
+                    <div>
+                      <span>{metric.label}</span>
+                      <strong>{metric.value}</strong>
+                      <small className={metric.ready ? "is-ready" : ""}>
+                        {metric.status}
+                      </small>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
             <AppDisclosure label="其他施工条件">
-              <div className="fact-list">{conditions}</div>
+              <PropertyTable columns={2}>
+                <PropertyRow
+                  label="前置工作包"
+                  value={wp.predecessors?.length ? wp.predecessors.join("、") : "无"}
+                />
+                <PropertyRow
+                  label="资质"
+                  value={
+                    missingQualifications.length
+                      ? `缺少 ${missingQualifications.join("、")}`
+                      : "齐备"
+                  }
+                  attention={missingQualifications.length > 0}
+                />
+                <PropertyRow
+                  label="工作包"
+                  value={wp.complete ? "已完成" : "进行中"}
+                />
+              </PropertyTable>
             </AppDisclosure>
-          </>
-        )}
-      </motion.div>
+          </section>
+
+          <PropertyGroup
+            className="overview-basis"
+            title={
+              <div className="overview-section-header">
+                <div>
+                  <span className="section-label">版本与依据</span>
+                  <h2>当前协调基准</h2>
+                </div>
+              </div>
+            }
+          >
+            <PropertyTable columns={2}>
+              <PropertyRow label="施工版本" value={wp.accepted_revision} />
+              <PropertyRow label="设计版本" value={wp.design_revision} />
+              <PropertyRow
+                label="分析快照"
+                value={snapshot ? `v${snapshot.version}` : "—"}
+              />
+              <PropertyRow label="工程来源" value={`${sourceCount} 份`} />
+            </PropertyTable>
+          </PropertyGroup>
+        </main>
+
+        <aside className="overview-inspector" aria-label="工作包检查器">
+          <header className="overview-inspector-header">
+            <div>
+              <span className="section-label">检查器</span>
+              <h2>工作包详情</h2>
+            </div>
+            <span className={`readiness-label is-${state.tone}`}>
+              <span aria-hidden="true" />
+              {state.label}
+            </span>
+          </header>
+          <nav className="overview-inspector-tabs" aria-label="检查器内容">
+            {[
+              ["properties", "基本信息"],
+              ["sources", "工程来源"],
+              ["resources", "现场资源"],
+            ].map(([id, label]) => (
+              <button
+                type="button"
+                key={id}
+                className={inspectorTab === id ? "active" : ""}
+                onClick={() =>
+                  setInspectorTab(id as typeof inspectorTab)
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+          <div className="overview-inspector-body">
+            {inspectorTab === "properties" && (
+              <>
+                <PropertyGroup title={<span className="section-label">工作包</span>}>
+                  <PropertyTable>
+                    <PropertyRow label="工作包编号" value={wp.id} mono />
+                    <PropertyRow
+                      label="名称"
+                      value={demoWorkPackageName(wp.id, wp.name)}
+                    />
+                    <PropertyRow
+                      label="区域"
+                      value={demoAreaName(wp.area_id, area?.name ?? wp.area_id)}
+                    />
+                    <PropertyRow
+                      label="专业"
+                      value={demoDiscipline(wp.discipline)}
+                    />
+                    <PropertyRow
+                      label="负责人"
+                      value={demoOwner(wp.id, wp.owner)}
+                    />
+                    <PropertyRow
+                      label="完成状态"
+                      value={wp.complete ? "已完成" : "进行中"}
+                    />
+                  </PropertyTable>
+                </PropertyGroup>
+                <PropertyGroup title={<span className="section-label">协调状态</span>}>
+                  <PropertyTable>
+                    <PropertyRow label="施工判断" value={state.label} />
+                    <PropertyRow
+                      label="阻塞条件"
+                      value={`${constraints.length} 项`}
+                      attention={constraints.length > 0}
+                    />
+                    <PropertyRow
+                      label="关联构件"
+                      value={`${wp.element_ids.length} 个`}
+                    />
+                  </PropertyTable>
+                  {constraints.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDetails("blocker")}
+                    >
+                      查看阻塞详情
+                    </Button>
+                  )}
+                </PropertyGroup>
+              </>
+            )}
+            {inspectorTab === "sources" && (
+              <PropertyGroup title={<span className="section-label">当前工程来源</span>}>
+                <div className="overview-source-list">
+                  {workspace.state.sources.map((source) => (
+                    <div key={`${source.source}-${source.revision}`}>
+                      <span>{demoSourceLabel(source.source)}</span>
+                      <code>{source.revision}</code>
+                    </div>
+                  ))}
+                  {!workspace.state.sources.length && (
+                    <p className="quiet-message">当前项目尚未记录工程来源。</p>
+                  )}
+                </div>
+              </PropertyGroup>
+            )}
+            {inspectorTab === "resources" && (
+              <PropertyGroup title={<span className="section-label">现场资源</span>}>
+                <PropertyTable>
+                  <PropertyRow
+                    label="班组"
+                    value={`${wp.available_workers} / ${wp.required_workers} 人`}
+                    attention={wp.available_workers < wp.required_workers}
+                  />
+                  <PropertyRow
+                    label="材料"
+                    value={`${available(wp.materials)} / ${defined(wp.materials)} 可用`}
+                  />
+                  <PropertyRow
+                    label="设备"
+                    value={`${available(wp.equipment)} / ${defined(wp.equipment)} 可用`}
+                  />
+                  <PropertyRow
+                    label="验收"
+                    value={wp.inspection_passed ? "已通过" : "未通过"}
+                    attention={!wp.inspection_passed}
+                  />
+                  <PropertyRow
+                    label="资质"
+                    value={missingQualifications.length ? "不齐备" : "齐备"}
+                    attention={missingQualifications.length > 0}
+                  />
+                </PropertyTable>
+              </PropertyGroup>
+            )}
+          </div>
+        </aside>
+      </div>
     </section>
   );
 }

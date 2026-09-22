@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import fixture from "../../tests/fixtures/inspector.json";
@@ -47,13 +47,14 @@ describe("ImpactGraph", () => {
     );
 
     expect(screen.getByText("影响关系")).toBeVisible();
-    expect(screen.getByText("变更事件")).toBeVisible();
-    expect(screen.getByText("Duct route revised / V17")).toBeVisible();
-    expect(screen.getByText("图纸 V16 → V17")).toBeVisible();
-    expect(screen.getByText("受影响工作包")).toBeVisible();
-    expect(screen.getByText("阻塞原因")).toBeVisible();
-    expect(screen.getByText("建议处理")).toBeVisible();
-    expect(screen.getByText(/批准后执行/)).toBeVisible();
+    const graph = within(screen.getByRole("region", { name: "影响关系" }));
+    expect(graph.getByText("变更事件")).toBeVisible();
+    expect(graph.getByText("Duct route revised / V17")).toBeVisible();
+    expect(graph.getByText("图纸 V16 → V17")).toBeVisible();
+    expect(graph.getByText("受影响工作包")).toBeVisible();
+    expect(graph.getByText("阻塞条件")).toBeVisible();
+    expect(graph.getByText("建议处理")).toBeVisible();
+    expect(graph.getByText(/批准后执行/)).toBeVisible();
 
     rerender(
       <ImpactGraph
@@ -62,9 +63,10 @@ describe("ImpactGraph", () => {
         onConstraint={vi.fn()}
       />,
     );
-    expect(screen.getByText("当前检查")).toBeVisible();
-    expect(
-      screen.queryByText("Duct route revised / V17"),
-    ).not.toBeInTheDocument();
+    const updatedGraph = within(
+      screen.getByRole("region", { name: "影响关系" }),
+    );
+    expect(updatedGraph.getByText("当前没有可展示的影响关系")).toBeVisible();
+    expect(updatedGraph.queryByText("Duct route revised / V17")).not.toBeInTheDocument();
   });
 });

@@ -7,8 +7,10 @@ import {
   type InvestigationReport,
 } from "../api/client";
 import { Button } from "../components/ui/button";
+import { AppSelect } from "../components/ui/AppSelect";
 import BIMWorkspace from "../viewers/BIMWorkspace";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
+import { demoInvestigationText } from "../ui/demo/demoPresentation";
 
 export function filterBimCandidates(
   elements: readonly DTO<"BimElementSnapshot">[],
@@ -215,25 +217,29 @@ export function BimMappingWorkspace({
                 )
               }
             >
-              让 Concord 调查当前选择
+              调查当前选择
             </Button>
           </header>
           <label className="form-label">
             BIM 来源
-            <select
-              value={sourceId}
-              onChange={(event) => {
-                setSourceId(event.target.value);
+            <AppSelect
+              label="BIM 来源"
+              value={sourceId || "__none__"}
+              onChange={(value) => {
+                setSourceId(value === "__none__" ? "" : value);
                 setSelected([]);
               }}
-            >
-              <option value="">选择已上传来源</option>
-              {bimSources.map((item) => (
-                <option key={item.source.id} value={item.source.id}>
-                  {item.source.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "__none__", label: "选择已上传来源" },
+                ...bimSources.map((item) => ({
+                  value: item.source.id,
+                  label: item.source.name,
+                  hint: item.has_pending_revision
+                    ? "有待接受版本"
+                    : "已同步基线",
+                })),
+              ]}
+            />
           </label>
           {!bimSources.length && (
             <div className="impact-empty">
@@ -275,39 +281,54 @@ export function BimMappingWorkspace({
               <div className="mapping-filters">
                 <label>
                   楼层
-                  <select
-                    value={storey}
-                    onChange={(e) => setStorey(e.target.value)}
-                  >
-                    <option value="">全部</option>
-                    {values("storey").map((value) => (
-                      <option key={value}>{value}</option>
-                    ))}
-                  </select>
+                  <AppSelect
+                    label="楼层"
+                    value={storey || "__all__"}
+                    onChange={(value) =>
+                      setStorey(value === "__all__" ? "" : value)
+                    }
+                    options={[
+                      { value: "__all__", label: "全部楼层" },
+                      ...values("storey").map((value) => ({
+                        value,
+                        label: value,
+                      })),
+                    ]}
+                  />
                 </label>
                 <label>
                   空间
-                  <select
-                    value={space}
-                    onChange={(e) => setSpace(e.target.value)}
-                  >
-                    <option value="">全部</option>
-                    {values("space").map((value) => (
-                      <option key={value}>{value}</option>
-                    ))}
-                  </select>
+                  <AppSelect
+                    label="空间"
+                    value={space || "__all__"}
+                    onChange={(value) =>
+                      setSpace(value === "__all__" ? "" : value)
+                    }
+                    options={[
+                      { value: "__all__", label: "全部空间" },
+                      ...values("space").map((value) => ({
+                        value,
+                        label: value,
+                      })),
+                    ]}
+                  />
                 </label>
                 <label>
                   IFC 类型
-                  <select
-                    value={ifcClass}
-                    onChange={(e) => setIfcClass(e.target.value)}
-                  >
-                    <option value="">全部</option>
-                    {values("ifc_class").map((value) => (
-                      <option key={value}>{value}</option>
-                    ))}
-                  </select>
+                  <AppSelect
+                    label="IFC 类型"
+                    value={ifcClass || "__all__"}
+                    onChange={(value) =>
+                      setIfcClass(value === "__all__" ? "" : value)
+                    }
+                    options={[
+                      { value: "__all__", label: "全部类型" },
+                      ...values("ifc_class").map((value) => ({
+                        value,
+                        label: value,
+                      })),
+                    ]}
+                  />
                 </label>
               </div>
               {!inspectionMode && (
@@ -393,10 +414,10 @@ export function BimMappingWorkspace({
           {confirm.error && <p className="alert">{confirm.error.message}</p>}
           {report?.scope.work_package_ids.includes(workPackageId) && (
             <section className="context-agent-result">
-              <span className="eyebrow">Concord 调查结果</span>
-              <p>{report.answer.summary}</p>
+              <span className="eyebrow">构件调查结果</span>
+              <p>{demoInvestigationText(report.answer.summary)}</p>
               <div className="context-agent-result-footer">
-                <small>{report.evidence.length} 条已持久化 Evidence</small>
+                <small>{report.evidence.length} 条已持久化依据</small>
                 {onOpenInvestigation && (
                   <Button
                     size="sm"

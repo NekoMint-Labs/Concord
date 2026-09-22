@@ -9,7 +9,7 @@ it("carries project and location context without repeating the work package", ()
   const wp = data.state.work_packages.find((item) => item.id === "WP-200")!;
   render(<WorkspaceHeader data={data} wp={wp} />);
 
-  expect(screen.getByText("Harbor East / Building A")).toBeVisible();
+  expect(screen.getByText("A 栋项目")).toBeVisible();
   expect(screen.getByText("L02 东翼")).toBeVisible();
   expect(screen.getByText("WP-200")).toBeVisible();
 

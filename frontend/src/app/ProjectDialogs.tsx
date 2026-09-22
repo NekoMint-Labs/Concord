@@ -3,7 +3,13 @@ import { ChevronRight } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type DTO, type Workspace } from "../api/client";
 import { AppDialog, DialogClose } from "../components/ui/AppDialog";
+import { AppSelect } from "../components/ui/AppSelect";
 import { Button } from "../components/ui/button";
+import {
+  demoAreaName,
+  demoProjectDescription,
+  demoProjectName,
+} from "../ui/demo/demoPresentation";
 
 export function NewProjectDialog({
   open,
@@ -155,7 +161,7 @@ export function OpenProjectDialog({
               onOpenChange(false);
             }}
           >
-            <strong>{item.name}</strong>
+            <strong>{demoProjectName(item.id, item.name)}</strong>
             <span>{item.description || item.timezone}</span>
             {item.id === "harbor-east" && <small>演示 / 示例</small>}
           </button>
@@ -182,14 +188,18 @@ export function ProjectSettingsDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="项目设置"
-      description="工程身份来自后端持久化项目。"
+      description="查看当前项目的基础信息与工作包结构。"
     >
       {project && (
         <dl className="project-facts">
           <dt>名称</dt>
-          <dd>{project.name}</dd>
+          <dd>{demoProjectName(project.id, project.name)}</dd>
           <dt>说明</dt>
-          <dd>{project.description || "—"}</dd>
+          <dd>
+            {project.description
+              ? demoProjectDescription(project.id, project.description)
+              : "—"}
+          </dd>
           <dt>时区</dt>
           <dd>{project.timezone}</dd>
           <dt>项目 ID</dt>
@@ -235,13 +245,19 @@ export function ProjectStructureDialog({
   const [discipline, setDiscipline] = useState("");
   const [owner, setOwner] = useState("");
   const [error, setError] = useState("");
+  const areaChoice = areaId || workspace.state.areas[0]?.id || "__create__";
+  const creatingArea = areaChoice === "__create__";
   const invalidate = () =>
     Promise.all([
       cache.invalidateQueries({ queryKey: ["workspace", project] }),
       cache.invalidateQueries({ queryKey: ["project", project] }),
     ]);
   const area = useMutation({
-    mutationFn: () => api.createArea(project, { name: areaName, floor }),
+    mutationFn: () =>
+      api.createArea(project, {
+        name: areaName.trim(),
+        floor: floor.trim(),
+      }),
     onSuccess: async (created) => {
       setAreaName("");
       setFloor("");
@@ -253,10 +269,10 @@ export function ProjectStructureDialog({
   const workPackage = useMutation({
     mutationFn: () =>
       api.createWorkPackage(project, {
-        name,
-        area_id: areaId,
-        discipline,
-        owner,
+        name: name.trim(),
+        area_id: areaChoice,
+        discipline: discipline.trim(),
+        owner: owner.trim(),
       }),
     onSuccess: async (created) => {
       setName("");
@@ -264,6 +280,7 @@ export function ProjectStructureDialog({
       setOwner("");
       await invalidate();
       onWorkPackage(created.id);
+      onOpenChange(false);
     },
     onError: (cause) => setError(cause.message),
   });
@@ -272,98 +289,120 @@ export function ProjectStructureDialog({
     <AppDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="区域与工作包"
-      description="保存后会立即出现在项目侧栏，并在重启后保留。"
+      eyebrow={<span className="eyebrow">项目结构</span>}
+      title="新建工作包"
+      description="选择所属区域，再填写工作包的基本信息。"
       className="structure-dialog"
     >
-      <div className="structure-columns">
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            setError("");
-            area.mutate();
-          }}
-        >
-          <h3>新建区域</h3>
-          <label className="form-label">
-            名称
-            <input
-              required
-              value={areaName}
-              onChange={(event) => setAreaName(event.target.value)}
-            />
-          </label>
-          <label className="form-label">
-            楼层
-            <input
-              value={floor}
-              onChange={(event) => setFloor(event.target.value)}
-            />
-          </label>
-          <Button type="submit" disabled={area.isPending || !areaName.trim()}>
-            保存区域
-          </Button>
-        </form>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            setError("");
-            workPackage.mutate();
-          }}
-        >
-          <h3>新建工作包</h3>
-          <label className="form-label">
-            区域
-            <select
-              required
-              value={areaId}
-              onChange={(event) => setAreaId(event.target.value)}
+      <form
+        className="project-form structure-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setError("");
+          workPackage.mutate();
+        }}
+      >
+        <label className="form-label">
+          所属区域
+          <AppSelect
+            label="所属区域"
+            value={areaChoice}
+            onChange={setAreaId}
+            options={[
+              ...workspace.state.areas.map((item) => ({
+                value: item.id,
+                label: demoAreaName(item.id, item.name),
+              })),
+              { value: "__create__", label: "新建区域…" },
+            ]}
+          />
+        </label>
+
+        {creatingArea && (
+          <section className="area-helper" aria-label="新建区域">
+            <div className="area-helper-heading">
+              <strong>先创建区域</strong>
+              <span>区域用于组织楼层或施工分区。</span>
+            </div>
+            <div className="form-row">
+              <label className="form-label">
+                区域名称
+                <input
+                  required
+                  value={areaName}
+                  onChange={(event) => setAreaName(event.target.value)}
+                  placeholder="例如：A 栋东区"
+                />
+              </label>
+              <label className="form-label">
+                楼层 <span className="optional-label">（可选）</span>
+                <input
+                  value={floor}
+                  onChange={(event) => setFloor(event.target.value)}
+                  placeholder="例如：L03"
+                />
+              </label>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={area.isPending || !areaName.trim()}
+              onClick={() => {
+                setError("");
+                area.mutate();
+              }}
             >
-              <option value="">选择区域</option>
-              {workspace.state.areas.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} {item.floor}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-label">
-            名称
-            <input
-              required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </label>
+              {area.isPending ? "正在保存…" : "保存并使用此区域"}
+            </Button>
+          </section>
+        )}
+
+        <label className="form-label">
+          工作包名称
+          <input
+            required
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="例如：机电安装"
+          />
+        </label>
+        <div className="form-row">
           <label className="form-label">
             专业
             <input
               required
               value={discipline}
               onChange={(event) => setDiscipline(event.target.value)}
+              placeholder="例如：机电"
             />
           </label>
           <label className="form-label">
-            负责人
+            负责人 <span className="optional-label">（可选）</span>
             <input
               value={owner}
               onChange={(event) => setOwner(event.target.value)}
+              placeholder="姓名或团队"
             />
           </label>
+        </div>
+        {error && <p className="alert">{error}</p>}
+        <div className="dialog-actions">
+          <DialogClose asChild>
+            <Button variant="secondary">取消</Button>
+          </DialogClose>
           <Button
             type="submit"
             disabled={
+              creatingArea ||
               workPackage.isPending ||
-              !areaId ||
               !name.trim() ||
               !discipline.trim()
             }
           >
-            保存工作包
+            {workPackage.isPending ? "正在创建…" : "创建工作包"}
           </Button>
-        </form>
-      </div>
-      {error && <p className="alert">{error}</p>}
+        </div>
+      </form>
     </AppDialog>
   );
 }

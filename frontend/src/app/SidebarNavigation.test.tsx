@@ -79,7 +79,7 @@ function sidebar({ collapsed = false, onCollapse = vi.fn() } = {}) {
 it("carries the collapse control and the current project in its own header", () => {
   const onCollapse = sidebar();
   const current = screen.getByRole("button", { name: "项目" });
-  expect(within(current).getByText("Harbor East / Building A")).toBeVisible();
+  expect(within(current).getByText("A 栋项目")).toBeVisible();
   expect(document.querySelector(".sidebar")).not.toHaveAttribute("inert");
 
   fireEvent.click(screen.getByRole("button", { name: "收起侧栏" }));
