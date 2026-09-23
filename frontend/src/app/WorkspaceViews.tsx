@@ -156,7 +156,7 @@ export function WorkspaceViews({
         orientation={stackedInspector ? "vertical" : "horizontal"}
       >
         <Pane
-          className="central-workspace"
+           className={`central-workspace${detailsOpen ? " has-detail" : ""}`}
           minSize={stackedInspector ? "300px" : "480px"}
           maxSize={stackedInspector ? "75%" : undefined}
         >
@@ -322,8 +322,14 @@ export function WorkspaceViews({
                 <InvestigationInspector
                   report={report}
                   run={run}
-                  context={investigationContext}
-                  onClose={() => onDetailsOpen(false)}
+                   context={investigationContext}
+                   proposal={data.proposals.find((item) => report?.scope.work_package_ids.includes(item.work_package_id))}
+                   onReview={() => {
+                     const workPackage = data.proposals.find((item) => report?.scope.work_package_ids.includes(item.work_package_id));
+                     if (workPackage) onSelected(workPackage.work_package_id);
+                     onInspectorView("action");
+                   }}
+                   onClose={() => onDetailsOpen(false)}
                 />
               ) : (
                 <Inspector

@@ -150,3 +150,26 @@
 .issue-detail > aside { height: 100%; }
 .issue-location-note { position: absolute; bottom: 12px; left: 12px; padding: 7px 10px; background: #fbfcfd; color: var(--muted); font-size: 11px; }
 @media (max-width: 1100px) { .issue-workspace { grid-template-columns: 200px minmax(0, 1fr) 240px; } }
+
+.central-workspace.has-detail .bim-workspace.spatial-workspace { grid-template-columns: clamp(180px, 24%, 256px) minmax(0, 1fr); }
+.central-workspace.has-detail .bim-workspace.spatial-workspace > .spatial-inspector { display: none; }
+.central-workspace.has-detail .change-workspace, .central-workspace.has-detail .issue-workspace { grid-template-columns: clamp(180px, 24%, 256px) minmax(0, 1fr); }
+.central-workspace.has-detail .change-inspector, .central-workspace.has-detail .issue-detail { display: none; }
+.investigation-proposal { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
+.investigation-proposal h4 { margin: 8px 0; font-size: 14px; font-weight: 600; }
+.investigation-proposal p { color: var(--ink-2); font-size: 12px; line-height: 1.6; }
+.investigation-proposal small { display: block; margin: 8px 0; color: var(--muted); }
+.investigation-process { margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: 11px; }
+.investigation-process summary { cursor: pointer; }
+.investigation-process li { display: grid; gap: 2px; padding: 8px 0; }
+
+.mapping-viewer .bim-workspace.spatial-workspace { grid-template-columns: minmax(0, 1fr) clamp(220px, 28%, 300px); }
+.mapping-viewer .bim-workspace.spatial-workspace > .spatial-explorer { display: none; }
+.central-workspace.has-detail .mapping-viewer .bim-workspace.spatial-workspace { display: block; }
+.central-workspace.has-detail .mapping-viewer .spatial-stage { height: 100%; }
+.revision-switch { display: flex; gap: 4px; margin-top: 16px; }
+.revision-switch button { flex: 1; padding: 7px 4px; border: 1px solid var(--line-soft); border-radius: 3px; background: transparent; color: var(--ink-2); font-size: 11px; }
+.revision-switch button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.source-heading-actions { display: flex; align-items: center; gap: 6px; }
+.source-history { margin: 16px; color: var(--muted); font-size: 11px; }
+.source-history summary { cursor: pointer; }

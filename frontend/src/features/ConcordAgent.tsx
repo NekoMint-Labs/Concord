@@ -23,8 +23,9 @@ export type ConcordContext = {
   fromRevisionLabel?: string;
   revisionId?: string;
   revisionLabel?: string;
-  workPackageId?: string;
-  elementIds: string[];
+   workPackageId?: string;
+   workPackageName?: string;
+   elementIds: string[];
 };
 
 function scopeFor(context: ConcordContext): DTO<"AgentScope-Input"> {
@@ -142,7 +143,7 @@ export function ConcordAgent({
         <section className="agent-context-block">
           <span className="section-label">当前上下文</span>
           <strong>
-            {context.workPackageId ?? context.sourceName ?? context.projectName}
+             {context.workPackageName ?? context.sourceName ?? context.projectName}
           </strong>
           <p>
             {[
@@ -218,12 +219,7 @@ export function ConcordAgent({
               <Status value={currentRun.status} />
             </div>
             <PropertyTable>
-              <PropertyRow
-                label="运行"
-                value={currentRun.id.slice(0, 8)}
-                mono
-              />
-              <PropertyRow label="代次" value={currentRun.generation} />
+
               {report?.run_id === currentRun.id && (
                 <PropertyRow
                   label="判断依据"
@@ -253,7 +249,7 @@ export function ConcordAgent({
             {notices.data.slice(-3).map((notice) => (
               <div key={notice.id}>
                 <span>工程来源有新版本</span>
-                <code>{notice.revision_id.slice(0, 8)}</code>
+
               </div>
             ))}
           </section>

@@ -15,6 +15,7 @@ import {
   demoProposalExplanation,
   demoProposalTitle,
   demoSourceLabel,
+  demoWorkPackageName,
 } from "../ui/demo/demoPresentation";
 
 /** The one thing the user opened. The inspector never narrates the whole story. */
@@ -104,7 +105,7 @@ export function Inspector({
       */}
       <DetailInspectorHeader
         eyebrow="工作包"
-        title={wp.id}
+         title={demoWorkPackageName(wp.id, wp.name)}
         tabs={views.map((item) => ({
           ...item,
           count:

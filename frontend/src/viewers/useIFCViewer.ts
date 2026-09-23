@@ -8,6 +8,7 @@ type ViewerControls = {
   focus(): Promise<void>;
   isolate(): Promise<void>;
   showAll(): Promise<void>;
+  selectGuid(id: string): Promise<void>;
 };
 
 /** Own the complete SDK lifetime inside the lazy IFC boundary. */
@@ -15,6 +16,7 @@ export function useIFCViewer(
   file: File,
   impacted: readonly string[],
   onSelected: (id: string) => void,
+  focusId?: string,
 ) {
   const container = useRef<HTMLDivElement>(null);
   const controls = useRef<ViewerControls | null>(null);
@@ -151,6 +153,16 @@ export function useIFCViewer(
             await model.setVisible(ids, true);
             await fragments.core.update(true);
           },
+          async selectGuid(id) {
+            const [localId] = await model.getLocalIdsByGuids([id]);
+            if (cancelled || typeof localId !== "number") return;
+            selected = [localId];
+            const [data] = await model.getItemsData(selected);
+            if (cancelled) return;
+            setProperties(data);
+            await paint();
+            await world.camera.controls.fitToBox(await model.getMergedBox(selected), true);
+          },
           async showAll() {
             selectionTicket++;
             await model.resetVisible();
@@ -212,6 +224,13 @@ export function useIFCViewer(
       if (controls.current === current) setError(String(cause));
     });
   }, [impacted, ready]);
+  useEffect(() => {
+    if (!ready || !focusId) return;
+    const current = controls.current;
+    void current?.selectGuid(focusId).catch((cause) => {
+      if (controls.current === current) setError(String(cause));
+    });
+  }, [focusId, ready]);
   async function act(name: "focus" | "isolate" | "showAll") {
     if (actionActive.current || !controls.current) return;
     actionActive.current = true;

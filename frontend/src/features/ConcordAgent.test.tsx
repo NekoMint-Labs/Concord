@@ -209,6 +209,7 @@ it("does not present an old run result as the current operation", () => {
       />
     </QueryClientProvider>,
   );
-  expect(screen.getByText("run-curr")).toBeVisible();
+  expect(screen.getByText("分析中")).toBeVisible();
+  expect(screen.queryByText("run-curr")).toBeNull();
   expect(screen.queryByText("Old failed investigation")).toBeNull();
 });

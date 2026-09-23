@@ -8,11 +8,13 @@ export function useConcordAgent({
   project,
   projectName,
   workPackageId,
+  workPackageName,
   sources,
 }: {
   project: string;
   projectName: string;
   workPackageId?: string;
+  workPackageName?: string;
   sources?: ProjectSourceStatus[];
 }) {
   const cache = useQueryClient();
@@ -186,8 +188,9 @@ export function useConcordAgent({
       projectName,
       ...scope,
       workPackageId,
+      workPackageName,
     }),
-    [projectName, scope, workPackageId],
+    [projectName, scope, workPackageId, workPackageName],
   );
 
   return {

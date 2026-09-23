@@ -21,6 +21,7 @@ export default function BIMWorkspace({
   externalFile,
   hideSourceActions = false,
   onViewerSelected,
+  focusId,
 }: {
   project: string;
   impacted: readonly string[];
@@ -28,12 +29,13 @@ export default function BIMWorkspace({
   externalFile?: File | null;
   hideSourceActions?: boolean;
   onViewerSelected?: (id: string) => void;
+  focusId?: string;
 }) {
   const elements = useQuery({ queryKey: ["bim", project], queryFn: () => api.bim(project) });
   const { selected, setSelected, file, setFile, error, notice, busy, imported, importSource, openImported, chooseFile } = useBIMSource(project);
   const input = useRef<HTMLInputElement>(null);
   const viewFile = externalFile === undefined ? file : externalFile;
-  const item = elements.data?.find((element) => element.id === selected);
+  const item = elements.data?.find((element) => element.id === (focusId ?? selected));
   const sections = item ? propertySections(item.properties) : [];
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export default function BIMWorkspace({
       <div className="spatial-stage">
         {viewFile ? (
           <Suspense fallback={<div className="loading-view">正在加载 IFC 查看器…</div>}>
-            <IFCViewer file={viewFile} impacted={item ? [item.id, ...impacted] : impacted} onSelected={select} />
+              <IFCViewer file={viewFile} impacted={item ? [item.id, ...impacted] : impacted} onSelected={select} focusId={focusId} />
           </Suspense>
         ) : <div className="spatial-stage-empty"><Box aria-hidden="true" /><strong>模型工作区</strong><span>打开项目 IFC，在模型中查看构件与变更。</span><small>本机文件仅在本机查看；导入项目需要明确操作。</small></div>}
         {(error || elements.error || imported.error || imported.data?.error) && <div className="alert spatial-feedback" role="alert">{error || elements.error?.message || imported.error?.message || imported.data?.error}</div>}

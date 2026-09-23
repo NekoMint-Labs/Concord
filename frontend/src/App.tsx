@@ -26,6 +26,7 @@ import {
 import { ConcordAgent } from "./features/ConcordAgent";
 import { useConcordAgent } from "./features/useConcordAgent";
 import type { BimMappingContext } from "./features/BimMappingWorkspace";
+import { demoWorkPackageName } from "./ui/demo/demoPresentation";
 
 export function App() {
   const cache = useQueryClient();
@@ -60,6 +61,7 @@ export function App() {
     project,
     projectName: data?.state.project.name ?? project,
     workPackageId: selected || undefined,
+    workPackageName: wp ? demoWorkPackageName(wp.id, wp.name) : undefined,
     sources: sourceCatalog.data,
   });
 
@@ -326,6 +328,8 @@ export function App() {
                   fromRevisionId,
                   fromRevisionLabel,
                 );
+                setInspectorView("investigation");
+                setDetailsOpen(true);
                 void agent.startInvestigation("调查当前工程来源版本", {
                   sourceId,
                   fromRevisionId,
@@ -345,6 +349,8 @@ export function App() {
                   elementIds,
                   fromRevisionId,
                 );
+                setInspectorView("investigation");
+                setDetailsOpen(true);
                 void agent.startInvestigation(
                   "调查当前工作包与选中的 BIM 构件",
                   {

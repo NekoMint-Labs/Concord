@@ -9,13 +9,15 @@ export default function IFCViewer({
   file,
   impacted,
   onSelected,
+  focusId,
 }: {
   file: File;
   impacted: readonly string[];
   onSelected: (id: string) => void;
+  focusId?: string;
 }) {
   const { container, ready, message, error, properties, busy, act } =
-    useIFCViewer(file, impacted, onSelected);
+    useIFCViewer(file, impacted, onSelected, focusId);
   /*
    * The selected element's attributes are rendered as the property sheet renders
    * them everywhere else in this product (frontend/src/viewers/bimProperties.ts).

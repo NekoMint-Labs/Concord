@@ -36,6 +36,7 @@ export function ChangeExplorer({ project, workspace, onModels, onInspect, onInve
   const [kind, setKind] = useState<Kind>("all");
   const [selectedId, setSelectedId] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [shownRevision, setShownRevision] = useState<"from" | "to">("to");
   const [fileError, setFileError] = useState("");
   const compare = useMutation({
     mutationFn: () => api.compareRevisions(project, sourceId, { from_revision_id: revisions.data!.at(-2)!.id, to_revision_id: revisions.data!.at(-1)!.id }),
@@ -44,17 +45,18 @@ export function ChangeExplorer({ project, workspace, onModels, onInspect, onInve
 
   useEffect(() => { if (!models.some((model) => model.source.id === sourceId)) setSourceId(models[0]?.source.id ?? ""); }, [models, sourceId]);
   useEffect(() => { if (!comparisons.data?.some((item) => item.id === comparisonId)) setComparisonId(comparisons.data?.at(-1)?.id ?? ""); }, [comparisons.data, comparisonId]);
-  useEffect(() => { setSelectedId(""); setKind("all"); }, [comparisonId]);
+  useEffect(() => { setSelectedId(""); setKind("all"); setShownRevision("to"); }, [comparisonId]);
   useEffect(() => {
     if (!comparison) { setFile(null); return; }
     let cancelled = false;
     setFile(null);
     setFileError("");
-    void readSource(`/api/projects/${encodeURIComponent(project)}/sources/${encodeURIComponent(sourceId)}/revisions/${encodeURIComponent(comparison.to_revision_id)}/content`)
-      .then((blob) => { if (!cancelled) setFile(new File([blob], `R${revisions.data?.find((item) => item.id === comparison.to_revision_id)?.sequence ?? "new"}.ifc`)); })
+    const revisionId = shownRevision === "from" ? comparison.from_revision_id : comparison.to_revision_id;
+    void readSource(`/api/projects/${encodeURIComponent(project)}/sources/${encodeURIComponent(sourceId)}/revisions/${encodeURIComponent(revisionId)}/content`)
+      .then((blob) => { if (!cancelled) setFile(new File([blob], `R${revisions.data?.find((item) => item.id === revisionId)?.sequence ?? "?"}.ifc`)); })
       .catch((error) => { if (!cancelled) setFileError(error instanceof Error ? error.message : "模型不可用"); });
     return () => { cancelled = true; };
-  }, [project, sourceId, comparison?.to_revision_id, revisions.data]);
+  }, [project, sourceId, comparison?.to_revision_id, comparison?.from_revision_id, shownRevision, revisions.data]);
 
   const changes = detail.data?.changes ?? [];
   const visible = kind === "all" ? changes : changes.filter((change) => change.change_kind === kind);
@@ -78,7 +80,7 @@ export function ChangeExplorer({ project, workspace, onModels, onInspect, onInve
       </label>}
       {comparison && <div className="change-filters" aria-label="变更类型">{kinds.map((option) => <button type="button" key={option.value} aria-pressed={kind === option.value} onClick={() => setKind(option.value)}>{option.label} <span>{option.value === "all" ? changes.length : changes.filter((change) => change.change_kind === option.value).length}</span></button>)}</div>}
       <div className="change-list">
-        {visible.map((change) => <button key={`${change.change_kind}:${change.global_id}`} type="button" aria-pressed={selectedId === change.global_id} onClick={() => setSelectedId(change.global_id)}>
+        {visible.map((change) => <button key={`${change.change_kind}:${change.global_id}`} type="button" aria-pressed={selectedId === change.global_id} onClick={() => { setSelectedId(change.global_id); setShownRevision(change.change_kind === "deleted" ? "from" : "to"); }}>
           <strong>{nameFor(change.global_id)}</strong>
           <small>{change.change_kind === "deleted" ? "已删除" : change.change_kind === "added" ? "新增" : "修改"} · {change.changed_aspects.map((aspect) => aspectLabel[aspect] ?? aspect).join("、") || "构件"}</small>
         </button>)}
@@ -88,16 +90,17 @@ export function ChangeExplorer({ project, workspace, onModels, onInspect, onInve
       </div>
     </aside>
     <div className="change-stage">
-      <div className="change-stage-heading">{comparison ? `R${from?.sequence ?? "?"} → R${to?.sequence ?? "?"}` : source?.source.name ?? "模型变更"}<span>{source?.has_pending_revision ? "待接受 · 当前基线未变" : "已接受"}</span></div>
+      <div className="change-stage-heading">{comparison ? `R${from?.sequence ?? "?"} → R${to?.sequence ?? "?"}` : source?.source.name ?? "模型变更"}<span>{comparison ? `查看 R${shownRevision === "from" ? from?.sequence ?? "?" : to?.sequence ?? "?"} · ${source?.has_pending_revision ? "待接受" : "已接受"}` : ""}</span></div>
       {comparison?.summary.warnings.map((warning) => <p className="continuity-warning" role="status" key={warning}>{warning}</p>)}
       {fileError && <p className="alert" role="alert">{fileError}</p>}
-      <BIMWorkspace project={project} impacted={selected ? [selected.global_id] : changes.map((change) => change.global_id)} externalFile={file} hideSourceActions onViewerSelected={setSelectedId} />
+      <BIMWorkspace project={project} impacted={selected ? [selected.global_id] : changes.map((change) => change.global_id)} focusId={selected?.global_id} externalFile={file} hideSourceActions onViewerSelected={setSelectedId} />
     </div>
     <aside className="change-inspector" aria-label="变更详情">
       <header className="spatial-pane-heading">{selected ? "构件变更" : "选择变更"}</header>
       {selected ? <div className="change-inspector-body">
         <h2>{nameFor(selected.global_id)}</h2>
         <dl><dt>变更</dt><dd>{selected.change_kind === "deleted" ? "已删除 · 在旧版本中查看" : selected.change_kind === "added" ? "新增" : selected.changed_aspects.map((aspect) => aspectLabel[aspect] ?? aspect).join("、") || "修改"}</dd><dt>版本</dt><dd>R{from?.sequence ?? "?"} → R{to?.sequence ?? "?"}</dd></dl>
+        <div className="revision-switch" aria-label="显示版本"><button type="button" aria-pressed={shownRevision === "from"} onClick={() => setShownRevision("from")}>旧版 R{from?.sequence ?? "?"}</button><button type="button" aria-pressed={shownRevision === "to"} onClick={() => setShownRevision("to")}>新版 R{to?.sequence ?? "?"}</button></div>
         <h3>受影响工作包</h3>
         {affected.length ? affected.map((item) => <button type="button" key={item.work_package_id} onClick={() => onInspect(item.work_package_id, sourceId, comparison!, selected)}>{demoWorkPackageName(item.work_package_id, workspace.state.work_packages.find((wp) => wp.id === item.work_package_id)?.name ?? item.work_package_id)} →</button>) : <p className="quiet-message">尚无已确认的工作包关联。</p>}
         {element && <><h3>关联依据</h3><p>{element.fact}</p></>}
