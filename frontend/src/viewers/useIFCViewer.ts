@@ -161,7 +161,10 @@ export function useIFCViewer(
             if (cancelled) return;
             setProperties(data);
             await paint();
-            await world.camera.controls.fitToBox(await model.getMergedBox(selected), true);
+            await world.camera.controls.fitToBox(
+              await model.getMergedBox(selected),
+              true,
+            );
           },
           async showAll() {
             selectionTicket++;
@@ -207,14 +210,16 @@ export function useIFCViewer(
           setError(cause instanceof Error ? cause.message : "IFC 引擎启动失败");
       }
     }
-    void load();
+    const loading = load();
     return () => {
       cancelled = true;
       epoch.current++;
       controls.current = null;
       cleanupSelection?.();
       observer?.disconnect();
-      components?.dispose();
+      // The loader's model-loaded event still uses FragmentsManager. Dispose only
+      // after that in-flight load settles when switching work surfaces quickly.
+      void loading.finally(() => components?.dispose());
     };
   }, [file]);
   useEffect(() => {

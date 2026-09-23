@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { expect, it, vi } from "vitest";
 import type { DTO } from "../api/client";
 import { AdvancedMenu } from "./AdvancedMenu";
-import type { WorkspaceTab } from "./WorkspaceTabs";
+import type { WorkspaceTab } from "./destinations";
 
 /* The profile gate is our contract; Radix popup behavior is browser-covered. */
 vi.mock("../components/ui/AppMenu", () => ({

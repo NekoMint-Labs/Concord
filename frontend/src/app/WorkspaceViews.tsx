@@ -25,7 +25,7 @@ import type { ConcordContext } from "../features/ConcordAgent";
 import { Documents } from "../features/Documents";
 import { Capabilities } from "../features/Capabilities";
 import { Operations } from "../features/Operations";
-import type { WorkspaceTab } from "./WorkspaceTabs";
+import type { WorkspaceTab } from "./destinations";
 
 const BIMWorkspace = lazy(() => import("../viewers/BIMWorkspace"));
 const BimMappingWorkspace = lazy(() =>
@@ -40,12 +40,7 @@ const ProjectSources = lazy(() =>
 );
 const GISWorkspace = lazy(() => import("../viewers/GISWorkspace"));
 
-/**
- * The view destinations are the navigation's own business, and they live there
- * rather than here: what counts as workflow, what is secondary, and what is a
- * diagnostic is a product decision, and it is stated once
- * (frontend/src/app/WorkspaceTabs.tsx).
- */
+/** Navigation owns destinations; this component only composes the selected work surface. */
 export type { WorkspaceTab };
 
 export function WorkspaceViews({
@@ -156,7 +151,7 @@ export function WorkspaceViews({
         orientation={stackedInspector ? "vertical" : "horizontal"}
       >
         <Pane
-           className={`central-workspace${detailsOpen ? " has-detail" : ""}`}
+          className={`central-workspace${detailsOpen ? " has-detail" : ""}`}
           minSize={stackedInspector ? "300px" : "480px"}
           maxSize={stackedInspector ? "75%" : undefined}
         >
@@ -238,7 +233,12 @@ export function WorkspaceViews({
                   workspace={data}
                   onModels={() => onTab("sources")}
                   onInvestigate={(sourceId, revisionId, fromRevisionId, ids) =>
-                    onInvestigateSource(sourceId, revisionId, fromRevisionId, ids)
+                    onInvestigateSource(
+                      sourceId,
+                      revisionId,
+                      fromRevisionId,
+                      ids,
+                    )
                   }
                   onInspect={(workPackageId, sourceId, comparison, change) =>
                     onInspectImpact(workPackageId, {
@@ -252,7 +252,11 @@ export function WorkspaceViews({
                 />
               )}
               {tab === "packages" && (
-                <IssueExplorer project={project} workspace={data} perform={perform} />
+                <IssueExplorer
+                  project={project}
+                  workspace={data}
+                  perform={perform}
+                />
               )}
               {tab === "documents" && (
                 <Documents
@@ -265,6 +269,7 @@ export function WorkspaceViews({
               {tab === "sources" && (
                 <ProjectSources
                   project={project}
+                  workPackages={data.state.work_packages}
                   report={report}
                   onContext={onSourceContext}
                   onRun={onAgentRun}
@@ -289,6 +294,7 @@ export function WorkspaceViews({
                 <BIMWorkspace
                   project={project}
                   impacted={data.analysis?.impact.element_ids ?? []}
+                  autoProjectModel
                   condensed={condensed}
                 />
               )}
@@ -322,14 +328,22 @@ export function WorkspaceViews({
                 <InvestigationInspector
                   report={report}
                   run={run}
-                   context={investigationContext}
-                   proposal={data.proposals.find((item) => report?.scope.work_package_ids.includes(item.work_package_id))}
-                   onReview={() => {
-                     const workPackage = data.proposals.find((item) => report?.scope.work_package_ids.includes(item.work_package_id));
-                     if (workPackage) onSelected(workPackage.work_package_id);
-                     onInspectorView("action");
-                   }}
-                   onClose={() => onDetailsOpen(false)}
+                  context={investigationContext}
+                  proposal={data.proposals.find((item) =>
+                    report?.scope.work_package_ids.includes(
+                      item.work_package_id,
+                    ),
+                  )}
+                  onReview={() => {
+                    const workPackage = data.proposals.find((item) =>
+                      report?.scope.work_package_ids.includes(
+                        item.work_package_id,
+                      ),
+                    );
+                    if (workPackage) onSelected(workPackage.work_package_id);
+                    onInspectorView("action");
+                  }}
+                  onClose={() => onDetailsOpen(false)}
                 />
               ) : (
                 <Inspector

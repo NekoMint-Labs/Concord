@@ -6,21 +6,84 @@ import { api, type DTO, type Workspace } from "../api/client";
 import { ChangeExplorer } from "./ChangeExplorer";
 import { IssueExplorer } from "./IssueExplorer";
 
-vi.mock("../viewers/BIMWorkspace", () => ({ default: ({ impacted }: { impacted: readonly string[] }) => <div data-testid="model-selection">{impacted.join(",")}</div> }));
-const wrap = (node: React.ReactNode) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{node}</QueryClientProvider>);
+vi.mock("../viewers/BIMWorkspace", () => ({
+  default: ({ impacted }: { impacted: readonly string[] }) => (
+    <div data-testid="model-selection">{impacted.join(",")}</div>
+  ),
+}));
+const wrap = (node: React.ReactNode) =>
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      {node}
+    </QueryClientProvider>,
+  );
 
 it("selects a real comparison change and connects its linked work package to model context", async () => {
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  const source = { source: { id: "s1", name: "MEP", kind: "BIM" }, latest_revision_id: "r2", accepted_revision_id: "r1", has_pending_revision: true } as DTO<"ProjectSourceStatus">;
-  const comparison: DTO<"RevisionComparison"> = { id: "c1", project_id: "harbor-east", source_id: "s1", from_revision_id: "r1", to_revision_id: "r2", engine: "IfcDiff", engine_version: "1", status: "COMPLETED", raw_result_key: "result", created_at: "2026-01-01", evidence_ids: ["ev"], summary: { added: 0, deleted: 0, changed: 1, warnings: [], from_elements: 1, to_elements: 1, common_global_ids: 1, global_id_continuity: 1, compare_seconds: 0 } };
-  const change = { comparison_id: "c1", global_id: "gid-1", change_kind: "changed", changed_aspects: ["geometry"] } as DTO<"BimElementChange">;
+  const source = {
+    source: { id: "s1", name: "MEP", kind: "BIM" },
+    latest_revision_id: "r2",
+    accepted_revision_id: "r1",
+    has_pending_revision: true,
+  } as DTO<"ProjectSourceStatus">;
+  const comparison: DTO<"RevisionComparison"> = {
+    id: "c1",
+    project_id: "harbor-east",
+    source_id: "s1",
+    from_revision_id: "r1",
+    to_revision_id: "r2",
+    engine: "IfcDiff",
+    engine_version: "1",
+    status: "COMPLETED",
+    raw_result_key: "result",
+    created_at: "2026-01-01",
+    evidence_ids: ["ev"],
+    summary: {
+      added: 0,
+      deleted: 0,
+      changed: 1,
+      warnings: [],
+      from_elements: 1,
+      to_elements: 1,
+      common_global_ids: 1,
+      global_id_continuity: 1,
+      compare_seconds: 0,
+    },
+  };
+  const change = {
+    comparison_id: "c1",
+    global_id: "gid-1",
+    change_kind: "changed",
+    changed_aspects: ["geometry"],
+  } as DTO<"BimElementChange">;
   vi.spyOn(api, "sourceStatuses").mockResolvedValue([source]);
-  vi.spyOn(api, "sourceRevisions").mockResolvedValue([{ id: "r1", sequence: 1 }, { id: "r2", sequence: 2 }] as DTO<"ProjectSourceRevision">[]);
+  vi.spyOn(api, "sourceRevisions").mockResolvedValue([
+    { id: "r1", sequence: 1 },
+    { id: "r2", sequence: 2 },
+  ] as DTO<"ProjectSourceRevision">[]);
   vi.spyOn(api, "comparisons").mockResolvedValue([comparison]);
-  vi.spyOn(api, "comparison").mockResolvedValue({ comparison, changes: [change], affected_work_packages: [{ work_package_id: "WP-200", changes: [change] }] });
-  vi.spyOn(api, "bimSnapshot").mockResolvedValue({ elements: [{ global_id: "gid-1", name: "AHU-01" }] } as DTO<"BimRevisionSnapshot">);
+  vi.spyOn(api, "comparison").mockResolvedValue({
+    comparison,
+    changes: [change],
+    affected_work_packages: [{ work_package_id: "WP-200", changes: [change] }],
+  });
+  vi.spyOn(api, "bimSnapshot").mockResolvedValue({
+    elements: [{ global_id: "gid-1", name: "AHU-01" }],
+  } as DTO<"BimRevisionSnapshot">);
   const onInspect = vi.fn();
-  wrap(<ChangeExplorer project="harbor-east" workspace={workspace} onModels={() => {}} onInspect={onInspect} onInvestigate={() => {}} />);
+  wrap(
+    <ChangeExplorer
+      project="harbor-east"
+      workspace={workspace}
+      onModels={() => {}}
+      onInspect={onInspect}
+      onInvestigate={() => {}}
+    />,
+  );
   fireEvent.click(await screen.findByRole("button", { name: /AHU-01/ }));
   expect(screen.getByTestId("model-selection")).toHaveTextContent("gid-1");
   fireEvent.click(screen.getByRole("button", { name: /东翼风管安装/ }));
@@ -30,7 +93,15 @@ it("selects a real comparison change and connects its linked work package to mod
 it("lists only blocking constraints, preserving the inspection path", () => {
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
   vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
-  wrap(<IssueExplorer project="harbor-east" workspace={workspace} perform={async () => {}} />);
+  wrap(
+    <IssueExplorer
+      project="harbor-east"
+      workspace={workspace}
+      perform={async () => {}}
+    />,
+  );
   expect(screen.getByRole("region", { name: "空间问题" })).toBeInTheDocument();
-  expect(screen.getByRole("complementary", { name: "问题列表" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("complementary", { name: "问题列表" }),
+  ).toBeInTheDocument();
 });

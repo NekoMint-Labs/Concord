@@ -32,8 +32,10 @@ async function workspace(request: APIRequestContext): Promise<Workspace> {
 }
 
 async function openSources(page: Page) {
-  await page.getByRole("button", { name: "更多视图" }).click();
-  await page.getByRole("menuitem", { name: "项目来源" }).click();
+  await page
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "版本" })
+    .click();
 }
 
 test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged", async ({
@@ -102,7 +104,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   await page.goto("/");
   await page
     .getByRole("navigation", { name: "工作包" })
-    .getByRole("button", { name: /东翼风管安装\s+WP-200\b/ })
+    .getByRole("button", { name: /东翼风管安装/ })
     .click();
   /*
    * The work package reports the judgement beside its own title, so the browser is
@@ -115,7 +117,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
       .getByRole("heading", { level: 2, name: "已阻塞" }),
   ).toBeVisible();
   await page
-    .getByRole("navigation", { name: "工作区视图" })
+    .getByRole("navigation", { name: "主要工作区" })
     .getByRole("button", { name: "模型", exact: true })
     .click();
   const uploads: string[] = [];
@@ -270,10 +272,10 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     .getByRole("button", { name: /Ventilation/ })
     .click();
   await page
-    .getByRole("navigation", { name: "工作区视图" })
+    .getByRole("navigation", { name: "主要工作区" })
     .getByRole("button", { name: "模型", exact: true })
     .click();
-  await page.getByRole("button", { name: "关联构件" }).click();
+  await page.getByRole("button", { name: "关联 BIM" }).click();
   await expect(page.getByText(/3 个候选构件/)).toBeVisible();
   await page.getByRole("button", { name: "选择全部" }).click();
   await expect(
@@ -291,7 +293,8 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     .toBe(3);
 
   await openSources(page);
-  await page.getByRole("button", { name: "接受当前版本为 B1" }).click();
+  await page.getByRole("button", { name: "建立 B1" }).click();
+  await page.getByText("历史基线").click();
   await expect(
     page.getByRole("button", { name: /^B1 · B1 · 1 个来源版本/ }),
   ).toBeVisible();
@@ -305,6 +308,7 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   await expect(
     page.getByText("MEP Model", { exact: true }).first(),
   ).toBeVisible();
+  await page.getByText("历史基线").click();
   await expect(
     page.getByRole("button", { name: /^B1 · B1 · 1 个来源版本/ }),
   ).toBeVisible();

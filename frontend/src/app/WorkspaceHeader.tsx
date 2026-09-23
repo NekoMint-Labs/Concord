@@ -8,7 +8,7 @@ import {
   demoProjectName,
   demoWorkPackageName,
 } from "../ui/demo/demoPresentation";
-import type { WorkspaceTab } from "./WorkspaceTabs";
+import type { WorkspaceTab } from "./destinations";
 
 /** Project context, destination navigation, and local actions are separate bands. */
 export function WorkspaceHeader({
@@ -48,16 +48,41 @@ export function WorkspaceHeader({
           {wp && (
             <>
               <span className="crumb-sep">/</span>
-              <span>{demoAreaName(wp.area_id, data.state.areas.find((area) => area.id === wp.area_id)?.name ?? wp.area_id)}</span>
+              <span>
+                {demoAreaName(
+                  wp.area_id,
+                  data.state.areas.find((area) => area.id === wp.area_id)
+                    ?.name ?? wp.area_id,
+                )}
+              </span>
               <span className="crumb-sep">/</span>
               <strong>{demoWorkPackageName(wp.id, wp.name)}</strong>
-
             </>
           )}
-          {tab && <span className="workspace-location">{({ coordination: "概览", bim: "模型", sources: "模型版本", impact: "影响", packages: "问题", documents: "文档", operations: "运行记录", gis: "现场地图", capabilities: "能力诊断" } satisfies Record<WorkspaceTab, string>)[tab]}</span>}
+          {tab && (
+            <span className="workspace-location">
+              {
+                (
+                  {
+                    coordination: "概览",
+                    bim: "模型",
+                    sources: "模型版本",
+                    impact: "影响",
+                    packages: "问题",
+                    documents: "文档",
+                    operations: "运行记录",
+                    gis: "现场地图",
+                    capabilities: "能力诊断",
+                  } satisfies Record<WorkspaceTab, string>
+                )[tab]
+              }
+            </span>
+          )}
         </div>
       </div>
-      <div className="local-actions" aria-label="当前工作区操作">{children}</div>
+      <div className="local-actions" aria-label="当前工作区操作">
+        {children}
+      </div>
     </header>
   );
 }

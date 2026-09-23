@@ -10,7 +10,7 @@ import {
 import { AppDialog } from "../components/ui/AppDialog";
 import { Button } from "../components/ui/button";
 import { icon } from "../components/ui/icon";
-import { advancedTabs, type WorkspaceTab } from "./WorkspaceTabs";
+import { advancedTabs, type WorkspaceTab } from "./destinations";
 
 /**
  * 高级: the one door to everything that is not the workflow.
@@ -63,7 +63,7 @@ export function AdvancedMenu({
         trigger={<Ellipsis {...icon} />}
         triggerClassName="icon-button advanced-menu-trigger"
       >
-        <AppMenuLabel>诊断</AppMenuLabel>
+        <AppMenuLabel>其他工具</AppMenuLabel>
         {advancedTabs.map(({ id, label }) => (
           <AppMenuItem key={id} active={tab === id} onSelect={() => onTab(id)}>
             {label}

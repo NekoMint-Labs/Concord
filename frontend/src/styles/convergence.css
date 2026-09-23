@@ -11,8 +11,12 @@
   min-height: 48px;
   border: 0;
 }
-.breadcrumb { font-size: 12px; }
-.breadcrumb code { display: none; }
+.breadcrumb {
+  font-size: 12px;
+}
+.breadcrumb code {
+  display: none;
+}
 .workspace-location {
   margin-left: 12px;
   padding-left: 12px;
@@ -26,14 +30,26 @@
   border: 0;
   background: transparent;
 }
-.sidebar-section-label { display: none; }
-.sidebar-primary { padding-top: 14px; }
-.sidebar-primary button.active { color: var(--accent); }
-.package-nav small { font-size: 10px; }
-.central-workspace { background: #f6f8f9; }
+.sidebar-section-label {
+  display: none;
+}
+.sidebar-primary {
+  padding-top: 14px;
+}
+.sidebar-primary button.active {
+  color: var(--accent);
+}
+.package-nav small {
+  font-size: 10px;
+}
+.central-workspace {
+  background: #f6f8f9;
+}
 /* Engineering facts need rows, not dashboard tiles. */
-.readiness-summary, .readiness-summary.is-ready,
-.readiness-summary.is-blocked, .readiness-summary.is-stale {
+.readiness-summary,
+.readiness-summary.is-ready,
+.readiness-summary.is-blocked,
+.readiness-summary.is-stale {
   border: 0;
   border-radius: 0;
   border-bottom: 1px solid var(--line-soft);
@@ -46,130 +62,18 @@
   border-radius: 0;
   background: transparent;
 }
-.work-object-header h1 { font-size: 20px; }
-.bim-stage { background: #e9edef; }
+.work-object-header h1 {
+  font-size: 20px;
+}
+.bim-stage {
+  background: #e9edef;
+}
 @media (prefers-reduced-motion: reduce) {
-  .application-shell *, .application-shell *::before, .application-shell *::after {
+  .application-shell *,
+  .application-shell *::before,
+  .application-shell *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
 }
-
-/* Three persistent spatial regions: explorer / geometry / selection. */
-.bim-workspace.spatial-workspace {
-  display: grid;
-  grid-template-columns: clamp(180px, 19%, 256px) minmax(0, 1fr) clamp(240px, 25%, 320px);
-  min-height: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-.spatial-explorer, .spatial-inspector {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: #fbfcfd;
-}
-.spatial-explorer { border-right: 1px solid var(--line-soft); }
-.spatial-inspector { border-left: 1px solid var(--line-soft); }
-.spatial-pane-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  min-height: 45px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 600;
-}
-.spatial-pane-heading small { color: var(--muted); font-weight: 400; }
-.spatial-explorer-list, .spatial-inspector-body { flex: 1; min-height: 0; overflow: auto; }
-.spatial-explorer-list { padding: 8px; }
-.spatial-inspector-body { padding: 16px; }
-.spatial-inspector-body .property-group + .property-group { margin-top: 18px; }
-.spatial-explorer-actions { display: grid; gap: 2px; padding: 8px; border-top: 1px solid var(--line-soft); }
-.spatial-explorer-actions .button { justify-content: flex-start; }
-.spatial-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #e9edef; }
-.spatial-stage .bim-stage { height: 100%; min-height: 0; }
-.spatial-stage-empty {
-  display: flex; flex-direction: column; justify-content: center; align-items: center;
-  gap: 8px; height: 100%; padding: 24px; color: var(--muted); text-align: center;
-}
-.spatial-stage-empty svg { width: 30px; height: 30px; stroke-width: 1; }
-.spatial-stage-empty strong { color: var(--ink-2); font-size: 14px; font-weight: 500; }
-.spatial-stage-empty span { font-size: 12px; }
-.spatial-stage-empty small { margin-top: 14px; font-size: 11px; }
-.spatial-feedback { position: absolute; bottom: 12px; left: 12px; right: 12px; z-index: 2; }
-.spatial-inspector .pane-empty { padding: 20px 16px; }
-@media (max-width: 1100px) {
-  .bim-workspace.spatial-workspace { grid-template-columns: 180px minmax(0, 1fr) 240px; }
-}
-
-.change-workspace { display: grid; grid-template-columns: clamp(220px, 22%, 300px) minmax(0, 1fr) clamp(250px, 25%, 320px); height: 100%; min-height: 0; }
-.change-explorer, .change-inspector { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #fbfcfd; }
-.change-explorer { border-right: 1px solid var(--line-soft); }
-.change-inspector { border-left: 1px solid var(--line-soft); }
-.change-explorer .spatial-pane-heading button { border: 0; background: none; color: var(--muted); font-size: 11px; }
-.change-source-label { display: grid; gap: 4px; padding: 10px 14px 0; color: var(--muted); font-size: 11px; }
-.change-source-label select { width: 100%; height: 30px; border: 1px solid var(--line-soft); border-radius: 4px; background: white; color: var(--ink); font-size: 12px; }
-.change-filters { display: flex; flex-wrap: wrap; gap: 2px; padding: 14px 10px 10px; border-bottom: 1px solid var(--line-soft); }
-.change-filters button { border: 0; padding: 5px; border-radius: 3px; background: transparent; color: var(--muted); font-size: 11px; }
-.change-filters button[aria-pressed="true"] { background: var(--accent-muted); color: var(--accent); }
-.change-filters span { margin-left: 2px; }
-.change-list { flex: 1; min-height: 0; overflow: auto; padding: 7px; }
-.change-list > button, .change-inspector-body > button { display: grid; gap: 3px; width: 100%; padding: 10px; border: 0; border-radius: 3px; background: none; color: var(--ink); text-align: left; }
-.change-list > button:hover, .change-inspector-body > button:hover { background: var(--hover); }
-.change-list > button[aria-pressed="true"] { background: var(--accent-muted); box-shadow: inset 2px 0 var(--accent); }
-.change-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; }
-.change-list small { color: var(--muted); font-size: 11px; }
-.change-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
-.change-stage-heading { display: flex; align-items: center; justify-content: space-between; min-height: 45px; padding: 0 14px; color: var(--ink); font-size: 12px; font-weight: 600; }
-.change-stage-heading span { color: var(--muted); font-size: 11px; font-weight: 400; }
-.change-stage .bim-workspace.spatial-workspace { flex: 1; min-height: 0; display: block; }
-.change-stage .spatial-explorer, .change-stage .spatial-inspector { display: none; }
-.change-stage .spatial-stage { height: 100%; }
-.change-inspector-body { overflow: auto; padding: 20px 16px; font-size: 12px; }
-.change-inspector-body h2 { font-size: 16px; font-weight: 600; }
-.change-inspector-body h3 { margin: 24px 0 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
-.change-inspector-body dl { display: grid; grid-template-columns: 80px 1fr; gap: 12px; margin-top: 20px; }
-.change-inspector-body dt { color: var(--muted); }
-.change-inspector-body .button { margin-top: 20px; }
-.change-inspector-body details { margin-top: 30px; color: var(--muted); }
-.change-inspector-body details code, .change-inspector-body details small { display: block; margin: 8px 0; overflow-wrap: anywhere; }
-@media (max-width: 1100px) { .change-workspace { grid-template-columns: 200px minmax(0, 1fr) 240px; } }
-
-.issue-workspace { display: grid; grid-template-columns: clamp(220px, 22%, 300px) minmax(0, 1fr) clamp(250px, 25%, 320px); height: 100%; min-height: 0; }
-.issue-explorer { display: flex; flex-direction: column; min-height: 0; background: #fbfcfd; border-right: 1px solid var(--line-soft); }
-.issue-stage { position: relative; min-width: 0; min-height: 0; }
-.issue-stage .bim-workspace.spatial-workspace { display: block; }
-.issue-stage .spatial-explorer, .issue-stage .spatial-inspector { display: none; }
-.issue-stage .spatial-stage { height: 100%; }
-.issue-detail { min-width: 0; min-height: 0; border-left: 1px solid var(--line-soft); background: #fbfcfd; }
-.issue-detail > aside { height: 100%; }
-.issue-location-note { position: absolute; bottom: 12px; left: 12px; padding: 7px 10px; background: #fbfcfd; color: var(--muted); font-size: 11px; }
-@media (max-width: 1100px) { .issue-workspace { grid-template-columns: 200px minmax(0, 1fr) 240px; } }
-
-.central-workspace.has-detail .bim-workspace.spatial-workspace { grid-template-columns: clamp(180px, 24%, 256px) minmax(0, 1fr); }
-.central-workspace.has-detail .bim-workspace.spatial-workspace > .spatial-inspector { display: none; }
-.central-workspace.has-detail .change-workspace, .central-workspace.has-detail .issue-workspace { grid-template-columns: clamp(180px, 24%, 256px) minmax(0, 1fr); }
-.central-workspace.has-detail .change-inspector, .central-workspace.has-detail .issue-detail { display: none; }
-.investigation-proposal { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
-.investigation-proposal h4 { margin: 8px 0; font-size: 14px; font-weight: 600; }
-.investigation-proposal p { color: var(--ink-2); font-size: 12px; line-height: 1.6; }
-.investigation-proposal small { display: block; margin: 8px 0; color: var(--muted); }
-.investigation-process { margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: 11px; }
-.investigation-process summary { cursor: pointer; }
-.investigation-process li { display: grid; gap: 2px; padding: 8px 0; }
-
-.mapping-viewer .bim-workspace.spatial-workspace { grid-template-columns: minmax(0, 1fr) clamp(220px, 28%, 300px); }
-.mapping-viewer .bim-workspace.spatial-workspace > .spatial-explorer { display: none; }
-.central-workspace.has-detail .mapping-viewer .bim-workspace.spatial-workspace { display: block; }
-.central-workspace.has-detail .mapping-viewer .spatial-stage { height: 100%; }
-.revision-switch { display: flex; gap: 4px; margin-top: 16px; }
-.revision-switch button { flex: 1; padding: 7px 4px; border: 1px solid var(--line-soft); border-radius: 3px; background: transparent; color: var(--ink-2); font-size: 11px; }
-.revision-switch button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
-.source-heading-actions { display: flex; align-items: center; gap: 6px; }
-.source-history { margin: 16px; color: var(--muted); font-size: 11px; }
-.source-history summary { cursor: pointer; }

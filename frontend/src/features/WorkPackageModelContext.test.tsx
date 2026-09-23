@@ -10,7 +10,7 @@ vi.mock("../viewers/IFCViewer", () => ({
 
 afterEach(() => vi.restoreAllMocks());
 
-it("uses the authenticated project IFC and keeps linked GlobalIds visible", async () => {
+it("uses the authenticated project IFC and names linked elements without exposing IDs", async () => {
   vi.spyOn(api, "bim").mockResolvedValue([
     {
       id: "gid-1",
@@ -47,7 +47,7 @@ it("uses the authenticated project IFC and keeps linked GlobalIds visible", asyn
     await screen.findByText("IFC viewer: project-import.ifc"),
   ).toBeVisible();
   expect(screen.getByText("Beam 01")).toBeVisible();
-  expect(screen.getByText("gid-1")).toBeVisible();
+  expect(screen.queryByText("gid-1")).toBeNull();
   expect(screen.getByText("1 个关联构件受到影响")).toBeVisible();
   cache.clear();
 });

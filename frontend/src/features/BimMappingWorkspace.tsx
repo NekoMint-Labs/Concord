@@ -262,7 +262,11 @@ export function BimMappingWorkspace({
                 );
                 return (
                   <div key={`${change.change_kind}:${change.global_id}`}>
-                    <code>{change.global_id}</code>
+                    <strong>
+                      {elements.find(
+                        (element) => element.global_id === change.global_id,
+                      )?.name || "历史变更构件"}
+                    </strong>
                     <span className={`binding-state is-${change.change_kind}`}>
                       {change.change_kind}
                       {!renderable && change.change_kind === "deleted"
@@ -378,7 +382,6 @@ export function BimMappingWorkspace({
                         {item.ifc_class} · {item.storey || "无楼层"} ·{" "}
                         {item.space || "无空间"}
                       </small>
-                      <small className="mono">{item.global_id}</small>
                     </span>
                   </label>
                 ))}
@@ -397,7 +400,7 @@ export function BimMappingWorkspace({
             <span className="fact-label">现有绑定</span>
             {existing.map((item) => (
               <div key={item.binding.id}>
-                <code>{item.binding.global_id}</code>
+                <span>{item.element?.name || "历史关联构件"}</span>
                 <span className={`binding-state is-${item.state}`}>
                   {item.state === "present"
                     ? "当前版本存在"

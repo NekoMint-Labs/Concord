@@ -90,15 +90,13 @@ async function openAdvancedView(page: Page, label: string) {
 
 /** Secondary workflow destinations live behind 更多; none of them is primary navigation. */
 async function openSecondaryView(page: Page, label: string) {
-  await page.getByRole("button", { name: "更多视图" }).focus();
-  await page.keyboard.press("Enter");
-  await page.getByRole("menuitem", { name: label, exact: true }).click();
+  await openAdvancedView(page, label);
 }
 
 async function selectDemoPackage(page: Page) {
   await page
     .getByRole("navigation", { name: "工作包" })
-    .getByRole("button", { name: /东翼风管安装\s+WP-200\b/ })
+    .getByRole("button", { name: /东翼风管安装/ })
     .click();
   await expect(
     page.getByRole("heading", { level: 1, name: "东翼风管安装" }),
@@ -285,7 +283,7 @@ test("document upload, retrieval and authenticated source download use the real 
   page,
 }) => {
   await page
-    .getByRole("navigation", { name: "工作区视图" })
+    .getByRole("navigation", { name: "主要工作区" })
     .getByRole("button", { name: "文档", exact: true })
     .click();
   await page.locator("input[type=file]").setInputFiles({
@@ -375,18 +373,18 @@ test("the change composer supports keyboard selection and dismissal in the produ
 test("structured BIM, capability status, and run history remain usable without optional SDKs", async ({
   page,
 }) => {
-  const views = page.getByRole("navigation", { name: "工作区视图" });
+  const views = page.getByRole("navigation", { name: "主要工作区" });
   await views.getByRole("button", { name: "模型", exact: true }).click();
-  const duct = page.getByRole("button", { name: /送风管 E-01 IfcDuctSegment/ });
+  const duct = page.getByRole("button", { name: /送风管 E-01/ });
   await expect(duct).toBeVisible();
   await duct.click();
   await expect(
-    page.getByRole("heading", { level: 3, name: "送风管 E-01" }),
+    page.getByLabel("构件详情").getByText("送风管 E-01"),
   ).toBeVisible();
   // Capability diagnostics stay behind 高级; run checks are a primary workflow.
   await openAdvancedView(page, "能力诊断");
   await expect(page.locator(".capability-table")).toBeVisible();
-  await views.getByRole("button", { name: "运行检查", exact: true }).click();
+  await views.getByRole("button", { name: "活动 / 运行", exact: true }).click();
   await expect(page.locator(".operations-workspace")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "启动排程检查" }),
@@ -413,12 +411,12 @@ test("real local GIS renders and selects its linked work package", async ({
   // The original synthetic WP-200 marker is exactly at the map's declared center.
   await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } });
   await expect(page.locator(".breadcrumb strong")).toHaveText("东翼风管安装");
-  await expect(page.locator(".breadcrumb code")).toHaveText("WP-200");
+  await expect(page.locator(".breadcrumb code")).toHaveCount(0);
   await expect(page.locator('.package-nav[aria-current="page"]')).toContainText(
     "WP-200",
   );
   await page
-    .getByRole("navigation", { name: "工作区视图" })
+    .getByRole("navigation", { name: "主要工作区" })
     .getByRole("button", { name: "概览", exact: true })
     .click();
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
@@ -447,7 +445,7 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
     (item) => item.work_package_id === "WP-200",
   )!;
   await page
-    .getByRole("navigation", { name: "工作区视图" })
+    .getByRole("navigation", { name: "主要工作区" })
     .getByRole("button", { name: "文档", exact: true })
     .click();
   await page.locator("input[type=file]").setInputFiles({
@@ -461,8 +459,8 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
   await expect(page.locator(".upload-status")).toContainText("已完成");
   const uploaded = await workspace(request);
   await page
-    .getByRole("navigation", { name: "工作区视图" })
-    .getByRole("button", { name: "运行检查", exact: true })
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "活动 / 运行", exact: true })
     .click();
   await expect(
     page.getByRole("region", { name: "运行记录" }).getByRole("button", {

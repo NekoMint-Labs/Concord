@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, type DTO, type InvestigationReport } from "../api/client";
+import {
+  api,
+  type DTO,
+  type InvestigationReport,
+  type WorkPackage,
+} from "../api/client";
 import { Button } from "../components/ui/button";
 import { useProjectSources } from "./useProjectSources";
 import { BaselineHistory } from "./BaselineHistory";
@@ -38,6 +43,7 @@ const sourceKindLabel: Record<string, string> = {
 
 export function ProjectSources({
   project,
+  workPackages = [],
   report,
   onContext,
   onRun,
@@ -46,6 +52,7 @@ export function ProjectSources({
   onOpenInvestigation,
 }: {
   project: string;
+  workPackages?: WorkPackage[];
   report?: InvestigationReport | null;
   onContext: (
     sourceId: string,
@@ -119,7 +126,9 @@ export function ProjectSources({
     <section className="sources-workspace">
       <div className="view-toolbar">
         <h2>模型与版本</h2>
-        <span className="viewer-toolbar-note">选择模型 · 查看修订 · 接受基线</span>
+        <span className="viewer-toolbar-note">
+          选择模型 · 查看修订 · 接受基线
+        </span>
         <div className="viewer-toolbar-actions">
           <Button
             size="sm"
@@ -128,7 +137,6 @@ export function ProjectSources({
           >
             新建来源
           </Button>
-
         </div>
       </div>
       {(sourceData.sources.error || sourceData.acceptBaseline.error) && (
@@ -195,8 +203,16 @@ export function ProjectSources({
                     <h3>{current.source.name}</h3>
                   </div>
                   <div className="source-heading-actions">
-                    {(current.has_pending_revision || (current.latest_revision_id && !current.accepted_revision_id)) && (
-                      <Button size="sm" disabled={sourceData.acceptBaseline.isPending} onClick={() => void sourceData.acceptBaseline.mutateAsync()}>
+                    {(current.has_pending_revision ||
+                      (current.latest_revision_id &&
+                        !current.accepted_revision_id)) && (
+                      <Button
+                        size="sm"
+                        disabled={sourceData.acceptBaseline.isPending}
+                        onClick={() =>
+                          void sourceData.acceptBaseline.mutateAsync()
+                        }
+                      >
                         建立 B{(sourceData.baselines.data?.length ?? 0) + 1}
                       </Button>
                     )}
@@ -249,7 +265,19 @@ export function ProjectSources({
                     return (
                       <article key={revision.id} className="revision-row">
                         <div className="revision-identity">
-                           <strong>R{revision.sequence}{(sourceData.baselines.data ?? []).filter((baseline) => baseline.entries.some((entry) => entry.source_id === sourceId && entry.revision_id === revision.id)).map((baseline) => ` · B${baseline.sequence}`).join("")}</strong>
+                          <strong>
+                            R{revision.sequence}
+                            {(sourceData.baselines.data ?? [])
+                              .filter((baseline) =>
+                                baseline.entries.some(
+                                  (entry) =>
+                                    entry.source_id === sourceId &&
+                                    entry.revision_id === revision.id,
+                                ),
+                              )
+                              .map((baseline) => ` · B${baseline.sequence}`)
+                              .join("")}
+                          </strong>
                           <span>
                             {revision.external_label ||
                               revision.original_filename}
@@ -334,6 +362,7 @@ export function ProjectSources({
                 {current.source.kind === "BIM" && (
                   <RevisionImpact
                     project={project}
+                    workPackages={workPackages}
                     source={sourceId}
                     revisions={revisions}
                     comparisons={sourceData.comparisons.data ?? []}
@@ -427,11 +456,16 @@ export function ProjectSources({
           </Pane>
         </PaneSplit>
       </div>
-      {!!sourceData.baselines.data?.length && <details className="source-history"><summary>历史基线</summary><BaselineHistory
-        baselines={sourceData.baselines.data}
-        statuses={statuses}
-        revisions={sourceData.revisionCatalog}
-      /></details>}
+      {!!sourceData.baselines.data?.length && (
+        <details className="source-history">
+          <summary>历史基线</summary>
+          <BaselineHistory
+            baselines={sourceData.baselines.data}
+            statuses={statuses}
+            revisions={sourceData.revisionCatalog}
+          />
+        </details>
+      )}
       <CreateSourceDialog
         open={createOpen}
         onOpenChange={setCreateOpen}

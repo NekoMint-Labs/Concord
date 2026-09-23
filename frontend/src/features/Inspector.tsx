@@ -105,7 +105,7 @@ export function Inspector({
       */}
       <DetailInspectorHeader
         eyebrow="工作包"
-         title={demoWorkPackageName(wp.id, wp.name)}
+        title={demoWorkPackageName(wp.id, wp.name)}
         tabs={views.map((item) => ({
           ...item,
           count:

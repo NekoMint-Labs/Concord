@@ -30,7 +30,7 @@ import {
   demoProjectName,
   demoWorkPackageName,
 } from "../ui/demo/demoPresentation";
-import type { WorkspaceTab } from "./WorkspaceTabs";
+import type { WorkspaceTab } from "./destinations";
 
 /** Abnormal states earn the only labels here; normal rows stay plain text. */
 const notable = new Set(["BLOCKED", "WAITING_APPROVAL", "STALE"]);
@@ -264,9 +264,7 @@ export function ProjectSidebar({
                             <strong>
                               {demoWorkPackageName(item.id, item.name)}
                             </strong>
-                            <small>
-                               {demoDiscipline(item.discipline)}
-                            </small>
+                            <small>{demoDiscipline(item.discipline)}</small>
                           </span>
                           {notable.has(status) && <Status value={status} />}
                         </button>

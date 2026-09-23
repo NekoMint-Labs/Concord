@@ -105,6 +105,13 @@ function renderImpact(
         project="project"
         source="source"
         revisions={revisions}
+        workPackages={
+          [
+            { id: "WP-27", name: "Ventilation" },
+            { id: "WP-23", name: "Electrical" },
+            { id: "WP-12", name: "Structure" },
+          ] as DTO<"WorkPackage">[]
+        }
         comparisons={comparisons}
         comparing={false}
         onCompare={() => {}}
@@ -145,11 +152,13 @@ it("surfaces summary, affected WP, Evidence and continuity warnings", async () =
     ],
   });
   renderImpact([r1ToR2]);
-  expect(await screen.findByText("WP-27")).toBeVisible();
+  expect(await screen.findByText("Ventilation")).toBeVisible();
+  expect(screen.queryByText("WP-27")).toBeNull();
   expect(screen.getByText(/GlobalId 连续性提醒/)).toBeVisible();
+  fireEvent.click(screen.getByText(/比较依据 · 1 条/));
   expect(screen.getByText("evidence-1")).toBeVisible();
   expect(screen.getByText("3")).toBeVisible();
-  expect(screen.getByText("changed · gid-1")).toBeVisible();
+  expect(screen.queryByText("changed · gid-1")).toBeNull();
 });
 
 it("keeps a selected historical comparison pair for BIM inspection and investigation", async () => {
@@ -181,13 +190,13 @@ it("keeps a selected historical comparison pair for BIM inspection and investiga
     onInspect,
   });
 
-  expect(await screen.findByText("WP-23")).toBeVisible();
+  expect(await screen.findByText("Electrical")).toBeVisible();
   const select = screen.getByRole("combobox", { name: "版本比较" });
   const option = screen.getByRole("option", {
     name: /R1 → R2/,
   }) as HTMLOptionElement;
   fireEvent.change(select, { target: { value: option.value } });
-  fireEvent.click(await screen.findByText("WP-12"));
+  fireEvent.click(await screen.findByText("Structure"));
 
   expect(onInspect).toHaveBeenCalledWith({
     workPackageId: "WP-12",

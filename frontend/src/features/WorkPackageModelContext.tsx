@@ -114,14 +114,15 @@ export function WorkPackageModelContext({
                 <span className="element-index">{index + 1}</span>
                 <span className="element-copy">
                   <strong>
-                    {element ? demoElementName(element.id, element.name) : id}
+                    {element
+                      ? demoElementName(element.id, element.name)
+                      : "历史关联构件"}
                   </strong>
                   <small>
                     {[element?.type, element?.storey, element?.space]
                       .filter(Boolean)
                       .join(" · ") || "结构化构件"}
                   </small>
-                  {element && <code>{element.id}</code>}
                 </span>
                 <span
                   className={`element-signal${affected.includes(id) ? " is-affected" : ""}`}

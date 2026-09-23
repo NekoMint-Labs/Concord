@@ -197,7 +197,7 @@ export function CoordinationWorkspace({
         <main className="overview-main">
           <header className="work-object-header">
             <div>
-               <span className="object-kicker">工作包</span>
+              <span className="object-kicker">工作包</span>
               <h1>{demoWorkPackageName(wp.id, wp.name)}</h1>
               <p>
                 {demoAreaName(wp.area_id, area?.name ?? wp.area_id)} ·{" "}

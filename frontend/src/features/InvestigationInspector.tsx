@@ -1,4 +1,8 @@
-import type { ActionProposal, AgentRun, InvestigationReport } from "../api/client";
+import type {
+  ActionProposal,
+  AgentRun,
+  InvestigationReport,
+} from "../api/client";
 import { Button } from "../components/ui/button";
 import { DetailInspectorHeader } from "../components/DetailInspector";
 import { PropertyRow, PropertyTable } from "../components/PropertyTable";
@@ -60,7 +64,7 @@ export function InvestigationInspector({
         {report ? (
           <>
             <section className="investigation-answer">
-               <span className="fact-label">影响</span>
+              <span className="fact-label">影响</span>
               <p>{demoInvestigationText(report.answer.summary)}</p>
               {report.answer.limitations.map((item) => (
                 <small key={item}>{item}</small>
@@ -96,7 +100,9 @@ export function InvestigationInspector({
                 )}
                 <PropertyRow
                   label="工作包"
-                   value={workPackages.length ? `${workPackages.length} 个` : "—"}
+                  value={
+                    workPackages.length ? `${workPackages.length} 个` : "—"
+                  }
                 />
                 <PropertyRow
                   label="BIM 构件"
@@ -119,7 +125,7 @@ export function InvestigationInspector({
               </PropertyTable>
             </section>
 
-             <section aria-labelledby="investigation-evidence">
+            <section aria-labelledby="investigation-evidence">
               <div className="investigation-section-heading">
                 <h4 id="investigation-evidence">判断依据</h4>
                 <span className="count">{report.evidence.length}</span>
@@ -148,26 +154,42 @@ export function InvestigationInspector({
               ) : (
                 <p className="quiet-message">本次调查没有持久化判断依据。</p>
               )}
-             </section>
-             {proposal && <section className="investigation-proposal">
-               <span className="fact-label">建议处理</span>
-               <h4>{proposal.title}</h4>
-               <p>{proposal.resolution.explanation}</p>
-               <small>{proposal.evidence_ids.length} 条依据 · 审批前不会执行</small>
-               {onReview && <Button size="sm" onClick={onReview}>审查处理方案 →</Button>}
-              </section>}
-              <details className="investigation-process">
-                <summary>过程 · {report.tools.length} 步</summary>
-                <ol className="investigation-trace">
-                  {report.tools.map((tool, index) => <li key={`${tool.tool}:${index}`}>
+            </section>
+            {proposal && (
+              <section className="investigation-proposal">
+                <span className="fact-label">建议处理</span>
+                <h4>{proposal.title}</h4>
+                <p>{proposal.resolution.explanation}</p>
+                <small>
+                  {proposal.evidence_ids.length} 条依据 · 审批前不会执行
+                </small>
+                {onReview && (
+                  <Button size="sm" onClick={onReview}>
+                    审查处理方案 →
+                  </Button>
+                )}
+              </section>
+            )}
+            <details className="investigation-process">
+              <summary>过程 · {report.tools.length} 步</summary>
+              <ol className="investigation-trace">
+                {report.tools.map((tool, index) => (
+                  <li key={`${tool.tool}:${index}`}>
                     <strong>{domainLabel("runTrace", tool.tool)}</strong>
-                    <small>{tool.available ? "已完成" : "不可用"} · {tool.evidence_ids.length} 条依据</small>
-                  </li>)}
-                </ol>
-                <small>运行 {shortId(report.run_id)} · 分析 {shortId(report.analysis_id)} · 代次 {report.generation}</small>
-              </details>
-            </>
-         ) : (
+                    <small>
+                      {tool.available ? "已完成" : "不可用"} ·{" "}
+                      {tool.evidence_ids.length} 条依据
+                    </small>
+                  </li>
+                ))}
+              </ol>
+              <small>
+                运行 {shortId(report.run_id)} · 分析{" "}
+                {shortId(report.analysis_id)} · 代次 {report.generation}
+              </small>
+            </details>
+          </>
+        ) : (
           <div className="investigation-pending">
             {run && <Status value={run.status} />}
             <strong>调查正在进行</strong>

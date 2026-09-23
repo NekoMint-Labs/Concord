@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, type DTO } from "../api/client";
+import { api, type DTO, type WorkPackage } from "../api/client";
+import { demoWorkPackageName } from "../ui/demo/demoPresentation";
 import { Button } from "../components/ui/button";
 import { AppSelect } from "../components/ui/AppSelect";
 
@@ -15,8 +16,10 @@ export function RevisionImpact({
   onSelectComparison,
   onInvestigate,
   onInspect,
+  workPackages = [],
 }: {
   project: string;
+  workPackages?: WorkPackage[];
   source: string;
   revisions: DTO<"ProjectSourceRevision">[];
   comparisons: DTO<"RevisionComparison">[];
@@ -182,13 +185,14 @@ export function RevisionImpact({
                 })
               }
             >
-              <strong>{item.work_package_id}</strong>
+              <strong>
+                {demoWorkPackageName(
+                  item.work_package_id,
+                  workPackages.find((wp) => wp.id === item.work_package_id)
+                    ?.name ?? "关联工作包",
+                )}
+              </strong>
               <span>{item.changes.length} 个变更构件 · 在 BIM 中查看</span>
-              {item.changes.map((change) => (
-                <small key={`${change.change_kind}:${change.global_id}`}>
-                  {change.change_kind} · {change.global_id}
-                </small>
-              ))}
             </button>
           ))}
         </div>
@@ -198,12 +202,12 @@ export function RevisionImpact({
           <span>尚未有匹配这些 GlobalId 的人工确认绑定。</span>
         </div>
       )}
-      <div className="evidence-register">
-        <span className="fact-label">比较依据</span>
+      <details className="evidence-register">
+        <summary>比较依据 · {comparison.evidence_ids.length} 条</summary>
         {comparison.evidence_ids.map((id) => (
           <code key={id}>{id}</code>
         ))}
-      </div>
+      </details>
     </section>
   );
 }
