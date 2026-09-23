@@ -459,8 +459,16 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
     page.getByText("approval-stream.md", { exact: true }),
   ).toBeVisible();
   await expect(page.locator(".upload-status")).toContainText("已完成");
-  await expect(page.locator(".timeline-heading")).toContainText("已完成");
   const uploaded = await workspace(request);
+  await page
+    .getByRole("navigation", { name: "工作区视图" })
+    .getByRole("button", { name: "运行检查", exact: true })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "运行记录" }).getByRole("button", {
+      name: new RegExp(`文档解析 ${uploaded.run!.id.slice(0, 8)}.*已完成`),
+    }),
+  ).toBeVisible();
   expect(uploaded.run!.id).not.toBe(current.run!.id);
   expect(uploaded.analysis_run!.id).toBe(current.analysis_run!.id);
   expect(uploaded.analysis_run!.status).toBe("WAITING_APPROVAL");

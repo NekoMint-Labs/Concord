@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { api, type AgentRun } from "../api/client";
 import { useRunStream } from "../api/stream";
 
-/** Server queries and the approval owner's independent run subscription. */
+const active = (run?: AgentRun | null) =>
+  !!run && ["QUEUED", "RUNNING", "WAITING_APPROVAL"].includes(run.status);
+
+/** Server queries and the active run subscriptions that refresh authoritative state. */
 export function useWorkspace(project: string) {
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
   const workspace = useQuery({
@@ -16,13 +19,15 @@ export function useWorkspace(project: string) {
         : false,
   });
   const data = workspace.data;
-  // A newer document/solver job can own the visible timeline while an older
-  // coordination run still owns the approval. Keep that run live as well.
+  const currentRun = data?.run;
   const approvalRun = data?.analysis_run;
-  const approvalActive =
-    !!approvalRun &&
-    approvalRun.id !== data?.run?.id &&
-    ["QUEUED", "RUNNING", "WAITING_APPROVAL"].includes(approvalRun.status);
-  useRunStream(approvalRun?.id, approvalActive, approvalRun?.generation);
+  useRunStream(currentRun?.id, active(currentRun), currentRun?.generation);
+  // A newer document job can replace the visible run while the older analysis
+  // still owns approval; identical IDs need only the current run's subscription.
+  useRunStream(
+    approvalRun?.id,
+    approvalRun?.id !== currentRun?.id && active(approvalRun),
+    approvalRun?.generation,
+  );
   return { profile, workspace };
 }
