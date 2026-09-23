@@ -13,6 +13,8 @@ import {
   usePaneWidth,
 } from "../layout/paneBudget";
 import { CoordinationWorkspace } from "../features/CoordinationWorkspace";
+import { ChangeExplorer } from "../features/ChangeExplorer";
+import { IssueExplorer } from "../features/IssueExplorer";
 import { WorkPackageModelContext } from "../features/WorkPackageModelContext";
 import { Inspector } from "../features/Inspector";
 import {
@@ -20,13 +22,11 @@ import {
   type WorkspaceInspectorView,
 } from "../features/InvestigationInspector";
 import type { ConcordContext } from "../features/ConcordAgent";
-import { WorkPackages } from "../features/WorkPackages";
 import { Documents } from "../features/Documents";
 import { Capabilities } from "../features/Capabilities";
 import { Operations } from "../features/Operations";
 import type { WorkspaceTab } from "./WorkspaceTabs";
 
-const ImpactGraph = lazy(() => import("../features/ImpactGraph"));
 const BIMWorkspace = lazy(() => import("../viewers/BIMWorkspace"));
 const BimMappingWorkspace = lazy(() =>
   import("../features/BimMappingWorkspace").then((module) => ({
@@ -233,14 +233,26 @@ export function WorkspaceViews({
                 <Operations project={project} perform={perform} />
               )}
               {tab === "impact" && (
-                <ImpactGraph
+                <ChangeExplorer
+                  project={project}
                   workspace={data}
-                  selected={selected}
-                  onConstraint={onConstraint}
+                  onModels={() => onTab("sources")}
+                  onInvestigate={(sourceId, revisionId, fromRevisionId, ids) =>
+                    onInvestigateSource(sourceId, revisionId, fromRevisionId, ids)
+                  }
+                  onInspect={(workPackageId, sourceId, comparison, change) =>
+                    onInspectImpact(workPackageId, {
+                      sourceId,
+                      fromRevisionId: comparison.from_revision_id,
+                      revisionId: comparison.to_revision_id,
+                      highlightIds: [change.global_id],
+                      changes: [change],
+                    })
+                  }
                 />
               )}
               {tab === "packages" && (
-                <WorkPackages workspace={data} onSelect={onSelected} />
+                <IssueExplorer project={project} workspace={data} perform={perform} />
               )}
               {tab === "documents" && (
                 <Documents

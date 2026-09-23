@@ -106,3 +106,47 @@
 @media (max-width: 1100px) {
   .bim-workspace.spatial-workspace { grid-template-columns: 180px minmax(0, 1fr) 240px; }
 }
+
+.change-workspace { display: grid; grid-template-columns: clamp(220px, 22%, 300px) minmax(0, 1fr) clamp(250px, 25%, 320px); height: 100%; min-height: 0; }
+.change-explorer, .change-inspector { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #fbfcfd; }
+.change-explorer { border-right: 1px solid var(--line-soft); }
+.change-inspector { border-left: 1px solid var(--line-soft); }
+.change-explorer .spatial-pane-heading button { border: 0; background: none; color: var(--muted); font-size: 11px; }
+.change-source-label { display: grid; gap: 4px; padding: 10px 14px 0; color: var(--muted); font-size: 11px; }
+.change-source-label select { width: 100%; height: 30px; border: 1px solid var(--line-soft); border-radius: 4px; background: white; color: var(--ink); font-size: 12px; }
+.change-filters { display: flex; flex-wrap: wrap; gap: 2px; padding: 14px 10px 10px; border-bottom: 1px solid var(--line-soft); }
+.change-filters button { border: 0; padding: 5px; border-radius: 3px; background: transparent; color: var(--muted); font-size: 11px; }
+.change-filters button[aria-pressed="true"] { background: var(--accent-muted); color: var(--accent); }
+.change-filters span { margin-left: 2px; }
+.change-list { flex: 1; min-height: 0; overflow: auto; padding: 7px; }
+.change-list > button, .change-inspector-body > button { display: grid; gap: 3px; width: 100%; padding: 10px; border: 0; border-radius: 3px; background: none; color: var(--ink); text-align: left; }
+.change-list > button:hover, .change-inspector-body > button:hover { background: var(--hover); }
+.change-list > button[aria-pressed="true"] { background: var(--accent-muted); box-shadow: inset 2px 0 var(--accent); }
+.change-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; }
+.change-list small { color: var(--muted); font-size: 11px; }
+.change-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.change-stage-heading { display: flex; align-items: center; justify-content: space-between; min-height: 45px; padding: 0 14px; color: var(--ink); font-size: 12px; font-weight: 600; }
+.change-stage-heading span { color: var(--muted); font-size: 11px; font-weight: 400; }
+.change-stage .bim-workspace.spatial-workspace { flex: 1; min-height: 0; display: block; }
+.change-stage .spatial-explorer, .change-stage .spatial-inspector { display: none; }
+.change-stage .spatial-stage { height: 100%; }
+.change-inspector-body { overflow: auto; padding: 20px 16px; font-size: 12px; }
+.change-inspector-body h2 { font-size: 16px; font-weight: 600; }
+.change-inspector-body h3 { margin: 24px 0 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.change-inspector-body dl { display: grid; grid-template-columns: 80px 1fr; gap: 12px; margin-top: 20px; }
+.change-inspector-body dt { color: var(--muted); }
+.change-inspector-body .button { margin-top: 20px; }
+.change-inspector-body details { margin-top: 30px; color: var(--muted); }
+.change-inspector-body details code, .change-inspector-body details small { display: block; margin: 8px 0; overflow-wrap: anywhere; }
+@media (max-width: 1100px) { .change-workspace { grid-template-columns: 200px minmax(0, 1fr) 240px; } }
+
+.issue-workspace { display: grid; grid-template-columns: clamp(220px, 22%, 300px) minmax(0, 1fr) clamp(250px, 25%, 320px); height: 100%; min-height: 0; }
+.issue-explorer { display: flex; flex-direction: column; min-height: 0; background: #fbfcfd; border-right: 1px solid var(--line-soft); }
+.issue-stage { position: relative; min-width: 0; min-height: 0; }
+.issue-stage .bim-workspace.spatial-workspace { display: block; }
+.issue-stage .spatial-explorer, .issue-stage .spatial-inspector { display: none; }
+.issue-stage .spatial-stage { height: 100%; }
+.issue-detail { min-width: 0; min-height: 0; border-left: 1px solid var(--line-soft); background: #fbfcfd; }
+.issue-detail > aside { height: 100%; }
+.issue-location-note { position: absolute; bottom: 12px; left: 12px; padding: 7px 10px; background: #fbfcfd; color: var(--muted); font-size: 11px; }
+@media (max-width: 1100px) { .issue-workspace { grid-template-columns: 200px minmax(0, 1fr) 240px; } }
