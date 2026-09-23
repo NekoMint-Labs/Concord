@@ -1,7 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test";
 import type { Workspace } from "../src/api/client";
 
 const headers = { Authorization: "Bearer local-demo-admin" };
@@ -24,6 +29,11 @@ async function workspace(request: APIRequestContext): Promise<Workspace> {
   const response = await request.get(`${project}/workspace`, { headers });
   expect(response.ok()).toBeTruthy();
   return response.json() as Promise<Workspace>;
+}
+
+async function openSources(page: Page) {
+  await page.getByRole("button", { name: "更多视图" }).click();
+  await page.getByRole("menuitem", { name: "项目来源" }).click();
 }
 
 test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged", async ({
@@ -90,16 +100,23 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     localStorage.setItem("concord:last-project", "harbor-east");
   });
   await page.goto("/");
-  await page.getByText("东翼风管安装", { exact: true }).first().click();
+  await page
+    .getByRole("navigation", { name: "工作包" })
+    .getByRole("button", { name: /东翼风管安装\s+WP-200\b/ })
+    .click();
   /*
    * The work package reports the judgement beside its own title, so the browser is
    * demonstrably rendering the same analysis whose impacted GUIDs the viewer is
    * about to match - not a second, unrelated state assembled for the assertion.
    */
-  await expect(page.locator(".coordination-state-tag")).toContainText("已阻塞");
+  await expect(
+    page
+      .getByRole("region", { name: "工作包概览" })
+      .getByRole("heading", { level: 2, name: "已阻塞" }),
+  ).toBeVisible();
   await page
     .getByRole("navigation", { name: "工作区视图" })
-    .getByRole("button", { name: "BIM", exact: true })
+    .getByRole("button", { name: "模型", exact: true })
     .click();
   const uploads: string[] = [];
   page.on("request", (request) => {
@@ -178,27 +195,34 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   await page.getByRole("button", { name: "新建项目" }).click();
   await page.getByLabel("项目名称").fill(name);
   await page.getByLabel("说明").fill("Issue 10 browser qualification");
-  await page.getByRole("button", { name: "创建并打开" }).click();
+  await page
+    .getByRole("dialog", { name: "新建项目" })
+    .getByRole("button", { name: "创建项目" })
+    .click();
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
 
-  await page.getByRole("button", { name: "添加" }).click();
-  const structure = page.locator(".structure-dialog");
-  await structure.getByLabel("名称").first().fill("East wing");
-  await structure.getByLabel("楼层").fill("L02");
-  await structure.getByRole("button", { name: "保存区域" }).click();
-  const areaOption = structure.getByRole("option", { name: /East wing/ });
-  await expect(areaOption).toBeAttached();
+  await page
+    .getByRole("navigation", { name: "工作包" })
+    .getByRole("button", { name: "新建工作包" })
+    .click();
+  const structure = page.getByRole("dialog", { name: "新建工作包" });
   await structure
-    .getByLabel("区域")
-    .selectOption((await areaOption.getAttribute("value"))!);
-  await structure.getByLabel("名称").nth(1).fill("Ventilation");
+    .getByRole("region", { name: "新建区域" })
+    .getByLabel("区域名称")
+    .fill("East wing");
+  await structure.getByLabel("楼层").fill("L02");
+  await structure.getByRole("button", { name: "保存并使用此区域" }).click();
+  const area = structure.getByRole("combobox", { name: "所属区域" });
+  await expect(area).toContainText("East wing");
+  await area.click();
+  await page.getByRole("option", { name: "East wing" }).click();
+  await structure.getByLabel("工作包名称").fill("Ventilation");
   await structure.getByLabel("专业").fill("MEP");
   await structure.getByLabel("负责人").fill("Team A");
-  await structure.getByRole("button", { name: "保存工作包" }).click();
+  await structure.getByRole("button", { name: "创建工作包" }).click();
   await expect(
     page.getByText("Ventilation", { exact: true }).first(),
   ).toBeVisible();
-  await page.keyboard.press("Escape");
 
   const projects = await request.get("/api/projects", { headers });
   const created = (await projects.json()).find(
@@ -207,10 +231,7 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   expect(created).toBeTruthy();
   const projectPath = `/api/projects/${created.id}`;
 
-  await page
-    .getByRole("navigation", { name: "工作区视图" })
-    .getByRole("button", { name: "项目来源", exact: true })
-    .click();
+  await openSources(page);
   await page.getByRole("button", { name: "新建来源" }).click();
   await page.getByLabel("来源名称").fill("MEP Model");
   await page.getByRole("button", { name: "创建来源" }).click();
@@ -244,8 +265,15 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     )
     .toBe(200);
 
-  await page.getByText("Ventilation", { exact: true }).first().click();
-  await page.getByRole("button", { name: "关联 BIM" }).click();
+  await page
+    .getByRole("navigation", { name: "工作包" })
+    .getByRole("button", { name: /Ventilation/ })
+    .click();
+  await page
+    .getByRole("navigation", { name: "工作区视图" })
+    .getByRole("button", { name: "模型", exact: true })
+    .click();
+  await page.getByRole("button", { name: "关联构件" }).click();
   await expect(page.getByText(/3 个候选构件/)).toBeVisible();
   await page.getByRole("button", { name: "选择全部" }).click();
   await expect(
@@ -262,26 +290,24 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     })
     .toBe(3);
 
-  await page
-    .getByRole("navigation", { name: "工作区视图" })
-    .getByRole("button", { name: "项目来源", exact: true })
-    .click();
-  await page.getByRole("button", { name: "接受为 B1" }).click();
-  await expect(page.getByText("B1", { exact: true })).toBeVisible();
+  await openSources(page);
+  await page.getByRole("button", { name: "接受当前版本为 B1" }).click();
+  await expect(
+    page.getByRole("button", { name: /^B1 · B1 · 1 个来源版本/ }),
+  ).toBeVisible();
 
   await page.reload();
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
   await expect(
     page.getByText("Ventilation", { exact: true }).first(),
   ).toBeVisible();
-  await page
-    .getByRole("navigation", { name: "工作区视图" })
-    .getByRole("button", { name: "项目来源", exact: true })
-    .click();
+  await openSources(page);
   await expect(
     page.getByText("MEP Model", { exact: true }).first(),
   ).toBeVisible();
-  await expect(page.getByText("B1", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^B1 · B1 · 1 个来源版本/ }),
+  ).toBeVisible();
 
   await revisionInput.setInputFiles(fixtureV17);
   await expect(page.getByText(/R2 原始文件已保存/)).toBeVisible();
@@ -304,10 +330,7 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     )
     .toBe(200);
   await page.reload();
-  await page
-    .getByRole("navigation", { name: "工作区视图" })
-    .getByRole("button", { name: "项目来源", exact: true })
-    .click();
+  await openSources(page);
   await expect(page.getByText("最新 · 待接受")).toBeVisible();
   await page.getByRole("button", { name: "比较最近两个版本" }).click();
   await expect(page.locator(".impact-summary")).toContainText("新增");
