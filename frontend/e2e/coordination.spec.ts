@@ -35,19 +35,28 @@ async function event(request: APIRequestContext, change = { revision: "V17" }) {
   return response.json();
 }
 
-/** The selected work package reports its state beside its own title. */
-const stateTag = (page: Page) => page.locator(".coordination-state-tag");
+/** The selected work package reports its judgement in the overview. */
+const overview = (page: Page) =>
+  page.getByRole("region", { name: "工作包概览" });
 const inspector = (page: Page) =>
   page.getByRole("complementary", { name: "判断依据与处理详情" });
 
 async function expectBlocked(page: Page) {
-  await expect(stateTag(page)).toContainText("已阻塞", { timeout: 30_000 });
+  await expect(
+    overview(page).getByRole("heading", { level: 2, name: "已阻塞" }),
+  ).toBeVisible({ timeout: 30_000 });
 }
 
 async function expectReady(page: Page) {
-  await expect(page.getByText("当前没有阻塞施工的条件")).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(
+    overview(page).getByRole("heading", { level: 2, name: "可施工" }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    overview(page).getByRole("heading", {
+      level: 3,
+      name: "当前没有未解决的阻塞条件",
+    }),
+  ).toBeVisible();
 }
 
 /**
@@ -61,7 +70,7 @@ async function expectReady(page: Page) {
  * a loaded machine, and the product is not what that timing measures.
  */
 async function openHeaderMenu(page: Page) {
-  await page.locator(".header-tools .quiet-trigger").focus();
+  await page.getByRole("button", { name: "高级", exact: true }).focus();
   await page.keyboard.press("Enter");
 }
 
@@ -81,15 +90,18 @@ async function openAdvancedView(page: Page, label: string) {
 
 /** Secondary workflow destinations live behind 更多; none of them is primary navigation. */
 async function openSecondaryView(page: Page, label: string) {
-  await page.locator(".more-views .quiet-trigger").focus();
+  await page.getByRole("button", { name: "更多视图" }).focus();
   await page.keyboard.press("Enter");
   await page.getByRole("menuitem", { name: label, exact: true }).click();
 }
 
 async function selectDemoPackage(page: Page) {
-  await page.getByText("东翼风管安装", { exact: true }).first().click();
+  await page
+    .getByRole("navigation", { name: "工作包" })
+    .getByRole("button", { name: /东翼风管安装\s+WP-200\b/ })
+    .click();
   await expect(
-    page.getByRole("heading", { level: 2, name: "东翼风管安装" }),
+    page.getByRole("heading", { level: 1, name: "东翼风管安装" }),
   ).toBeVisible();
 }
 
@@ -131,7 +143,7 @@ test("coordinates a design change through evidence, approval, receipt, and a fre
   ).toBeVisible();
 
   // Evidence is one click away, and the pane reports only the opened detail.
-  await page.getByRole("button", { name: "查看依据" }).click();
+  await page.getByRole("button", { name: "1 项判断依据" }).click();
   await expect(panel.getByText(/来源 structured-drawing/)).toBeVisible();
   await expect(
     panel.getByText("完成相关负责人确认后，重新检查当前施工条件。"),
@@ -147,7 +159,7 @@ test("coordinates a design change through evidence, approval, receipt, and a fre
   });
   expect(denied.status()).toBe(403);
 
-  await page.getByRole("button", { name: "批准并继续" }).click();
+  await page.getByRole("button", { name: "审查处理方案" }).click();
   await expect(
     panel.getByRole("button", { name: "执行并重新检查" }),
   ).toBeDisabled();
@@ -180,10 +192,10 @@ test("coordinates a design change through evidence, approval, receipt, and a fre
   // The secondary workforce case runs through the same engine and the same view.
   await injectDemoEvent(page, "电气班组不足");
   await expect(
-    page.getByRole("heading", { level: 2, name: "03 层电气粗装" }),
+    page.getByRole("heading", { level: 1, name: "03 层电气粗装" }),
   ).toBeVisible();
   await expectBlocked(page);
-  await page.getByRole("button", { name: "批准并继续" }).click();
+  await page.getByRole("button", { name: "审查处理方案" }).click();
   await panel.getByRole("button", { name: /^批准 R/ }).click();
   await panel.getByRole("button", { name: "执行并重新检查" }).click();
   await expectReady(page);
@@ -196,7 +208,7 @@ test("stale approval is rejected and the browser refreshes instead of silently a
   const panel = inspector(page);
   await injectDemoEvent(page, /图纸 V16/);
   await expectBlocked(page);
-  await page.getByRole("button", { name: "批准并继续" }).click();
+  await page.getByRole("button", { name: "审查处理方案" }).click();
   const approve = panel.getByRole("button", { name: /^批准 R/ });
   await expect(approve).toBeEnabled();
 
@@ -242,7 +254,7 @@ test("inspection R4 requires exact typed confirmation", async ({
   await page.reload();
   await selectDemoPackage(page);
   await expectBlocked(page);
-  await page.getByRole("button", { name: "批准并继续" }).click();
+  await page.getByRole("button", { name: "审查处理方案" }).click();
   const panel = inspector(page);
   const approve = panel.getByRole("button", { name: "批准 R4" });
   await expect(approve).toBeDisabled();
@@ -306,7 +318,7 @@ test("viewer can read but cannot approve or execute", async ({
   await page.reload();
   await selectDemoPackage(page);
   await expectBlocked(page);
-  await page.getByRole("button", { name: "批准并继续" }).click();
+  await page.getByRole("button", { name: "审查处理方案" }).click();
   const panel = inspector(page);
   const response = page.waitForResponse((value) =>
     value.url().endsWith("/approve"),
@@ -365,9 +377,12 @@ test("structured BIM, capability status, and run history remain usable without o
 }) => {
   const views = page.getByRole("navigation", { name: "工作区视图" });
   await views.getByRole("button", { name: "模型", exact: true }).click();
-  await expect(page.locator(".bim-element").first()).toBeVisible();
-  await page.locator(".bim-element").first().click();
-  await expect(page.locator(".bim-property-list")).toBeVisible();
+  const duct = page.getByRole("button", { name: /送风管 E-01 IfcDuctSegment/ });
+  await expect(duct).toBeVisible();
+  await duct.click();
+  await expect(
+    page.getByRole("heading", { level: 3, name: "送风管 E-01" }),
+  ).toBeVisible();
   // Capability diagnostics stay behind 高级; run checks are a primary workflow.
   await openAdvancedView(page, "能力诊断");
   await expect(page.locator(".capability-table")).toBeVisible();
@@ -397,11 +412,15 @@ test("real local GIS renders and selects its linked work package", async ({
   expect(box).not.toBeNull();
   // The original synthetic WP-200 marker is exactly at the map's declared center.
   await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } });
-  await expect(page.locator(".breadcrumb strong")).toHaveText("WP-200");
+  await expect(page.locator(".breadcrumb strong")).toHaveText("东翼风管安装");
+  await expect(page.locator(".breadcrumb code")).toHaveText("WP-200");
   await expect(page.locator('.package-nav[aria-current="page"]')).toContainText(
     "WP-200",
   );
-  await openSecondaryView(page, "工作包");
+  await page
+    .getByRole("navigation", { name: "工作区视图" })
+    .getByRole("button", { name: "概览", exact: true })
+    .click();
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
 });
 
@@ -419,7 +438,7 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
   await injectDemoEvent(page, /图纸 V16/);
   await expect.poll(() => attempts).toBeGreaterThanOrEqual(2);
   await expectBlocked(page);
-  await page.getByRole("button", { name: "批准并继续" }).click();
+  await page.getByRole("button", { name: "审查处理方案" }).click();
   const panel = inspector(page);
   await expect(panel.getByRole("button", { name: /^批准 R/ })).toBeEnabled();
 
