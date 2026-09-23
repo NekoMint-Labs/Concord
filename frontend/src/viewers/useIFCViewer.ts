@@ -60,7 +60,7 @@ export function useIFCViewer(
         world.renderer = new OBC.SimpleRenderer(components, element);
         world.camera = new OBC.SimpleCamera(components);
         world.scene.setup();
-        world.scene.three.background = new THREE.Color("#e9eeec");
+        world.scene.three.background = new THREE.Color("#e9edef");
         components.init();
         await world.camera.controls.setLookAt(15, 15, 15, 0, 0, 0);
         if (cancelled) return;
@@ -113,7 +113,7 @@ export function useIFCViewer(
               });
             if (selected.length)
               await model.highlight(selected, {
-                color: new THREE.Color("#50ac9b"),
+                color: new THREE.Color("#397ad5"),
                 renderedFaces: FRAGS.RenderedFaces.TWO,
                 opacity: 1,
                 transparent: false,
@@ -134,7 +134,7 @@ export function useIFCViewer(
             await paint();
             if (cancelled || ticket !== impactTicket) return;
             setMessage(
-              `${file.name}：已匹配 ${impactIds.length}/${ids.length} 个受影响构件 GUID。双击构件可查看属性；聚焦或单独显示优先使用所选构件，否则使用受影响构件。`,
+              `${file.name}：已匹配 ${impactIds.length}/${ids.length} 个受影响构件 GUID。双击构件选择；聚焦和隔离以当前选择为准。`,
             );
           },
           async focus() {

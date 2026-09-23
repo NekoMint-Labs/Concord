@@ -8,14 +8,13 @@ import {
   demoProjectName,
   demoWorkPackageName,
 } from "../ui/demo/demoPresentation";
-import { WorkspaceTabs, type WorkspaceTab } from "./WorkspaceTabs";
+import type { WorkspaceTab } from "./WorkspaceTabs";
 
 /** Project context, destination navigation, and local actions are separate bands. */
 export function WorkspaceHeader({
   data,
   wp,
   tab,
-  onTab,
   navCollapsed = false,
   onToggleNav,
   children,
@@ -23,7 +22,6 @@ export function WorkspaceHeader({
   data: Workspace;
   wp?: WorkPackage;
   tab?: WorkspaceTab;
-  onTab?: (tab: WorkspaceTab) => void;
   navCollapsed?: boolean;
   onToggleNav?: () => void;
   children?: ReactNode;
@@ -50,20 +48,16 @@ export function WorkspaceHeader({
           {wp && (
             <>
               <span className="crumb-sep">/</span>
-              <span>{demoAreaName(wp.area_id, wp.area_id)}</span>
+              <span>{demoAreaName(wp.area_id, data.state.areas.find((area) => area.id === wp.area_id)?.name ?? wp.area_id)}</span>
               <span className="crumb-sep">/</span>
               <strong>{demoWorkPackageName(wp.id, wp.name)}</strong>
-              <code>{wp.id}</code>
+
             </>
           )}
+          {tab && <span className="workspace-location">{({ coordination: "概览", bim: "模型", sources: "模型版本", impact: "影响", packages: "问题", documents: "文档", operations: "运行记录", gis: "现场地图", capabilities: "能力诊断" } satisfies Record<WorkspaceTab, string>)[tab]}</span>}
         </div>
       </div>
-      <div className="destination-bar">
-        {tab && onTab && <WorkspaceTabs tab={tab} onTab={onTab} />}
-        <div className="local-actions" aria-label="当前工作区操作">
-          {children}
-        </div>
-      </div>
+      <div className="local-actions" aria-label="当前工作区操作">{children}</div>
     </header>
   );
 }

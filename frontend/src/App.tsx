@@ -205,17 +205,13 @@ export function App() {
               data={data}
               wp={wp}
               tab={tab}
-              onTab={(next) => {
-                if (next !== "bim") setMappingMode(false);
-                setTab(next);
-              }}
               navCollapsed={!navOpen}
               onToggleNav={() => {
                 navPanel.current?.expand();
                 setNavOpen(true);
               }}
             >
-              {wp && (
+              {wp && tab === "coordination" && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -236,7 +232,7 @@ export function App() {
                   }}
                 >
                   <Link2 {...icon} />
-                  关联构件
+                  关联 BIM
                 </Button>
               )}
               <ConcordAgent

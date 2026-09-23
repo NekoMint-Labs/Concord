@@ -42,9 +42,11 @@ const workspaceLinks: {
 }[] = [
   { tab: "coordination", label: "概览", icon: Home },
   { tab: "bim", label: "模型", icon: Box },
+  { tab: "sources", label: "版本", icon: Building2 },
+  { tab: "impact", label: "变更", icon: History },
   { tab: "packages", label: "问题", icon: CircleDot },
   { tab: "documents", label: "文档", icon: FileText },
-  { tab: "operations", label: "运行记录", icon: History },
+  { tab: "operations", label: "活动 / 运行", icon: History },
 ];
 
 export function ProjectSidebar({
@@ -263,7 +265,7 @@ export function ProjectSidebar({
                               {demoWorkPackageName(item.id, item.name)}
                             </strong>
                             <small>
-                              {item.id} · {demoDiscipline(item.discipline)}
+                               {demoDiscipline(item.discipline)}
                             </small>
                           </span>
                           {notable.has(status) && <Status value={status} />}

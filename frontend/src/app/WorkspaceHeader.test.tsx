@@ -11,7 +11,7 @@ it("carries project and location context without repeating the work package", ()
 
   expect(screen.getByText("A 栋项目")).toBeVisible();
   expect(screen.getByText("L02 东翼")).toBeVisible();
-  expect(screen.getByText("WP-200")).toBeVisible();
+  expect(screen.queryByText("WP-200")).not.toBeInTheDocument();
 
   // Title, status, and actions belong to the coordination workspace.
   expect(
