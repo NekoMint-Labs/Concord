@@ -167,7 +167,10 @@ export default function BIMWorkspace({
           title={<span className="property-group-title">关系</span>}
         >
           <PropertyTable>
-            <PropertyRow label="关联构件" value={`${item.related_ids.length} 个`} />
+            <PropertyRow
+              label="关联构件"
+              value={`${item.related_ids.length} 个`}
+            />
             <PropertyRow
               label="受影响"
               value={selectedImpacted ? "是" : "否"}

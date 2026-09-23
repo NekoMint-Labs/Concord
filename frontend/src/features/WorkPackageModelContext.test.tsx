@@ -43,7 +43,9 @@ it("uses the authenticated project IFC and keeps linked GlobalIds visible", asyn
     </QueryClientProvider>,
   );
 
-  expect(await screen.findByText("IFC viewer: project-import.ifc")).toBeVisible();
+  expect(
+    await screen.findByText("IFC viewer: project-import.ifc"),
+  ).toBeVisible();
   expect(screen.getByText("Beam 01")).toBeVisible();
   expect(screen.getByText("gid-1")).toBeVisible();
   expect(screen.getByText("1 个关联构件受到影响")).toBeVisible();

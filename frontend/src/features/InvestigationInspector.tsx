@@ -1,9 +1,6 @@
 import type { AgentRun, InvestigationReport } from "../api/client";
 import { DetailInspectorHeader } from "../components/DetailInspector";
-import {
-  PropertyRow,
-  PropertyTable,
-} from "../components/PropertyTable";
+import { PropertyRow, PropertyTable } from "../components/PropertyTable";
 import { Status } from "../components/Status";
 import { domainLabel } from "../ui/labels";
 import {

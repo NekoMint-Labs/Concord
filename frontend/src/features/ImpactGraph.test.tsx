@@ -67,6 +67,8 @@ describe("ImpactGraph", () => {
       screen.getByRole("region", { name: "影响关系" }),
     );
     expect(updatedGraph.getByText("当前没有可展示的影响关系")).toBeVisible();
-    expect(updatedGraph.queryByText("Duct route revised / V17")).not.toBeInTheDocument();
+    expect(
+      updatedGraph.queryByText("Duct route revised / V17"),
+    ).not.toBeInTheDocument();
   });
 });

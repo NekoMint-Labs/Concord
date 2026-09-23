@@ -82,7 +82,9 @@ export function WorkPackageModelContext({
               <Cuboid {...icon} aria-hidden="true" />
               <div>
                 <strong>
-                  {model.isLoading ? "正在查找项目模型" : "暂无可打开的 IFC 几何文件"}
+                  {model.isLoading
+                    ? "正在查找项目模型"
+                    : "暂无可打开的 IFC 几何文件"}
                 </strong>
                 <p>
                   {model.isLoading
@@ -112,9 +114,7 @@ export function WorkPackageModelContext({
                 <span className="element-index">{index + 1}</span>
                 <span className="element-copy">
                   <strong>
-                    {element
-                      ? demoElementName(element.id, element.name)
-                      : id}
+                    {element ? demoElementName(element.id, element.name) : id}
                   </strong>
                   <small>
                     {[element?.type, element?.storey, element?.space]

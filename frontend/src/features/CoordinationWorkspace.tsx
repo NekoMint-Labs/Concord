@@ -69,7 +69,9 @@ export function CoordinationWorkspace({
   const [inspectorTab, setInspectorTab] = useState<
     "properties" | "sources" | "resources"
   >("properties");
-  const wp = workspace.state.work_packages.find((item) => item.id === selected)!;
+  const wp = workspace.state.work_packages.find(
+    (item) => item.id === selected,
+  )!;
   const area = workspace.state.areas.find((item) => item.id === wp.area_id);
   const readiness = workspace.analysis?.readiness.find(
     (item) => item.work_package_id === selected,
@@ -92,7 +94,9 @@ export function CoordinationWorkspace({
   const stale = workspace.stale && !analyzing;
   const snapshot = workspace.analysis?.snapshot;
   const impactedIds = workspace.analysis?.impact.element_ids ?? [];
-  const impactCount = wp.element_ids.filter((id) => impactedIds.includes(id)).length;
+  const impactCount = wp.element_ids.filter((id) =>
+    impactedIds.includes(id),
+  ).length;
   const sourceCount = workspace.state.sources.length;
   const missingQualifications = (wp.required_qualifications ?? []).filter(
     (item) => !(wp.qualifications ?? []).includes(item),
@@ -197,7 +201,8 @@ export function CoordinationWorkspace({
               <h1>{demoWorkPackageName(wp.id, wp.name)}</h1>
               <p>
                 {demoAreaName(wp.area_id, area?.name ?? wp.area_id)} ·{" "}
-                {demoDiscipline(wp.discipline)} · 负责人 {demoOwner(wp.id, wp.owner)}
+                {demoDiscipline(wp.discipline)} · 负责人{" "}
+                {demoOwner(wp.id, wp.owner)}
               </p>
             </div>
           </header>
@@ -346,7 +351,9 @@ export function CoordinationWorkspace({
               <PropertyTable columns={2}>
                 <PropertyRow
                   label="前置工作包"
-                  value={wp.predecessors?.length ? wp.predecessors.join("、") : "无"}
+                  value={
+                    wp.predecessors?.length ? wp.predecessors.join("、") : "无"
+                  }
                 />
                 <PropertyRow
                   label="资质"
@@ -409,9 +416,7 @@ export function CoordinationWorkspace({
                 type="button"
                 key={id}
                 className={inspectorTab === id ? "active" : ""}
-                onClick={() =>
-                  setInspectorTab(id as typeof inspectorTab)
-                }
+                onClick={() => setInspectorTab(id as typeof inspectorTab)}
               >
                 {label}
               </button>
@@ -420,7 +425,9 @@ export function CoordinationWorkspace({
           <div className="overview-inspector-body">
             {inspectorTab === "properties" && (
               <>
-                <PropertyGroup title={<span className="section-label">工作包</span>}>
+                <PropertyGroup
+                  title={<span className="section-label">工作包</span>}
+                >
                   <PropertyTable>
                     <PropertyRow label="工作包编号" value={wp.id} mono />
                     <PropertyRow
@@ -445,7 +452,9 @@ export function CoordinationWorkspace({
                     />
                   </PropertyTable>
                 </PropertyGroup>
-                <PropertyGroup title={<span className="section-label">协调状态</span>}>
+                <PropertyGroup
+                  title={<span className="section-label">协调状态</span>}
+                >
                   <PropertyTable>
                     <PropertyRow label="施工判断" value={state.label} />
                     <PropertyRow
@@ -471,7 +480,9 @@ export function CoordinationWorkspace({
               </>
             )}
             {inspectorTab === "sources" && (
-              <PropertyGroup title={<span className="section-label">当前工程来源</span>}>
+              <PropertyGroup
+                title={<span className="section-label">当前工程来源</span>}
+              >
                 <div className="overview-source-list">
                   {workspace.state.sources.map((source) => (
                     <div key={`${source.source}-${source.revision}`}>
@@ -486,7 +497,9 @@ export function CoordinationWorkspace({
               </PropertyGroup>
             )}
             {inspectorTab === "resources" && (
-              <PropertyGroup title={<span className="section-label">现场资源</span>}>
+              <PropertyGroup
+                title={<span className="section-label">现场资源</span>}
+              >
                 <PropertyTable>
                   <PropertyRow
                     label="班组"

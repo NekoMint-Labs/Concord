@@ -45,8 +45,18 @@
   position: relative;
   min-height: 300px;
   background:
-    linear-gradient(90deg, transparent 49.8%, color-mix(in srgb, var(--line-soft) 48%, transparent) 50%, transparent 50.2%),
-    linear-gradient(0deg, transparent 49.8%, color-mix(in srgb, var(--line-soft) 48%, transparent) 50%, transparent 50.2%),
+    linear-gradient(
+      90deg,
+      transparent 49.8%,
+      color-mix(in srgb, var(--line-soft) 48%, transparent) 50%,
+      transparent 50.2%
+    ),
+    linear-gradient(
+      0deg,
+      transparent 49.8%,
+      color-mix(in srgb, var(--line-soft) 48%, transparent) 50%,
+      transparent 50.2%
+    ),
     var(--bg-app);
 }
 .react-flow__node-default {

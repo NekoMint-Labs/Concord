@@ -58,10 +58,7 @@ export function PropertyRow({
     <div className="property-row">
       <dt>{label}</dt>
       <dd
-        className={[
-          attention ? "is-attention" : "",
-          mono ? "mono" : "",
-        ]
+        className={[attention ? "is-attention" : "", mono ? "mono" : ""]
           .filter(Boolean)
           .join(" ")}
       >

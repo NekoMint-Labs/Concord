@@ -26,7 +26,9 @@ export default function ImpactGraph({
   selected: string;
   onConstraint: (id: string) => void;
 }) {
-  const wp = workspace.state.work_packages.find((item) => item.id === selected)!;
+  const wp = workspace.state.work_packages.find(
+    (item) => item.id === selected,
+  )!;
   const activeEvent = activeCoordinationEvent(workspace, selected);
   const readiness = workspace.analysis?.readiness.find(
     (item) => item.work_package_id === selected,
@@ -236,7 +238,9 @@ export default function ImpactGraph({
             <div className="impact-empty">
               <span className="section-label">等待工程变化</span>
               <strong>当前没有可展示的影响关系</strong>
-              <span>记录工程事实变化或导入新的来源版本后，关系将在这里展开。</span>
+              <span>
+                记录工程事实变化或导入新的来源版本后，关系将在这里展开。
+              </span>
             </div>
           )}
         </section>

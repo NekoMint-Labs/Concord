@@ -176,13 +176,14 @@ export function WorkspaceViews({
               {tab === "coordination" && !!selected && (
                 <>
                   {report?.scope.work_package_ids.includes(selected) && (
-                     <section className="context-agent-result workspace-agent-result">
-                       <span className="eyebrow">工程调查</span>
-                       <strong>调查结果已保存到当前工作包</strong>
-                       <div className="context-agent-result-footer">
-                         <small>
-                           {report.evidence.length} 条判断依据 · {report.tools.length} 个调查步骤
-                         </small>
+                    <section className="context-agent-result workspace-agent-result">
+                      <span className="eyebrow">工程调查</span>
+                      <strong>调查结果已保存到当前工作包</strong>
+                      <div className="context-agent-result-footer">
+                        <small>
+                          {report.evidence.length} 条判断依据 ·{" "}
+                          {report.tools.length} 个调查步骤
+                        </small>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -292,11 +293,7 @@ export function WorkspaceViews({
         {detailsOpen && (
           <>
             <PaneDivider
-              label={
-                stackedInspector
-                  ? "调整详情面板高度"
-                  : "调整详情面板宽度"
-              }
+              label={stackedInspector ? "调整详情面板高度" : "调整详情面板宽度"}
             />
             <Pane
               id="inspector-pane"

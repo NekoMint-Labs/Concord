@@ -156,10 +156,7 @@ export function demoProjectName(id: string, fallback: string): string {
   return locale === "zh" ? (PROJECT_NAMES[id] ?? fallback) : fallback;
 }
 
-export function demoProjectDescription(
-  id: string,
-  fallback: string,
-): string {
+export function demoProjectDescription(id: string, fallback: string): string {
   return locale === "zh" ? (PROJECT_DESCRIPTIONS[id] ?? fallback) : fallback;
 }
 

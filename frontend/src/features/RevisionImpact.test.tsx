@@ -1,8 +1,36 @@
+import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { api, type DTO } from "../api/client";
 import { RevisionImpact } from "./RevisionImpact";
+
+/* RevisionImpact owns the selection state; Radix interaction is browser-covered. */
+vi.mock("../components/ui/AppSelect", () => ({
+  AppSelect: ({
+    label,
+    value,
+    onChange,
+    options,
+  }: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    options: { value: string; label: ReactNode }[];
+  }) => (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(event) => onChange(event.currentTarget.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
 
 const revisions = [
   { id: "r1", sequence: 1 },
@@ -154,8 +182,11 @@ it("keeps a selected historical comparison pair for BIM inspection and investiga
   });
 
   expect(await screen.findByText("WP-23")).toBeVisible();
-  fireEvent.click(screen.getByLabelText("版本比较"));
-  fireEvent.click(screen.getByRole("option", { name: /R1 → R2/ }));
+  const select = screen.getByRole("combobox", { name: "版本比较" });
+  const option = screen.getByRole("option", {
+    name: /R1 → R2/,
+  }) as HTMLOptionElement;
+  fireEvent.change(select, { target: { value: option.value } });
   fireEvent.click(await screen.findByText("WP-12"));
 
   expect(onInspect).toHaveBeenCalledWith({

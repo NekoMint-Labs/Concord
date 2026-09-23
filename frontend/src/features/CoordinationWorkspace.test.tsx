@@ -45,7 +45,9 @@ it("keeps real work-package BIM identity in the model context", () => {
   const selected = workspace.state.work_packages.find(
     (item) => item.id === "WP-200",
   )!;
-  expect(screen.getByText(`${selected.element_ids.length} 个关联构件`)).toBeVisible();
+  expect(
+    screen.getByText(`${selected.element_ids.length} 个关联构件`),
+  ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "打开模型" }));
   expect(baseProps.onModel).toHaveBeenCalled();
 });
