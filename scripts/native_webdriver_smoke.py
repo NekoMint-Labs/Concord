@@ -87,23 +87,34 @@ def stop_driver(driver: subprocess.Popen):
 
 
 def coordination(session: NativeSession, artifacts: Path) -> dict:
+    session.wait("return !!document.querySelector('.startup')")
+    session.click(".startup", "打开演示项目")
     session.wait("return !!document.querySelector('.application-shell')")
-    session.wait("return document.body.textContent.includes('当前没有阻塞施工的条件')")
+    session.click("nav[aria-label='工作包']", "东翼风管安装", startswith=True)
+    readiness = '[aria-label="工作包概览"] .readiness-summary'
+    ready = """
+        const overview = document.querySelector(arguments[0]);
+        return overview?.querySelector('h2')?.textContent.trim() === '可施工' &&
+            overview?.querySelector('h3')?.textContent.trim() === '当前没有未解决的阻塞条件';
+    """
+    session.wait("return document.querySelector('.breadcrumb code')?.textContent === 'WP-200'")
+    session.wait(ready, readiness)
     profile = session.api("/api/profile")
     assert profile["profile"] == "desktop" and profile["runtime"] == "dbos", profile
     session.open_menu()
     session.choose_menu("能力诊断")
     session.wait("return document.querySelector('.profile-tag')?.textContent.includes('desktop')")
-    session.click("nav[aria-label='工作区视图']", "协调")
-    session.click(".header-tools", "记录变更")
+    session.click("nav[aria-label='工作区视图']", "概览")
+    session.click("[aria-label='当前工作区操作']", "记录变更")
     session.click(".event-dialog", "提交并分析")
     session.wait(
-        "return document.querySelector('.coordination-state-tag')?.textContent.includes('已阻塞')"
+        "return document.querySelector(arguments[0] + ' h2')?.textContent.trim() === '已阻塞'",
+        readiness,
     )
     route = "/api/projects/harbor-east/workspace"
     before = session.api(route)
     assert before["analysis"]["constraints"] and not before["stale"]
-    session.click("body", "批准并继续")
+    session.click("section[aria-label='工作包概览']", "审查处理方案")
     inspector = "[aria-label='判断依据与处理详情']"
     assert session.wait(
         """
@@ -117,7 +128,7 @@ def coordination(session: NativeSession, artifacts: Path) -> dict:
         "return document.querySelector(arguments[0])?.textContent.includes('已批准')", inspector
     )
     session.click(inspector, "执行并重新检查")
-    session.wait("return document.body.textContent.includes('当前没有阻塞施工的条件')")
+    session.wait(ready, readiness)
     after = session.api(route)
     assert not after["stale"] and not after["analysis"]["constraints"]
     assert after["analysis"]["snapshot"]["id"] != before["analysis"]["snapshot"]["id"]

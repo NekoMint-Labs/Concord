@@ -139,7 +139,7 @@ class NativeSession:
         self.request("POST", self.path(f"element/{identity}/click"), {})
 
     def open_menu(self):
-        element = self.wait("return document.querySelector('.header-tools .quiet-trigger')")
+        element = self.wait("return document.querySelector('button[aria-label=\"高级\"]')")
         self.request("POST", self.path(f"element/{element[ELEMENT_KEY]}/value"), {"text": "\ue007"})
 
     def choose_menu(self, label: str):

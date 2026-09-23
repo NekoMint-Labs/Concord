@@ -30,11 +30,15 @@ def rendered(session: NativeSession):
 
 
 def import_ifc(session: NativeSession, fixture: Path) -> dict:
+    session.wait("return !!document.querySelector('.startup')")
+    session.click(".startup", "打开演示项目")
     session.wait("return !!document.querySelector('.application-shell')")
+    session.click("nav[aria-label='工作包']", "东翼风管安装", startswith=True)
+    session.wait("return document.querySelector('.breadcrumb code')?.textContent === 'WP-200'")
     profile = session.api("/api/profile")
     assert profile["profile"] == "desktop" and profile["runtime"] == "dbos"
     before = session.api(PROJECT + "/workspace")
-    session.click("nav[aria-label='工作区视图']", "BIM")
+    session.click("nav[aria-label='工作区视图']", "模型")
     session.choose_file('input[aria-label="本地 IFC 文件"]', fixture)
     rendered(session)
     # Opening local geometry must not implicitly upload or mutate project state.
