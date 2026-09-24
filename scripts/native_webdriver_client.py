@@ -122,11 +122,12 @@ class NativeSession:
     def click(self, root: str, label: str, *, startswith: bool = False):
         element = self.wait(
             """
-            const buttons = [...document.querySelectorAll(arguments[0] + ' button')];
-            const button = buttons.find(value => arguments[2]
-                ? value.textContent.trim().startsWith(arguments[1])
-                : value.textContent.trim() === arguments[1]);
-            return button && !button.disabled ? button : null;
+            const controls = [...document.querySelectorAll(arguments[0] + ' :is(button, summary)')];
+            const control = controls.find(value => {
+                const name = value.getAttribute('aria-label') || value.textContent.trim();
+                return arguments[2] ? name.startsWith(arguments[1]) : name === arguments[1];
+            });
+            return control && !control.disabled ? control : null;
         """,
             root,
             label,

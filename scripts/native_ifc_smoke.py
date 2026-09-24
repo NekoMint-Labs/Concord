@@ -34,16 +34,21 @@ def import_ifc(session: NativeSession, fixture: Path) -> dict:
     session.click(".startup", "打开演示项目")
     session.wait("return !!document.querySelector('.application-shell')")
     session.click("nav[aria-label='工作包']", "东翼风管安装", startswith=True)
-    session.wait("return document.querySelector('.breadcrumb code')?.textContent === 'WP-200'")
+    session.wait(
+        "return document.querySelector('[aria-label=\"当前工程上下文\"] strong')"
+        "?.textContent.trim() === '东翼风管安装'"
+    )
     profile = session.api("/api/profile")
     assert profile["profile"] == "desktop" and profile["runtime"] == "dbos"
     before = session.api(PROJECT + "/workspace")
-    session.click("nav[aria-label='工作区视图']", "模型")
+    session.click("nav[aria-label='主要工作区']", "Models")
     session.choose_file('input[aria-label="本地 IFC 文件"]', fixture)
     rendered(session)
     # Opening local geometry must not implicitly upload or mutate project state.
     assert session.api(PROJECT + "/workspace")["state"]["version"] == before["state"]["version"]
-    session.click(".bim-workspace", "导入项目")
+    # A loaded model closes its native Model disclosure; reopen it before import.
+    session.click("section[aria-label='模型工作区']", "Model")
+    session.click("section[aria-label='模型工作区']", "Import to project")
     session.wait(
         "return document.querySelector('.bim-workspace')?.textContent.includes('导入 已完成。')",
         timeout=90,
@@ -53,10 +58,34 @@ def import_ifc(session: NativeSession, fixture: Path) -> dict:
     assert session.api(PROJECT + "/bim/content", digest=True) == expected_hash
     elements = session.api(PROJECT + "/bim/elements")
     assert len(elements) == 3 and all(element["id"] for element in elements)
-    session.click(".bim-workspace", "结构化视图")
-    session.wait("return document.querySelectorAll('.bim-element').length === 3")
-    session.click(".bim-workspace", "打开项目 IFC")
+    # Structured elements now live in the selected work package's model context.
+    session.click("nav[aria-label='主要工作区']", "Overview")
+    session.wait(
+        """
+        const linked = document.querySelector('[aria-label="模型上下文"] .linked-element-list');
+        return arguments[0].every(name => linked?.textContent.includes(name));
+        """,
+        ["送风管 E-01", "东侧核心筒墙"],
+    )
+    session.click("nav[aria-label='工作包']", "03 层电气粗装", startswith=True)
+    session.wait(
+        "return document.querySelector('[aria-label=\"模型上下文\"] .linked-element-list')"
+        "?.textContent.includes('电缆桥架 E-01')"
+    )
+    session.click("nav[aria-label='工作包']", "东翼风管安装", startswith=True)
+    session.click("nav[aria-label='主要工作区']", "Models")
+    session.wait(
+        "return !!document.querySelector('[aria-label=\"模型工作区\"] "
+        ".spatial-source-actions.is-loaded:not([open])')"
+    )
+    session.click("section[aria-label='模型工作区']", "Model")
+    session.click("section[aria-label='模型工作区']", "Close local view")
+    session.click("section[aria-label='模型工作区']", "Project IFC")
     rendered(session)
+    session.wait(
+        "return document.querySelector('[aria-label=\"IFC 模型查看器\"] [role=status]')"
+        "?.textContent.includes('project-import.ifc')"
+    )
     return {
         "status": "PASS",
         "runtime": "dbos",

@@ -97,14 +97,17 @@ def coordination(session: NativeSession, artifacts: Path) -> dict:
         return overview?.querySelector('h2')?.textContent.trim() === '可施工' &&
             overview?.querySelector('h3')?.textContent.trim() === '当前没有未解决的阻塞条件';
     """
-    session.wait("return document.querySelector('.breadcrumb code')?.textContent === 'WP-200'")
+    session.wait(
+        "return document.querySelector('[aria-label=\"当前工程上下文\"] strong')"
+        "?.textContent.trim() === '东翼风管安装'"
+    )
     session.wait(ready, readiness)
     profile = session.api("/api/profile")
     assert profile["profile"] == "desktop" and profile["runtime"] == "dbos", profile
     session.open_menu()
     session.choose_menu("能力诊断")
     session.wait("return document.querySelector('.profile-tag')?.textContent.includes('desktop')")
-    session.click("nav[aria-label='工作区视图']", "概览")
+    session.click("nav[aria-label='主要工作区']", "Overview")
     session.click("[aria-label='当前工作区操作']", "记录变更")
     session.click(".event-dialog", "提交并分析")
     session.wait(
