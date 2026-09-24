@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   min-height: 48px;
-  background: #fafbfc;
+  background: var(--concord-header-surface);
 }
 .context-bar {
   flex: 1;
@@ -43,7 +43,7 @@
   font-size: 10px;
 }
 .central-workspace {
-  background: #f6f8f9;
+  background: var(--concord-workspace-surface);
 }
 /* Engineering facts need rows, not dashboard tiles. */
 .readiness-summary,
@@ -66,7 +66,7 @@
   font-size: 20px;
 }
 .bim-stage {
-  background: #e9edef;
+  background: var(--concord-model-surface);
 }
 @media (prefers-reduced-motion: reduce) {
   .application-shell *,

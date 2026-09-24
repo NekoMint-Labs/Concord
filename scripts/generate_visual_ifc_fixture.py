@@ -13,16 +13,25 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 model = ifcopenshell.open(str(ROOT / "fixtures/harbor-east-v17.ifc"))
 run = ifcopenshell.api.run
-body = next(item for item in model.by_type("IfcGeometricRepresentationSubContext") if item.ContextIdentifier == "Body")
+body = next(
+    item
+    for item in model.by_type("IfcGeometricRepresentationSubContext")
+    if item.ContextIdentifier == "Body"
+)
 space = next(item for item in model.by_type("IfcSpace") if item.Name == "L02-E-ZONE")
 
 
 def surface(name: str, rgb: tuple[float, float, float], transparency: float = 0):
     style = run("style.add_style", model, name=name)
-    run("style.add_surface_style", model, style=style, attributes={
-        "SurfaceColour": dict(zip(("Red", "Green", "Blue"), rgb)),
-        "Transparency": transparency,
-    })
+    run(
+        "style.add_surface_style",
+        model,
+        style=style,
+        attributes={
+            "SurfaceColour": dict(zip(("Red", "Green", "Blue"), rgb, strict=True)),
+            "Transparency": transparency,
+        },
+    )
     return style
 
 
@@ -38,12 +47,30 @@ styles = {
 }
 
 
-def block(kind: str, name: str, size: tuple[float, float, float], at: tuple[float, float, float], angle: float = 0):
+def block(
+    kind: str,
+    name: str,
+    size: tuple[float, float, float],
+    at: tuple[float, float, float],
+    angle: float = 0,
+):
     product = run("root.create_entity", model, ifc_class=kind, name=name)
     run("spatial.assign_container", model, products=[product], relating_structure=space)
-    representation = run("geometry.add_wall_representation", model, context=body, length=size[0], thickness=size[1], height=size[2])
+    representation = run(
+        "geometry.add_wall_representation",
+        model,
+        context=body,
+        length=size[0],
+        thickness=size[1],
+        height=size[2],
+    )
     run("geometry.assign_representation", model, product=product, representation=representation)
-    run("style.assign_representation_styles", model, shape_representation=representation, styles=[styles[kind]])
+    run(
+        "style.assign_representation_styles",
+        model,
+        shape_representation=representation,
+        styles=[styles[kind]],
+    )
     matrix = np.eye(4)
     if angle:
         matrix[:2, :2] = [[0, -1], [1, 0]]
@@ -57,7 +84,15 @@ block("IfcSlab", "Level 2 slab", (28, 19, 0.18), (-4, -5, 3.4))
 for x in (-3, 4, 13, 23):
     for y in (-4, 4, 13):
         block("IfcColumn", f"Column {x}:{y}", (0.28, 0.28, 4.0), (x, y, 3.6))
-for x, y, length, angle in ((-4, -5, 28, 0), (-4, 14, 28, 0), (-4, -5, 19, 1), (24, -5, 19, 1), (4, -4, 17, 1), (13, -4, 17, 1), (-3, 4, 26, 0)):
+for x, y, length, angle in (
+    (-4, -5, 28, 0),
+    (-4, 14, 28, 0),
+    (-4, -5, 19, 1),
+    (24, -5, 19, 1),
+    (4, -4, 17, 1),
+    (13, -4, 17, 1),
+    (-3, 4, 26, 0),
+):
     block("IfcWall", f"Partition {x}:{y}", (length, 0.13, 1.45), (x, y, 3.6), angle)
 for y in (0, 7, 12):
     for x in (-3, 4, 13):

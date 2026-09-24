@@ -1,19 +1,19 @@
 /* Concord reference workspace: restrained chrome around one dominant model plane. */
 .application-shell {
-  --accent: #2876db;
-  --accent-muted: #edf4fe;
-  --surface-nav: #f8f9fb;
-  --surface-detail: #f8f9fb;
-  --ink: #263241;
-  --muted: #596674;
-  --line-soft: #e8ebef;
-  font-family:
-    Inter, "Segoe UI", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --accent: var(--concord-accent);
+  --accent-muted: var(--concord-accent-tint);
+  --surface-nav: var(--concord-shell-surface);
+  --surface-detail: var(--concord-shell-surface);
+  --ink: var(--concord-ink);
+  --muted: var(--concord-muted);
+  --line-soft: var(--concord-divider);
+  --font-ui: var(--concord-font-ui);
+  font-family: var(--font-ui);
   font-size: 12.25px;
 }
 .application-shell .sidebar {
   background: var(--surface-nav);
-  border-right: 1px solid #edf0f2;
+  border-right: 1px solid var(--concord-shell-divider);
 }
 .application-shell .brand {
   height: 41px;
@@ -24,7 +24,7 @@
   height: 16px;
   border-radius: 3px;
   font-size: 10px;
-  background: #263746;
+  background: var(--concord-brand-mark);
 }
 .application-shell .brand-name strong {
   font-size: 15px;
@@ -59,7 +59,7 @@
   height: 30px;
   padding: 0 8px;
   gap: 10px;
-  color: #465261;
+  color: var(--concord-nav-text);
   font-size: 12px;
   font-weight: 400;
 }
@@ -70,13 +70,13 @@
   stroke-width: 1.7;
 }
 .application-shell .sidebar-primary button.active {
-  background: #e8eef8;
-  color: #235b9c;
+  background: var(--concord-nav-selection);
+  color: var(--concord-nav-active);
   font-weight: 500;
 }
 .application-shell .sidebar-group {
   padding: 10px 11px;
-  border-top: 1px solid #eceff2;
+  border-top: 1px solid var(--concord-nav-divider);
 }
 .application-shell .sidebar-group-heading {
   padding: 0 8px 6px;
@@ -87,7 +87,7 @@
   margin-top: 5px;
 }
 .application-shell .area-title {
-  color: #687584;
+  color: var(--concord-area-label);
   font-size: 10.5px;
 }
 .application-shell .package-nav {
@@ -101,7 +101,7 @@
   font-size: 10.5px;
 }
 .application-shell .sidebar-footer {
-  border-top: 1px solid #eceff2;
+  border-top: 1px solid var(--concord-nav-divider);
 }
 .application-shell .sidebar-footer button {
   height: 28px;
@@ -113,10 +113,10 @@
   min-height: 41px;
   height: 41px;
   border: 0;
-  background: #fff;
+  background: var(--surface);
 }
 .application-shell .app-header {
-  border-bottom: 1px solid #e9edf1;
+  border-bottom: 1px solid var(--concord-header-divider);
 }
 .application-shell .context-bar {
   gap: 12px;
@@ -138,13 +138,13 @@
   gap: 9px;
   font-size: 10px;
   white-space: nowrap;
-  color: #6b7782;
+  color: var(--concord-header-label);
 }
 .application-shell .header-versions > span:not(:nth-child(2)) {
   padding: 5px 8px;
   border-radius: 4px;
-  background: #f6f8fa;
-  color: #273543;
+  background: var(--concord-header-control);
+  color: var(--concord-dark-ink);
 }
 .application-shell .header-versions i {
   display: inline-block;
@@ -152,7 +152,7 @@
   height: 6px;
   margin-right: 7px;
   border-radius: 50%;
-  background: #278455;
+  background: var(--concord-ready-mark);
 }
 .application-shell .local-actions {
   gap: 10px;
@@ -171,8 +171,8 @@
   width: clamp(140px, 18vw, 245px);
   padding: 0 8px;
   border-radius: 5px;
-  background: #f6f8fa;
-  color: #7b8590;
+  background: var(--concord-header-control);
+  color: var(--concord-search-placeholder);
 }
 .application-shell .header-search input {
   width: 100%;
@@ -188,7 +188,7 @@
 }
 .application-shell .header-search kbd {
   font-size: 10px;
-  color: #8a949d;
+  color: var(--concord-search-hint);
 }
 .application-shell .header-icon {
   display: grid;
@@ -197,7 +197,7 @@
   height: 25px;
   border: 0;
   background: transparent;
-  color: #445363;
+  color: var(--concord-header-icon);
 }
 .application-shell .header-avatar {
   display: grid;
@@ -205,12 +205,12 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #a9b1ba;
-  color: white;
+  background: var(--concord-avatar);
+  color: var(--on-primary);
   font-size: 10px;
 }
 .application-shell .central-workspace {
-  background: #fff;
+  background: var(--surface);
 }
 /* The stage takes all horizontal space except the fixed inspector; the context occupies the bottom of the stage only. */
 .application-shell .bim-workspace.spatial-workspace {
@@ -223,33 +223,33 @@
 .application-shell .bim-workspace > .spatial-stage {
   grid-column: 1;
   grid-row: 1;
-  background: #e7eaec;
+  background: var(--concord-viewer-stage);
 }
 .application-shell .bim-workspace > .spatial-inspector {
   grid-column: 2;
   grid-row: 1 / 3;
   min-width: 0;
   background: var(--surface-detail);
-  border-left: 1px solid #edf0f2;
+  border-left: 1px solid var(--concord-shell-divider);
 }
 .application-shell .bim-workspace > .spatial-context {
   grid-column: 1;
   grid-row: 2;
   min-width: 0;
   min-height: 0;
-  background: white;
-  border-top: 1px solid #e3e8ed;
+  background: var(--surface);
+  border-top: 1px solid var(--concord-context-divider);
 }
 .application-shell .bim-stage {
   min-height: 0;
-  background: #e7eaec;
+  background: var(--concord-viewer-stage);
 }
 .application-shell .spatial-inspector-head {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   padding: 17px 17px 10px;
-  color: #2b3947;
+  color: var(--concord-inspector-title);
 }
 .application-shell .spatial-inspector-head > div {
   flex: 1;
@@ -265,7 +265,7 @@
   font-weight: 600;
 }
 .application-shell .spatial-inspector-head span {
-  color: #647181;
+  color: var(--concord-inspector-subtitle);
   font-size: 11px;
 }
 .application-shell .spatial-inspector-tabs {
@@ -274,19 +274,19 @@
   align-items: stretch;
   height: 34px;
   padding: 0 12px;
-  border-bottom: 1px solid #e9edf0;
+  border-bottom: 1px solid var(--concord-inspector-divider);
 }
 .application-shell .spatial-inspector-tabs button {
   position: relative;
   padding: 0 2px;
   border: 0;
   background: none;
-  color: #596878;
+  color: var(--concord-tab-label);
   font-size: 11px;
   white-space: nowrap;
 }
 .application-shell .spatial-inspector-tabs button[aria-selected="true"] {
-  color: #20344d;
+  color: var(--concord-tab-active);
   font-weight: 600;
 }
 .application-shell .spatial-inspector-tabs button[aria-selected="true"]:after {
@@ -296,7 +296,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: #2876db;
+  background: var(--accent);
 }
 .application-shell .spatial-inspector-tabs small,
 .application-shell .element-section h3 small,
@@ -304,8 +304,8 @@
   margin-left: 4px;
   padding: 1px 4px;
   border-radius: 8px;
-  background: #f1f3f6;
-  color: #75808a;
+  background: var(--concord-count-surface);
+  color: var(--concord-quiet-metadata);
   font-size: 9px;
   font-weight: 400;
 }
@@ -320,11 +320,11 @@
   height: 102px;
   margin-bottom: 8px;
   border-radius: 4px;
-  background: #edf1f4;
-  color: #8294a2;
+  background: var(--concord-element-surface);
+  color: var(--concord-element-icon);
 }
 .application-shell .element-identity span {
-  color: #687a88;
+  color: var(--concord-element-kind);
   font-size: 10px;
 }
 .application-shell .element-facts {
@@ -335,10 +335,10 @@
   grid-template-columns: 74px minmax(0, 1fr);
   align-items: center;
   min-height: 25px;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--concord-shell-divider);
 }
 .application-shell .element-facts dt {
-  color: #647382;
+  color: var(--concord-fact-label);
   font-size: 11px;
 }
 .application-shell .element-facts dd {
@@ -346,13 +346,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #344150;
+  color: var(--concord-fact-value);
   font-size: 11px;
 }
 .application-shell .element-section {
   margin-top: 16px;
   padding-top: 11px;
-  border-top: 1px solid #e9edf0;
+  border-top: 1px solid var(--concord-inspector-divider);
 }
 .application-shell .element-section h3 {
   margin: 0 0 7px;
@@ -373,13 +373,13 @@
   border: 0;
   border-radius: 3px;
   background: none;
-  color: #344150;
+  color: var(--concord-fact-value);
   text-align: left;
   font-size: 11px;
 }
 .application-shell .element-context-row:hover,
 .application-shell .spatial-context tbody tr:hover {
-  background: #f2f6fa;
+  background: var(--concord-row-hover);
 }
 .application-shell .element-context-row svg:last-child {
   flex-shrink: 0;
@@ -393,23 +393,23 @@
   border-radius: 50%;
 }
 .application-shell .dot.blue {
-  background: #2876db;
+  background: var(--accent);
 }
 .application-shell .dot.amber {
-  background: #d5911c;
+  background: var(--concord-amber-mark);
 }
 .application-shell .dot.red {
-  background: #cf4745;
+  background: var(--concord-red-mark);
 }
 .application-shell .issue-inspection p {
   font-size: 11px;
 }
 .application-shell .issue-inspection small {
-  color: #75808a;
+  color: var(--concord-quiet-metadata);
 }
 .application-shell .technical-properties {
   margin-top: 12px;
-  color: #677380;
+  color: var(--concord-technical-text);
   font-size: 10px;
   overflow-wrap: anywhere;
 }
@@ -417,7 +417,7 @@
   margin-top: 12px;
   border: 0;
   background: none;
-  color: #2876db;
+  color: var(--accent);
   font-size: 11px;
   cursor: pointer;
 }
@@ -430,7 +430,7 @@
 }
 .application-shell .spatial-context-header > span {
   margin-left: auto;
-  color: #637180;
+  color: var(--concord-context-label);
   font-size: 11px;
 }
 .application-shell .spatial-context-header > button {
@@ -439,7 +439,7 @@
   width: 24px;
   height: 24px;
   border: 0;
-  background: #f4f6f8;
+  background: var(--concord-control-surface);
   border-radius: 4px;
 }
 .application-shell .spatial-context-tabs {
@@ -452,11 +452,11 @@
   position: relative;
   border: 0;
   background: none;
-  color: #687481;
+  color: var(--concord-context-tab);
   font-size: 11px;
 }
 .application-shell .spatial-context-tabs button.active {
-  color: #253241;
+  color: var(--concord-context-active);
   font-weight: 600;
 }
 .application-shell .spatial-context-tabs button.active:after {
@@ -466,7 +466,7 @@
   right: 0;
   bottom: 0;
   height: 2px;
-  background: #2876db;
+  background: var(--accent);
 }
 .application-shell .spatial-context-scroll {
   overflow: auto;
@@ -481,7 +481,7 @@
 }
 .application-shell .spatial-context th {
   height: 27px;
-  color: #657381;
+  color: var(--concord-table-label);
   font-size: 10px;
   font-weight: 400;
   text-align: left;
@@ -491,8 +491,8 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  border-top: 1px solid #edf0f2;
-  color: #495563;
+  border-top: 1px solid var(--concord-shell-divider);
+  color: var(--concord-table-value);
   cursor: pointer;
 }
 .application-shell .spatial-context td:nth-child(1) {
@@ -520,27 +520,27 @@
   padding: 0;
   border: 0;
   background: none;
-  color: #275d9d;
+  color: var(--concord-table-action);
   font-size: inherit;
   font-weight: 600;
 }
 .application-shell .spatial-context tbody tr.selected {
-  background: #f2f7fd;
+  background: var(--concord-row-selected);
 }
 .application-shell .context-status {
   padding: 3px 6px;
   border-radius: 9px;
-  background: #fff4e4;
-  color: #94621c;
+  background: var(--concord-warning-surface);
+  color: var(--concord-warning-text);
   font-size: 9px;
 }
 .application-shell .context-status.is-open {
-  background: #fcebea;
-  color: #b54742;
+  background: var(--concord-danger-surface);
+  color: var(--concord-danger-text);
 }
 .application-shell .context-empty {
   padding: 16px 0;
-  color: #78838e;
+  color: var(--concord-empty-text);
   font-size: 11px;
 }
 .application-shell .viewer-actions {
@@ -550,8 +550,8 @@
   gap: 0;
   padding: 4px;
   border-radius: 5px;
-  background: white;
-  box-shadow: 0 2px 10px #27354326;
+  background: var(--surface);
+  box-shadow: 0 2px 10px var(--concord-viewer-shadow);
 }
 .application-shell .viewer-actions button {
   display: grid;
@@ -561,16 +561,16 @@
   border: 0;
   border-radius: 3px;
   background: none;
-  color: #354353;
+  color: var(--concord-viewer-text);
 }
 .application-shell .viewer-actions button:hover,
 .application-shell .viewer-bottom-tools button:hover {
-  background: #edf4fc;
-  color: #2876db;
+  background: var(--concord-action-hover);
+  color: var(--accent);
 }
 .application-shell .viewer-actions button:first-child {
-  color: #2876db;
-  background: #edf4fc;
+  color: var(--accent);
+  background: var(--concord-action-hover);
 }
 .application-shell .viewer-actions button:disabled {
   opacity: 0.45;
@@ -583,7 +583,7 @@
   display: grid;
   gap: 8px;
   text-align: center;
-  color: #354353;
+  color: var(--concord-viewer-text);
   font-size: 10px;
   font-weight: 600;
 }
@@ -598,8 +598,8 @@
   height: 29px;
   border: 0;
   border-radius: 4px;
-  background: #fff;
-  color: #354353;
+  background: var(--surface);
+  color: var(--concord-viewer-text);
   transform: translateY(45px);
 }
 .application-shell .viewer-object-label {
@@ -607,12 +607,12 @@
   z-index: 5;
   padding: 3px 7px;
   border-radius: 3px;
-  background: #2876db;
-  color: white;
+  background: var(--accent);
+  color: var(--on-primary);
   font-size: 10px;
   pointer-events: none;
   transform: translate(-50%, -160%);
-  box-shadow: 0 2px 5px #16334b30;
+  box-shadow: 0 2px 5px var(--concord-label-shadow);
 }
 .application-shell .viewer-issue-label {
   position: absolute;
@@ -624,11 +624,11 @@
   align-items: center;
   max-width: 180px;
   padding: 8px;
-  border: 1px solid #f1d6cf;
+  border: 1px solid var(--concord-issue-border);
   border-radius: 4px;
-  background: #fffdfa;
-  box-shadow: 0 3px 12px #24354323;
-  color: #37424e;
+  background: var(--concord-issue-surface);
+  box-shadow: 0 3px 12px var(--concord-issue-shadow);
+  color: var(--concord-issue-text);
   font-size: 10px;
 }
 .application-shell .viewer-bottom-tools {
@@ -642,8 +642,8 @@
   height: 30px;
   padding: 3px 5px;
   border-radius: 5px;
-  background: white;
-  box-shadow: 0 2px 10px #27354330;
+  background: var(--surface);
+  box-shadow: 0 2px 10px var(--concord-toolbar-shadow);
   transform: translateX(-50%);
 }
 .application-shell .viewer-bottom-tools button {
@@ -653,7 +653,7 @@
   height: 24px;
   border: 0;
   background: none;
-  color: #354353;
+  color: var(--concord-viewer-text);
 }
 .application-shell .viewer-bottom-tools span,
 .application-shell .viewer-bottom-tools strong {
@@ -662,8 +662,8 @@
 }
 .application-shell .viewer-bottom-tools strong {
   border-radius: 3px;
-  background: #304356;
-  color: white;
+  background: var(--concord-toolbar-active);
+  color: var(--on-primary);
 }
 .application-shell .viewer-message[hidden] {
   display: none;
@@ -691,9 +691,9 @@
   padding: 0 8px;
   border: 0;
   border-radius: 4px;
-  background: #fff;
-  box-shadow: 0 1px 5px #27354320;
-  color: #354353;
+  background: var(--surface);
+  box-shadow: 0 1px 5px var(--concord-control-shadow);
+  color: var(--concord-viewer-text);
   font-size: 11px;
   cursor: pointer;
 }
@@ -752,13 +752,13 @@
   max-width: 130px;
   border: 0;
   border-radius: 4px;
-  background: #fff;
-  color: #354353;
+  background: var(--surface);
+  color: var(--concord-viewer-text);
   font-size: 11px;
 }
 .application-shell .spatial-context-controls button[aria-pressed="true"] {
-  background: #edf4fc;
-  color: #2876db;
+  background: var(--concord-action-hover);
+  color: var(--accent);
 }
 
 .application-shell .spatial-source-actions {
@@ -777,8 +777,8 @@
   height: 27px;
   padding: 0 8px;
   border-radius: 4px;
-  background: #fff;
-  box-shadow: 0 1px 5px #27354320;
+  background: var(--surface);
+  box-shadow: 0 1px 5px var(--concord-control-shadow);
   font-size: 10px;
   cursor: pointer;
   list-style: none;
@@ -796,8 +796,8 @@
   min-width: 140px;
   padding: 5px;
   border-radius: 4px;
-  background: #fff;
-  box-shadow: 0 3px 12px #27354320;
+  background: var(--surface);
+  box-shadow: 0 3px 12px var(--concord-control-shadow);
 }
 .application-shell .spatial-source-actions.is-loaded:not([open]) > div {
   display: none;
@@ -813,16 +813,16 @@
   padding: 4px 0;
 }
 .application-shell .technical-properties dt {
-  color: #687684;
+  color: var(--concord-metadata-label);
 }
 .application-shell .technical-properties dd {
   margin: 0;
-  color: #344150;
+  color: var(--concord-fact-value);
   text-align: right;
 }
 
 .application-shell .spatial-context-tabs button:disabled {
-  color: #9aa4ad;
+  color: var(--concord-disabled-tab);
   cursor: default;
 }
 .application-shell .spatial-context-tabs button:focus-visible,
@@ -830,13 +830,13 @@
 .application-shell .spatial-source-actions button:focus-visible,
 .application-shell .viewer-actions button:focus-visible,
 .application-shell .spatial-context tbody button:focus-visible {
-  outline: 2px solid #2876db;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 .application-shell .context-status.is-ready {
-  background: #e9f6ee;
-  color: #32704f;
+  background: var(--concord-ready-surface);
+  color: var(--concord-ready-text);
 }
 
 /* Comparison and issue contexts keep the canvas primary and the right edge decision-oriented. */
@@ -850,7 +850,7 @@
 .application-shell .issue-primary h3 {
   margin: 18px 0 9px;
   padding-top: 11px;
-  border-top: 1px solid #edf0f2;
+  border-top: 1px solid var(--concord-shell-divider);
   font-size: 11.5px;
 }
 .application-shell .comparison-inspection h3:first-of-type,
@@ -864,7 +864,7 @@
   gap: 12px;
   min-height: 34px;
   padding: 4px 8px;
-  border: 1px solid #eef1f4;
+  border: 1px solid var(--concord-comparison-border);
   border-radius: 4px;
   margin: 4px 0;
   font-size: 11px;
@@ -872,8 +872,8 @@
 .application-shell .comparison-step strong {
   padding: 3px 5px;
   border-radius: 3px;
-  background: #f0f5fc;
-  color: #2876db;
+  background: var(--concord-comparison-surface);
+  color: var(--accent);
 }
 .application-shell .comparison-step span {
   min-width: 0;
@@ -882,22 +882,22 @@
   white-space: nowrap;
 }
 .application-shell .comparison-inspection p {
-  color: #5f6d7c;
+  color: var(--concord-comparison-text);
   font-size: 11px;
   line-height: 1.5;
 }
 .application-shell .comparison-inspection button {
   border: 0;
   background: none;
-  color: #2876db;
+  color: var(--accent);
   padding: 4px 0;
   font-size: 10px;
 }
 .application-shell .is-issues .spatial-inspector-head {
-  border-bottom: 1px solid #e9edf0;
+  border-bottom: 1px solid var(--concord-inspector-divider);
 }
 .application-shell .is-issues .spatial-inspector-head > svg:first-child {
-  color: #c7433e;
+  color: var(--concord-issue-icon);
 }
 .application-shell .is-issues .spatial-inspector-body {
   padding-top: 3px;
@@ -907,10 +907,10 @@
 }
 .application-shell .is-issues .issue-primary p {
   line-height: 1.5;
-  color: #45515d;
+  color: var(--concord-issue-body);
 }
 .application-shell .issue-priority {
-  color: #ae3937 !important;
+  color: var(--concord-blocking-text) !important;
 }
 .application-shell .issue-resolution {
   width: 100%;
@@ -918,8 +918,8 @@
   margin-top: 10px;
   border: 0;
   border-radius: 4px;
-  background: #2f4050;
-  color: white;
+  background: var(--concord-issue-action);
+  color: var(--on-primary);
   font-size: 11px;
   cursor: pointer;
 }
@@ -928,8 +928,8 @@
   min-width: 106px;
   padding: 5px;
   border-radius: 4px;
-  background: #fff;
-  box-shadow: 0 2px 8px #27354325;
+  background: var(--surface);
+  box-shadow: 0 2px 8px var(--concord-filter-shadow);
 }
 .application-shell .compare-filter button {
   display: flex;
@@ -939,12 +939,12 @@
   background: none;
 }
 .application-shell .compare-filter button[aria-pressed="true"] {
-  color: #2876db;
-  background: #edf4fc;
+  color: var(--accent);
+  background: var(--concord-action-hover);
 }
 .application-shell .compare-filter small {
   margin-left: 8px;
-  color: #778490;
+  color: var(--concord-filter-count);
 }
 .application-shell .spatial-context-controls:has(.compare-filter) {
   align-items: flex-start;
@@ -955,7 +955,7 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  background: #fff;
+  background: var(--surface);
 }
 .application-shell .investigation-tabs {
   display: flex;
@@ -964,8 +964,8 @@
   flex-shrink: 0;
   height: 35px;
   padding: 0 14px;
-  border-bottom: 1px solid #e8ebef;
-  color: #667481;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--concord-investigation-tab);
   font-size: 10px;
 }
 .application-shell .investigation-tabs span {
@@ -975,19 +975,19 @@
   height: 100%;
 }
 .application-shell .investigation-tabs .active {
-  border-bottom: 2px solid #2876db;
-  color: #293a4a;
+  border-bottom: 2px solid var(--accent);
+  color: var(--concord-investigation-active);
   font-weight: 600;
 }
 .application-shell .investigation-tabs small {
   border-radius: 9px;
-  background: #f0f2f4;
+  background: var(--concord-investigation-count);
   padding: 1px 4px;
   font-size: 9px;
 }
 .application-shell .investigation-tabs strong {
   margin-left: auto;
-  color: #2c496b;
+  color: var(--concord-investigation-status);
   font-size: 10px;
 }
 .application-shell .investigation-visuals {
@@ -1003,7 +1003,7 @@
   position: relative;
   min-height: 0;
   overflow: hidden;
-  border: 1px solid #e7ebef;
+  border: 1px solid var(--concord-section-divider);
   border-radius: 4px;
 }
 .application-shell .investigation-model .bim-stage {
@@ -1026,7 +1026,7 @@
   gap: 7px;
   min-height: 30px;
   padding: 0 11px;
-  border-bottom: 1px solid #e8ebef;
+  border-bottom: 1px solid var(--line-soft);
   font-size: 10px;
 }
 .application-shell .investigation-document header strong {
@@ -1037,7 +1037,7 @@
 }
 .application-shell .investigation-document header span {
   margin-left: auto;
-  color: #7a8691;
+  color: var(--concord-document-status);
   white-space: nowrap;
 }
 .application-shell .investigation-document-body {
@@ -1047,10 +1047,10 @@
 }
 .application-shell .investigation-document-body section {
   padding: 4px 0 9px;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--concord-shell-divider);
 }
 .application-shell .investigation-document-body section small {
-  color: #697785;
+  color: var(--concord-document-meta);
   font-size: 10px;
 }
 .application-shell .investigation-document-body section p {
@@ -1062,18 +1062,18 @@
 .application-shell .investigation-inspector {
   height: 100%;
   background: var(--surface-detail);
-  border-left: 1px solid #edf0f2;
+  border-left: 1px solid var(--concord-shell-divider);
 }
 .application-shell .investigation-inspector .detail-inspector-header {
   min-height: 59px;
   padding: 10px 15px;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--concord-shell-divider);
 }
 .application-shell .investigation-inspector .detail-inspector-title strong {
   font-size: 14px;
 }
 .application-shell .investigation-inspector .detail-inspector-title .eyebrow {
-  color: #828e9a;
+  color: var(--concord-eyebrow);
   font-size: 9px;
 }
 .application-shell .investigation-body {
@@ -1085,7 +1085,7 @@
   font-size: 10px;
 }
 .application-shell .investigation-body > section {
-  border-color: #e8ebef;
+  border-color: var(--line-soft);
 }
 .application-shell .investigation-answer {
   order: 0;
@@ -1127,7 +1127,7 @@
   gap: 7px;
   align-items: flex-start;
   padding: 7px 0;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--concord-shell-divider);
 }
 .application-shell .investigation-evidence li > div {
   flex: 1;
@@ -1152,7 +1152,7 @@
   min-height: 52px;
   gap: 14px;
   padding: 7px 15px;
-  border-bottom: 1px solid #e8ecf0;
+  border-bottom: 1px solid var(--concord-document-divider);
 }
 .application-shell .documents-view .view-toolbar h2 {
   margin: 0;
@@ -1168,13 +1168,13 @@
   border-radius: 5px;
   padding: 0 7px;
   font-size: 11px;
-  background: #f8fafc;
+  background: var(--concord-document-input);
 }
 .application-shell .documents-view .pane-split {
-  background: #f5f7fa;
+  background: var(--concord-document-region);
 }
 .application-shell .document-list {
-  background: #f9fafc;
+  background: var(--concord-document-list);
 }
 .application-shell .document-list > .pane-header {
   height: 41px;
@@ -1185,7 +1185,7 @@
 .application-shell .document-list .pane-header-label {
   font-size: 11px;
   font-weight: 650;
-  color: #364251;
+  color: var(--concord-list-heading);
 }
 .application-shell .document-filters {
   display: flex;
@@ -1198,13 +1198,13 @@
   border-radius: 4px;
   padding: 5px 10px;
   background: transparent;
-  color: #596b7b;
+  color: var(--concord-document-filter);
   font-size: 11px;
   cursor: pointer;
 }
 .application-shell .document-filters button[aria-pressed="true"] {
-  color: #276ccb;
-  background: #e8f1fd;
+  color: var(--concord-document-active);
+  background: var(--concord-document-filter-active);
 }
 .application-shell .document-list .pane-body {
   padding: 0 11px 20px;
@@ -1214,19 +1214,19 @@
   gap: 10px;
   padding: 11px 12px;
   margin: 0 0 7px;
-  border: 1px solid #e5eaf0;
+  border: 1px solid var(--concord-document-row-border);
   border-radius: 5px;
-  background: #fff;
+  background: var(--surface);
   min-height: 77px;
 }
 .application-shell .document-list .pane-body > button.selected {
-  background: #eef5ff;
-  border-color: #8ab7ed;
+  background: var(--concord-document-selected);
+  border-color: var(--concord-document-selected-border);
 }
 .application-shell .document-list .pane-body > button > svg {
   flex-shrink: 0;
   margin-top: 2px;
-  color: #4088d5;
+  color: var(--concord-document-icon);
 }
 .application-shell .document-list .pane-body > button > span {
   min-width: 0;
@@ -1241,13 +1241,13 @@
   margin-top: 5px;
 }
 .application-shell .document-content {
-  background: #f3f5f8;
+  background: var(--concord-document-preview);
 }
 .application-shell .document-content > .pane-header {
   min-height: 41px;
   padding: 0 16px;
-  border-bottom: 1px solid #e3e8ed;
-  background: #fff;
+  border-bottom: 1px solid var(--concord-context-divider);
+  background: var(--surface);
 }
 .application-shell .document-content > .pane-header h3 {
   display: flex;
@@ -1256,7 +1256,7 @@
   font-size: 11.5px;
 }
 .application-shell .document-content > .pane-header h3 svg {
-  color: #4287d0;
+  color: var(--concord-document-header-icon);
 }
 .application-shell .document-content .pane-body {
   --evidence-gutter: 76px;
@@ -1267,10 +1267,10 @@
   min-height: 160px;
   padding: 17px 16px;
   margin: 0 auto 13px;
-  border: 1px solid #e4e8ee;
+  border: 1px solid var(--concord-document-sheet-border);
   border-radius: 2px;
-  background: #fff;
-  box-shadow: 0 1px 3px #27333f0a;
+  background: var(--surface);
+  box-shadow: 0 1px 3px var(--concord-document-sheet-shadow);
 }
 .application-shell .document-chunk .chunk-gutter {
   gap: 5px;
@@ -1279,7 +1279,7 @@
   gap: 0;
 }
 .application-shell .document-chunk .chunk-fact-label {
-  color: #687684;
+  color: var(--concord-metadata-label);
   font-size: 10px;
 }
 .application-shell .document-chunk .chunk-fact-value {
@@ -1339,20 +1339,20 @@
   height: 32px;
   align-items: stretch;
   margin-bottom: 9px;
-  border-bottom: 1px solid #e7ebef;
+  border-bottom: 1px solid var(--concord-section-divider);
 }
 .application-shell .work-package-tabs button {
   border: 0;
   border-bottom: 2px solid transparent;
   padding: 0 3px;
-  color: #596b7a;
+  color: var(--concord-worktab-text);
   background: transparent;
   font-size: 11px;
   cursor: pointer;
 }
 .application-shell .work-package-tabs button.active {
-  color: #2673d0;
-  border-color: #2673d0;
+  color: var(--concord-worktab-active);
+  border-color: var(--concord-worktab-active);
   font-weight: 600;
 }
 .application-shell .work-package-tabs button:last-child {
@@ -1425,7 +1425,7 @@
   order: 7;
 }
 .application-shell .overview-inspector {
-  border: 1px solid #edf0f2;
+  border: 1px solid var(--concord-shell-divider);
   background: var(--surface-detail);
 }
 .application-shell .overview-inspector-header {
@@ -1445,8 +1445,8 @@
   order: 2;
   min-height: 250px;
   padding: 16px;
-  border: 1px solid #e7ebef;
-  background: #fff;
+  border: 1px solid var(--concord-section-divider);
+  background: var(--surface);
 }
 .application-shell .package-tab-content h2 {
   font-size: 13px;
@@ -1454,7 +1454,7 @@
 }
 .application-shell .package-tab-content p {
   font-size: 11px;
-  color: #687785;
+  color: var(--concord-package-description);
 }
 .application-shell .package-issue {
   display: flex;
@@ -1462,14 +1462,14 @@
   gap: 8px;
   width: 100%;
   border: 0;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--concord-shell-divider);
   padding: 10px 0;
   text-align: left;
   background: transparent;
   cursor: pointer;
 }
 .application-shell .package-issue > svg {
-  color: #b5473f;
+  color: var(--concord-package-issue);
 }
 .application-shell .package-issue strong,
 .application-shell .package-issue small {
@@ -1477,7 +1477,7 @@
   font-size: 10px;
 }
 .application-shell .package-issue small {
-  color: #70808b;
+  color: var(--concord-package-meta);
   margin-top: 3px;
 }
 @media (max-width: 900px) {
@@ -1520,7 +1520,7 @@
   margin-top: 6px;
 }
 .application-shell .investigation-document-body section:first-child {
-  background: #fff;
+  background: var(--surface);
 }
 
 .application-shell .investigation-evidence li p {
