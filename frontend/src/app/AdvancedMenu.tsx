@@ -16,9 +16,9 @@ import { advancedTabs, type WorkspaceTab } from "./destinations";
  * 高级: the one door to everything that is not the workflow.
  *
  * Capability diagnostics used to sit in the window chrome as a workflow peer.
- * Run checks now have an explicit primary destination; capability health remains
- * behind this separated entry because it diagnoses the installation rather than
- * the selected work package.
+ * Run history and checks remain reachable here without expanding the primary
+ * workspace sidebar; capability health also lives behind this entry because it
+ * diagnoses the installation rather than the selected work package.
  *
  * Demo tools are additionally gated on the profile the backend is actually
  * running under: `api.profile()` is the one honest signal, and it reports `local`

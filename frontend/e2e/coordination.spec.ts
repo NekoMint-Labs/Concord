@@ -61,8 +61,8 @@ async function expectReady(page: Page) {
 
 /**
  * The header's own entry: 记录变更 is the workflow action beside it, and the 高级
- * menu is the one door to everything that is not the workflow - the diagnostics
- * and, on the local demonstration profile, the fixture tools.
+ * menu houses run history, diagnostics and, on the local demonstration profile,
+ * the fixture tools.
  *
  * Menus are opened with the keyboard, which is how a keyboard user opens them and
  * also the only way to open one here without a race: a menu that opens on the
@@ -82,13 +82,13 @@ async function injectDemoEvent(page: Page, label: RegExp | string) {
   await page.getByRole("menuitem", { name: label }).click();
 }
 
-/** An advanced view is a destination inside 高级, not a peer of the workflow. */
+/** Secondary destinations are reached through the header's advanced menu. */
 async function openAdvancedView(page: Page, label: string) {
   await openHeaderMenu(page);
   await page.getByRole("menuitem", { name: label, exact: true }).click();
 }
 
-/** Secondary workflow destinations live behind 更多; none of them is primary navigation. */
+/** The site map is a secondary workspace behind 高级. */
 async function openSecondaryView(page: Page, label: string) {
   await openAdvancedView(page, label);
 }
@@ -284,7 +284,7 @@ test("document upload, retrieval and authenticated source download use the real 
 }) => {
   await page
     .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "文档", exact: true })
+    .getByRole("button", { name: "Documents", exact: true })
     .click();
   await page.locator("input[type=file]").setInputFiles({
     name: "browser-evidence.md",
@@ -296,7 +296,7 @@ test("document upload, retrieval and authenticated source download use the real 
   ).toBeVisible();
   await page.getByText("browser-evidence.md", { exact: true }).click();
   await page.getByLabel("搜索文档").fill("unique-browser-evidence-phrase");
-  await page.getByRole("button", { name: "搜索", exact: true }).click();
+  await page.getByRole("search").getByRole("button", { name: "Search" }).click();
   await expect(page.locator(".document-chunk")).toContainText(
     "unique-browser-evidence-phrase",
   );
@@ -373,18 +373,19 @@ test("the change composer supports keyboard selection and dismissal in the produ
 test("structured BIM, capability status, and run history remain usable without optional SDKs", async ({
   page,
 }) => {
-  const views = page.getByRole("navigation", { name: "主要工作区" });
-  await views.getByRole("button", { name: "模型", exact: true }).click();
-  const duct = page.getByRole("button", { name: /送风管 E-01/ });
+  const duct = overview(page)
+    .getByRole("region", { name: "模型上下文" })
+    .getByRole("button", { name: /送风管 E-01/ });
   await expect(duct).toBeVisible();
   await duct.click();
-  await expect(
-    page.getByLabel("构件详情").getByText("送风管 E-01"),
-  ).toBeVisible();
-  // Capability diagnostics stay behind 高级; run checks are a primary workflow.
+  await expect(duct).toHaveClass(/selected/);
+  const views = page.getByRole("navigation", { name: "主要工作区" });
+  await views.getByRole("button", { name: "Models", exact: true }).click();
+  await expect(page.getByRole("region", { name: "模型工作区" })).toBeVisible();
+  // Both diagnostics and run history remain available through the advanced menu.
   await openAdvancedView(page, "能力诊断");
   await expect(page.locator(".capability-table")).toBeVisible();
-  await views.getByRole("button", { name: "活动 / 运行", exact: true }).click();
+  await openAdvancedView(page, "Activity / Runs");
   await expect(page.locator(".operations-workspace")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "启动排程检查" }),
@@ -394,30 +395,29 @@ test("structured BIM, capability status, and run history remain usable without o
 test("real local GIS renders and selects its linked work package", async ({
   page,
 }) => {
-  await page.locator(".package-nav").filter({ hasText: "WP-300" }).click();
-  await page
-    .locator('.package-nav[aria-current="page"]')
-    .filter({ hasText: "WP-300" })
-    .waitFor();
+  const packages = page.getByRole("navigation", { name: "工作包" });
+  const electrical = packages.getByRole("button", { name: /03 层电气粗装/ });
+  await electrical.click();
+  await expect(electrical).toHaveAttribute("aria-current", "page");
   await openSecondaryView(page, "现场地图");
   await expect(page.locator(".view-toolbar")).toContainText("地图已就绪");
   // The map says what it is showing: the site polygon, the work-package points,
   // and which work package is current.
-  await expect(page.locator(".gis-context")).toContainText("WP-300");
+  await expect(page.locator(".gis-context")).toContainText("03 层电气粗装");
   const canvas = page.locator(".maplibregl-canvas");
   await expect(canvas).toBeVisible();
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();
   // The original synthetic WP-200 marker is exactly at the map's declared center.
   await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } });
-  await expect(page.locator(".breadcrumb strong")).toHaveText("东翼风管安装");
-  await expect(page.locator(".breadcrumb code")).toHaveCount(0);
-  await expect(page.locator('.package-nav[aria-current="page"]')).toContainText(
-    "WP-200",
-  );
+  await expect(
+    packages.getByRole("button", { name: /东翼风管安装/ }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(electrical).not.toHaveAttribute("aria-current", "page");
+  await expect(page.getByLabel("当前工程上下文")).toContainText("东翼风管安装");
   await page
     .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "概览", exact: true })
+    .getByRole("button", { name: "Overview", exact: true })
     .click();
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
 });
@@ -446,7 +446,7 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
   )!;
   await page
     .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "文档", exact: true })
+    .getByRole("button", { name: "Documents", exact: true })
     .click();
   await page.locator("input[type=file]").setInputFiles({
     name: "approval-stream.md",
@@ -458,10 +458,7 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
   ).toBeVisible();
   await expect(page.locator(".upload-status")).toContainText("已完成");
   const uploaded = await workspace(request);
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "活动 / 运行", exact: true })
-    .click();
+  await openAdvancedView(page, "Activity / Runs");
   await expect(
     page.getByRole("region", { name: "运行记录" }).getByRole("button", {
       name: new RegExp(`文档解析 ${uploaded.run!.id.slice(0, 8)}.*已完成`),
