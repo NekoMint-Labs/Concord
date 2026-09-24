@@ -50,7 +50,7 @@ it("a local IFC stays local and overlapping import clicks submit only once", asy
   });
   await screen.findByText("Local viewer: fixture.ifc");
   expect(api.uploadIFC).not.toHaveBeenCalled();
-  const submit = screen.getByRole("button", { name: "导入项目" });
+  const submit = screen.getByRole("button", { name: "Import to project" });
   fireEvent.click(submit);
   fireEvent.click(submit);
   expect(api.uploadIFC).toHaveBeenCalledTimes(1);
@@ -79,7 +79,7 @@ it("rejecting a new oversized file clears the previous import target", async () 
   });
   expect(screen.getByRole("alert")).toHaveTextContent("25 MiB");
   expect(
-    screen.queryByRole("button", { name: "导入项目" }),
+    screen.queryByRole("button", { name: "Import to project" }),
   ).not.toBeInTheDocument();
   expect(screen.queryByText("Local viewer: first.ifc")).not.toBeInTheDocument();
   unmount();
@@ -110,18 +110,27 @@ it("renders the full condition set as labelled rows, never as JSON source", asyn
   });
   const { unmount } = render(
     <QueryClientProvider client={cache}>
-      <BIMWorkspace project="harbor-east" impacted={[]} />
+      <BIMWorkspace
+        project="harbor-east"
+        impacted={["2O2Fr$t4X7Zf8NOew3FL9r"]}
+      />
     </QueryClientProvider>,
   );
-  fireEvent.click(await screen.findByText("East core wall"));
-  fireEvent.click(screen.getByRole("button", { name: "全部属性" }));
+  fireEvent.click(screen.getByRole("button", { name: "Expand context list" }));
+  expect(
+    screen.getByRole("button", { name: "Collapse context list" }),
+  ).toHaveAttribute("aria-expanded", "true");
+  fireEvent.click(
+    await screen.findByRole("button", { name: "East core wall" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Technical details" }));
   expect(await screen.findByText("防火等级")).toBeInTheDocument();
   expect(screen.getByText("120 min")).toBeInTheDocument();
   expect(screen.getByText("0.2 m")).toBeInTheDocument();
   expect(screen.getByText("基线")).toBeInTheDocument();
   expect(screen.getByText("WP-100、WP-200")).toBeInTheDocument();
   // The disclosure is a property sheet, not a dumped record.
-  expect(document.querySelector(".bim-properties pre")).toBeNull();
+  expect(document.querySelector(".spatial-inspector pre")).toBeNull();
   unmount();
   cache.clear();
 });

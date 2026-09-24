@@ -17,11 +17,14 @@ export function useIFCViewer(
   impacted: readonly string[],
   onSelected: (id: string) => void,
   focusId?: string,
+  onProperties?: (properties: unknown) => void,
 ) {
   const container = useRef<HTMLDivElement>(null);
   const controls = useRef<ViewerControls | null>(null);
   const callback = useRef(onSelected);
   callback.current = onSelected;
+  const propertyCallback = useRef(onProperties);
+  propertyCallback.current = onProperties;
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("正在准备本地 IFC 引擎…");
   const [error, setError] = useState("");
@@ -33,6 +36,7 @@ export function useIFCViewer(
    */
   const [properties, setProperties] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
   const actionActive = useRef(false);
   const epoch = useRef(0);
   useEffect(() => {
@@ -45,6 +49,7 @@ export function useIFCViewer(
     setReady(false);
     setError("");
     setProperties(null);
+    setAnchor(null);
     setBusy(false);
     setMessage("正在准备本地 IFC 引擎…");
     actionActive.current = false;
@@ -62,7 +67,7 @@ export function useIFCViewer(
         world.renderer = new OBC.SimpleRenderer(components, element);
         world.camera = new OBC.SimpleCamera(components);
         world.scene.setup();
-        world.scene.three.background = new THREE.Color("#e9edef");
+        world.scene.three.background = new THREE.Color("#e7eaec");
         components.init();
         await world.camera.controls.setLookAt(15, 15, 15, 0, 0, 0);
         if (cancelled) return;
@@ -94,10 +99,40 @@ export function useIFCViewer(
         world.scene.three.add(model.object);
         await fragments.core.update(true);
         if (cancelled) return;
-        await world.camera.controls.fitToBox(model.box, true);
+        const frame = async (box: THREE.Box3, transition = false) => {
+          await world.camera.controls.fitToBox(box, false);
+          const center = box.getCenter(new THREE.Vector3());
+          const radius = world.camera.controls.distance;
+          await world.camera.controls.setLookAt(
+            center.x + radius * 0.5,
+            center.y + radius * 0.8,
+            center.z + radius * 0.4,
+            center.x,
+            center.y,
+            center.z,
+            transition,
+          );
+        };
+        await frame(model.box);
         if (cancelled) return;
         let selected: number[] = [];
         let impactIds: number[] = [];
+        const updateAnchor = async () => {
+          if (!selected.length || cancelled) return;
+          const box = await model.getMergedBox(selected);
+          if (cancelled) return;
+          const point = box
+            .getCenter(new THREE.Vector3())
+            .project(world.camera.three);
+          setAnchor({
+            x: ((point.x + 1) / 2) * element.clientWidth,
+            y: ((1 - point.y) / 2) * element.clientHeight,
+          });
+        };
+        world.camera.controls.addEventListener("update", () => {
+          void updateAnchor().catch(fail);
+        });
+
         let paintTail = Promise.resolve();
         let selectionTicket = 0;
         let impactTicket = 0;
@@ -141,7 +176,7 @@ export function useIFCViewer(
           },
           async focus() {
             const ids = selected.length ? selected : impactIds;
-            await world.camera.controls.fitToBox(
+            await frame(
               ids.length ? await model.getMergedBox(ids) : model.box,
               true,
             );
@@ -160,11 +195,15 @@ export function useIFCViewer(
             const [data] = await model.getItemsData(selected);
             if (cancelled) return;
             setProperties(data);
+            propertyCallback.current?.(data);
             await paint();
-            await world.camera.controls.fitToBox(
-              await model.getMergedBox(selected),
-              true,
+            const contextBox = (await model.getMergedBox(selected)).clone();
+            const sceneSize = model.box.getSize(new THREE.Vector3());
+            contextBox.expandByScalar(
+              Math.max(sceneSize.x, sceneSize.y, sceneSize.z) * 0.25,
             );
+            await frame(contextBox, true);
+            await updateAnchor();
           },
           async showAll() {
             selectionTicket++;
@@ -172,6 +211,8 @@ export function useIFCViewer(
             if (cancelled) return;
             selected = [];
             setProperties(null);
+            propertyCallback.current?.(null);
+            setAnchor(null);
             callback.current("");
             await paint();
           },
@@ -194,8 +235,10 @@ export function useIFCViewer(
             if (cancelled || ticket !== selectionTicket) return;
             selected = ids;
             setProperties(data[0]);
+            propertyCallback.current?.(data[0]);
             callback.current(guid ?? String(hit.localId));
             await paint();
+            await updateAnchor();
           } catch (cause) {
             if (!cancelled)
               setError(cause instanceof Error ? cause.message : "构件选择失败");
@@ -253,5 +296,5 @@ export function useIFCViewer(
       }
     }
   }
-  return { container, ready, message, error, properties, busy, act };
+  return { container, ready, message, error, properties, busy, act, anchor };
 }

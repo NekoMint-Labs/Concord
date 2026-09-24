@@ -40,13 +40,12 @@ const workspaceLinks: {
   label: string;
   icon: LucideIcon;
 }[] = [
-  { tab: "coordination", label: "概览", icon: Home },
-  { tab: "bim", label: "模型", icon: Box },
-  { tab: "sources", label: "版本", icon: Building2 },
-  { tab: "impact", label: "变更", icon: History },
-  { tab: "packages", label: "问题", icon: CircleDot },
-  { tab: "documents", label: "文档", icon: FileText },
-  { tab: "operations", label: "活动 / 运行", icon: History },
+  { tab: "coordination", label: "Overview", icon: Home },
+  { tab: "bim", label: "Models", icon: Box },
+  { tab: "impact", label: "Changes", icon: History },
+  { tab: "packages", label: "Issues", icon: CircleDot },
+  { tab: "work-packages", label: "Work Packages", icon: Building2 },
+  { tab: "documents", label: "Documents", icon: FileText },
 ];
 
 export function ProjectSidebar({
@@ -110,7 +109,6 @@ export function ProjectSidebar({
           </span>
           <span className="brand-name">
             <strong>Concord</strong>
-            <span>工程协同</span>
           </span>
           <AppTooltip label="收起侧栏" side="right">
             <button
@@ -133,7 +131,6 @@ export function ProjectSidebar({
                 <Building2 className="project-mark" {...icon} />
                 <span className="project-name">
                   <strong>{current}</strong>
-                  {demo && <span>演示 / 示例</span>}
                 </span>
                 <ChevronsUpDown className="project-chevron" {...icon} />
               </>
@@ -223,7 +220,7 @@ export function ProjectSidebar({
 
         <nav className="sidebar-group" aria-label="工作包">
           <div className="sidebar-group-heading">
-            <span>工作包</span>
+            <span>DISCIPLINES</span>
             <AppTooltip label="新建工作包" side="right">
               <button
                 type="button"
@@ -285,8 +282,7 @@ export function ProjectSidebar({
 
       <footer className="sidebar-footer">
         <button type="button" onClick={() => onProjectSettings?.()}>
-          <Settings2 {...icon} />
-          项目设置
+          <Settings2 {...icon} /> Settings
         </button>
       </footer>
     </aside>

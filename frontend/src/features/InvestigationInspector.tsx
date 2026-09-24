@@ -50,12 +50,14 @@ export function InvestigationInspector({
       : shortId(scope?.to_revision_id);
   const workPackages = scope?.work_package_ids ?? [];
   const elements = scope?.element_ids ?? [];
+  const summary = report?.answer.summary ?? "";
+  const comparison = summary.match(/Compared IFC revisions: [^.]+\./)?.[0];
 
   return (
     <aside className="investigation-inspector" aria-label="工程调查详情">
       <DetailInspectorHeader
-        eyebrow="工程判断"
-        title="影响与依据"
+        eyebrow="CONCORD · AI"
+        title="Investigation"
         meta={run ? <Status value={run.status} /> : undefined}
         onClose={onClose}
       />
@@ -65,10 +67,19 @@ export function InvestigationInspector({
           <>
             <section className="investigation-answer">
               <span className="fact-label">影响</span>
-              <p>{demoInvestigationText(report.answer.summary)}</p>
-              {report.answer.limitations.map((item) => (
-                <small key={item}>{item}</small>
-              ))}
+              <p>
+                {comparison
+                  ? demoInvestigationText(summary.split(/\.\s+/)[0] + ".")
+                  : demoInvestigationText(summary)}
+              </p>
+              {comparison && <p>{comparison}</p>}
+              <details>
+                <summary>完整分析与限制</summary>
+                {comparison && <p>{demoInvestigationText(summary)}</p>}
+                {report.answer.limitations.map((item) => (
+                  <small key={item}>{item}</small>
+                ))}
+              </details>
             </section>
 
             <section aria-labelledby="investigation-properties">

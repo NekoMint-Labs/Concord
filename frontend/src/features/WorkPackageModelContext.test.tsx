@@ -11,6 +11,7 @@ vi.mock("../viewers/IFCViewer", () => ({
 afterEach(() => vi.restoreAllMocks());
 
 it("uses the authenticated project IFC and names linked elements without exposing IDs", async () => {
+  vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
   vi.spyOn(api, "bim").mockResolvedValue([
     {
       id: "gid-1",

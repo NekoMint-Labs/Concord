@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { Search, Upload } from "lucide-react";
+import { FileText, Search, Upload } from "lucide-react";
 import { api, isDesktop, readSource, type AgentRun } from "../api/client";
 import { WorkspaceState } from "../components/WorkspaceState";
 import { Button } from "../components/ui/button";
@@ -68,6 +68,7 @@ export function Documents({
   const [selected, setSelected] = useState("");
   const [runId, setRunId] = useState("");
   const [search, setSearch] = useState("");
+  const [fileType, setFileType] = useState<"all" | "text" | "pdf">("all");
   const [query, setQuery] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const cache = useQueryClient();
@@ -76,9 +77,17 @@ export function Documents({
     queryKey: ["documents", project],
     queryFn: () => api.documents(project),
   });
-  const current = selected || documents.data?.[0]?.id || "";
-  const meta = documents.data?.find((doc) => doc.id === current);
   const count = documents.data?.length ?? 0;
+  const listed = documents.data?.filter(
+    (doc) =>
+      fileType === "all" ||
+      (fileType === "pdf"
+        ? doc.filename.toLowerCase().endsWith(".pdf")
+        : !doc.filename.toLowerCase().endsWith(".pdf")),
+  );
+  const current =
+    listed?.find((doc) => doc.id === selected)?.id ?? listed?.[0]?.id ?? "";
+  const meta = listed?.find((doc) => doc.id === current);
   /*
    * The subject. When the source list is a pane it also prints the filename, so
    * the reading header pairs the filename with the parser rather than repeating
@@ -190,7 +199,9 @@ export function Documents({
             ))}
           </AppMenu>
         )}
-        <h3>{subject}</h3>
+        <h3>
+          <FileText size={14} /> {subject}
+        </h3>
         <span className="pane-header-actions">
           {/*
            * Condensed, the header carries one action and no provenance: the
@@ -218,6 +229,11 @@ export function Documents({
         </span>
       </header>
       <div className="pane-body">
+        {!current && !!documents.data?.length && (
+          <p className="quiet-message">
+            Choose another file type to preview a project document.
+          </p>
+        )}
         {(chunks.error || results.error || documents.error) && (
           <WorkspaceState
             kind="error"
@@ -277,7 +293,9 @@ export function Documents({
                 </div>
               </div>
               <div className="chunk-body">
-                <pre>{highlightMatch(chunk.text, query)}</pre>
+                <pre>
+                  {highlightMatch(chunk.text.replace(/^#{1,6} /gm, ""), query)}
+                </pre>
               </div>
             </article>
           ))}
@@ -300,8 +318,8 @@ export function Documents({
   const sourceList = (
     <Pane
       className="document-list pane-stack"
-      defaultSize="264px"
-      minSize="150px"
+      defaultSize="40%"
+      minSize="220px"
       /*
        * The source list's share has a ceiling: it is the local browser for the
        * document being read, not the reading surface, so it may not grow to
@@ -316,12 +334,24 @@ export function Documents({
        * ceiling is actually about (`Pane` keeps a pixel width across a resize -
        * frontend/src/layout/PaneSplit.tsx). One number, no breakpoint.
        */
-      maxSize="410px"
+      maxSize="560px"
     >
       <header className="pane-header">
-        <span className="pane-header-label">来源</span>
+        <span className="pane-header-label">Project Documents</span>
         <span className="count">{count}</span>
       </header>
+      <div className="document-filters" aria-label="Document types">
+        {(["all", "text", "pdf"] as const).map((type) => (
+          <button
+            type="button"
+            key={type}
+            aria-pressed={fileType === type}
+            onClick={() => setFileType(type)}
+          >
+            {type === "all" ? "All files" : type === "pdf" ? "PDF" : "Text"}
+          </button>
+        ))}
+      </div>
       <div className="pane-body">
         {/*
           A source row is text: every row in this list is a document, so a mark on
@@ -330,7 +360,7 @@ export function Documents({
           sidebar, and this list therefore all carry their objects the same way
           (frontend/src/components/ui/icon.ts states the rule).
         */}
-        {documents.data?.map((doc) => (
+        {listed?.map((doc) => (
           <button
             className={current === doc.id ? "selected" : ""}
             onClick={() => {
@@ -339,15 +369,23 @@ export function Documents({
             }}
             key={doc.id}
           >
+            <FileText aria-hidden="true" size={18} />
             <span>
               <strong>{doc.filename}</strong>
               <small>
-                {doc.parser} · SHA{" "}
-                <span className="mono">{doc.content_hash.slice(0, 12)}</span>
+                {new Date(doc.created_at).toLocaleDateString()} · {doc.parser}
+              </small>
+              <small className="mono">
+                SHA {doc.content_hash.slice(0, 12)}
               </small>
             </span>
           </button>
         ))}
+        {!!documents.data?.length && !listed?.length && (
+          <p className="quiet-message">
+            No {fileType === "pdf" ? "PDF" : "text"} files in this project.
+          </p>
+        )}
         {documents.data?.length === 0 && (
           <WorkspaceState
             kind="empty"
@@ -362,7 +400,7 @@ export function Documents({
   return (
     <div className="documents-view">
       <div className="view-toolbar">
-        <h2>文档</h2>
+        <h2>Documents</h2>
         <form
           className="documents-search"
           role="search"
@@ -376,10 +414,10 @@ export function Documents({
             aria-label="搜索文档"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索本地文档，无需向量索引"
+            placeholder="Search documents and extracted text"
           />
           <Button type="submit" variant="secondary" size="sm">
-            搜索
+            Search
           </Button>
           {query && (
             <Button
@@ -403,7 +441,7 @@ export function Documents({
               isDesktop ? void perform(nativeImport) : input.current?.click()
             }
           >
-            <Upload {...icon} /> 导入文档
+            <Upload {...icon} /> Import document
           </Button>
           <input
             ref={input}
@@ -433,7 +471,7 @@ export function Documents({
       {condensed ? (
         <PaneSplit id="documents-condensed">{reading}</PaneSplit>
       ) : (
-        <PaneSplit id="documents" persist>
+        <PaneSplit id="documents-library" persist>
           {sourceList}
           <PaneDivider label="调整来源列表宽度" />
           {reading}

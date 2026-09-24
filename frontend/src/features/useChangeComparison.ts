@@ -135,6 +135,8 @@ export function useChangeComparison(project: string) {
     comparison,
     detail,
     nameFor,
+    oldModel,
+    newModel,
     kind,
     setKind,
     selectedId,

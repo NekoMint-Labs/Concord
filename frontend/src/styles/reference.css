@@ -1,0 +1,1558 @@
+/* Concord reference workspace: restrained chrome around one dominant model plane. */
+.application-shell {
+  --accent: #2876db;
+  --accent-muted: #edf4fe;
+  --surface-nav: #f8f9fb;
+  --surface-detail: #f8f9fb;
+  --ink: #263241;
+  --muted: #596674;
+  --line-soft: #e8ebef;
+  font-family:
+    Inter, "Segoe UI", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  font-size: 12.25px;
+}
+.application-shell .sidebar {
+  background: var(--surface-nav);
+  border-right: 1px solid #edf0f2;
+}
+.application-shell .brand {
+  height: 41px;
+  padding-left: 16px;
+}
+.application-shell .brand-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  font-size: 10px;
+  background: #263746;
+}
+.application-shell .brand-name strong {
+  font-size: 15px;
+  letter-spacing: -0.025em;
+}
+.application-shell .brand > .icon-button {
+  opacity: 0;
+}
+.application-shell .brand:hover > .icon-button,
+.application-shell .brand > .icon-button:focus-visible {
+  opacity: 1;
+}
+.application-shell .project-picker {
+  padding: 2px 9px 6px;
+}
+.application-shell .project-trigger {
+  height: 30px;
+  font-size: 12px;
+}
+.application-shell .project-trigger .project-name strong {
+  font-size: 12px;
+}
+.application-shell .sidebar-search {
+  display: none;
+}
+.application-shell .sidebar-primary {
+  padding: 4px 11px 12px;
+  gap: 2px;
+  border: 0;
+}
+.application-shell .sidebar-primary button {
+  height: 30px;
+  padding: 0 8px;
+  gap: 10px;
+  color: #465261;
+  font-size: 12px;
+  font-weight: 400;
+}
+.application-shell .sidebar-primary button svg,
+.application-shell .sidebar-footer button svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.7;
+}
+.application-shell .sidebar-primary button.active {
+  background: #e8eef8;
+  color: #235b9c;
+  font-weight: 500;
+}
+.application-shell .sidebar-group {
+  padding: 10px 11px;
+  border-top: 1px solid #eceff2;
+}
+.application-shell .sidebar-group-heading {
+  padding: 0 8px 6px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+.application-shell .area-group {
+  margin-top: 5px;
+}
+.application-shell .area-title {
+  color: #687584;
+  font-size: 10.5px;
+}
+.application-shell .package-nav {
+  padding: 5px 8px;
+}
+.application-shell .package-nav strong {
+  font-size: 11.5px;
+  font-weight: 400;
+}
+.application-shell .package-nav small {
+  font-size: 10.5px;
+}
+.application-shell .sidebar-footer {
+  border-top: 1px solid #eceff2;
+}
+.application-shell .sidebar-footer button {
+  height: 28px;
+  font-size: 11px;
+}
+.application-shell .app-header,
+.application-shell .context-bar,
+.application-shell .local-actions {
+  min-height: 41px;
+  height: 41px;
+  border: 0;
+  background: #fff;
+}
+.application-shell .app-header {
+  border-bottom: 1px solid #e9edf1;
+}
+.application-shell .context-bar {
+  gap: 12px;
+  padding: 0 15px;
+}
+.application-shell .breadcrumb {
+  font-size: 11.5px;
+}
+.application-shell .breadcrumb strong {
+  font-weight: 600;
+}
+.application-shell .workspace-location {
+  margin-left: 4px;
+  padding-left: 10px;
+}
+.application-shell .header-versions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 10px;
+  white-space: nowrap;
+  color: #6b7782;
+}
+.application-shell .header-versions > span:not(:nth-child(2)) {
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: #f6f8fa;
+  color: #273543;
+}
+.application-shell .header-versions i {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #278455;
+}
+.application-shell .local-actions {
+  gap: 10px;
+  padding: 0 12px;
+}
+.application-shell .local-actions > .button {
+  font-size: 10px;
+  height: 27px;
+  padding: 0 7px;
+}
+.application-shell .header-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 25px;
+  width: clamp(140px, 18vw, 245px);
+  padding: 0 8px;
+  border-radius: 5px;
+  background: #f6f8fa;
+  color: #7b8590;
+}
+.application-shell .header-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 11px;
+}
+.application-shell .header-search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.application-shell .header-search kbd {
+  font-size: 10px;
+  color: #8a949d;
+}
+.application-shell .header-icon {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border: 0;
+  background: transparent;
+  color: #445363;
+}
+.application-shell .header-avatar {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #a9b1ba;
+  color: white;
+  font-size: 10px;
+}
+.application-shell .central-workspace {
+  background: #fff;
+}
+/* The stage takes all horizontal space except the fixed inspector; the context occupies the bottom of the stage only. */
+.application-shell .bim-workspace.spatial-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(290px, 27%, 330px);
+  grid-template-rows: minmax(260px, 1fr) 210px;
+  height: 100%;
+  min-height: 0;
+}
+.application-shell .bim-workspace > .spatial-stage {
+  grid-column: 1;
+  grid-row: 1;
+  background: #e7eaec;
+}
+.application-shell .bim-workspace > .spatial-inspector {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  min-width: 0;
+  background: var(--surface-detail);
+  border-left: 1px solid #edf0f2;
+}
+.application-shell .bim-workspace > .spatial-context {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  background: white;
+  border-top: 1px solid #e3e8ed;
+}
+.application-shell .bim-stage {
+  min-height: 0;
+  background: #e7eaec;
+}
+.application-shell .spatial-inspector-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 17px 17px 10px;
+  color: #2b3947;
+}
+.application-shell .spatial-inspector-head > div {
+  flex: 1;
+  min-width: 0;
+}
+.application-shell .spatial-inspector-head h2 {
+  margin: 0 0 3px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  line-height: 1.15;
+  font-weight: 600;
+}
+.application-shell .spatial-inspector-head span {
+  color: #647181;
+  font-size: 11px;
+}
+.application-shell .spatial-inspector-tabs {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  height: 34px;
+  padding: 0 12px;
+  border-bottom: 1px solid #e9edf0;
+}
+.application-shell .spatial-inspector-tabs button {
+  position: relative;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: #596878;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.application-shell .spatial-inspector-tabs button[aria-selected="true"] {
+  color: #20344d;
+  font-weight: 600;
+}
+.application-shell .spatial-inspector-tabs button[aria-selected="true"]:after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #2876db;
+}
+.application-shell .spatial-inspector-tabs small,
+.application-shell .element-section h3 small,
+.application-shell .spatial-context-tabs small {
+  margin-left: 4px;
+  padding: 1px 4px;
+  border-radius: 8px;
+  background: #f1f3f6;
+  color: #75808a;
+  font-size: 9px;
+  font-weight: 400;
+}
+.application-shell .spatial-inspector-body {
+  padding: 12px 17px 32px;
+  font-size: 11.5px;
+}
+.application-shell .element-identity {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  height: 102px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: #edf1f4;
+  color: #8294a2;
+}
+.application-shell .element-identity span {
+  color: #687a88;
+  font-size: 10px;
+}
+.application-shell .element-facts {
+  margin: 0;
+}
+.application-shell .element-facts div {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  align-items: center;
+  min-height: 25px;
+  border-bottom: 1px solid #edf0f2;
+}
+.application-shell .element-facts dt {
+  color: #647382;
+  font-size: 11px;
+}
+.application-shell .element-facts dd {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #344150;
+  font-size: 11px;
+}
+.application-shell .element-section {
+  margin-top: 16px;
+  padding-top: 11px;
+  border-top: 1px solid #e9edf0;
+}
+.application-shell .element-section h3 {
+  margin: 0 0 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.application-shell .element-section .quiet-message {
+  margin: 6px 0;
+  font-size: 11px;
+}
+.application-shell .element-context-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 5px;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: #344150;
+  text-align: left;
+  font-size: 11px;
+}
+.application-shell .element-context-row:hover,
+.application-shell .spatial-context tbody tr:hover {
+  background: #f2f6fa;
+}
+.application-shell .element-context-row svg:last-child {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.application-shell .dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.application-shell .dot.blue {
+  background: #2876db;
+}
+.application-shell .dot.amber {
+  background: #d5911c;
+}
+.application-shell .dot.red {
+  background: #cf4745;
+}
+.application-shell .issue-inspection p {
+  font-size: 11px;
+}
+.application-shell .issue-inspection small {
+  color: #75808a;
+}
+.application-shell .technical-properties {
+  margin-top: 12px;
+  color: #677380;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.application-shell .investigate-link {
+  margin-top: 12px;
+  border: 0;
+  background: none;
+  color: #2876db;
+  font-size: 11px;
+  cursor: pointer;
+}
+.application-shell .spatial-context-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 15px;
+}
+.application-shell .spatial-context-header > span {
+  margin-left: auto;
+  color: #637180;
+  font-size: 11px;
+}
+.application-shell .spatial-context-header > button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  background: #f4f6f8;
+  border-radius: 4px;
+}
+.application-shell .spatial-context-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  height: 100%;
+}
+.application-shell .spatial-context-tabs button {
+  position: relative;
+  border: 0;
+  background: none;
+  color: #687481;
+  font-size: 11px;
+}
+.application-shell .spatial-context-tabs button.active {
+  color: #253241;
+  font-weight: 600;
+}
+.application-shell .spatial-context-tabs button.active:after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: #2876db;
+}
+.application-shell .spatial-context-scroll {
+  overflow: auto;
+  height: calc(100% - 40px);
+  padding: 0 15px;
+}
+.application-shell .spatial-context table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 11px;
+}
+.application-shell .spatial-context th {
+  height: 27px;
+  color: #657381;
+  font-size: 10px;
+  font-weight: 400;
+  text-align: left;
+}
+.application-shell .spatial-context td {
+  height: 30px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-top: 1px solid #edf0f2;
+  color: #495563;
+  cursor: pointer;
+}
+.application-shell .spatial-context td:nth-child(1) {
+  width: 85px;
+}
+.application-shell .spatial-context th:nth-child(1) {
+  width: 85px;
+}
+.application-shell .spatial-context th:nth-child(2) {
+  width: 18%;
+}
+.application-shell .spatial-context th:nth-child(4) {
+  width: 25%;
+}
+.application-shell .spatial-context th:nth-child(5) {
+  width: 15%;
+}
+.application-shell .spatial-context th:last-child {
+  width: 15px;
+}
+.application-shell .spatial-context td .dot {
+  margin-right: 7px;
+}
+.application-shell .spatial-context td button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #275d9d;
+  font-size: inherit;
+  font-weight: 600;
+}
+.application-shell .spatial-context tbody tr.selected {
+  background: #f2f7fd;
+}
+.application-shell .context-status {
+  padding: 3px 6px;
+  border-radius: 9px;
+  background: #fff4e4;
+  color: #94621c;
+  font-size: 9px;
+}
+.application-shell .context-status.is-open {
+  background: #fcebea;
+  color: #b54742;
+}
+.application-shell .context-empty {
+  padding: 16px 0;
+  color: #78838e;
+  font-size: 11px;
+}
+.application-shell .viewer-actions {
+  top: 12px;
+  left: 12px;
+  display: grid;
+  gap: 0;
+  padding: 4px;
+  border-radius: 5px;
+  background: white;
+  box-shadow: 0 2px 10px #27354326;
+}
+.application-shell .viewer-actions button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: #354353;
+}
+.application-shell .viewer-actions button:hover,
+.application-shell .viewer-bottom-tools button:hover {
+  background: #edf4fc;
+  color: #2876db;
+}
+.application-shell .viewer-actions button:first-child {
+  color: #2876db;
+  background: #edf4fc;
+}
+.application-shell .viewer-actions button:disabled {
+  opacity: 0.45;
+}
+.application-shell .viewer-orientation {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  z-index: 5;
+  display: grid;
+  gap: 8px;
+  text-align: center;
+  color: #354353;
+  font-size: 10px;
+  font-weight: 600;
+}
+.application-shell .viewer-light {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border: 0;
+  border-radius: 4px;
+  background: #fff;
+  color: #354353;
+  transform: translateY(45px);
+}
+.application-shell .viewer-object-label {
+  position: absolute;
+  z-index: 5;
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: #2876db;
+  color: white;
+  font-size: 10px;
+  pointer-events: none;
+  transform: translate(-50%, -160%);
+  box-shadow: 0 2px 5px #16334b30;
+}
+.application-shell .viewer-issue-label {
+  position: absolute;
+  z-index: 5;
+  top: 19%;
+  right: 10%;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  max-width: 180px;
+  padding: 8px;
+  border: 1px solid #f1d6cf;
+  border-radius: 4px;
+  background: #fffdfa;
+  box-shadow: 0 3px 12px #24354323;
+  color: #37424e;
+  font-size: 10px;
+}
+.application-shell .viewer-bottom-tools {
+  position: absolute;
+  z-index: 5;
+  bottom: 13px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 30px;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: white;
+  box-shadow: 0 2px 10px #27354330;
+  transform: translateX(-50%);
+}
+.application-shell .viewer-bottom-tools button {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 24px;
+  border: 0;
+  background: none;
+  color: #354353;
+}
+.application-shell .viewer-bottom-tools span,
+.application-shell .viewer-bottom-tools strong {
+  padding: 4px 6px;
+  font-size: 10px;
+}
+.application-shell .viewer-bottom-tools strong {
+  border-radius: 3px;
+  background: #304356;
+  color: white;
+}
+.application-shell .viewer-message[hidden] {
+  display: none;
+}
+.application-shell .viewer-message:not([hidden]) {
+  left: 50%;
+  bottom: auto;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.application-shell .spatial-source-actions {
+  position: absolute;
+  z-index: 6;
+  top: 12px;
+  left: 56px;
+  display: flex;
+  gap: 3px;
+}
+.application-shell .spatial-source-actions button,
+.application-shell .spatial-context-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 27px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 1px 5px #27354320;
+  color: #354353;
+  font-size: 11px;
+  cursor: pointer;
+}
+.application-shell .spatial-context-controls {
+  position: absolute;
+  z-index: 6;
+  top: 12px;
+  left: 56px;
+  display: flex;
+  gap: 4px;
+}
+.application-shell
+  .spatial-stage:has(.spatial-context-controls)
+  .spatial-source-actions {
+  top: 45px;
+}
+@media (max-width: 850px) {
+  .application-shell .bim-workspace.spatial-workspace {
+    grid-template-columns: minmax(0, 1fr) 220px;
+    grid-template-rows: minmax(240px, 1fr) 150px;
+  }
+  .application-shell .header-search {
+    display: none;
+  }
+}
+
+/* Changes and Issues are alternate contexts of the same model workspace. */
+.application-shell .change-workspace,
+.application-shell .issue-workspace {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+.application-shell .change-stage,
+.application-shell .issue-stage {
+  height: 100%;
+  min-height: 0;
+}
+.application-shell .change-stage .bim-workspace.spatial-workspace,
+.application-shell .issue-stage .bim-workspace.spatial-workspace {
+  display: grid;
+  height: 100%;
+  grid-template-columns: minmax(0, 1fr) clamp(290px, 27%, 330px);
+  grid-template-rows: minmax(260px, 1fr) 210px;
+}
+.application-shell .change-stage .spatial-inspector,
+.application-shell .issue-stage .spatial-inspector {
+  display: flex;
+}
+.application-shell .change-stage .spatial-stage,
+.application-shell .issue-stage .spatial-stage {
+  height: auto;
+}
+.application-shell .spatial-context-controls select {
+  height: 27px;
+  max-width: 130px;
+  border: 0;
+  border-radius: 4px;
+  background: #fff;
+  color: #354353;
+  font-size: 11px;
+}
+.application-shell .spatial-context-controls button[aria-pressed="true"] {
+  background: #edf4fc;
+  color: #2876db;
+}
+
+.application-shell .spatial-source-actions {
+  display: block;
+}
+.application-shell .spatial-source-actions > summary {
+  display: none;
+}
+.application-shell .spatial-source-actions > div {
+  display: flex;
+  gap: 3px;
+}
+.application-shell .spatial-source-actions.is-loaded > summary {
+  display: inline-flex;
+  align-items: center;
+  height: 27px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 1px 5px #27354320;
+  font-size: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+.application-shell
+  .spatial-source-actions.is-loaded
+  > summary::-webkit-details-marker {
+  display: none;
+}
+.application-shell .spatial-source-actions.is-loaded > div {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  display: grid;
+  min-width: 140px;
+  padding: 5px;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 3px 12px #27354320;
+}
+.application-shell .spatial-source-actions.is-loaded:not([open]) > div {
+  display: none;
+}
+
+.application-shell .technical-properties dl {
+  margin: 6px 0 0;
+}
+.application-shell .technical-properties dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+.application-shell .technical-properties dt {
+  color: #687684;
+}
+.application-shell .technical-properties dd {
+  margin: 0;
+  color: #344150;
+  text-align: right;
+}
+
+.application-shell .spatial-context-tabs button:disabled {
+  color: #9aa4ad;
+  cursor: default;
+}
+.application-shell .spatial-context-tabs button:focus-visible,
+.application-shell .spatial-inspector button:focus-visible,
+.application-shell .spatial-source-actions button:focus-visible,
+.application-shell .viewer-actions button:focus-visible,
+.application-shell .spatial-context tbody button:focus-visible {
+  outline: 2px solid #2876db;
+  outline-offset: 2px;
+}
+
+.application-shell .context-status.is-ready {
+  background: #e9f6ee;
+  color: #32704f;
+}
+
+/* Comparison and issue contexts keep the canvas primary and the right edge decision-oriented. */
+.application-shell .is-changes .element-identity {
+  display: none;
+}
+.application-shell .is-changes .spatial-inspector-body > .element-section {
+  margin-top: 12px;
+}
+.application-shell .comparison-inspection h3,
+.application-shell .issue-primary h3 {
+  margin: 18px 0 9px;
+  padding-top: 11px;
+  border-top: 1px solid #edf0f2;
+  font-size: 11.5px;
+}
+.application-shell .comparison-inspection h3:first-of-type,
+.application-shell .issue-primary h3:first-child {
+  border: 0;
+  padding-top: 0;
+}
+.application-shell .comparison-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid #eef1f4;
+  border-radius: 4px;
+  margin: 4px 0;
+  font-size: 11px;
+}
+.application-shell .comparison-step strong {
+  padding: 3px 5px;
+  border-radius: 3px;
+  background: #f0f5fc;
+  color: #2876db;
+}
+.application-shell .comparison-step span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.application-shell .comparison-inspection p {
+  color: #5f6d7c;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.application-shell .comparison-inspection button {
+  border: 0;
+  background: none;
+  color: #2876db;
+  padding: 4px 0;
+  font-size: 10px;
+}
+.application-shell .is-issues .spatial-inspector-head {
+  border-bottom: 1px solid #e9edf0;
+}
+.application-shell .is-issues .spatial-inspector-head > svg:first-child {
+  color: #c7433e;
+}
+.application-shell .is-issues .spatial-inspector-body {
+  padding-top: 3px;
+}
+.application-shell .is-issues .issue-primary h3 {
+  margin-top: 14px;
+}
+.application-shell .is-issues .issue-primary p {
+  line-height: 1.5;
+  color: #45515d;
+}
+.application-shell .issue-priority {
+  color: #ae3937 !important;
+}
+.application-shell .issue-resolution {
+  width: 100%;
+  height: 29px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 4px;
+  background: #2f4050;
+  color: white;
+  font-size: 11px;
+  cursor: pointer;
+}
+.application-shell .compare-filter {
+  display: grid;
+  min-width: 106px;
+  padding: 5px;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 2px 8px #27354325;
+}
+.application-shell .compare-filter button {
+  display: flex;
+  justify-content: space-between;
+  min-width: 100%;
+  box-shadow: none;
+  background: none;
+}
+.application-shell .compare-filter button[aria-pressed="true"] {
+  color: #2876db;
+  background: #edf4fc;
+}
+.application-shell .compare-filter small {
+  margin-left: 8px;
+  color: #778490;
+}
+.application-shell .spatial-context-controls:has(.compare-filter) {
+  align-items: flex-start;
+}
+/* The investigation is a working surface for actual IFC and persisted evidence, not a squeezed Change table. */
+.application-shell .investigation-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #fff;
+}
+.application-shell .investigation-tabs {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  height: 35px;
+  padding: 0 14px;
+  border-bottom: 1px solid #e8ebef;
+  color: #667481;
+  font-size: 10px;
+}
+.application-shell .investigation-tabs span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}
+.application-shell .investigation-tabs .active {
+  border-bottom: 2px solid #2876db;
+  color: #293a4a;
+  font-weight: 600;
+}
+.application-shell .investigation-tabs small {
+  border-radius: 9px;
+  background: #f0f2f4;
+  padding: 1px 4px;
+  font-size: 9px;
+}
+.application-shell .investigation-tabs strong {
+  margin-left: auto;
+  color: #2c496b;
+  font-size: 10px;
+}
+.application-shell .investigation-visuals {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 50% 50%;
+  padding: 8px;
+  gap: 6px;
+}
+.application-shell .investigation-model,
+.application-shell .investigation-document {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #e7ebef;
+  border-radius: 4px;
+}
+.application-shell .investigation-model .bim-stage {
+  height: 100%;
+  min-height: 0;
+}
+.application-shell .investigation-model .viewer-actions,
+.application-shell .investigation-model .viewer-orientation,
+.application-shell .investigation-model .viewer-light,
+.application-shell .investigation-model .viewer-bottom-tools {
+  display: none;
+}
+.application-shell .investigation-document {
+  display: flex;
+  flex-direction: column;
+}
+.application-shell .investigation-document header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 11px;
+  border-bottom: 1px solid #e8ebef;
+  font-size: 10px;
+}
+.application-shell .investigation-document header strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+.application-shell .investigation-document header span {
+  margin-left: auto;
+  color: #7a8691;
+  white-space: nowrap;
+}
+.application-shell .investigation-document-body {
+  overflow: auto;
+  min-height: 0;
+  padding: 9px 13px;
+}
+.application-shell .investigation-document-body section {
+  padding: 4px 0 9px;
+  border-bottom: 1px solid #edf0f2;
+}
+.application-shell .investigation-document-body section small {
+  color: #697785;
+  font-size: 10px;
+}
+.application-shell .investigation-document-body section p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.application-shell .investigation-inspector {
+  height: 100%;
+  background: var(--surface-detail);
+  border-left: 1px solid #edf0f2;
+}
+.application-shell .investigation-inspector .detail-inspector-header {
+  min-height: 59px;
+  padding: 10px 15px;
+  border-bottom: 1px solid #edf0f2;
+}
+.application-shell .investigation-inspector .detail-inspector-title strong {
+  font-size: 14px;
+}
+.application-shell .investigation-inspector .detail-inspector-title .eyebrow {
+  color: #828e9a;
+  font-size: 9px;
+}
+.application-shell .investigation-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 15px;
+  overflow: auto;
+  font-size: 10px;
+}
+.application-shell .investigation-body > section {
+  border-color: #e8ebef;
+}
+.application-shell .investigation-answer {
+  order: 0;
+}
+.application-shell .investigation-answer p {
+  margin: 5px 0;
+  line-height: 1.55;
+  font-size: 11px;
+}
+.application-shell .investigation-body > section:has(#investigation-evidence) {
+  order: 1;
+}
+.application-shell
+  .investigation-body
+  > section:has(#investigation-properties) {
+  order: 3;
+}
+.application-shell .investigation-proposal {
+  order: 2;
+  margin: 0;
+  padding-top: 8px;
+}
+.application-shell .investigation-process {
+  order: 4;
+  margin: 0;
+}
+.application-shell .investigation-section-heading h4,
+.application-shell .investigation-body h4 {
+  margin: 0 0 7px;
+  font-size: 11px;
+}
+.application-shell .investigation-evidence {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.application-shell .investigation-evidence li {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  padding: 7px 0;
+  border-bottom: 1px solid #edf0f2;
+}
+.application-shell .investigation-evidence li > div {
+  flex: 1;
+  min-width: 0;
+}
+.application-shell .investigation-evidence li strong {
+  font-size: 10.5px;
+  overflow-wrap: anywhere;
+}
+.application-shell .investigation-evidence li p {
+  margin: 3px 0;
+  line-height: 1.5;
+  font-size: 10.5px;
+}
+.application-shell .investigation-evidence li small {
+  font-size: 9.5px;
+  overflow-wrap: anywhere;
+}
+
+/* Document library: browse actual imported files beside their parsed pages. */
+.application-shell .documents-view .view-toolbar {
+  min-height: 52px;
+  gap: 14px;
+  padding: 7px 15px;
+  border-bottom: 1px solid #e8ecf0;
+}
+.application-shell .documents-view .view-toolbar h2 {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+.application-shell .documents-search {
+  max-width: 340px;
+  margin: auto;
+  position: relative;
+}
+.application-shell .documents-search input {
+  border-radius: 5px;
+  padding: 0 7px;
+  font-size: 11px;
+  background: #f8fafc;
+}
+.application-shell .documents-view .pane-split {
+  background: #f5f7fa;
+}
+.application-shell .document-list {
+  background: #f9fafc;
+}
+.application-shell .document-list > .pane-header {
+  height: 41px;
+  padding-left: 15px;
+  border: 0;
+  background: transparent;
+}
+.application-shell .document-list .pane-header-label {
+  font-size: 11px;
+  font-weight: 650;
+  color: #364251;
+}
+.application-shell .document-filters {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 14px 10px;
+}
+.application-shell .document-filters button {
+  border: 0;
+  border-radius: 4px;
+  padding: 5px 10px;
+  background: transparent;
+  color: #596b7b;
+  font-size: 11px;
+  cursor: pointer;
+}
+.application-shell .document-filters button[aria-pressed="true"] {
+  color: #276ccb;
+  background: #e8f1fd;
+}
+.application-shell .document-list .pane-body {
+  padding: 0 11px 20px;
+}
+.application-shell .document-list .pane-body > button {
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  margin: 0 0 7px;
+  border: 1px solid #e5eaf0;
+  border-radius: 5px;
+  background: #fff;
+  min-height: 77px;
+}
+.application-shell .document-list .pane-body > button.selected {
+  background: #eef5ff;
+  border-color: #8ab7ed;
+}
+.application-shell .document-list .pane-body > button > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #4088d5;
+}
+.application-shell .document-list .pane-body > button > span {
+  min-width: 0;
+}
+.application-shell .document-list .pane-body > button strong {
+  font-size: 11.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.application-shell .document-list .pane-body > button small {
+  font-size: 10px;
+  margin-top: 5px;
+}
+.application-shell .document-content {
+  background: #f3f5f8;
+}
+.application-shell .document-content > .pane-header {
+  min-height: 41px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e3e8ed;
+  background: #fff;
+}
+.application-shell .document-content > .pane-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+}
+.application-shell .document-content > .pane-header h3 svg {
+  color: #4287d0;
+}
+.application-shell .document-content .pane-body {
+  --evidence-gutter: 76px;
+  padding: 14px 20px 40px;
+}
+.application-shell .document-chunk.evidence-sheet {
+  max-width: 690px;
+  min-height: 160px;
+  padding: 17px 16px;
+  margin: 0 auto 13px;
+  border: 1px solid #e4e8ee;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 1px 3px #27333f0a;
+}
+.application-shell .document-chunk .chunk-gutter {
+  gap: 5px;
+}
+.application-shell .document-chunk .chunk-fact {
+  gap: 0;
+}
+.application-shell .document-chunk .chunk-fact-label {
+  color: #687684;
+  font-size: 10px;
+}
+.application-shell .document-chunk .chunk-fact-value {
+  font-size: 10px;
+}
+.application-shell .document-chunk pre {
+  font-size: 12px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.application-shell .document-chunk .chunk-body {
+  padding-left: 15px;
+}
+@media (max-width: 760px) {
+  .application-shell .documents-view .view-toolbar {
+    flex-wrap: wrap;
+  }
+  .application-shell .documents-search {
+    order: 3;
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* Work-package overview uses a compact tabbed header and real readiness facts. */
+.application-shell .coordination-workspace {
+  width: 100%;
+  padding: 10px 14px 32px;
+}
+.application-shell .overview-layout {
+  grid-template-columns: minmax(0, 1fr) 258px;
+  gap: 12px;
+}
+.application-shell .overview-main {
+  display: flex;
+  flex-direction: column;
+}
+.application-shell .work-object-header {
+  order: 0;
+  margin-bottom: 6px;
+}
+.application-shell .work-object-header .object-kicker {
+  font-size: 10px;
+}
+.application-shell .work-object-header h1 {
+  font-size: 18px;
+  margin-top: 1px;
+}
+.application-shell .work-object-header p {
+  font-size: 11px;
+}
+.application-shell .work-package-tabs {
+  order: 1;
+  display: flex;
+  gap: 18px;
+  height: 32px;
+  align-items: stretch;
+  margin-bottom: 9px;
+  border-bottom: 1px solid #e7ebef;
+}
+.application-shell .work-package-tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0 3px;
+  color: #596b7a;
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
+}
+.application-shell .work-package-tabs button.active {
+  color: #2673d0;
+  border-color: #2673d0;
+  font-weight: 600;
+}
+.application-shell .work-package-tabs button:last-child {
+  margin-right: auto;
+}
+.application-shell .readiness-summary {
+  order: 2;
+  padding: 8px 11px;
+  gap: 7px;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+}
+.application-shell .readiness-summary > svg {
+  width: 16px;
+  height: 16px;
+}
+.application-shell .readiness-copy h3 {
+  margin-top: 1px;
+  font-size: 11px;
+}
+.application-shell .readiness-copy > p {
+  margin-top: 1px;
+  font-size: 11px;
+}
+.application-shell .readiness-meta {
+  margin-top: 4px;
+  font-size: 10px;
+}
+.application-shell .construction-conditions {
+  order: 3;
+  margin-top: 10px;
+}
+.application-shell .construction-conditions .overview-section-header {
+  margin-bottom: 4px;
+}
+.application-shell .construction-conditions .overview-section-header h2 {
+  font-size: 11px;
+}
+.application-shell .condition-metrics {
+  gap: 6px;
+}
+.application-shell .condition-metrics article {
+  padding: 7px;
+}
+.application-shell .condition-metrics article > svg {
+  width: 15px;
+  height: 15px;
+}
+.application-shell .condition-metrics article strong {
+  font-size: 13px;
+}
+.application-shell .model-context {
+  order: 4;
+  margin-top: 11px;
+}
+.application-shell .model-context-layout {
+  min-height: 268px;
+  grid-template-columns: minmax(0, 1.65fr) minmax(160px, 0.75fr);
+}
+.application-shell .overview-model-stage,
+.application-shell .overview-model-stage .bim-stage {
+  min-height: 268px;
+}
+.application-shell .overview-decision {
+  order: 5;
+}
+.application-shell .relevant-change-strip {
+  order: 6;
+}
+.application-shell .overview-basis {
+  order: 7;
+}
+.application-shell .overview-inspector {
+  border: 1px solid #edf0f2;
+  background: var(--surface-detail);
+}
+.application-shell .overview-inspector-header {
+  padding: 11px;
+}
+.application-shell .overview-inspector-header h2 {
+  font-size: 15px;
+}
+.application-shell .overview-inspector-tabs button {
+  height: 34px;
+  font-size: 11px;
+}
+.application-shell .overview-inspector-body {
+  padding: 9px 11px;
+}
+.application-shell .package-tab-content {
+  order: 2;
+  min-height: 250px;
+  padding: 16px;
+  border: 1px solid #e7ebef;
+  background: #fff;
+}
+.application-shell .package-tab-content h2 {
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.application-shell .package-tab-content p {
+  font-size: 11px;
+  color: #687785;
+}
+.application-shell .package-issue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #edf0f2;
+  padding: 10px 0;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+.application-shell .package-issue > svg {
+  color: #b5473f;
+}
+.application-shell .package-issue strong,
+.application-shell .package-issue small {
+  display: block;
+  font-size: 10px;
+}
+.application-shell .package-issue small {
+  color: #70808b;
+  margin-top: 3px;
+}
+@media (max-width: 900px) {
+  .application-shell .overview-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.application-shell .compare-filter {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+}
+.application-shell .compare-filter button {
+  min-width: 0;
+  width: auto;
+  white-space: nowrap;
+  padding: 5px 6px;
+  font-size: 10.5px;
+}
+.application-shell .compare-filter small {
+  margin-left: 4px;
+}
+.application-shell .spatial-context-controls:has(.compare-filter) {
+  align-items: center;
+}
+.application-shell .construction-secondary {
+  order: 5;
+  margin-top: 8px;
+}
+.application-shell .construction-conditions .overview-section-header {
+  display: none;
+}
+.application-shell .construction-conditions {
+  margin-top: 7px;
+}
+.application-shell .model-context {
+  margin-top: 6px;
+}
+.application-shell .investigation-document-body section:first-child {
+  background: #fff;
+}
+
+.application-shell .investigation-evidence li p {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+/* The object list is available on demand, while the model remains the workspace. */
+.application-shell .bim-workspace.spatial-workspace {
+  grid-template-rows: minmax(260px, 1fr) 39px;
+}
+.application-shell .bim-workspace.spatial-workspace.is-list-open {
+  grid-template-rows: minmax(260px, 1fr) 210px;
+}
+.application-shell .spatial-context-header {
+  height: 38px;
+}
+.application-shell .bim-workspace:not(.is-list-open) .spatial-context-scroll {
+  display: none;
+}
+.application-shell .spatial-context-header > button {
+  cursor: pointer;
+}
+
+.application-shell
+  .change-stage
+  .bim-workspace.spatial-workspace:not(.is-list-open),
+.application-shell
+  .issue-stage
+  .bim-workspace.spatial-workspace:not(.is-list-open) {
+  grid-template-rows: minmax(260px, 1fr) 39px;
+}

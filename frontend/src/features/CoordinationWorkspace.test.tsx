@@ -89,3 +89,22 @@ it("switches the overview inspector without changing domain state", () => {
   fireEvent.click(screen.getByRole("button", { name: "现场资源" }));
   expect(screen.getByText("资质")).toBeVisible();
 });
+
+it("opens real issue context and does not invent schedule dates", () => {
+  const onDocuments = vi.fn();
+  render(
+    <CoordinationWorkspace
+      workspace={completed()}
+      {...baseProps}
+      onDocuments={onDocuments}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
+  expect(
+    screen.getByText("Dates are not recorded for this work package."),
+  ).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: /Issues \d+/ }));
+  expect(screen.getByRole("heading", { name: /Open issues/ })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Documents →" }));
+  expect(onDocuments).toHaveBeenCalledOnce();
+});

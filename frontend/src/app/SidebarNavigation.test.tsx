@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
 import type { DTO, Workspace } from "../api/client";
@@ -97,23 +98,35 @@ it("takes a collapsed column out of reach instead of unmounting it", () => {
 it("offers the way back only while the column is gone", () => {
   const onToggleNav = vi.fn();
   const view = render(
-    <WorkspaceHeader data={data} wp={wp} onToggleNav={onToggleNav} />,
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <WorkspaceHeader data={data} wp={wp} onToggleNav={onToggleNav} />
+    </QueryClientProvider>,
   );
   expect(screen.queryByRole("button", { name: "展开侧栏" })).toBeNull();
 
   view.rerender(
-    <WorkspaceHeader
-      data={data}
-      wp={wp}
-      navCollapsed
-      onToggleNav={onToggleNav}
-    />,
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <WorkspaceHeader
+        data={data}
+        wp={wp}
+        navCollapsed
+        onToggleNav={onToggleNav}
+      />
+    </QueryClientProvider>,
   );
   fireEvent.click(screen.getByRole("button", { name: "展开侧栏" }));
   expect(onToggleNav).toHaveBeenCalledTimes(1);
 });
 
-it("labels the demo project distinctly in the existing project picker", () => {
+it("keeps fixture/debug wording out of the project picker", () => {
   render(
     <ProjectSidebar
       data={data}
@@ -128,7 +141,8 @@ it("labels the demo project distinctly in the existing project picker", () => {
   );
 
   const trigger = screen.getByRole("button", { name: "项目" });
-  expect(within(trigger).getByText("演示 / 示例")).toBeVisible();
+  expect(within(trigger).getByText("A 栋项目")).toBeVisible();
+  expect(within(trigger).queryByText("演示 / 示例")).toBeNull();
 });
 
 it("keeps project actions and switching discoverable in the project switcher", async () => {

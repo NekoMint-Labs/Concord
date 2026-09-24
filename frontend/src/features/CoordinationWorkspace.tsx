@@ -55,6 +55,7 @@ export function CoordinationWorkspace({
   onDetails,
   onImpact,
   onModel,
+  onDocuments,
   modelContext,
 }: {
   workspace: Workspace;
@@ -64,8 +65,12 @@ export function CoordinationWorkspace({
   onDetails: (view: InspectorView) => void;
   onImpact: () => void;
   onModel?: () => void;
+  onDocuments?: () => void;
   modelContext?: ReactNode;
 }) {
+  const [overviewTab, setOverviewTab] = useState<
+    "overview" | "schedule" | "issues"
+  >("overview");
   const [inspectorTab, setInspectorTab] = useState<
     "properties" | "sources" | "resources"
   >("properties");
@@ -206,193 +211,278 @@ export function CoordinationWorkspace({
               </p>
             </div>
           </header>
-          <section className={`readiness-summary is-${state.tone}`}>
-            <StateIcon
-              {...icon}
-              className={analyzing ? "is-spinning" : undefined}
-              aria-hidden="true"
-            />
-            <div className="readiness-copy">
-              <div className="readiness-title-row">
-                <h2>{state.label}</h2>
-                {analyzing && <span>正在运行</span>}
-              </div>
-              <h3>{state.title}</h3>
-              <p>{state.description}</p>
-              <div className="readiness-meta">
-                <span>上次检查 {checkedAt(snapshot?.captured_at)}</span>
-                <span>快照 {snapshot ? `v${snapshot.version}` : "—"}</span>
-                <span>{sourceCount} 份工程来源</span>
-              </div>
-            </div>
-            <div className="readiness-actions">
-              {!analyzing && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={busy}
-                  onClick={onRecheck}
-                >
-                  重新检查
-                </Button>
-              )}
-              {(blocked || impactCount > 0 || analyzing) && (
-                <Button variant="ghost" size="sm" onClick={onImpact}>
-                  查看影响
-                </Button>
-              )}
-            </div>
-          </section>
+          <nav className="work-package-tabs" aria-label="Work package sections">
+            {(
+              [
+                ["overview", "Overview"],
+                ["schedule", "Schedule"],
+                ["issues", `Issues ${constraints.length}`],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                type="button"
+                key={id}
+                className={overviewTab === id ? "active" : ""}
+                onClick={() => setOverviewTab(id)}
+              >
+                {label}
+              </button>
+            ))}
+            {onDocuments && (
+              <button type="button" onClick={onDocuments}>
+                Documents →
+              </button>
+            )}
+          </nav>
+          {overviewTab === "overview" && (
+            <>
+              <section className={`readiness-summary is-${state.tone}`}>
+                <StateIcon
+                  {...icon}
+                  className={analyzing ? "is-spinning" : undefined}
+                  aria-hidden="true"
+                />
+                <div className="readiness-copy">
+                  <div className="readiness-title-row">
+                    <h2>{state.label}</h2>
+                    {analyzing && <span>正在运行</span>}
+                  </div>
+                  <h3>{state.title}</h3>
+                  <p>{state.description}</p>
+                  <div className="readiness-meta">
+                    <span>上次检查 {checkedAt(snapshot?.captured_at)}</span>
+                    <span>快照 {snapshot ? `v${snapshot.version}` : "—"}</span>
+                    <span>{sourceCount} 份工程来源</span>
+                  </div>
+                </div>
+                <div className="readiness-actions">
+                  {!analyzing && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy}
+                      onClick={onRecheck}
+                    >
+                      重新检查
+                    </Button>
+                  )}
+                  {(blocked || impactCount > 0 || analyzing) && (
+                    <Button variant="ghost" size="sm" onClick={onImpact}>
+                      查看影响
+                    </Button>
+                  )}
+                </div>
+              </section>
 
-          {blocked && !analyzing && (
-            <section className="overview-decision">
-              <div className="decision-copy">
-                <span className="section-label">建议处理</span>
-                <h3>
-                  {proposal
-                    ? demoProposalExplanation(proposal.resolution.explanation)
-                    : "等待协调方案"}
-                </h3>
-                <p>
-                  {proposal
-                    ? `R${proposal.risk} · 批准后执行并重新检查`
-                    : "处理方案准备后会显示在详情中。"}
-                </p>
-              </div>
-              <div className="decision-actions">
-                {constraints[0] && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDetails("evidence")}
-                  >
-                    {constraints[0].evidence_ids.length} 项判断依据
+              {blocked && !analyzing && (
+                <section className="overview-decision">
+                  <div className="decision-copy">
+                    <span className="section-label">建议处理</span>
+                    <h3>
+                      {proposal
+                        ? demoProposalExplanation(
+                            proposal.resolution.explanation,
+                          )
+                        : "等待协调方案"}
+                    </h3>
+                    <p>
+                      {proposal
+                        ? `R${proposal.risk} · 批准后执行并重新检查`
+                        : "处理方案准备后会显示在详情中。"}
+                    </p>
+                  </div>
+                  <div className="decision-actions">
+                    {constraints[0] && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDetails("evidence")}
+                      >
+                        {constraints[0].evidence_ids.length} 项判断依据
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      disabled={busy || !proposal}
+                      onClick={() => onDetails("action")}
+                    >
+                      审查处理方案
+                    </Button>
+                  </div>
+                </section>
+              )}
+
+              {modelContext ?? (
+                <section className="model-context model-context-fallback">
+                  <header className="overview-section-header">
+                    <div>
+                      <span className="section-label">模型上下文</span>
+                      <h2>{wp.element_ids.length} 个关联构件</h2>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={openModel}>
+                      打开模型
+                    </Button>
+                  </header>
+                  <div className="model-stage-state">
+                    <Box {...icon} aria-hidden="true" />
+                    <div>
+                      <strong>模型上下文将在项目工作区中加载</strong>
+                      <p>打开模型可查看关联构件、属性与变化范围。</p>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              <section className="relevant-change-strip">
+                <div>
+                  <span className="section-label">最近相关变化</span>
+                  <h3>
+                    {activeEvent?.title ??
+                      (impactCount
+                        ? `${impactCount} 个关联构件进入当前影响范围`
+                        : "当前没有影响本工作包的模型变化")}
+                  </h3>
+                  <p>
+                    {activeEvent?.change.revision
+                      ? `${wp.accepted_revision} → ${activeEvent.change.revision}`
+                      : `${wp.accepted_revision} / ${wp.design_revision}`}
+                  </p>
+                </div>
+                {(activeEvent || impactCount > 0) && (
+                  <Button variant="ghost" size="sm" onClick={onImpact}>
+                    查看变化
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  disabled={busy || !proposal}
-                  onClick={() => onDetails("action")}
-                >
-                  审查处理方案
-                </Button>
-              </div>
-            </section>
-          )}
+              </section>
 
-          {modelContext ?? (
-            <section className="model-context model-context-fallback">
-              <header className="overview-section-header">
-                <div>
-                  <span className="section-label">模型上下文</span>
-                  <h2>{wp.element_ids.length} 个关联构件</h2>
+              <section className="construction-conditions">
+                <header className="overview-section-header">
+                  <div>
+                    <span className="section-label">施工条件</span>
+                    <h2>现场准备状态</h2>
+                  </div>
+                </header>
+                <div className="condition-metrics">
+                  {metrics.map((metric) => {
+                    const MetricIcon = metric.icon;
+                    return (
+                      <article key={metric.label}>
+                        <MetricIcon {...icon} aria-hidden="true" />
+                        <div>
+                          <span>{metric.label}</span>
+                          <strong>{metric.value}</strong>
+                          <small className={metric.ready ? "is-ready" : ""}>
+                            {metric.status}
+                          </small>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
-                <Button variant="ghost" size="sm" onClick={openModel}>
-                  打开模型
-                </Button>
-              </header>
-              <div className="model-stage-state">
-                <Box {...icon} aria-hidden="true" />
-                <div>
-                  <strong>模型上下文将在项目工作区中加载</strong>
-                  <p>打开模型可查看关联构件、属性与变化范围。</p>
-                </div>
+              </section>
+              <div className="construction-secondary">
+                <AppDisclosure label="其他施工条件">
+                  <PropertyTable columns={2}>
+                    <PropertyRow
+                      label="前置工作包"
+                      value={
+                        wp.predecessors?.length
+                          ? wp.predecessors.join("、")
+                          : "无"
+                      }
+                    />
+                    <PropertyRow
+                      label="资质"
+                      value={
+                        missingQualifications.length
+                          ? `缺少 ${missingQualifications.join("、")}`
+                          : "齐备"
+                      }
+                      attention={missingQualifications.length > 0}
+                    />
+                    <PropertyRow
+                      label="工作包"
+                      value={wp.complete ? "已完成" : "进行中"}
+                    />
+                  </PropertyTable>
+                </AppDisclosure>
               </div>
-            </section>
-          )}
 
-          <section className="relevant-change-strip">
-            <div>
-              <span className="section-label">最近相关变化</span>
-              <h3>
-                {activeEvent?.title ??
-                  (impactCount
-                    ? `${impactCount} 个关联构件进入当前影响范围`
-                    : "当前没有影响本工作包的模型变化")}
-              </h3>
-              <p>
-                {activeEvent?.change.revision
-                  ? `${wp.accepted_revision} → ${activeEvent.change.revision}`
-                  : `${wp.accepted_revision} / ${wp.design_revision}`}
-              </p>
-            </div>
-            {(activeEvent || impactCount > 0) && (
-              <Button variant="ghost" size="sm" onClick={onImpact}>
-                查看变化
-              </Button>
-            )}
-          </section>
-
-          <section className="construction-conditions">
-            <header className="overview-section-header">
-              <div>
-                <span className="section-label">施工条件</span>
-                <h2>现场准备状态</h2>
-              </div>
-            </header>
-            <div className="condition-metrics">
-              {metrics.map((metric) => {
-                const MetricIcon = metric.icon;
-                return (
-                  <article key={metric.label}>
-                    <MetricIcon {...icon} aria-hidden="true" />
+              <PropertyGroup
+                className="overview-basis"
+                title={
+                  <div className="overview-section-header">
                     <div>
-                      <span>{metric.label}</span>
-                      <strong>{metric.value}</strong>
-                      <small className={metric.ready ? "is-ready" : ""}>
-                        {metric.status}
-                      </small>
+                      <span className="section-label">版本与依据</span>
+                      <h2>当前协调基准</h2>
                     </div>
-                  </article>
-                );
-              })}
-            </div>
-            <AppDisclosure label="其他施工条件">
-              <PropertyTable columns={2}>
+                  </div>
+                }
+              >
+                <PropertyTable columns={2}>
+                  <PropertyRow label="施工版本" value={wp.accepted_revision} />
+                  <PropertyRow label="设计版本" value={wp.design_revision} />
+                  <PropertyRow
+                    label="分析快照"
+                    value={snapshot ? `v${snapshot.version}` : "—"}
+                  />
+                  <PropertyRow label="工程来源" value={`${sourceCount} 份`} />
+                </PropertyTable>
+              </PropertyGroup>
+            </>
+          )}
+          {overviewTab === "schedule" && (
+            <section className="package-tab-content">
+              <h2>Schedule</h2>
+              <p>Dates are not recorded for this work package.</p>
+              <PropertyTable>
                 <PropertyRow
-                  label="前置工作包"
+                  label="Predecessors"
                   value={
-                    wp.predecessors?.length ? wp.predecessors.join("、") : "无"
+                    wp.predecessors?.length
+                      ? wp.predecessors.join("、")
+                      : "None"
                   }
                 />
                 <PropertyRow
-                  label="资质"
-                  value={
-                    missingQualifications.length
-                      ? `缺少 ${missingQualifications.join("、")}`
-                      : "齐备"
-                  }
-                  attention={missingQualifications.length > 0}
+                  label="Accepted design"
+                  value={wp.accepted_revision}
                 />
                 <PropertyRow
-                  label="工作包"
-                  value={wp.complete ? "已完成" : "进行中"}
+                  label="Current design"
+                  value={wp.design_revision}
                 />
               </PropertyTable>
-            </AppDisclosure>
-          </section>
-
-          <PropertyGroup
-            className="overview-basis"
-            title={
-              <div className="overview-section-header">
-                <div>
-                  <span className="section-label">版本与依据</span>
-                  <h2>当前协调基准</h2>
-                </div>
-              </div>
-            }
-          >
-            <PropertyTable columns={2}>
-              <PropertyRow label="施工版本" value={wp.accepted_revision} />
-              <PropertyRow label="设计版本" value={wp.design_revision} />
-              <PropertyRow
-                label="分析快照"
-                value={snapshot ? `v${snapshot.version}` : "—"}
-              />
-              <PropertyRow label="工程来源" value={`${sourceCount} 份`} />
-            </PropertyTable>
-          </PropertyGroup>
+            </section>
+          )}
+          {overviewTab === "issues" && (
+            <section className="package-tab-content">
+              <h2>Open issues · {constraints.length}</h2>
+              {constraints.length ? (
+                constraints.map((issue) => (
+                  <button
+                    className="package-issue"
+                    key={issue.id}
+                    type="button"
+                    onClick={() => onDetails("blocker")}
+                  >
+                    <CircleAlert size={15} />
+                    <span>
+                      <strong>
+                        {demoConstraintText(issue.kind, issue.description)}
+                      </strong>
+                      <small>
+                        {issue.evidence_ids.length} evidence items · Review
+                        issue →
+                      </small>
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <p>No blocking issues are recorded for this work package.</p>
+              )}
+            </section>
+          )}
         </main>
 
         <aside className="overview-inspector" aria-label="工作包检查器">

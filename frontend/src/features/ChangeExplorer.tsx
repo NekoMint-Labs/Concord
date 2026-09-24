@@ -1,32 +1,23 @@
-import type { DTO, Workspace } from "../api/client";
-import { useChangeComparison, type ChangeKind } from "./useChangeComparison";
-import { Button } from "../components/ui/button";
+import { api, type DTO, type Workspace } from "../api/client";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useChangeComparison } from "./useChangeComparison";
 import BIMWorkspace from "../viewers/BIMWorkspace";
-import { demoWorkPackageName } from "../ui/demo/demoPresentation";
 
-const kinds: { value: ChangeKind; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "added", label: "新增" },
-  { value: "deleted", label: "删除" },
-  { value: "changed", label: "修改" },
-];
-const aspectLabel: Record<string, string> = {
-  geometry: "几何",
-  placement: "位置",
-  attributes: "属性",
-  properties: "属性",
-};
-
-/** A comparison is authoritative server data; selection only controls presentation. */
+/** Revision changes remain in model space, with a contextual list and inspector. */
 export function ChangeExplorer({
   project,
   workspace,
+  localFile,
+  onLocalFile,
   onModels,
   onInspect,
   onInvestigate,
 }: {
   project: string;
   workspace: Workspace;
+  localFile?: File | null;
+  onLocalFile?: (file: File | null) => void;
   onModels: () => void;
   onInspect: (
     workPackageId: string,
@@ -41,197 +32,78 @@ export function ChangeExplorer({
     elementIds: string[],
   ) => void;
 }) {
+  const state = useChangeComparison(project);
+  const baselines = useQuery({
+    queryKey: ["baselines", project],
+    queryFn: () => api.baselines(project),
+  });
   const {
-    sources,
     models,
     sourceId,
     setSourceId,
-    source,
     revisions,
-    comparisons,
-    comparisonId,
-    setComparisonId,
     comparison,
     detail,
-    nameFor,
-    kind,
-    setKind,
+    file,
+    fileError,
+    compare,
     selectedId,
     setSelectedId,
     shownRevision,
     setShownRevision,
-    file,
-    fileError,
-    compare,
-  } = useChangeComparison(project);
-
+  } = state;
   const changes = detail.data?.changes ?? [];
-  const visible =
+  const [kind, setKind] = useState<"all" | "added" | "deleted" | "changed">(
+    "all",
+  );
+  const filtered =
     kind === "all"
       ? changes
-      : changes.filter((change) => change.change_kind === kind);
-  const selected = changes.find((change) => change.global_id === selectedId);
-  const affected =
-    detail.data?.affected_work_packages.filter((item) =>
-      item.changes.some((change) => change.global_id === selectedId),
-    ) ?? [];
+      : changes.filter((item) => item.change_kind === kind);
+  const highlighted = changes
+    .filter((item) => item.change_kind === "changed")
+    .map((item) => item.global_id);
+  useEffect(() => {
+    if (selectedId || !state.newModel.data) return;
+    // Spatial containers such as IfcSpace have no useful camera target.
+    const visible = (entry: (typeof changes)[number]) => {
+      const category = state.newModel.data?.elements.find(
+        (element) => element.global_id === entry.global_id,
+      )?.ifc_class;
+      return (
+        !!category &&
+        !/^Ifc(Space|Project|Site|Building|BuildingStorey)$/.test(category)
+      );
+    };
+    setSelectedId(
+      changes.find((entry) => entry.change_kind === "changed" && visible(entry))
+        ?.global_id ??
+        changes.find((entry) => entry.change_kind === "added" && visible(entry))
+          ?.global_id ??
+        "",
+    );
+  }, [selectedId, detail.data, state.newModel.data]);
   const from = revisions.data?.find(
     (item) => item.id === comparison?.from_revision_id,
   );
   const to = revisions.data?.find(
     (item) => item.id === comparison?.to_revision_id,
   );
-  const element = workspace.analysis?.evidence.find((item) =>
-    item.element_ids.includes(selectedId),
+  const snapshots =
+    (shownRevision === "from" ? state.oldModel.data : state.newModel.data)
+      ?.elements ?? [];
+  const baseline = baselines.data?.find((entry) =>
+    entry.entries.some(
+      (item) =>
+        item.source_id === sourceId &&
+        item.revision_id === comparison?.from_revision_id,
+    ),
   );
+  const issues =
+    workspace.analysis?.constraints.filter((entry) => entry.blocking) ?? [];
   return (
     <section className="change-workspace" aria-label="版本变更">
-      <aside className="change-explorer" aria-label="变更构件">
-        <header className="spatial-pane-heading">
-          <strong>变更</strong>
-          <button type="button" onClick={onModels}>
-            模型版本 →
-          </button>
-        </header>
-        <label className="change-source-label">
-          模型
-          <select
-            value={sourceId}
-            onChange={(event) => {
-              setSourceId(event.target.value);
-              setComparisonId("");
-            }}
-            aria-label="比较模型"
-          >
-            {models.map((model) => (
-              <option value={model.source.id} key={model.source.id}>
-                {model.source.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {comparison && (
-          <label className="change-source-label">
-            比较
-            <select
-              value={comparisonId}
-              onChange={(event) => setComparisonId(event.target.value)}
-              aria-label="版本比较"
-            >
-              {comparisons.data?.map((item) => (
-                <option value={item.id} key={item.id}>
-                  R
-                  {revisions.data?.find(
-                    (revision) => revision.id === item.from_revision_id,
-                  )?.sequence ?? "?"}{" "}
-                  → R
-                  {revisions.data?.find(
-                    (revision) => revision.id === item.to_revision_id,
-                  )?.sequence ?? "?"}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {comparison && (
-          <div className="change-filters" aria-label="变更类型">
-            {kinds.map((option) => (
-              <button
-                type="button"
-                key={option.value}
-                aria-pressed={kind === option.value}
-                onClick={() => setKind(option.value)}
-              >
-                {option.label}{" "}
-                <span>
-                  {option.value === "all"
-                    ? changes.length
-                    : changes.filter(
-                        (change) => change.change_kind === option.value,
-                      ).length}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="change-list">
-          {visible.map((change) => (
-            <button
-              key={`${change.change_kind}:${change.global_id}`}
-              type="button"
-              aria-pressed={selectedId === change.global_id}
-              onClick={() => {
-                setSelectedId(change.global_id);
-                setShownRevision(
-                  change.change_kind === "deleted" ? "from" : "to",
-                );
-              }}
-            >
-              <strong>{nameFor(change.global_id)}</strong>
-              <small>
-                {change.change_kind === "deleted"
-                  ? "已删除"
-                  : change.change_kind === "added"
-                    ? "新增"
-                    : "修改"}{" "}
-                ·{" "}
-                {change.changed_aspects
-                  .map((aspect) => aspectLabel[aspect] ?? aspect)
-                  .join("、") || "构件"}
-              </small>
-            </button>
-          ))}
-          {!comparison && (
-            <div className="pane-empty quiet-message">
-              {models.length ? (
-                revisions.data && revisions.data.length >= 2 ? (
-                  <Button
-                    size="sm"
-                    disabled={compare.isPending}
-                    onClick={() => compare.mutate()}
-                  >
-                    {compare.isPending ? "比较中…" : "比较最近两个版本"}
-                  </Button>
-                ) : (
-                  "至少导入两个模型版本后可以比较。"
-                )
-              ) : (
-                "还没有模型。先创建模型来源。"
-              )}
-            </div>
-          )}
-          {comparison && !changes.length && (
-            <p className="pane-empty quiet-message">比较完成，没有构件变更。</p>
-          )}
-          {(sources.error ||
-            comparisons.error ||
-            detail.error ||
-            compare.error) && (
-            <p className="alert" role="alert">
-              {sources.error?.message ||
-                comparisons.error?.message ||
-                detail.error?.message ||
-                compare.error?.message}
-            </p>
-          )}
-        </div>
-      </aside>
       <div className="change-stage">
-        <div className="change-stage-heading">
-          {comparison
-            ? `R${from?.sequence ?? "?"} → R${to?.sequence ?? "?"}`
-            : (source?.source.name ?? "模型变更")}
-          <span>
-            {comparison
-              ? `查看 R${shownRevision === "from" ? (from?.sequence ?? "?") : (to?.sequence ?? "?")} · ${source?.has_pending_revision ? "待接受" : "已接受"}`
-              : ""}
-          </span>
-        </div>
-        {comparison?.summary.warnings.map((warning) => (
-          <p className="continuity-warning" role="status" key={warning}>
-            {warning}
-          </p>
-        ))}
         {fileError && (
           <p className="alert" role="alert">
             {fileError}
@@ -239,114 +111,139 @@ export function ChangeExplorer({
         )}
         <BIMWorkspace
           project={project}
+          workspace={workspace}
+          changes={filtered}
+          snapshots={snapshots}
+          mode="changes"
+          issues={issues}
           impacted={
-            selected
-              ? [selected.global_id]
-              : changes.map((change) => change.global_id)
+            highlighted.length
+              ? highlighted
+              : (workspace.analysis?.impact.element_ids ?? [])
           }
-          focusId={selected?.global_id}
-          externalFile={file}
-          hideSourceActions
+          focusId={selectedId || undefined}
+          externalFile={comparison ? file : (localFile ?? undefined)}
+          localFile={localFile}
+          onLocalFile={onLocalFile}
+          autoProjectModel={!comparison}
+          hideSourceActions={!!comparison}
           onViewerSelected={setSelectedId}
-        />
-      </div>
-      <aside className="change-inspector" aria-label="变更详情">
-        <header className="spatial-pane-heading">
-          {selected ? "构件变更" : "选择变更"}
-        </header>
-        {selected ? (
-          <div className="change-inspector-body">
-            <h2>{nameFor(selected.global_id)}</h2>
-            <dl>
-              <dt>变更</dt>
-              <dd>
-                {selected.change_kind === "deleted"
-                  ? "已删除 · 在旧版本中查看"
-                  : selected.change_kind === "added"
-                    ? "新增"
-                    : selected.changed_aspects
-                        .map((aspect) => aspectLabel[aspect] ?? aspect)
-                        .join("、") || "修改"}
-              </dd>
-              <dt>版本</dt>
-              <dd>
-                R{from?.sequence ?? "?"} → R{to?.sequence ?? "?"}
-              </dd>
-            </dl>
-            <div className="revision-switch" aria-label="显示版本">
-              <button
-                type="button"
-                aria-pressed={shownRevision === "from"}
-                onClick={() => setShownRevision("from")}
+          revisionLabel={
+            comparison
+              ? `R${to?.sequence ?? "?"} vs ${baseline ? `B${baseline.sequence}` : `R${from?.sequence ?? "?"}`}`
+              : undefined
+          }
+          onInvestigate={(id) =>
+            comparison &&
+            onInvestigate(
+              sourceId,
+              comparison.to_revision_id,
+              comparison.from_revision_id,
+              [id],
+            )
+          }
+          toolbar={
+            <>
+              <select
+                aria-label="Model"
+                value={sourceId}
+                onChange={(event) => setSourceId(event.target.value)}
               >
-                旧版 R{from?.sequence ?? "?"}
-              </button>
-              <button
-                type="button"
-                aria-pressed={shownRevision === "to"}
-                onClick={() => setShownRevision("to")}
-              >
-                新版 R{to?.sequence ?? "?"}
-              </button>
-            </div>
-            <h3>受影响工作包</h3>
-            {affected.length ? (
-              affected.map((item) => (
+                {models.map((item) => (
+                  <option key={item.source.id} value={item.source.id}>
+                    {item.source.name}
+                  </option>
+                ))}
+              </select>
+              {comparison && (
+                <div className="compare-filter" aria-label="Change types">
+                  {(["all", "added", "deleted", "changed"] as const).map(
+                    (value) => (
+                      <button
+                        type="button"
+                        key={value}
+                        aria-pressed={kind === value}
+                        onClick={() => setKind(value)}
+                      >
+                        {value === "all"
+                          ? "All"
+                          : value === "deleted"
+                            ? "Removed"
+                            : value[0].toUpperCase() + value.slice(1)}{" "}
+                        <small>
+                          {value === "all"
+                            ? changes.length
+                            : changes.filter(
+                                (entry) => entry.change_kind === value,
+                              ).length}
+                        </small>
+                      </button>
+                    ),
+                  )}
+                </div>
+              )}
+              {comparison ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShownRevision("from")}
+                    aria-pressed={shownRevision === "from"}
+                  >
+                    R{from?.sequence} Before
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShownRevision("to")}
+                    aria-pressed={shownRevision === "to"}
+                  >
+                    R{to?.sequence} Current
+                  </button>
+                </>
+              ) : revisions.data && revisions.data.length >= 2 ? (
                 <button
                   type="button"
-                  key={item.work_package_id}
-                  onClick={() =>
-                    onInspect(
-                      item.work_package_id,
-                      sourceId,
-                      comparison!,
-                      selected,
-                    )
-                  }
+                  onClick={() => compare.mutate()}
+                  disabled={compare.isPending}
                 >
-                  {demoWorkPackageName(
-                    item.work_package_id,
-                    workspace.state.work_packages.find(
-                      (wp) => wp.id === item.work_package_id,
-                    )?.name ?? item.work_package_id,
-                  )}{" "}
-                  →
+                  Compare latest versions
                 </button>
-              ))
-            ) : (
-              <p className="quiet-message">尚无已确认的工作包关联。</p>
-            )}
-            {element && (
-              <>
-                <h3>关联依据</h3>
-                <p>{element.fact}</p>
-              </>
-            )}
-            <Button
-              size="sm"
-              onClick={() =>
-                onInvestigate(
-                  sourceId,
-                  comparison!.to_revision_id,
-                  comparison!.from_revision_id,
-                  [selected.global_id],
-                )
-              }
-            >
-              调查此变更
-            </Button>
-            <details>
-              <summary>技术信息</summary>
-              <code>{selected.global_id}</code>
-              <small>比较依据 {comparison?.evidence_ids.length ?? 0} 条</small>
-            </details>
-          </div>
-        ) : (
-          <p className="pane-empty quiet-message">
-            在左侧选择一项变更，查看模型位置、关联工作包和依据。
-          </p>
-        )}
-      </aside>
+              ) : (
+                <button type="button" onClick={onModels}>
+                  Model lifecycle
+                </button>
+              )}
+              {selectedId &&
+                comparison &&
+                detail.data?.affected_work_packages
+                  .filter((entry) =>
+                    entry.changes.some(
+                      (change) => change.global_id === selectedId,
+                    ),
+                  )
+                  .map((entry) => (
+                    <button
+                      key={entry.work_package_id}
+                      type="button"
+                      onClick={() => {
+                        const change = changes.find(
+                          (item) => item.global_id === selectedId,
+                        );
+                        if (change)
+                          onInspect(
+                            entry.work_package_id,
+                            sourceId,
+                            comparison,
+                            change,
+                          );
+                      }}
+                    >
+                      Work Package →
+                    </button>
+                  ))}
+            </>
+          }
+        />
+      </div>
     </section>
   );
 }

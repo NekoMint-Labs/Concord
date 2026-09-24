@@ -1,88 +1,148 @@
-import { Fragment } from "react";
-import { AppDisclosure } from "../components/ui/AppDisclosure";
-import { Button } from "../components/ui/button";
-import { propertySections } from "./bimProperties";
+import { Box, Focus, Layers3, MousePointer2, Sun, Undo2 } from "lucide-react";
 import { useIFCViewer } from "./useIFCViewer";
 
-/** All SDK objects stay inside this lazy boundary, never in server/domain DTOs. */
+/** Geometry and controls remain on the canvas, not in a second technical pane. */
 export default function IFCViewer({
   file,
   impacted,
   onSelected,
   focusId,
+  selectedLabel,
+  issueLabel,
+  onProperties,
 }: {
   file: File;
   impacted: readonly string[];
   onSelected: (id: string) => void;
   focusId?: string;
+  selectedLabel?: string;
+  issueLabel?: string;
+  onProperties?: (properties: unknown) => void;
 }) {
-  const { container, ready, message, error, properties, busy, act } =
-    useIFCViewer(file, impacted, onSelected, focusId);
-  /*
-   * The selected element's attributes are rendered as the property sheet renders
-   * them everywhere else in this product (frontend/src/viewers/bimProperties.ts).
-   * They used to be printed as JSON, which made the geometry viewer the second
-   * place a normal user was handed source instead of a value.
-   */
-  const sections = properties === null ? [] : propertySections(properties);
+  const { container, ready, message, error, busy, act, anchor } = useIFCViewer(
+    file,
+    impacted,
+    onSelected,
+    focusId,
+    onProperties,
+  );
   return (
     <div className="bim-stage" ref={container} aria-label="IFC 模型查看器">
-      <div className="viewer-actions">
-        <Button
+      <div className="viewer-actions" aria-label="Model tools">
+        <button type="button" title="Select" aria-label="Select">
+          <MousePointer2 size={17} />
+        </button>
+        <button
+          type="button"
+          title="Focus"
+          aria-label="聚焦"
           disabled={!ready || busy}
-          size="sm"
-          variant="secondary"
           onClick={() => void act("focus")}
         >
-          聚焦
-        </Button>
-        <Button
+          <Focus size={17} />
+        </button>
+        <button
+          type="button"
+          title="Isolate"
+          aria-label="隔离"
           disabled={!ready || busy}
-          size="sm"
-          variant="secondary"
           onClick={() => void act("isolate")}
         >
-          隔离
-        </Button>
-        <Button
+          <Box size={17} />
+        </button>
+        <button
+          type="button"
+          title="Show all"
+          aria-label="显示全部"
           disabled={!ready || busy}
-          size="sm"
-          variant="secondary"
           onClick={() => void act("showAll")}
         >
-          显示全部
-        </Button>
+          <Layers3 size={17} />
+        </button>
       </div>
-      <div className="viewer-message" role={error ? "alert" : "status"}>
+      <div className="viewer-orientation" aria-hidden="true">
+        <span>Z</span>
+        <span>Y　 ◇　 X</span>
+      </div>
+      <span className="viewer-light" aria-hidden="true">
+        <Sun size={17} />
+      </span>
+      {ready && selectedLabel && anchor && (
+        <div
+          className="viewer-object-label"
+          style={{ left: anchor.x, top: anchor.y }}
+        >
+          {selectedLabel}
+        </div>
+      )}
+      {ready && issueLabel && (
+        <div
+          className="viewer-issue-label"
+          style={
+            anchor
+              ? {
+                  left: Math.max(
+                    12,
+                    Math.min(
+                      anchor.x + 80,
+                      (container.current?.clientWidth ?? 0) - 200,
+                    ),
+                  ),
+                  top: Math.max(16, anchor.y - 100),
+                  right: "auto",
+                }
+              : undefined
+          }
+        >
+          <span className="dot red" />
+          {issueLabel}
+        </div>
+      )}
+      <div className="viewer-bottom-tools" aria-label="Viewer actions">
+        <button type="button" title="Select">
+          <MousePointer2 size={15} />
+        </button>
+        <button
+          type="button"
+          title="Focus"
+          onClick={() => void act("focus")}
+          disabled={!ready}
+        >
+          <Focus size={15} />
+        </button>
+        <button
+          type="button"
+          title="Isolate"
+          onClick={() => void act("isolate")}
+          disabled={!ready}
+        >
+          <Box size={15} />
+        </button>
+        <button
+          type="button"
+          title="Show all"
+          onClick={() => void act("showAll")}
+          disabled={!ready}
+        >
+          <Undo2 size={15} />
+        </button>
+        <span>2D</span>
+        <strong>3D</strong>
+      </div>
+      <div
+        className="viewer-message"
+        role={error ? "alert" : "status"}
+        hidden={ready && !error}
+      >
         {error
           ? `3D 查看器不可用：${error}。结构化 BIM 数据仍可使用。`
           : message}
-        {properties !== null && (
-          <AppDisclosure label="所选构件属性">
-            {sections.length ? (
-              <div className="bim-property-summary">
-                {sections.map((section, index) => (
-                  <div className="property-group" key={section.title ?? index}>
-                    <span className="property-group-title">
-                      {section.title ?? "构件属性"}
-                    </span>
-                    <dl className="property-values">
-                      {section.fields.map((field, fieldIndex) => (
-                        <Fragment key={`${field.label}-${fieldIndex}`}>
-                          <dt>{field.label}</dt>
-                          <dd>{field.value}</dd>
-                        </Fragment>
-                      ))}
-                    </dl>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="quiet-message">该构件没有可显示的属性。</p>
-            )}
-          </AppDisclosure>
-        )}
       </div>
+      {ready && (
+        <span className="sr-only" role="status">
+          {message}
+        </span>
+      )}
     </div>
   );
 }

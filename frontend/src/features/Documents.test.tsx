@@ -66,6 +66,11 @@ it("refreshes the document library when an asynchronously dispatched import fini
     finish({ ...run, status: "COMPLETED" });
   });
   await screen.findByText("late.md");
+  fireEvent.click(screen.getByRole("button", { name: "PDF" }));
+  expect(screen.getByText("No PDF files in this project.")).toBeVisible();
+  expect(screen.queryByText("late.md")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "All files" }));
+  expect(screen.getByText("late.md")).toBeVisible();
   expect(screen.getByText(/^导入 已完成/)).toHaveTextContent("已完成");
   unmount();
   client.clear();

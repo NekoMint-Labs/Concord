@@ -5,6 +5,7 @@ export const advancedTabs = [
 
 export type WorkspaceTab =
   | "coordination"
+  | "work-packages"
   | "bim"
   | "sources"
   | "impact"

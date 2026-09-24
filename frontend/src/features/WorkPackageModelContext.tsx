@@ -26,14 +26,25 @@ export function WorkPackageModelContext({
     queryKey: ["bim", project],
     queryFn: () => api.bim(project),
   });
+  const sources = useQuery({
+    queryKey: ["sources", project],
+    queryFn: () => api.sourceStatuses(project),
+  });
+  const source = sources.data?.find(
+    (item) => item.source.kind === "BIM" && item.latest_revision_id,
+  );
   const model = useQuery({
-    queryKey: ["bim-content", project],
+    queryKey: ["bim-content", project, source?.latest_revision_id],
     queryFn: async () => {
-      const blob = await readSource(
-        `/api/projects/${encodeURIComponent(project)}/bim/content`,
+      const path = source
+        ? `/api/projects/${encodeURIComponent(project)}/sources/${encodeURIComponent(source.source.id)}/revisions/${encodeURIComponent(source.latest_revision_id!)}/content`
+        : `/api/projects/${encodeURIComponent(project)}/bim/content`;
+      return new File(
+        [await readSource(path)],
+        source ? "project-model.ifc" : "project-import.ifc",
       );
-      return new File([blob], "project-import.ifc");
     },
+    enabled: sources.isSuccess,
     retry: false,
     staleTime: Number.POSITIVE_INFINITY,
   });

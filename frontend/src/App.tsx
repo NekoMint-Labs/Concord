@@ -34,7 +34,12 @@ export function App() {
   const project = lifecycle.project;
   const [selected, setSelected] = useState("");
   const [selectedConstraint, setSelectedConstraint] = useState("");
-  const [tab, setTab] = useState<WorkspaceTab>("coordination");
+  const [localIfc, setLocalIfc] = useState<{
+    project: string;
+    file: File;
+  } | null>(null);
+  const localIfcFile = localIfc?.project === project ? localIfc.file : null;
+  const [tab, setTab] = useState<WorkspaceTab>("bim");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [inspectorView, setInspectorView] =
     useState<WorkspaceInspectorView>("blocker");
@@ -68,6 +73,7 @@ export function App() {
   useEffect(() => {
     setSelected("");
     setSelectedConstraint("");
+    setLocalIfc(null);
     setDetailsOpen(false);
     setMappingMode(false);
     setMappingContext(undefined);
@@ -76,7 +82,7 @@ export function App() {
     if (!data) return;
     if (!data.state.work_packages.length) {
       setSelected("");
-      setTab("coordination");
+      setTab("bim");
       return;
     }
     if (!data.state.work_packages.some((item) => item.id === selected))
@@ -166,7 +172,7 @@ export function App() {
           panelRef={navPanel}
           collapsible
           collapsedSize="0px"
-          defaultSize="196px"
+          defaultSize="204px"
           minSize="176px"
           maxSize="264px"
           onResize={(size) => setNavOpen(size.inPixels > 0)}
@@ -213,7 +219,7 @@ export function App() {
                 setNavOpen(true);
               }}
             >
-              {wp && tab === "coordination" && (
+              {wp && (tab === "coordination" || tab === "work-packages") && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -282,6 +288,10 @@ export function App() {
             <WorkspaceViews
               project={project}
               data={data}
+              localIfcFile={localIfcFile}
+              onLocalIfcFile={(file) =>
+                setLocalIfc(file ? { project, file } : null)
+              }
               selected={selected}
               selectedConstraint={selectedConstraint}
               tab={tab}

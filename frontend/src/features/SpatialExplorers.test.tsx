@@ -7,8 +7,37 @@ import { ChangeExplorer } from "./ChangeExplorer";
 import { IssueExplorer } from "./IssueExplorer";
 
 vi.mock("../viewers/BIMWorkspace", () => ({
-  default: ({ impacted }: { impacted: readonly string[] }) => (
-    <div data-testid="model-selection">{impacted.join(",")}</div>
+  default: ({
+    impacted,
+    changes,
+    onViewerSelected,
+    toolbar,
+    issues,
+    onIssueResolution,
+  }: {
+    impacted: readonly string[];
+    changes?: DTO<"BimElementChange">[];
+    onViewerSelected?: (id: string) => void;
+    toolbar?: React.ReactNode;
+    issues?: DTO<"Constraint">[];
+    onIssueResolution?: (id: string) => void;
+  }) => (
+    <div>
+      <div data-testid="model-selection">{impacted.join(",")}</div>
+      <button
+        type="button"
+        onClick={() => onViewerSelected?.(changes?.[0]?.global_id ?? "")}
+      >
+        Select change
+      </button>
+      {toolbar}
+      <span>Issues {issues?.length ?? 0}</span>
+      {issues?.[0] && (
+        <button type="button" onClick={() => onIssueResolution?.(issues[0].id)}>
+          Review resolution
+        </button>
+      )}
+    </div>
   ),
 }));
 const wrap = (node: React.ReactNode) =>
@@ -84,24 +113,33 @@ it("selects a real comparison change and connects its linked work package to mod
       onInvestigate={() => {}}
     />,
   );
-  fireEvent.click(await screen.findByRole("button", { name: /AHU-01/ }));
+  await screen.findByText("gid-1");
   expect(screen.getByTestId("model-selection")).toHaveTextContent("gid-1");
-  fireEvent.click(screen.getByRole("button", { name: /东翼风管安装/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Select change" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Work Package →" }),
+  );
   expect(onInspect).toHaveBeenCalledWith("WP-200", "s1", comparison, change);
 });
 
 it("lists only blocking constraints, preserving the inspection path", () => {
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
   vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
+  const onResolve = vi.fn();
+  const onSelectWorkPackage = vi.fn();
   wrap(
     <IssueExplorer
       project="harbor-east"
       workspace={workspace}
+      onResolve={onResolve}
+      onSelectWorkPackage={onSelectWorkPackage}
       perform={async () => {}}
     />,
   );
   expect(screen.getByRole("region", { name: "空间问题" })).toBeInTheDocument();
-  expect(
-    screen.getByRole("complementary", { name: "问题列表" }),
-  ).toBeInTheDocument();
+  expect(screen.getByText(/Issues \d+/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Review resolution" }));
+  const issue = workspace.analysis!.constraints.find((item) => item.blocking)!;
+  expect(onSelectWorkPackage).toHaveBeenCalledWith(issue.work_package_id);
+  expect(onResolve).toHaveBeenCalledWith(issue.id);
 });
