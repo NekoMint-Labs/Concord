@@ -41,14 +41,14 @@ def import_ifc(session: NativeSession, fixture: Path) -> dict:
     profile = session.api("/api/profile")
     assert profile["profile"] == "desktop" and profile["runtime"] == "dbos"
     before = session.api(PROJECT + "/workspace")
-    session.click("nav[aria-label='主要工作区']", "Models")
+    session.click("nav[aria-label='主要工作区']", "模型")
     session.choose_file('input[aria-label="本地 IFC 文件"]', fixture)
     rendered(session)
     # Opening local geometry must not implicitly upload or mutate project state.
     assert session.api(PROJECT + "/workspace")["state"]["version"] == before["state"]["version"]
-    # A loaded model closes its native Model disclosure; reopen it before import.
-    session.click("section[aria-label='模型工作区']", "Model")
-    session.click("section[aria-label='模型工作区']", "Import to project")
+    # A loaded model closes its native 模型 disclosure; reopen it before import.
+    session.click("section[aria-label='模型工作区']", "模型")
+    session.click("section[aria-label='模型工作区']", "导入项目")
     session.wait(
         "return document.querySelector('.bim-workspace')?.textContent.includes('导入 已完成。')",
         timeout=90,
@@ -59,7 +59,7 @@ def import_ifc(session: NativeSession, fixture: Path) -> dict:
     elements = session.api(PROJECT + "/bim/elements")
     assert len(elements) == 3 and all(element["id"] for element in elements)
     # Structured elements now live in the selected work package's model context.
-    session.click("nav[aria-label='主要工作区']", "Overview")
+    session.click("nav[aria-label='主要工作区']", "概览")
     session.wait(
         """
         const linked = document.querySelector('[aria-label="模型上下文"] .linked-element-list');
@@ -73,14 +73,14 @@ def import_ifc(session: NativeSession, fixture: Path) -> dict:
         "?.textContent.includes('电缆桥架 E-01')"
     )
     session.click("nav[aria-label='工作包']", "东翼风管安装", startswith=True)
-    session.click("nav[aria-label='主要工作区']", "Models")
+    session.click("nav[aria-label='主要工作区']", "模型")
     session.wait(
         "return !!document.querySelector('[aria-label=\"模型工作区\"] "
         ".spatial-source-actions.is-loaded:not([open])')"
     )
-    session.click("section[aria-label='模型工作区']", "Model")
-    session.click("section[aria-label='模型工作区']", "Close local view")
-    session.click("section[aria-label='模型工作区']", "Project IFC")
+    session.click("section[aria-label='模型工作区']", "模型")
+    session.click("section[aria-label='模型工作区']", "关闭本地视图")
+    session.click("section[aria-label='模型工作区']", "打开项目模型")
     rendered(session)
     session.wait(
         "return document.querySelector('[aria-label=\"IFC 模型查看器\"] [role=status]')"

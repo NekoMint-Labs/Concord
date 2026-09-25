@@ -162,7 +162,11 @@ export function OpenProjectDialog({
             }}
           >
             <strong>{demoProjectName(item.id, item.name)}</strong>
-            <span>{item.description || item.timezone}</span>
+            <span>
+              {item.description
+                ? demoProjectDescription(item.id, item.description)
+                : item.timezone}
+            </span>
             {item.id === "harbor-east" && <small>演示 / 示例</small>}
           </button>
         ))}

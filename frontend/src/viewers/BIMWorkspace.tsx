@@ -18,6 +18,7 @@ import { api, readSource, type DTO, type Workspace } from "../api/client";
 import { useBIMSource } from "./useBIMSource";
 import { propertySections } from "./bimProperties";
 import {
+  demoConstraintKind,
   demoConstraintText,
   demoElementName,
   demoWorkPackageName,
@@ -169,16 +170,18 @@ export default function BIMWorkspace({
       : evidence?.some((entry) => entry.element_ids.includes(activeId));
   });
   const title =
-    snapshot?.name ||
+    (snapshot &&
+      demoElementName(
+        snapshot.global_id,
+        snapshot.name ?? snapshot.global_id,
+      )) ||
     (item && demoElementName(item.id, item.name)) ||
     modelName ||
-    (activeId ? "Selected element" : "Select an element");
+    (activeId ? "所选构件" : "选择构件");
   const classification =
     snapshot?.ifc_class ??
     item?.type ??
-    (typeof viewerRecord?.type === "string"
-      ? viewerRecord.type
-      : "Model element");
+    (typeof viewerRecord?.type === "string" ? viewerRecord.type : "模型构件");
   const select = (id: string) => {
     setSelected(id);
     setSelectedIssue("");
@@ -203,6 +206,14 @@ export default function BIMWorkspace({
     if (imported.data?.status === "FAILED")
       notify.error("IFC 导入失败", imported.data.error ?? undefined);
   }, [imported.data?.status, imported.data?.error]);
+  const feedback =
+    error ||
+    elements.error?.message ||
+    imported.error?.message ||
+    imported.data?.error;
+  const missingModel =
+    feedback?.includes("CCA_IFC_PATH") ||
+    feedback?.includes("此项目尚无可打开的模型");
   const issue = issues.find((entry) => entry.id === selectedIssue);
   const packageFor = (id: string) =>
     workspace?.state.work_packages.find((wp) => wp.element_ids.includes(id));
@@ -229,11 +240,11 @@ export default function BIMWorkspace({
       .map(
         (aspect) =>
           ({
-            placement: "Position changed",
-            geometry: "Geometry changed",
-            attributes: "Attributes changed",
-            properties: "Properties changed",
-            impact: "Affected by design change",
+            placement: "位置变更",
+            geometry: "几何变更",
+            attributes: "属性变更",
+            properties: "属性集变更",
+            impact: "受设计变更影响",
           })[aspect] ?? aspect,
       )
       .join(" · ");
@@ -268,11 +279,11 @@ export default function BIMWorkspace({
         ) : (
           <div className="spatial-stage-empty">
             <Box aria-hidden="true" />
-            <strong>Open a model to explore its geometry</strong>
+            <strong>打开模型以查看构件与上下文</strong>
             <span>
               {revision.isPending && source
                 ? "正在打开项目模型…"
-                : "Choose an IFC file or open a project model."}
+                : "选择本地 IFC 文件，或打开项目模型。"}
             </span>
           </div>
         )}
@@ -283,7 +294,7 @@ export default function BIMWorkspace({
             className={`spatial-source-actions${viewFile ? " is-loaded" : ""}`}
             open={!viewFile}
           >
-            <summary>Model</summary>
+            <summary>模型</summary>
             <div>
               <input
                 ref={input}
@@ -311,14 +322,14 @@ export default function BIMWorkspace({
                 onClick={() => input.current?.click()}
                 disabled={busy}
               >
-                <FolderOpen size={14} /> Open IFC
+                <FolderOpen size={14} /> 打开本地 IFC
               </button>
               <button
                 type="button"
                 onClick={() => void openImported()}
                 disabled={busy}
               >
-                <PackageOpen size={14} /> Project IFC
+                <PackageOpen size={14} /> 打开项目模型
               </button>
               {file && (
                 <button
@@ -326,7 +337,7 @@ export default function BIMWorkspace({
                   onClick={() => void importSource()}
                   disabled={busy}
                 >
-                  Import to project
+                  导入项目
                 </button>
               )}
               {file && (
@@ -338,26 +349,29 @@ export default function BIMWorkspace({
                     select("");
                   }}
                 >
-                  Close local view
+                  关闭本地视图
                 </button>
               )}
               {onModels && (
                 <button type="button" onClick={onModels}>
-                  Model lifecycle →
+                  模型生命周期 →
                 </button>
               )}
             </div>
           </details>
         )}
-        {(error ||
-          elements.error ||
-          imported.error ||
-          imported.data?.error) && (
-          <div className="alert spatial-feedback" role="alert">
-            {error ||
-              elements.error?.message ||
-              imported.error?.message ||
-              imported.data?.error}
+        {feedback && (
+          <div
+            className={
+              missingModel
+                ? "spatial-feedback model-hint"
+                : "alert spatial-feedback"
+            }
+            role={missingModel ? "status" : "alert"}
+          >
+            {feedback.includes("CCA_IFC_PATH")
+              ? "此项目尚无可打开的模型，请先导入本地 IFC 文件。"
+              : feedback}
           </div>
         )}
         {(notice || imported.data) && (
@@ -376,7 +390,9 @@ export default function BIMWorkspace({
           <Box size={18} strokeWidth={1.6} />
           <div>
             <h2>
-              {mode === "issues" && issue ? "Issue · " + issue.kind : title}
+              {mode === "issues" && issue
+                ? "问题 · " + demoConstraintKind(issue.kind)
+                : title}
             </h2>
             <span>
               {mode === "issues" && issue
@@ -390,7 +406,7 @@ export default function BIMWorkspace({
           <div
             className="spatial-inspector-tabs"
             role="tablist"
-            aria-label="Element context"
+            aria-label="构件上下文"
           >
             {(["overview", "changes", "issues", "documents"] as const).map(
               (tab) => (
@@ -401,7 +417,14 @@ export default function BIMWorkspace({
                   aria-selected={inspectorTab === tab}
                   onClick={() => setInspectorTab(tab)}
                 >
-                  {tab[0].toUpperCase() + tab.slice(1)}
+                  {
+                    {
+                      overview: "概览",
+                      changes: "变更",
+                      issues: "问题",
+                      documents: "文档",
+                    }[tab]
+                  }
                   {tab === "changes" && changes.length > 0 ? (
                     <small>{changes.length}</small>
                   ) : tab === "issues" && linkedIssues.length > 0 ? (
@@ -417,24 +440,22 @@ export default function BIMWorkspace({
             <section className="comparison-inspection">
               <span className="context-status">
                 {change.change_kind === "added"
-                  ? "Added"
+                  ? "新增"
                   : change.change_kind === "deleted"
-                    ? "Removed"
-                    : "Modified"}
+                    ? "删除"
+                    : "修改"}
               </span>
-              <h3>Revision history</h3>
+              <h3>修订记录</h3>
               <div className="comparison-step">
                 <strong>R2</strong>
                 <span>{description(change.changed_aspects)}</span>
               </div>
               <div className="comparison-step">
                 <strong>R1</strong>
-                <span>Previous model revision</span>
+                <span>上一模型版本</span>
               </div>
-              <h3>Change visualization</h3>
-              <p>
-                Selected geometry is blue. Other modified elements are amber.
-              </p>
+              <h3>变更标识</h3>
+              <p>所选构件以蓝色标识，其他变更构件以琥珀色标识。</p>
               <button
                 type="button"
                 onClick={() => {
@@ -442,24 +463,24 @@ export default function BIMWorkspace({
                   setListOpen(true);
                 }}
               >
-                View in change list →
+                在变更列表中查看 →
               </button>
             </section>
           )}
           {mode === "issues" && issue && (
             <section className="issue-inspection issue-primary">
-              <h3>Details</h3>
+              <h3>详情</h3>
               <dl className="element-facts">
                 <div>
-                  <dt>Type</dt>
-                  <dd>{issue.kind}</dd>
+                  <dt>类型</dt>
+                  <dd>{demoConstraintKind(issue.kind)}</dd>
                 </div>
                 <div>
-                  <dt>Priority</dt>
-                  <dd className="issue-priority">Blocking</dd>
+                  <dt>优先级</dt>
+                  <dd className="issue-priority">阻塞</dd>
                 </div>
                 <div>
-                  <dt>Work Package</dt>
+                  <dt>工作包</dt>
                   <dd>
                     {workPackage
                       ? demoWorkPackageName(workPackage.id, workPackage.name)
@@ -467,18 +488,18 @@ export default function BIMWorkspace({
                   </dd>
                 </div>
                 <div>
-                  <dt>Level</dt>
+                  <dt>楼层</dt>
                   <dd>{snapshot?.storey ?? item?.storey ?? "—"}</dd>
                 </div>
               </dl>
-              <h3>Description</h3>
+              <h3>描述</h3>
               <p>{demoConstraintText(issue.kind, issue.description)}</p>
-              <h3>Evidence</h3>
+              <h3>判断依据</h3>
               <p>
                 {workspace?.analysis?.evidence
                   .filter((entry) => issue.evidence_ids.includes(entry.id))
                   .map((entry) => demoConstraintText(issue.kind, entry.fact))
-                  .join(" · ") || "No spatial evidence linked."}
+                  .join(" · ") || "暂无关联的空间判断依据。"}
               </p>
               {onIssueResolution && (
                 <button
@@ -486,7 +507,7 @@ export default function BIMWorkspace({
                   className="issue-resolution"
                   onClick={() => onIssueResolution(issue.id)}
                 >
-                  Review resolution →
+                  查看处理建议 →
                 </button>
               )}
             </section>
@@ -502,19 +523,19 @@ export default function BIMWorkspace({
                     </div>
                     <dl className="element-facts">
                       <div>
-                        <dt>Category</dt>
+                        <dt>类别</dt>
                         <dd>{classification}</dd>
                       </div>
                       <div>
-                        <dt>System</dt>
+                        <dt>系统</dt>
                         <dd>{item?.space ?? snapshot?.space ?? "—"}</dd>
                       </div>
                       <div>
-                        <dt>Level</dt>
+                        <dt>楼层</dt>
                         <dd>{snapshot?.storey ?? item?.storey ?? "—"}</dd>
                       </div>
                       <div>
-                        <dt>Work Package</dt>
+                        <dt>工作包</dt>
                         <dd>
                           {workPackage
                             ? demoWorkPackageName(
@@ -525,7 +546,7 @@ export default function BIMWorkspace({
                         </dd>
                       </div>
                       <div>
-                        <dt>Model</dt>
+                        <dt>模型</dt>
                         <dd>
                           {revisionLabel ??
                             source?.source.name ??
@@ -540,7 +561,7 @@ export default function BIMWorkspace({
                   inspectorTab === "changes") && (
                   <section className="element-section">
                     <h3>
-                      Changes <small>{change ? 1 : 0}</small>
+                      变更 <small>{change ? 1 : 0}</small>
                     </h3>
                     {change ? (
                       <button
@@ -556,16 +577,14 @@ export default function BIMWorkspace({
                         <ChevronRight size={13} />
                       </button>
                     ) : (
-                      <p className="quiet-message">
-                        No changes for this element.
-                      </p>
+                      <p className="quiet-message">此构件暂无变更。</p>
                     )}
                   </section>
                 )}
                 {(inspectorTab === "overview" || inspectorTab === "issues") && (
                   <section className="element-section">
                     <h3>
-                      Issues <small>{linkedIssues.length}</small>
+                      问题 <small>{linkedIssues.length}</small>
                     </h3>
                     {linkedIssues.map((entry) => (
                       <button
@@ -580,19 +599,17 @@ export default function BIMWorkspace({
                       </button>
                     ))}
                     {!linkedIssues.length && (
-                      <p className="quiet-message">No linked issues.</p>
+                      <p className="quiet-message">暂无关联问题。</p>
                     )}
                   </section>
                 )}
                 {inspectorTab === "documents" && (
-                  <p className="quiet-message">
-                    No linked documents for this element.
-                  </p>
+                  <p className="quiet-message">此构件暂无关联文档。</p>
                 )}
                 {inspectorTab === "overview" && (
                   <>
                     <section className="element-section">
-                      <h3>Related</h3>
+                      <h3>关联构件</h3>
                       {item?.related_ids.map((id) => (
                         <button
                           type="button"
@@ -609,14 +626,14 @@ export default function BIMWorkspace({
                         </button>
                       ))}
                     </section>
-                    <AppDisclosure label="Technical details">
+                    <AppDisclosure label="技术详情">
                       <dl className="element-facts">
                         <div>
                           <dt>GlobalId</dt>
                           <dd className="mono">{activeId}</dd>
                         </div>
                         <div>
-                          <dt>Revision</dt>
+                          <dt>修订</dt>
                           <dd>{item?.revision ?? snapshot?.revision_id}</dd>
                         </div>
                       </dl>
@@ -624,7 +641,7 @@ export default function BIMWorkspace({
                         item?.properties ?? viewerProperties,
                       ).map((section, i) => (
                         <div key={i} className="technical-properties">
-                          <strong>{section.title ?? "Properties"}</strong>
+                          <strong>{section.title ?? "其他属性"}</strong>
                           <dl>
                             {section.fields.map((field, j) => (
                               <div key={j}>
@@ -642,10 +659,10 @@ export default function BIMWorkspace({
             )}
           {mode !== "issues" && issue && (
             <section className="element-section issue-inspection">
-              <h3>Issue context</h3>
+              <h3>问题上下文</h3>
               <p>{demoConstraintText(issue.kind, issue.description)}</p>
               <small>
-                Work Package ·{" "}
+                工作包 ·{" "}
                 {demoWorkPackageName(
                   issue.work_package_id,
                   workspace?.state.work_packages.find(
@@ -657,7 +674,7 @@ export default function BIMWorkspace({
           )}
           {!item && !snapshot && !issue && (
             <p className="quiet-message">
-              Select geometry or a row below to inspect its context.
+              选择模型构件或下方列表项，查看相关上下文。
             </p>
           )}
           {change && onInvestigate && (
@@ -666,12 +683,12 @@ export default function BIMWorkspace({
               className="investigate-link"
               onClick={() => onInvestigate(activeId)}
             >
-              Investigate change →
+              调查变更 →
             </button>
           )}
         </div>
       </aside>
-      <section className="spatial-context" aria-label="Model context">
+      <section className="spatial-context" aria-label="模型上下文">
         <header className="spatial-context-header">
           <div className="spatial-context-tabs">
             <button
@@ -682,7 +699,7 @@ export default function BIMWorkspace({
                 setListOpen(true);
               }}
             >
-              Changes <small>{rows.length}</small>
+              变更 <small>{rows.length}</small>
             </button>
             <button
               type="button"
@@ -692,22 +709,20 @@ export default function BIMWorkspace({
                 setListOpen(true);
               }}
             >
-              Issues <small>{issues.length}</small>
+              问题 <small>{issues.length}</small>
             </button>
             <button
               type="button"
               disabled={!workPackage || !onWorkPackage}
               onClick={() => workPackage && onWorkPackage?.(workPackage.id)}
             >
-              Work Package
+              工作包
             </button>
           </div>
           <span>{revisionLabel}</span>
           <button
             type="button"
-            aria-label={
-              listOpen ? "Collapse context list" : "Expand context list"
-            }
+            aria-label={listOpen ? "收起上下文列表" : "展开上下文列表"}
             aria-expanded={listOpen}
             onClick={() => setListOpen((open) => !open)}
           >
@@ -719,11 +734,11 @@ export default function BIMWorkspace({
             <table>
               <thead>
                 <tr>
-                  <th>Type</th>
-                  <th>Element</th>
-                  <th>Description</th>
-                  <th>Impact</th>
-                  <th>Status</th>
+                  <th>类型</th>
+                  <th>构件</th>
+                  <th>描述</th>
+                  <th>影响</th>
+                  <th>状态</th>
                   <th />
                 </tr>
               </thead>
@@ -737,34 +752,42 @@ export default function BIMWorkspace({
                     <td>
                       <i className="dot blue" />
                       {entry.change_kind === "added"
-                        ? "Added"
+                        ? "新增"
                         : entry.change_kind === "deleted"
-                          ? "Removed"
-                          : "Modified"}
+                          ? "删除"
+                          : "修改"}
                     </td>
                     <td>
                       <button
                         type="button"
                         onClick={() => select(entry.global_id)}
                       >
-                        {snapshots.find((s) => s.global_id === entry.global_id)
-                          ?.name ||
-                          demoElementName(
-                            entry.global_id,
+                        {demoElementName(
+                          entry.global_id,
+                          snapshots.find((s) => s.global_id === entry.global_id)
+                            ?.name ||
                             elements.data?.find((e) => e.id === entry.global_id)
-                              ?.name ?? entry.global_id,
-                          )}
+                              ?.name ||
+                            entry.global_id,
+                        )}
                       </button>
                     </td>
                     <td>{description(entry.changed_aspects)}</td>
-                    <td>{packageFor(entry.global_id)?.name ?? "—"}</td>
+                    <td>
+                      {packageFor(entry.global_id)
+                        ? demoWorkPackageName(
+                            packageFor(entry.global_id)!.id,
+                            packageFor(entry.global_id)!.name,
+                          )
+                        : "—"}
+                    </td>
                     <td>
                       <span
                         className={`context-status${readinessFor(entry.global_id) === "READY" ? " is-ready" : ""}`}
                       >
                         {readinessFor(entry.global_id) === "READY"
-                          ? "Ready"
-                          : "Needs review"}
+                          ? "就绪"
+                          : "待复核"}
                       </span>
                     </td>
                     <td>›</td>
@@ -776,10 +799,10 @@ export default function BIMWorkspace({
             <table>
               <thead>
                 <tr>
-                  <th>Issue</th>
-                  <th>Work Package</th>
-                  <th>Context</th>
-                  <th>Status</th>
+                  <th>问题</th>
+                  <th>工作包</th>
+                  <th>上下文</th>
+                  <th>状态</th>
                   <th />
                 </tr>
               </thead>
@@ -802,9 +825,9 @@ export default function BIMWorkspace({
                         )?.name ?? entry.work_package_id,
                       )}
                     </td>
-                    <td>{entry.kind}</td>
+                    <td>{demoConstraintKind(entry.kind)}</td>
                     <td>
-                      <span className="context-status is-open">Open</span>
+                      <span className="context-status is-open">待处理</span>
                     </td>
                     <td>›</td>
                   </tr>
@@ -815,8 +838,8 @@ export default function BIMWorkspace({
           {(context === "changes" ? !rows.length : !issues.length) && (
             <p className="context-empty">
               {context === "changes"
-                ? "No model changes in this context."
-                : "No spatial issues in this context."}
+                ? "当前上下文暂无模型变更。"
+                : "当前上下文暂无空间问题。"}
             </p>
           )}
         </div>

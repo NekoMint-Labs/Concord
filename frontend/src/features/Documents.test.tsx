@@ -67,9 +67,9 @@ it("refreshes the document library when an asynchronously dispatched import fini
   });
   await screen.findByText("late.md");
   fireEvent.click(screen.getByRole("button", { name: "PDF" }));
-  expect(screen.getByText("No PDF files in this project.")).toBeVisible();
+  expect(screen.getByText("当前项目没有PDF文件。")).toBeVisible();
   expect(screen.queryByText("late.md")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "All files" }));
+  fireEvent.click(screen.getByRole("button", { name: "全部文件" }));
   expect(screen.getByText("late.md")).toBeVisible();
   expect(screen.getByText(/^导入 已完成/)).toHaveTextContent("已完成");
   unmount();

@@ -81,7 +81,11 @@ export function useBIMSource(project: string) {
     } catch (cause) {
       if (current === epoch.current)
         setError(
-          cause instanceof Error ? cause.message : "没有已导入的 IFC 来源",
+          cause instanceof Error && cause.message.includes("CCA_IFC_PATH")
+            ? "此项目尚无可打开的模型，请先导入本地 IFC 文件。"
+            : cause instanceof Error
+              ? cause.message
+              : "没有已导入的 IFC 来源",
         );
     } finally {
       if (current === epoch.current) {

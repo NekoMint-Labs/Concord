@@ -256,9 +256,9 @@ test("inspection R4 requires exact typed confirmation", async ({
   const panel = inspector(page);
   const approve = panel.getByRole("button", { name: "批准 R4" });
   await expect(approve).toBeDisabled();
-  await panel.getByLabel("R4 confirmation").fill("approve r4");
+  await panel.getByLabel("R4 强确认").fill("approve r4");
   await expect(approve).toBeDisabled();
-  await panel.getByLabel("R4 confirmation").fill("APPROVE R4");
+  await panel.getByLabel("R4 强确认").fill("APPROVE R4");
   await approve.click();
   await panel.getByRole("button", { name: "执行并重新检查" }).click();
   await expectReady(page);
@@ -284,7 +284,7 @@ test("document upload, retrieval and authenticated source download use the real 
 }) => {
   await page
     .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "Documents", exact: true })
+    .getByRole("button", { name: "文档", exact: true })
     .click();
   await page.locator("input[type=file]").setInputFiles({
     name: "browser-evidence.md",
@@ -296,7 +296,7 @@ test("document upload, retrieval and authenticated source download use the real 
   ).toBeVisible();
   await page.getByText("browser-evidence.md", { exact: true }).click();
   await page.getByLabel("搜索文档").fill("unique-browser-evidence-phrase");
-  await page.getByRole("search").getByRole("button", { name: "Search" }).click();
+  await page.getByRole("search").getByRole("button", { name: "搜索" }).click();
   await expect(page.locator(".document-chunk")).toContainText(
     "unique-browser-evidence-phrase",
   );
@@ -380,12 +380,12 @@ test("structured BIM, capability status, and run history remain usable without o
   await duct.click();
   await expect(duct).toHaveClass(/selected/);
   const views = page.getByRole("navigation", { name: "主要工作区" });
-  await views.getByRole("button", { name: "Models", exact: true }).click();
+  await views.getByRole("button", { name: "模型", exact: true }).click();
   await expect(page.getByRole("region", { name: "模型工作区" })).toBeVisible();
   // Both diagnostics and run history remain available through the advanced menu.
   await openAdvancedView(page, "能力诊断");
   await expect(page.locator(".capability-table")).toBeVisible();
-  await openAdvancedView(page, "Activity / Runs");
+  await openAdvancedView(page, "活动与运行");
   await expect(page.locator(".operations-workspace")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "启动排程检查" }),
@@ -417,7 +417,7 @@ test("real local GIS renders and selects its linked work package", async ({
   await expect(page.getByLabel("当前工程上下文")).toContainText("东翼风管安装");
   await page
     .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "Overview", exact: true })
+    .getByRole("button", { name: "概览", exact: true })
     .click();
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
 });
@@ -446,7 +446,7 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
   )!;
   await page
     .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "Documents", exact: true })
+    .getByRole("button", { name: "文档", exact: true })
     .click();
   await page.locator("input[type=file]").setInputFiles({
     name: "approval-stream.md",
@@ -458,7 +458,7 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
   ).toBeVisible();
   await expect(page.locator(".upload-status")).toContainText("已完成");
   const uploaded = await workspace(request);
-  await openAdvancedView(page, "Activity / Runs");
+  await openAdvancedView(page, "活动与运行");
   await expect(
     page.getByRole("region", { name: "运行记录" }).getByRole("button", {
       name: new RegExp(`文档解析 ${uploaded.run!.id.slice(0, 8)}.*已完成`),

@@ -204,6 +204,7 @@ export function WorkspaceViews({
                         )}
                         <CoordinationWorkspace
                           workspace={data}
+                          surface={tab}
                           selected={selected}
                           busy={busy}
                           onRecheck={onRecheck}

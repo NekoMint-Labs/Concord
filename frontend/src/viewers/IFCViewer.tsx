@@ -28,13 +28,13 @@ export default function IFCViewer({
   );
   return (
     <div className="bim-stage" ref={container} aria-label="IFC 模型查看器">
-      <div className="viewer-actions" aria-label="Model tools">
-        <button type="button" title="Select" aria-label="Select">
+      <div className="viewer-actions" aria-label="模型工具">
+        <button type="button" title="选择" aria-label="选择">
           <MousePointer2 size={17} />
         </button>
         <button
           type="button"
-          title="Focus"
+          title="聚焦"
           aria-label="聚焦"
           disabled={!ready || busy}
           onClick={() => void act("focus")}
@@ -43,7 +43,7 @@ export default function IFCViewer({
         </button>
         <button
           type="button"
-          title="Isolate"
+          title="隔离"
           aria-label="隔离"
           disabled={!ready || busy}
           onClick={() => void act("isolate")}
@@ -52,7 +52,7 @@ export default function IFCViewer({
         </button>
         <button
           type="button"
-          title="Show all"
+          title="显示全部"
           aria-label="显示全部"
           disabled={!ready || busy}
           onClick={() => void act("showAll")}
@@ -98,13 +98,13 @@ export default function IFCViewer({
           {issueLabel}
         </div>
       )}
-      <div className="viewer-bottom-tools" aria-label="Viewer actions">
-        <button type="button" title="Select">
+      <div className="viewer-bottom-tools" aria-label="查看器操作">
+        <button type="button" title="选择">
           <MousePointer2 size={15} />
         </button>
         <button
           type="button"
-          title="Focus"
+          title="聚焦"
           onClick={() => void act("focus")}
           disabled={!ready}
         >
@@ -112,7 +112,7 @@ export default function IFCViewer({
         </button>
         <button
           type="button"
-          title="Isolate"
+          title="隔离"
           onClick={() => void act("isolate")}
           disabled={!ready}
         >
@@ -120,7 +120,7 @@ export default function IFCViewer({
         </button>
         <button
           type="button"
-          title="Show all"
+          title="显示全部"
           onClick={() => void act("showAll")}
           disabled={!ready}
         >

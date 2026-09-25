@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Box, Image as ImageIcon } from "lucide-react";
 import { api, readSource, type InvestigationReport } from "../api/client";
+import { documentLocation } from "../ui/labels";
 import type { ConcordContext } from "./ConcordAgent";
 
 const IFCViewer = lazy(() => import("../viewers/IFCViewer"));
@@ -55,29 +56,25 @@ export function InvestigationWorkspace({
     [report?.scope.element_ids, context.elementIds],
   );
   return (
-    <section
-      className="investigation-workspace"
-      aria-label="Investigation evidence workspace"
-    >
-      <nav className="investigation-tabs" aria-label="Investigation sources">
+    <section className="investigation-workspace" aria-label="调查依据工作区">
+      <nav className="investigation-tabs" aria-label="调查来源">
         <span className="active">
-          <Box size={13} /> Model
+          <Box size={13} /> 模型
         </span>
         <span>
-          <FileText size={13} /> Documents{" "}
+          <FileText size={13} /> 文档{" "}
           <small>{documents.data?.length ?? 0}</small>
         </span>
         <span>
-          <ImageIcon size={13} /> Photos <small>0</small>
+          <ImageIcon size={13} /> 图片 <small>0</small>
         </span>
-        <strong>AI insights</strong>
       </nav>
       <div className="investigation-visuals">
-        <div className="investigation-model" aria-label="Investigation model">
+        <div className="investigation-model" aria-label="调查模型">
           {file.data ? (
             <Suspense
               fallback={
-                <div className="model-stage-state">Loading IFC geometry…</div>
+                <div className="model-stage-state">正在加载 IFC 模型…</div>
               }
             >
               <IFCViewer
@@ -90,40 +87,33 @@ export function InvestigationWorkspace({
           ) : (
             <div className="model-stage-state">
               {file.isLoading
-                ? "Loading IFC geometry…"
+                ? "正在加载 IFC 模型…"
                 : file.error
-                  ? "This model revision is unavailable."
-                  : "No model revision is linked to this investigation."}
+                  ? "此模型版本不可用。"
+                  : "本次调查未关联模型版本。"}
             </div>
           )}
         </div>
-        <div
-          className="investigation-document"
-          aria-label="Investigation document"
-        >
+        <div className="investigation-document" aria-label="调查文档">
           <header>
             <FileText size={14} />
             <strong>
-              {document
-                ? `Project document · ${document.filename}`
-                : "Project documents"}
+              {document ? `项目文档 · ${document.filename}` : "项目文档"}
             </strong>
-            <span>{chunks.data?.length ?? 0} excerpts</span>
+            <span>{chunks.data?.length ?? 0} 段摘录</span>
           </header>
           <div className="investigation-document-body">
             {chunks.data?.map((entry) => (
               <section key={entry.id}>
                 <small>
-                  {document?.filename} · {entry.location}
+                  {document?.filename} · {documentLocation(entry.location)}
                 </small>
                 <p>{entry.text}</p>
               </section>
             ))}
             {!chunks.data?.length && (
               <p className="quiet-message">
-                {chunks.isLoading
-                  ? "Loading project document…"
-                  : "No project documents are available."}
+                {chunks.isLoading ? "正在加载项目文档…" : "暂无项目文档。"}
               </p>
             )}
           </div>

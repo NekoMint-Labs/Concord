@@ -66,11 +66,11 @@ describe("evidence-backed action controls", () => {
     ).toBeDisabled();
     const approve = screen.getByRole("button", { name: "批准 R4" });
     expect(approve).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("R4 confirmation"), {
+    fireEvent.change(screen.getByLabelText("R4 强确认"), {
       target: { value: "approve r4" },
     });
     expect(approve).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("R4 confirmation"), {
+    fireEvent.change(screen.getByLabelText("R4 强确认"), {
       target: { value: "APPROVE R4" },
     });
     expect(approve).toBeEnabled();
@@ -81,7 +81,7 @@ describe("evidence-backed action controls", () => {
       .spyOn(api, "approve")
       .mockResolvedValue(fixture.approval as Workspace["approvals"][number]);
     render(action(waiting));
-    fireEvent.change(screen.getByLabelText("R4 confirmation"), {
+    fireEvent.change(screen.getByLabelText("R4 强确认"), {
       target: { value: "APPROVE R4" },
     });
     fireEvent.click(screen.getByRole("button", { name: "批准 R4" }));
@@ -91,7 +91,7 @@ describe("evidence-backed action controls", () => {
 
   it("clears typed consent when a new proposal replaces the old one", () => {
     const { rerender } = render(action(waiting));
-    fireEvent.change(screen.getByLabelText("R4 confirmation"), {
+    fireEvent.change(screen.getByLabelText("R4 强确认"), {
       target: { value: "APPROVE R4" },
     });
     const next = {
@@ -102,7 +102,7 @@ describe("evidence-backed action controls", () => {
       })),
     };
     rerender(action(next));
-    expect(screen.getByLabelText("R4 confirmation")).toHaveValue("");
+    expect(screen.getByLabelText("R4 强确认")).toHaveValue("");
     expect(screen.getByRole("button", { name: "批准 R4" })).toBeDisabled();
   });
 

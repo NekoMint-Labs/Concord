@@ -7,10 +7,12 @@ import { Button } from "../components/ui/button";
 import { DetailInspectorHeader } from "../components/DetailInspector";
 import { PropertyRow, PropertyTable } from "../components/PropertyTable";
 import { Status } from "../components/Status";
-import { domainLabel } from "../ui/labels";
+import { documentLocation, domainLabel } from "../ui/labels";
 import {
   demoEvidenceFact,
   demoInvestigationText,
+  demoProposalExplanation,
+  demoProposalTitle,
   demoSourceLabel,
 } from "../ui/demo/demoPresentation";
 import type { InspectorView } from "./Inspector";
@@ -36,10 +38,11 @@ export function InvestigationInspector({
   onClose: () => void;
 }) {
   const scope = report?.scope;
-  const source =
-    scope?.source_id && scope.source_id === context.sourceId
-      ? context.sourceName
-      : scope?.source_id;
+  const source = scope?.source_id
+    ? scope.source_id === context.sourceId
+      ? context.sourceName || "工程来源"
+      : "工程来源"
+    : undefined;
   const fromRevision =
     scope?.from_revision_id === context.fromRevisionId
       ? (context.fromRevisionLabel ?? shortId(scope?.from_revision_id))
@@ -51,13 +54,14 @@ export function InvestigationInspector({
   const workPackages = scope?.work_package_ids ?? [];
   const elements = scope?.element_ids ?? [];
   const summary = report?.answer.summary ?? "";
-  const comparison = summary.match(/Compared IFC revisions: [^.]+\./)?.[0];
+  const comparison = summary.match(
+    /Compared IFC revisions: \d+ added, \d+ deleted, \d+ changed; GlobalId continuity [\d.]+%\./,
+  )?.[0];
 
   return (
     <aside className="investigation-inspector" aria-label="工程调查详情">
       <DetailInspectorHeader
-        eyebrow="CONCORD · AI"
-        title="Investigation"
+        title="工程调查"
         meta={run ? <Status value={run.status} /> : undefined}
         onClose={onClose}
       />
@@ -72,12 +76,12 @@ export function InvestigationInspector({
                   ? demoInvestigationText(summary.split(/\.\s+/)[0] + ".")
                   : demoInvestigationText(summary)}
               </p>
-              {comparison && <p>{comparison}</p>}
+              {comparison && <p>{demoInvestigationText(comparison)}</p>}
               <details>
-                <summary>完整分析与限制</summary>
+                <summary>完整判断与限制</summary>
                 {comparison && <p>{demoInvestigationText(summary)}</p>}
                 {report.answer.limitations.map((item) => (
-                  <small key={item}>{item}</small>
+                  <small key={item}>{demoInvestigationText(item)}</small>
                 ))}
               </details>
             </section>
@@ -143,24 +147,59 @@ export function InvestigationInspector({
               </div>
               {report.evidence.length ? (
                 <ol className="investigation-evidence">
-                  {report.evidence.map((evidence, index) => (
-                    <li key={evidence.id}>
-                      <span className="evidence-index">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <div>
-                        <strong>{demoSourceLabel(evidence.source_id)}</strong>
-                        <p>
-                          {demoEvidenceFact(evidence.source_id, evidence.fact)}
-                        </p>
-                        <small>
-                          {evidence.source_revision} ·{" "}
-                          {domainLabel("quality", evidence.quality)} ·{" "}
-                          {evidence.location || "无位置"}
-                        </small>
-                      </div>
-                    </li>
-                  ))}
+                  {report.evidence.map((evidence, index) => {
+                    const historical =
+                      /^Recorded evidence (\S+) from snapshot (\S+): (.*)$/s.exec(
+                        evidence.fact,
+                      );
+                    const revisionFact =
+                      /^Source \S+: revision \S+ \(sequence \d+, SHA256 \S+\)\./.test(
+                        evidence.fact,
+                      );
+                    return (
+                      <li key={evidence.id}>
+                        <span className="evidence-index">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <div>
+                          <strong>
+                            {demoSourceLabel(evidence.source_id) ===
+                            evidence.source_id
+                              ? `判断依据 ${index + 1}`
+                              : demoSourceLabel(evidence.source_id)}
+                          </strong>
+                          <p>
+                            {revisionFact
+                              ? "工程来源版本已核对，原始记录见技术详情。"
+                              : demoEvidenceFact(
+                                  evidence.source_id,
+                                  historical?.[3] ?? evidence.fact,
+                                )}
+                          </p>
+                          <small>
+                            {domainLabel("quality", evidence.quality)} ·{" "}
+                            {evidence.location
+                              ? documentLocation(evidence.location)
+                              : "无位置"}
+                          </small>
+                          <details className="investigation-technical">
+                            <summary>技术详情</summary>
+                            <small>来源 {evidence.source_id}</small>
+                            <small>版本 {evidence.source_revision}</small>
+                            <small>依据编号 {evidence.id}</small>
+                            {historical && (
+                              <small>
+                                原始依据 {historical[1]} · 快照 {historical[2]}
+                              </small>
+                            )}
+                            {revisionFact && (
+                              <small>原始记录 {evidence.fact}</small>
+                            )}
+                          </details>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ol>
               ) : (
                 <p className="quiet-message">本次调查没有持久化判断依据。</p>
@@ -169,8 +208,12 @@ export function InvestigationInspector({
             {proposal && (
               <section className="investigation-proposal">
                 <span className="fact-label">建议处理</span>
-                <h4>{proposal.title}</h4>
-                <p>{proposal.resolution.explanation}</p>
+                <h4>
+                  {demoProposalTitle(proposal.work_package_id, proposal.title)}
+                </h4>
+                <p>
+                  {demoProposalExplanation(proposal.resolution.explanation)}
+                </p>
                 <small>
                   {proposal.evidence_ids.length} 条依据 · 审批前不会执行
                 </small>
@@ -182,7 +225,7 @@ export function InvestigationInspector({
               </section>
             )}
             <details className="investigation-process">
-              <summary>过程 · {report.tools.length} 步</summary>
+              <summary>技术详情 · {report.tools.length} 步</summary>
               <ol className="investigation-trace">
                 {report.tools.map((tool, index) => (
                   <li key={`${tool.tool}:${index}`}>
@@ -198,6 +241,7 @@ export function InvestigationInspector({
                 运行 {shortId(report.run_id)} · 分析{" "}
                 {shortId(report.analysis_id)} · 代次 {report.generation}
               </small>
+              {scope?.source_id && <small>工程来源 {scope.source_id}</small>}
             </details>
           </>
         ) : (

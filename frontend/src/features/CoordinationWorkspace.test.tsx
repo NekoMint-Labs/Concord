@@ -99,12 +99,28 @@ it("opens real issue context and does not invent schedule dates", () => {
       onDocuments={onDocuments}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
-  expect(
-    screen.getByText("Dates are not recorded for this work package."),
-  ).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: /Issues \d+/ }));
-  expect(screen.getByRole("heading", { name: /Open issues/ })).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "Documents →" }));
+  fireEvent.click(screen.getByRole("button", { name: "进度" }));
+  expect(screen.getByText("此工作包尚未记录日期。")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: /问题 \d+/ }));
+  expect(screen.getByRole("heading", { name: /未解决问题/ })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "文档 →" }));
   expect(onDocuments).toHaveBeenCalledOnce();
+});
+
+it("distinguishes current coordination from the package record without changing its facts", () => {
+  const workspace = completed();
+  const view = render(
+    <CoordinationWorkspace workspace={workspace} {...baseProps} />,
+  );
+  expect(screen.getByText("当前协调")).toBeVisible();
+  expect(screen.getByRole("heading", { name: "协调详情" })).toBeVisible();
+  view.rerender(
+    <CoordinationWorkspace
+      workspace={workspace}
+      surface="work-packages"
+      {...baseProps}
+    />,
+  );
+  expect(screen.getByRole("heading", { name: "工作包详情" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "工作包" })).toBeVisible();
 });

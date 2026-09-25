@@ -49,6 +49,7 @@ function checkedAt(value?: string | null) {
 
 export function CoordinationWorkspace({
   workspace,
+  surface = "coordination",
   selected,
   busy,
   onRecheck,
@@ -59,6 +60,7 @@ export function CoordinationWorkspace({
   modelContext,
 }: {
   workspace: Workspace;
+  surface?: "coordination" | "work-packages";
   selected: string;
   busy: boolean;
   onRecheck: () => void;
@@ -202,7 +204,9 @@ export function CoordinationWorkspace({
         <main className="overview-main">
           <header className="work-object-header">
             <div>
-              <span className="object-kicker">工作包</span>
+              <span className="object-kicker">
+                {surface === "coordination" ? "当前协调" : "工作包"}
+              </span>
               <h1>{demoWorkPackageName(wp.id, wp.name)}</h1>
               <p>
                 {demoAreaName(wp.area_id, area?.name ?? wp.area_id)} ·{" "}
@@ -211,12 +215,12 @@ export function CoordinationWorkspace({
               </p>
             </div>
           </header>
-          <nav className="work-package-tabs" aria-label="Work package sections">
+          <nav className="work-package-tabs" aria-label="工作包栏目">
             {(
               [
-                ["overview", "Overview"],
-                ["schedule", "Schedule"],
-                ["issues", `Issues ${constraints.length}`],
+                ["overview", surface === "coordination" ? "概览" : "工作包"],
+                ["schedule", "进度"],
+                ["issues", `问题 ${constraints.length}`],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -230,7 +234,7 @@ export function CoordinationWorkspace({
             ))}
             {onDocuments && (
               <button type="button" onClick={onDocuments}>
-                Documents →
+                文档 →
               </button>
             )}
           </nav>
@@ -433,31 +437,26 @@ export function CoordinationWorkspace({
           )}
           {overviewTab === "schedule" && (
             <section className="package-tab-content">
-              <h2>Schedule</h2>
-              <p>Dates are not recorded for this work package.</p>
+              <h2>进度</h2>
+              <p>此工作包尚未记录日期。</p>
               <PropertyTable>
                 <PropertyRow
-                  label="Predecessors"
+                  label="前置工作包"
                   value={
-                    wp.predecessors?.length
-                      ? wp.predecessors.join("、")
-                      : "None"
+                    wp.predecessors?.length ? wp.predecessors.join("、") : "无"
                   }
                 />
                 <PropertyRow
-                  label="Accepted design"
+                  label="已接受设计版本"
                   value={wp.accepted_revision}
                 />
-                <PropertyRow
-                  label="Current design"
-                  value={wp.design_revision}
-                />
+                <PropertyRow label="当前设计版本" value={wp.design_revision} />
               </PropertyTable>
             </section>
           )}
           {overviewTab === "issues" && (
             <section className="package-tab-content">
-              <h2>Open issues · {constraints.length}</h2>
+              <h2>未解决问题 · {constraints.length}</h2>
               {constraints.length ? (
                 constraints.map((issue) => (
                   <button
@@ -472,14 +471,13 @@ export function CoordinationWorkspace({
                         {demoConstraintText(issue.kind, issue.description)}
                       </strong>
                       <small>
-                        {issue.evidence_ids.length} evidence items · Review
-                        issue →
+                        {issue.evidence_ids.length} 项判断依据 · 查看问题 →
                       </small>
                     </span>
                   </button>
                 ))
               ) : (
-                <p>No blocking issues are recorded for this work package.</p>
+                <p>此工作包没有已记录的阻塞问题。</p>
               )}
             </section>
           )}
@@ -489,7 +487,7 @@ export function CoordinationWorkspace({
           <header className="overview-inspector-header">
             <div>
               <span className="section-label">检查器</span>
-              <h2>工作包详情</h2>
+              <h2>{surface === "coordination" ? "协调详情" : "工作包详情"}</h2>
             </div>
             <span className={`readiness-label is-${state.tone}`}>
               <span aria-hidden="true" />

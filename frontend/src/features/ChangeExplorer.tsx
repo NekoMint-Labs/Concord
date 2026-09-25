@@ -130,7 +130,7 @@ export function ChangeExplorer({
           onViewerSelected={setSelectedId}
           revisionLabel={
             comparison
-              ? `R${to?.sequence ?? "?"} vs ${baseline ? `B${baseline.sequence}` : `R${from?.sequence ?? "?"}`}`
+              ? `R${to?.sequence ?? "?"} 对比 ${baseline ? `B${baseline.sequence}` : `R${from?.sequence ?? "?"}`}`
               : undefined
           }
           onInvestigate={(id) =>
@@ -145,7 +145,7 @@ export function ChangeExplorer({
           toolbar={
             <>
               <select
-                aria-label="Model"
+                aria-label="模型"
                 value={sourceId}
                 onChange={(event) => setSourceId(event.target.value)}
               >
@@ -156,7 +156,7 @@ export function ChangeExplorer({
                 ))}
               </select>
               {comparison && (
-                <div className="compare-filter" aria-label="Change types">
+                <div className="compare-filter" aria-label="变更类型">
                   {(["all", "added", "deleted", "changed"] as const).map(
                     (value) => (
                       <button
@@ -165,11 +165,14 @@ export function ChangeExplorer({
                         aria-pressed={kind === value}
                         onClick={() => setKind(value)}
                       >
-                        {value === "all"
-                          ? "All"
-                          : value === "deleted"
-                            ? "Removed"
-                            : value[0].toUpperCase() + value.slice(1)}{" "}
+                        {
+                          {
+                            all: "全部",
+                            added: "新增",
+                            deleted: "移除",
+                            changed: "变更",
+                          }[value]
+                        }{" "}
                         <small>
                           {value === "all"
                             ? changes.length
@@ -189,14 +192,14 @@ export function ChangeExplorer({
                     onClick={() => setShownRevision("from")}
                     aria-pressed={shownRevision === "from"}
                   >
-                    R{from?.sequence} Before
+                    R{from?.sequence} 变更前
                   </button>
                   <button
                     type="button"
                     onClick={() => setShownRevision("to")}
                     aria-pressed={shownRevision === "to"}
                   >
-                    R{to?.sequence} Current
+                    R{to?.sequence} 当前版本
                   </button>
                 </>
               ) : revisions.data && revisions.data.length >= 2 ? (
@@ -205,11 +208,11 @@ export function ChangeExplorer({
                   onClick={() => compare.mutate()}
                   disabled={compare.isPending}
                 >
-                  Compare latest versions
+                  比较最新版本
                 </button>
               ) : (
                 <button type="button" onClick={onModels}>
-                  Model lifecycle
+                  模型版本
                 </button>
               )}
               {selectedId &&
@@ -237,7 +240,7 @@ export function ChangeExplorer({
                           );
                       }}
                     >
-                      Work Package →
+                      工作包 →
                     </button>
                   ))}
             </>

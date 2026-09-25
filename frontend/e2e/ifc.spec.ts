@@ -33,12 +33,12 @@ async function workspace(request: APIRequestContext): Promise<Workspace> {
 
 async function openSources(page: Page) {
   const views = page.getByRole("navigation", { name: "主要工作区" });
-  // Leaving mapping mode through Overview restores the normal Models workspace.
-  await views.getByRole("button", { name: "Overview", exact: true }).click();
-  await views.getByRole("button", { name: "Models", exact: true }).click();
+  // Leaving mapping mode through 概览 restores the normal 模型 workspace.
+  await views.getByRole("button", { name: "概览", exact: true }).click();
+  await views.getByRole("button", { name: "模型", exact: true }).click();
   const model = page.getByRole("region", { name: "模型工作区" });
   await expect(model).toBeVisible();
-  const lifecycle = model.getByRole("button", { name: "Model lifecycle →" });
+  const lifecycle = model.getByRole("button", { name: "模型生命周期 →" });
   if (!(await lifecycle.isVisible())) await model.locator("summary").click();
   await lifecycle.click();
 }
@@ -123,7 +123,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   ).toBeVisible();
   await page
     .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "Models", exact: true })
+    .getByRole("button", { name: "模型", exact: true })
     .click();
   const uploads: string[] = [];
   page.on("request", (request) => {
@@ -141,17 +141,18 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     new RegExp(`[1-9]\\d*/${impacted.length} 个受影响构件 GUID`),
   );
   expect(uploads).toEqual([]); // Merely opening a local file must never upload it.
-  await viewer.getByRole("button", { name: "聚焦", exact: true }).click();
+  const modelTools = viewer.getByLabel("模型工具");
+  await modelTools.getByRole("button", { name: "聚焦", exact: true }).click();
   await expect(
-    viewer.getByRole("button", { name: "隔离", exact: true }),
+    modelTools.getByRole("button", { name: "隔离", exact: true }),
   ).toBeEnabled();
-  await viewer.getByRole("button", { name: "隔离", exact: true }).click();
+  await modelTools.getByRole("button", { name: "隔离", exact: true }).click();
   await expect(
-    viewer.getByRole("button", { name: "显示全部", exact: true }),
+    modelTools.getByRole("button", { name: "显示全部", exact: true }),
   ).toBeEnabled();
-  await viewer.getByRole("button", { name: "显示全部", exact: true }).click();
+  await modelTools.getByRole("button", { name: "显示全部", exact: true }).click();
   await expect(
-    viewer.getByRole("button", { name: "聚焦", exact: true }),
+    modelTools.getByRole("button", { name: "聚焦", exact: true }),
   ).toBeEnabled();
   await expect(viewer.getByRole("alert")).toHaveCount(0);
 
@@ -162,7 +163,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
       response.request().method() === "POST" &&
       response.url().includes("/bim/import"),
   );
-  await page.getByRole("button", { name: "Import to project", exact: true }).click();
+  await page.getByRole("button", { name: "导入项目", exact: true }).click();
   expect((await upload).status()).toBe(202);
   await expect(
     page
@@ -177,13 +178,13 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   const elements = await request.get(`${project}/bim/elements`, { headers });
   expect(elements.ok()).toBeTruthy();
   expect((await elements.json()).length).toBe(3);
-  // The current model keeps structured impacted elements in Model context
+  // The current model keeps structured impacted elements in 模型上下文
   // alongside the viewer rather than switching to a separate list view.
-  const context = page.getByRole("region", { name: "Model context" });
-  await context.getByRole("button", { name: "Expand context list" }).click();
+  const context = page.getByRole("region", { name: "模型上下文" });
+  await context.getByRole("button", { name: "展开上下文列表" }).click();
   await expect(context.getByRole("row")).toHaveCount(impacted.length + 1);
-  await page.getByRole("button", { name: "Close local view" }).click();
-  await page.getByRole("button", { name: "Project IFC" }).click();
+  await page.getByRole("button", { name: "关闭本地视图" }).click();
+  await page.getByRole("button", { name: "打开项目模型" }).click();
   await expect(viewer.getByRole("status")).toContainText(
     /project-import\.ifc：已匹配 [1-9]\d*\/[1-9]\d* 个受影响构件 GUID/,
   );
@@ -283,7 +284,7 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     .click();
   await page
     .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "Models", exact: true })
+    .getByRole("button", { name: "模型", exact: true })
     .click();
   await page.getByRole("button", { name: "关联 BIM" }).click();
   await expect(page.getByText(/3 个候选构件/)).toBeVisible();

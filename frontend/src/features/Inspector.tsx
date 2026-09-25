@@ -259,7 +259,7 @@ export function Inspector({
                       <label className="form-label">
                         强确认：输入 APPROVE R4
                         <input
-                          aria-label="R4 confirmation"
+                          aria-label="R4 强确认"
                           value={confirmation}
                           onChange={(event) =>
                             setConfirmation(event.target.value)

@@ -116,9 +116,7 @@ it("selects a real comparison change and connects its linked work package to mod
   await screen.findByText("gid-1");
   expect(screen.getByTestId("model-selection")).toHaveTextContent("gid-1");
   fireEvent.click(screen.getByRole("button", { name: "Select change" }));
-  fireEvent.click(
-    await screen.findByRole("button", { name: "Work Package →" }),
-  );
+  fireEvent.click(await screen.findByRole("button", { name: "工作包 →" }));
   expect(onInspect).toHaveBeenCalledWith("WP-200", "s1", comparison, change);
 });
 

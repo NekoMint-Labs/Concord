@@ -227,3 +227,8 @@ export function domainLabel(set: LabelSet, value: string): string {
 export function yesNo(value: boolean): string {
   return value ? "是" : "否";
 }
+
+/** Localize the parser's coordinate label without rewriting source text or other locations. */
+export function documentLocation(value?: string | null): string {
+  return value?.replace(/^characters (?=\d+-\d+$)/, "字符范围 ") ?? "—";
+}

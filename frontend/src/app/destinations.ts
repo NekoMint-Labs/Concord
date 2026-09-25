@@ -1,5 +1,5 @@
 export const advancedTabs = [
-  { id: "operations", label: "Activity / Runs" },
+  { id: "operations", label: "活动与运行" },
   { id: "gis", label: "现场地图" },
   { id: "capabilities", label: "能力诊断" },
 ] as const;

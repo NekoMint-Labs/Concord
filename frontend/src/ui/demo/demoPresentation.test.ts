@@ -53,6 +53,16 @@ it("localizes known deterministic fixture content in Chinese", () => {
     ),
   ).toBe("已记录项目版本 1；当前范围包含 1 个工作包；0 个工程来源与基准不同。");
   expect(
+    demoInvestigationText(
+      "Compared IFC revisions: 61 added, 4 deleted, 5 changed; GlobalId continuity 7.6%.",
+    ),
+  ).toBe("IFC 版本对比：新增 61、删除 4、修改 5；构件标识连续率 7.6%。");
+  expect(
+    demoInvestigationText(
+      "File metadata does not establish BIM changes or engineering readiness.",
+    ),
+  ).toBe("文件元数据不足以判断 BIM 变更或工程就绪状态。");
+  expect(
     demoProposalTitle("WP-200", "Coordinate East-wing duct installation"),
   ).toBe("协调东翼风管安装");
 });

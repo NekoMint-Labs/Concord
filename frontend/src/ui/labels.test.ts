@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import openapi from "../../openapi.json";
 import {
+  documentLocation,
   domainLabel,
   statusLabel,
   statusTone,
@@ -121,4 +122,10 @@ it("spends the exception colour only on states that are actually exceptional", (
 it("states a boolean the way the property sheets read one", () => {
   expect(yesNo(true)).toBe("是");
   expect(yesNo(false)).toBe("否");
+});
+
+it("localizes generated document coordinates without changing other locations", () => {
+  expect(documentLocation("characters 0-182")).toBe("字符范围 0-182");
+  expect(documentLocation("page 2")).toBe("page 2");
+  expect(documentLocation(null)).toBe("—");
 });

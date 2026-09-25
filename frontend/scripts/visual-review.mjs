@@ -26,7 +26,7 @@ async function poll(fn, timeout = 120_000) {
 const [source] = await json(await api.get(`${path}/sources`));
 let sourceId = source?.source.id;
 if (!sourceId) {
-  sourceId = (await json(await api.post(`${path}/sources`, { data: { name: 'East Wing MEP', kind: 'BIM' } }))).id;
+  sourceId = (await json(await api.post(`${path}/sources`, { data: { name: '东翼机电模型', kind: 'BIM' } }))).id;
   const uploaded = [];
   for (const [name, label] of [['harbor-east-v16.ifc', 'V16'], ['concord-review.ifc', 'V17']]) {
     const result = await json(await api.post(`${path}/sources/${sourceId}/revisions`, {
@@ -68,17 +68,17 @@ async function shot(name) {
 }
 try {
   await loaded(); await shot('model');
-  await nav.getByRole('button',{name:'Changes'}).click(); await loaded('R2.ifc'); await page.getByRole('button',{name:'Expand context list'}).click(); await page.locator('.spatial-context tbody tr').first().waitFor(); await page.getByRole('button',{name:'Collapse context list'}).click(); await shot('changes');
-  await nav.getByRole('button',{name:'Issues'}).click(); await loaded('current-model.ifc'); await page.locator('.spatial-context-tabs button').filter({hasText:'Issues'}).click(); await page.locator('.spatial-context tbody tr').first().click(); await page.getByRole('button',{name:'Collapse context list'}).click(); await shot('issues');
-  await page.getByRole('button',{name:'Review resolution →'}).click();
+  await nav.getByRole('button',{name:'变更'}).click(); await loaded('R2.ifc'); await page.getByRole('button',{name:'展开上下文列表'}).click(); await page.locator('.spatial-context tbody tr').first().waitFor(); await page.getByRole('button',{name:'收起上下文列表'}).click(); await shot('changes');
+  await nav.getByRole('button',{name:'问题'}).click(); await loaded('current-model.ifc'); await page.locator('.spatial-context-tabs button').filter({hasText:'问题'}).click(); await page.locator('.spatial-context tbody tr').first().click(); await page.getByRole('button',{name:'收起上下文列表'}).click(); await page.waitForTimeout(1800); await shot('issues');
+  await page.getByRole('button',{name:'查看处理建议 →'}).click();
   await page.getByLabel('判断依据与处理详情').getByText('东翼风管安装').first().waitFor();
   await page.getByLabel('判断依据与处理详情').getByRole('button',{name:'关闭详情'}).click();
-  await nav.getByRole('button',{name:'Documents'}).click(); await page.locator('.document-content .document-chunk').first().waitFor(); await shot('documents');
-  await nav.getByRole('button',{name:'Work Packages'}).click(); await page.getByRole('region',{name:'工作包概览'}).waitFor(); await page.locator('.overview-model-stage').getByRole('status').filter({hasText:/已匹配/}).waitFor({timeout:120_000}); await shot('work-packages');
-  await nav.getByRole('button',{name:'Overview'}).click(); await page.getByRole('region',{name:'工作包概览'}).waitFor(); await page.locator('.overview-model-stage').getByRole('status').filter({hasText:/已匹配/}).waitFor({timeout:120_000}); await page.waitForTimeout(1200); await shot('overview');
+  await nav.getByRole('button',{name:'文档'}).click(); await page.locator('.document-content .document-chunk').first().waitFor(); await shot('documents');
+  await nav.getByRole('button',{name:'工作包'}).click(); await page.getByRole('region',{name:'工作包概览'}).waitFor(); await page.locator('.overview-model-stage').getByRole('status').filter({hasText:/已匹配/}).waitFor({timeout:120_000}); await shot('work-packages');
+  await nav.getByRole('button',{name:'概览'}).click(); await page.getByRole('region',{name:'工作包概览'}).waitFor(); await page.locator('.overview-model-stage').getByRole('status').filter({hasText:/已匹配/}).waitFor({timeout:120_000}); await page.waitForTimeout(1200); await shot('overview');
   // Investigation must use the real UI action and wait for the authoritative report.
-  await nav.getByRole('button',{name:'Changes'}).click(); await loaded('R2.ifc');
-  await page.getByRole('button',{name:'Investigate change →'}).click();
+  await nav.getByRole('button',{name:'变更'}).click(); await loaded('R2.ifc');
+  await page.getByRole('button',{name:'调查变更 →'}).click();
   await page.getByLabel('工程调查详情').waitFor({timeout:90_000});
   await page.getByLabel('工程调查详情').locator('.investigation-answer').waitFor({timeout:120_000});
   await page.locator('.investigation-model').getByRole('status').filter({hasText:/已匹配/}).waitFor({timeout:120_000});

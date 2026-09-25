@@ -63,12 +63,14 @@ it("presents a durable investigation as context, trace, and evidence", () => {
     />,
   );
 
+  expect(screen.getByText("工程调查")).toBeVisible();
+  expect(screen.queryByText("CONCORD · AI")).not.toBeInTheDocument();
   expect(
     screen.getByText("R2 changes the MEP routing in WP-27."),
   ).toBeVisible();
   expect(screen.getByText("R1 → R2")).toBeVisible();
   expect(screen.queryByText("compare_bim")).not.toBeVisible();
-  fireEvent.click(screen.getByText(/过程 · 1 步/));
+  fireEvent.click(screen.getByText(/技术详情 · 1 步/));
   expect(screen.getByText("compare_bim")).toBeVisible();
   expect(screen.getByText("The riser moved 450 mm east.")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "关闭详情" }));

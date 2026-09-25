@@ -40,12 +40,12 @@ const workspaceLinks: {
   label: string;
   icon: LucideIcon;
 }[] = [
-  { tab: "coordination", label: "Overview", icon: Home },
-  { tab: "bim", label: "Models", icon: Box },
-  { tab: "impact", label: "Changes", icon: History },
-  { tab: "packages", label: "Issues", icon: CircleDot },
-  { tab: "work-packages", label: "Work Packages", icon: Building2 },
-  { tab: "documents", label: "Documents", icon: FileText },
+  { tab: "coordination", label: "概览", icon: Home },
+  { tab: "bim", label: "模型", icon: Box },
+  { tab: "impact", label: "变更", icon: History },
+  { tab: "packages", label: "问题", icon: CircleDot },
+  { tab: "work-packages", label: "工作包", icon: Building2 },
+  { tab: "documents", label: "文档", icon: FileText },
 ];
 
 export function ProjectSidebar({
@@ -163,7 +163,7 @@ export function ProjectSidebar({
                       key={item.id}
                       onSelect={() => onProject(item.id)}
                     >
-                      {item.name}
+                      {demoProjectName(item.id, item.name)}
                       {item.id === "harbor-east" && " · 演示"}
                     </AppMenuItem>
                   ))}
@@ -178,7 +178,7 @@ export function ProjectSidebar({
                     key={item.id}
                     onSelect={() => onProject(item.id)}
                   >
-                    {item.name}
+                    {demoProjectName(item.id, item.name)}
                     {item.id === "harbor-east" && " · 演示"}
                   </AppMenuItem>
                 ))}
@@ -220,7 +220,7 @@ export function ProjectSidebar({
 
         <nav className="sidebar-group" aria-label="工作包">
           <div className="sidebar-group-heading">
-            <span>DISCIPLINES</span>
+            <span>专业与工作包</span>
             <AppTooltip label="新建工作包" side="right">
               <button
                 type="button"
@@ -282,7 +282,7 @@ export function ProjectSidebar({
 
       <footer className="sidebar-footer">
         <button type="button" onClick={() => onProjectSettings?.()}>
-          <Settings2 {...icon} /> Settings
+          <Settings2 {...icon} /> 设置
         </button>
       </footer>
     </aside>

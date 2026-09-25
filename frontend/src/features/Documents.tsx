@@ -12,6 +12,7 @@ import { statusLabel } from "../components/Status";
 import { icon } from "../components/ui/icon";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
 import { useMotion } from "../motion";
+import { documentLocation } from "../ui/labels";
 
 /**
  * Mark every literal occurrence of the search term inside a chunk.
@@ -108,7 +109,7 @@ export function Documents({
     : meta
       ? condensed
         ? meta.filename
-        : `${meta.filename} · ${meta.parser}`
+        : `${meta.filename} · 解析器：${meta.parser}`
       : "文档依据";
   const chunks = useQuery({
     queryKey: ["chunks", current],
@@ -190,7 +191,7 @@ export function Documents({
                 }}
                 hint={
                   <>
-                    {doc.parser} · {doc.content_hash.slice(0, 8)}
+                    解析器：{doc.parser} · {doc.content_hash.slice(0, 8)}
                   </>
                 }
               >
@@ -230,9 +231,7 @@ export function Documents({
       </header>
       <div className="pane-body">
         {!current && !!documents.data?.length && (
-          <p className="quiet-message">
-            Choose another file type to preview a project document.
-          </p>
+          <p className="quiet-message">请选择其他文件类型以预览项目文档。</p>
         )}
         {(chunks.error || results.error || documents.error) && (
           <WorkspaceState
@@ -275,7 +274,7 @@ export function Documents({
                 <div className="chunk-fact">
                   <span className="chunk-fact-label">位置</span>
                   <span className="chunk-fact-value">
-                    {chunk.location ?? "—"}
+                    {documentLocation(chunk.location)}
                   </span>
                 </div>
                 <div className="chunk-fact">
@@ -288,7 +287,7 @@ export function Documents({
                   {/* the chunk carries no source revision, so its parser is the
                       only provenance value it exposes; labelling it "版本" would
                       claim a fact the response does not have */}
-                  <span className="chunk-fact-label">解析</span>
+                  <span className="chunk-fact-label">解析器</span>
                   <span className="chunk-fact-value">{chunk.parser}</span>
                 </div>
               </div>
@@ -337,10 +336,10 @@ export function Documents({
       maxSize="560px"
     >
       <header className="pane-header">
-        <span className="pane-header-label">Project Documents</span>
+        <span className="pane-header-label">项目文档</span>
         <span className="count">{count}</span>
       </header>
-      <div className="document-filters" aria-label="Document types">
+      <div className="document-filters" aria-label="文档类型">
         {(["all", "text", "pdf"] as const).map((type) => (
           <button
             type="button"
@@ -348,7 +347,7 @@ export function Documents({
             aria-pressed={fileType === type}
             onClick={() => setFileType(type)}
           >
-            {type === "all" ? "All files" : type === "pdf" ? "PDF" : "Text"}
+            {type === "all" ? "全部文件" : type === "pdf" ? "PDF" : "文本"}
           </button>
         ))}
       </div>
@@ -373,7 +372,9 @@ export function Documents({
             <span>
               <strong>{doc.filename}</strong>
               <small>
-                {new Date(doc.created_at).toLocaleDateString()} · {doc.parser}
+                {new Date(doc.created_at).toLocaleDateString("zh-CN")} ·
+                解析器：
+                {doc.parser}
               </small>
               <small className="mono">
                 SHA {doc.content_hash.slice(0, 12)}
@@ -383,7 +384,7 @@ export function Documents({
         ))}
         {!!documents.data?.length && !listed?.length && (
           <p className="quiet-message">
-            No {fileType === "pdf" ? "PDF" : "text"} files in this project.
+            当前项目没有{fileType === "pdf" ? "PDF" : "文本"}文件。
           </p>
         )}
         {documents.data?.length === 0 && (
@@ -400,7 +401,7 @@ export function Documents({
   return (
     <div className="documents-view">
       <div className="view-toolbar">
-        <h2>Documents</h2>
+        <h2>文档</h2>
         <form
           className="documents-search"
           role="search"
@@ -414,10 +415,10 @@ export function Documents({
             aria-label="搜索文档"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search documents and extracted text"
+            placeholder="搜索文档与解析内容"
           />
           <Button type="submit" variant="secondary" size="sm">
-            Search
+            搜索
           </Button>
           {query && (
             <Button
@@ -441,7 +442,7 @@ export function Documents({
               isDesktop ? void perform(nativeImport) : input.current?.click()
             }
           >
-            <Upload {...icon} /> Import document
+            <Upload {...icon} /> 导入文档
           </Button>
           <input
             ref={input}

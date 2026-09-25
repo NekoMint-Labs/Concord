@@ -45,12 +45,14 @@ it("a local IFC stays local and overlapping import clicks submit only once", asy
   );
   vi.spyOn(api, "run").mockResolvedValue(run);
   const { unmount, cache } = view();
+  expect(screen.getByText("打开模型以查看构件与上下文")).toBeVisible();
+  expect(screen.getByRole("button", { name: "打开本地 IFC" })).toBeVisible();
   fireEvent.change(screen.getByLabelText("本地 IFC 文件"), {
     target: { files: [new File(["IFC fixture"], "fixture.ifc")] },
   });
   await screen.findByText("Local viewer: fixture.ifc");
   expect(api.uploadIFC).not.toHaveBeenCalled();
-  const submit = screen.getByRole("button", { name: "Import to project" });
+  const submit = screen.getByRole("button", { name: "导入项目" });
   fireEvent.click(submit);
   fireEvent.click(submit);
   expect(api.uploadIFC).toHaveBeenCalledTimes(1);
@@ -79,7 +81,7 @@ it("rejecting a new oversized file clears the previous import target", async () 
   });
   expect(screen.getByRole("alert")).toHaveTextContent("25 MiB");
   expect(
-    screen.queryByRole("button", { name: "Import to project" }),
+    screen.queryByRole("button", { name: "导入项目" }),
   ).not.toBeInTheDocument();
   expect(screen.queryByText("Local viewer: first.ifc")).not.toBeInTheDocument();
   unmount();
@@ -116,14 +118,14 @@ it("renders the full condition set as labelled rows, never as JSON source", asyn
       />
     </QueryClientProvider>,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Expand context list" }));
+  fireEvent.click(screen.getByRole("button", { name: "展开上下文列表" }));
   expect(
-    screen.getByRole("button", { name: "Collapse context list" }),
+    screen.getByRole("button", { name: "收起上下文列表" }),
   ).toHaveAttribute("aria-expanded", "true");
   fireEvent.click(
     await screen.findByRole("button", { name: "East core wall" }),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Technical details" }));
+  fireEvent.click(screen.getByRole("button", { name: "技术详情" }));
   expect(await screen.findByText("防火等级")).toBeInTheDocument();
   expect(screen.getByText("120 min")).toBeInTheDocument();
   expect(screen.getByText("0.2 m")).toBeInTheDocument();

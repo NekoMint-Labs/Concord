@@ -107,7 +107,7 @@ def coordination(session: NativeSession, artifacts: Path) -> dict:
     session.open_menu()
     session.choose_menu("能力诊断")
     session.wait("return document.querySelector('.profile-tag')?.textContent.includes('desktop')")
-    session.click("nav[aria-label='主要工作区']", "Overview")
+    session.click("nav[aria-label='主要工作区']", "概览")
     session.click("[aria-label='当前工作区操作']", "记录变更")
     session.click(".event-dialog", "提交并分析")
     session.wait(
