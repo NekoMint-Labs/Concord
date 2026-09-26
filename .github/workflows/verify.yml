@@ -154,14 +154,34 @@ jobs:
       - run: uv sync --frozen --group dev --extra storage --extra server
       - name: Ephemeral loopback-only S3 compatibility fixture (not a production deployment)
         run: |
-          docker run --detach --name cca-minio --publish 127.0.0.1:19000:9000 \
-            --env MINIO_ROOT_USER=cca-local-test --env MINIO_ROOT_PASSWORD=cca-local-test-secret \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          set -euo pipefail
+          fixture="$RUNNER_TEMP/cca-minio"
+          mkdir -p "$fixture/data"
+          # Official MinIO RELEASE.2025-09-07T16-13-09Z binary; registries deny anonymous pulls.
+          url=https://github.com/minio/minio/releases/download/RELEASE.2025-09-07T16-13-09Z/minio.linux-amd64.RELEASE.2025-09-07T16-13-09Z
+          for attempt in 1 2 3; do
+            if curl --fail --location --silent --show-error --connect-timeout 20 --max-time 180 \
+              --output "$fixture/minio.tmp" "$url"; then break; fi
+            rm -f "$fixture/minio.tmp"
+            if [ "$attempt" -eq 3 ]; then exit 1; fi
+            sleep "$((attempt * 2))"
+          done
+          echo "7c5bd8512c6e966455b1d198209358b2d191c77a83ab377c4073281065fb855f  $fixture/minio.tmp" | sha256sum --check
+          mv "$fixture/minio.tmp" "$fixture/minio"
+          chmod +x "$fixture/minio"
+          "$fixture/minio" --version
+          MINIO_ROOT_USER=cca-local-test MINIO_ROOT_PASSWORD=cca-local-test-secret \
+            "$fixture/minio" server --address 127.0.0.1:19000 \
+            --console-address 127.0.0.1:19001 "$fixture/data" > "$fixture/minio.log" 2>&1 &
+          echo $! > "$fixture/pid"
           for attempt in $(seq 1 40); do
             if curl --fail --silent http://127.0.0.1:19000/minio/health/live; then exit 0; fi
+            if ! kill -0 "$(<"$fixture/pid")" 2>/dev/null; then break; fi
             sleep 1
           done
-          docker logs cca-minio
+          echo 'MinIO fixture did not become healthy:'
+          cat "$fixture/minio.log"
+          curl --verbose --max-time 3 http://127.0.0.1:19000/minio/health/live || true
           exit 1
       - name: Real SDK/service tests must execute, not skip
         env:
@@ -170,9 +190,14 @@ jobs:
         run: |
           uv run --frozen --no-sync pytest -q backend/tests/integration/test_storage_services.py --junitxml=artifacts/storage.xml
           uv run --frozen --no-sync python scripts/assert_junit.py artifacts/storage.xml
-      - name: Remove only this job's object-storage container
+      - name: Remove only this job's cca-minio fixture
         if: always()
-        run: docker rm --force cca-minio || true
+        run: |
+          fixture="$RUNNER_TEMP/cca-minio"
+          if [ -f "$fixture/pid" ] && ps -p "$(<"$fixture/pid")" -o args= | grep -Fq "$fixture/minio"; then
+            kill "$(<"$fixture/pid")"
+          fi
+          rm -rf "$fixture"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
