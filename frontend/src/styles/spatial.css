@@ -248,14 +248,6 @@
 .change-stage .bim-workspace.spatial-workspace {
   flex: 1;
   min-height: 0;
-  display: block;
-}
-.change-stage .spatial-explorer,
-.change-stage .spatial-inspector {
-  display: none;
-}
-.change-stage .spatial-stage {
-  height: 100%;
 }
 .change-inspector-body {
   overflow: auto;
@@ -322,16 +314,7 @@
   min-width: 0;
   min-height: 0;
 }
-.issue-stage .bim-workspace.spatial-workspace {
-  display: block;
-}
-.issue-stage .spatial-explorer,
-.issue-stage .spatial-inspector {
-  display: none;
-}
-.issue-stage .spatial-stage {
-  height: 100%;
-}
+
 .issue-detail {
   min-width: 0;
   min-height: 0;
@@ -356,14 +339,6 @@
   }
 }
 
-.central-workspace.has-detail .bim-workspace.spatial-workspace {
-  grid-template-columns: clamp(180px, 24%, 256px) minmax(0, 1fr);
-}
-.central-workspace.has-detail
-  .bim-workspace.spatial-workspace
-  > .spatial-inspector {
-  display: none;
-}
 .central-workspace.has-detail .change-workspace,
 .central-workspace.has-detail .issue-workspace {
   grid-template-columns: clamp(180px, 24%, 256px) minmax(0, 1fr);
@@ -408,18 +383,6 @@
   padding: 8px 0;
 }
 
-.mapping-viewer .bim-workspace.spatial-workspace {
-  grid-template-columns: minmax(0, 1fr) clamp(220px, 28%, 300px);
-}
-.mapping-viewer .bim-workspace.spatial-workspace > .spatial-explorer {
-  display: none;
-}
-.central-workspace.has-detail .mapping-viewer .bim-workspace.spatial-workspace {
-  display: block;
-}
-.central-workspace.has-detail .mapping-viewer .spatial-stage {
-  height: 100%;
-}
 .revision-switch {
   display: flex;
   gap: 4px;

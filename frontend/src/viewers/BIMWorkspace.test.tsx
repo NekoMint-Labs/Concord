@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
@@ -135,4 +136,52 @@ it("renders the full condition set as labelled rows, never as JSON source", asyn
   expect(document.querySelector(".spatial-inspector pre")).toBeNull();
   unmount();
   cache.clear();
+});
+
+it("switches inspector content by keyboard and hides unavailable document tabs", async () => {
+  vi.spyOn(api, "bim").mockResolvedValue([
+    {
+      id: "wall-1",
+      name: "East core wall",
+      type: "IfcWall",
+      storey: "L02",
+      space: "Core",
+      revision: "V16",
+      ifc_schema: null,
+      related_ids: [],
+      properties: { FireRating: "120 min" },
+    },
+  ]);
+  const cache = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={cache}>
+      <BIMWorkspace project="harbor-east" impacted={["wall-1"]} />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "展开上下文列表" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "East core wall" }),
+  );
+  const tabs = screen.getByRole("tablist", { name: "构件上下文" });
+  fireEvent.keyDown(tabs, { key: "ArrowRight" });
+  expect(screen.getByRole("tab", { name: /变更/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  expect(
+    within(screen.getByRole("complementary", { name: "构件详情" })).getByText(
+      "受设计变更影响",
+    ),
+  ).toBeVisible();
+  fireEvent.keyDown(tabs, { key: "ArrowRight" });
+  expect(screen.getByRole("tab", { name: /问题/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  expect(screen.getByText("暂无关联问题。")).toBeVisible();
+  expect(screen.queryByRole("tab", { name: "文档" })).toBeNull();
+
+  expect(screen.getByRole("button", { name: "检查器选项" })).toBeVisible();
 });

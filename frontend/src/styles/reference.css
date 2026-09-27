@@ -212,29 +212,40 @@
 .application-shell .central-workspace {
   background: var(--surface);
 }
-/* The stage takes all horizontal space except the fixed inspector; the context occupies the bottom of the stage only. */
+/* The divider changes only the Inspector column; the stage retains the bottom context. */
 .application-shell .bim-workspace.spatial-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(290px, 27%, 330px);
-  grid-template-rows: minmax(260px, 1fr) 210px;
+  display: block;
   height: 100%;
   min-height: 0;
 }
-.application-shell .bim-workspace > .spatial-stage {
-  grid-column: 1;
-  grid-row: 1;
+.application-shell .bim-workspace > .pane-split {
+  height: 100%;
+}
+.application-shell .bim-workspace .spatial-main {
+  display: grid;
+  grid-template-rows: minmax(260px, 1fr) 40px;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.application-shell .bim-workspace.is-list-open .spatial-main {
+  grid-template-rows: minmax(260px, 1fr) 210px;
+}
+.application-shell .bim-workspace .spatial-stage {
+  min-height: 0;
   background: var(--concord-viewer-stage);
 }
-.application-shell .bim-workspace > .spatial-inspector {
-  grid-column: 2;
-  grid-row: 1 / 3;
+.application-shell .bim-workspace .spatial-inspector-pane {
+  min-height: 0;
+  background: var(--surface-detail);
+}
+.application-shell .bim-workspace .spatial-inspector {
+  height: 100%;
   min-width: 0;
   background: var(--surface-detail);
   border-left: 1px solid var(--concord-shell-divider);
 }
-.application-shell .bim-workspace > .spatial-context {
-  grid-column: 1;
-  grid-row: 2;
+.application-shell .bim-workspace .spatial-context {
   min-width: 0;
   min-height: 0;
   background: var(--surface);
@@ -254,6 +265,21 @@
 .application-shell .spatial-inspector-head > div {
   flex: 1;
   min-width: 0;
+}
+.application-shell .spatial-inspector-menu {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--concord-inspector-subtitle);
+}
+.application-shell .spatial-inspector-menu:hover,
+.application-shell .spatial-inspector-menu[data-state="open"] {
+  background: var(--hover);
 }
 .application-shell .spatial-inspector-head h2 {
   margin: 0 0 3px;
@@ -473,6 +499,9 @@
   height: calc(100% - 40px);
   padding: 0 15px;
 }
+.application-shell .spatial-context-scroll[hidden] {
+  display: none;
+}
 .application-shell .spatial-context table {
   width: 100%;
   border-collapse: collapse;
@@ -568,7 +597,7 @@
   background: var(--concord-action-hover);
   color: var(--accent);
 }
-.application-shell .viewer-actions button:first-child {
+.application-shell .viewer-actions button.is-active {
   color: var(--accent);
   background: var(--concord-action-hover);
 }
@@ -655,15 +684,17 @@
   background: none;
   color: var(--concord-viewer-text);
 }
-.application-shell .viewer-bottom-tools span,
-.application-shell .viewer-bottom-tools strong {
-  padding: 4px 6px;
+.application-shell .viewer-bottom-tools button {
+  width: 31px;
   font-size: 10px;
 }
-.application-shell .viewer-bottom-tools strong {
+.application-shell .viewer-bottom-tools button.is-active {
   border-radius: 3px;
   background: var(--concord-toolbar-active);
   color: var(--on-primary);
+}
+.application-shell .viewer-bottom-tools button:disabled {
+  opacity: 0.45;
 }
 .application-shell .viewer-message[hidden] {
   display: none;
@@ -711,12 +742,8 @@
   top: 45px;
 }
 @media (max-width: 850px) {
-  .application-shell .bim-workspace.spatial-workspace {
-    grid-template-columns: minmax(0, 1fr) 220px;
+  .application-shell .bim-workspace.is-list-open .spatial-main {
     grid-template-rows: minmax(240px, 1fr) 150px;
-  }
-  .application-shell .header-search {
-    display: none;
   }
 }
 
@@ -734,10 +761,8 @@
 }
 .application-shell .change-stage .bim-workspace.spatial-workspace,
 .application-shell .issue-stage .bim-workspace.spatial-workspace {
-  display: grid;
+  display: block;
   height: 100%;
-  grid-template-columns: minmax(0, 1fr) clamp(290px, 27%, 330px);
-  grid-template-rows: minmax(260px, 1fr) 210px;
 }
 .application-shell .change-stage .spatial-inspector,
 .application-shell .issue-stage .spatial-inspector {
@@ -968,11 +993,13 @@
   color: var(--concord-investigation-tab);
   font-size: 10px;
 }
-.application-shell .investigation-tabs span {
+.application-shell .investigation-tabs button {
   display: flex;
   align-items: center;
   gap: 4px;
   height: 100%;
+  border: 0;
+  background: transparent;
 }
 .application-shell .investigation-tabs .active {
   border-bottom: 2px solid var(--accent);
@@ -994,9 +1021,12 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-rows: 50% 50%;
+  grid-template-rows: minmax(0, 1fr);
   padding: 8px;
   gap: 6px;
+}
+.application-shell .investigation-visuals [hidden] {
+  display: none;
 }
 .application-shell .investigation-model,
 .application-shell .investigation-document {
@@ -1740,7 +1770,7 @@
 .application-shell .inspector-switch button,
 .application-shell .spatial-context-tabs button,
 .application-shell .work-package-tabs button,
-.application-shell .investigation-tabs span {
+.application-shell .investigation-tabs button {
   position: relative;
   flex: 0 0 auto;
   height: 100%;

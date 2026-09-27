@@ -1,6 +1,6 @@
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Box, Image as ImageIcon } from "lucide-react";
+import { FileText, Box } from "lucide-react";
 import { api, readSource, type InvestigationReport } from "../api/client";
 import { documentLocation } from "../ui/labels";
 import type { ConcordContext } from "./ConcordAgent";
@@ -55,22 +55,35 @@ export function InvestigationWorkspace({
     () => report?.scope.element_ids ?? context.elementIds,
     [report?.scope.element_ids, context.elementIds],
   );
+  const [selected, setSelected] = useState(ids[0] ?? "");
+  const [sourceTab, setSourceTab] = useState<"model" | "documents">("model");
   return (
     <section className="investigation-workspace" aria-label="调查依据工作区">
       <nav className="investigation-tabs" aria-label="调查来源">
-        <span className="active">
+        <button
+          type="button"
+          className={sourceTab === "model" ? "active" : ""}
+          aria-current={sourceTab === "model" ? "true" : undefined}
+          onClick={() => setSourceTab("model")}
+        >
           <Box size={13} /> 模型
-        </span>
-        <span>
+        </button>
+        <button
+          type="button"
+          className={sourceTab === "documents" ? "active" : ""}
+          aria-current={sourceTab === "documents" ? "true" : undefined}
+          onClick={() => setSourceTab("documents")}
+        >
           <FileText size={13} /> 文档{" "}
           <small>{documents.data?.length ?? 0}</small>
-        </span>
-        <span>
-          <ImageIcon size={13} /> 图片 <small>0</small>
-        </span>
+        </button>
       </nav>
-      <div className="investigation-visuals">
-        <div className="investigation-model" aria-label="调查模型">
+      <div className={`investigation-visuals is-${sourceTab}`}>
+        <div
+          className="investigation-model"
+          aria-label="调查模型"
+          hidden={sourceTab !== "model"}
+        >
           {file.data ? (
             <Suspense
               fallback={
@@ -80,8 +93,9 @@ export function InvestigationWorkspace({
               <IFCViewer
                 file={file.data}
                 impacted={ids}
-                onSelected={() => {}}
-                selectedLabel={undefined}
+                onSelected={setSelected}
+                focusId={selected || undefined}
+                selectedLabel={selected || undefined}
               />
             </Suspense>
           ) : (
@@ -94,7 +108,11 @@ export function InvestigationWorkspace({
             </div>
           )}
         </div>
-        <div className="investigation-document" aria-label="调查文档">
+        <div
+          className="investigation-document"
+          aria-label="调查文档"
+          hidden={sourceTab !== "documents"}
+        >
           <header>
             <FileText size={14} />
             <strong>

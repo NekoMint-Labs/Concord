@@ -1,6 +1,11 @@
 import { lazy, Suspense } from "react";
 import { Plus } from "lucide-react";
-import type { AgentRun, InvestigationReport, Workspace } from "../api/client";
+import type {
+  AgentRun,
+  InvestigationReport,
+  ProjectSourceStatus,
+  Workspace,
+} from "../api/client";
 import type { BimMappingContext } from "../features/BimMappingWorkspace";
 import { ViewerBoundary } from "../components/ViewerBoundary";
 import { WorkspaceState } from "../components/WorkspaceState";
@@ -47,10 +52,15 @@ export type { WorkspaceTab };
 export function WorkspaceViews({
   project,
   data,
+  modelSource,
   localIfcFile,
   onLocalIfcFile,
   selected,
   selectedConstraint,
+  selectedElement,
+  selectedSpatialIssue,
+  onElementSelected,
+  onSpatialIssueSelected,
   tab,
   busy,
   detailsOpen,
@@ -77,10 +87,15 @@ export function WorkspaceViews({
 }: {
   project: string;
   data: Workspace;
+  modelSource?: ProjectSourceStatus;
   localIfcFile?: File | null;
   onLocalIfcFile?: (file: File | null) => void;
   selected: string;
   selectedConstraint: string;
+  selectedElement: string;
+  selectedSpatialIssue: string;
+  onElementSelected: (id: string) => void;
+  onSpatialIssueSelected: (id: string) => void;
   tab: WorkspaceTab;
   busy: boolean;
   detailsOpen: boolean;
@@ -246,6 +261,8 @@ export function WorkspaceViews({
                     <ChangeExplorer
                       project={project}
                       workspace={data}
+                      initialElement={selectedElement}
+                      onElementSelected={onElementSelected}
                       localFile={localIfcFile}
                       onLocalFile={onLocalIfcFile}
                       onModels={() => onTab("sources")}
@@ -282,6 +299,10 @@ export function WorkspaceViews({
                     <IssueExplorer
                       project={project}
                       workspace={data}
+                      selectedElement={selectedElement}
+                      selectedIssue={selectedSpatialIssue}
+                      onElementSelected={onElementSelected}
+                      onIssueSelected={onSpatialIssueSelected}
                       localFile={localIfcFile}
                       onLocalFile={onLocalIfcFile}
                       onResolve={onConstraint}
@@ -325,6 +346,20 @@ export function WorkspaceViews({
                     <BIMWorkspace
                       project={project}
                       impacted={data.analysis?.impact.element_ids ?? []}
+                      focusId={selectedElement || undefined}
+                      onViewerSelected={onElementSelected}
+                      selectedIssueId={selectedSpatialIssue}
+                      onIssueSelected={onSpatialIssueSelected}
+                      onInvestigate={
+                        modelSource?.latest_revision_id
+                          ? (id) =>
+                              onInvestigateBim(
+                                modelSource.source.id,
+                                modelSource.latest_revision_id!,
+                                [id],
+                              )
+                          : undefined
+                      }
                       localFile={localIfcFile}
                       onLocalFile={onLocalIfcFile}
                       autoProjectModel

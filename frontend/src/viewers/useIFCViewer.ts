@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import * as OBC from "@thatopen/components";
 import * as FRAGS from "@thatopen/fragments";
 import * as THREE from "three";
+import { viewerProjection } from "./viewerProjection";
 
 type ViewerControls = {
   impacts(ids: readonly string[]): Promise<void>;
   focus(): Promise<void>;
   isolate(): Promise<void>;
   showAll(): Promise<void>;
+  selectMode(): Promise<void>;
+  setViewMode(mode: "2d" | "3d"): Promise<void>;
   selectGuid(id: string): Promise<void>;
 };
 
@@ -37,6 +40,9 @@ export function useIFCViewer(
   const [properties, setProperties] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [hasTarget, setHasTarget] = useState(false);
+  const [isolated, setIsolated] = useState(false);
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("3d");
   const actionActive = useRef(false);
   const epoch = useRef(0);
   useEffect(() => {
@@ -50,6 +56,9 @@ export function useIFCViewer(
     setError("");
     setProperties(null);
     setAnchor(null);
+    setHasTarget(false);
+    setIsolated(false);
+    setViewMode("3d");
     setBusy(false);
     setMessage("正在准备本地 IFC 引擎…");
     actionActive.current = false;
@@ -62,10 +71,14 @@ export function useIFCViewer(
         components = new OBC.Components();
         const world = components
           .get(OBC.Worlds)
-          .create<OBC.SimpleScene, OBC.SimpleCamera, OBC.SimpleRenderer>();
+          .create<
+            OBC.SimpleScene,
+            OBC.OrthoPerspectiveCamera,
+            OBC.SimpleRenderer
+          >();
         world.scene = new OBC.SimpleScene(components);
         world.renderer = new OBC.SimpleRenderer(components, element);
-        world.camera = new OBC.SimpleCamera(components);
+        world.camera = new OBC.OrthoPerspectiveCamera(components);
         world.scene.setup();
         world.scene.three.background = new THREE.Color("#e7eaec");
         components.init();
@@ -103,10 +116,11 @@ export function useIFCViewer(
           await world.camera.controls.fitToBox(box, false);
           const center = box.getCenter(new THREE.Vector3());
           const radius = world.camera.controls.distance;
+          const plan = world.camera.projection.current === "Orthographic";
           await world.camera.controls.setLookAt(
-            center.x + radius * 0.5,
-            center.y + radius * 0.8,
-            center.z + radius * 0.4,
+            center.x + (plan ? 0 : radius * 0.5),
+            center.y + (plan ? Math.max(radius, 20) : radius * 0.8),
+            center.z + (plan ? 0 : radius * 0.4),
             center.x,
             center.y,
             center.z,
@@ -160,6 +174,9 @@ export function useIFCViewer(
           paintTail = next.catch(() => {}); // A failed paint must not poison the queue.
           return next;
         };
+        const project = viewerProjection(world.camera, model.box, () =>
+          model.useCamera(world.camera.three),
+        );
         controls.current = {
           async impacts(ids) {
             const ticket = ++impactTicket;
@@ -168,6 +185,7 @@ export function useIFCViewer(
             impactIds = matches.filter(
               (id): id is number => typeof id === "number",
             );
+            setHasTarget(selected.length > 0 || impactIds.length > 0);
             await paint();
             if (cancelled || ticket !== impactTicket) return;
             setMessage(
@@ -187,11 +205,23 @@ export function useIFCViewer(
             await model.setVisible(undefined, false);
             await model.setVisible(ids, true);
             await fragments.core.update(true);
+            setIsolated(true);
+          },
+          async selectMode() {
+            await model.resetVisible();
+            await fragments.core.update(true);
+            setIsolated(false);
+            await paint();
+          },
+          async setViewMode(mode) {
+            await project(mode);
+            setViewMode(mode);
           },
           async selectGuid(id) {
             const [localId] = await model.getLocalIdsByGuids([id]);
             if (cancelled || typeof localId !== "number") return;
             selected = [localId];
+            setHasTarget(true);
             const [data] = await model.getItemsData(selected);
             if (cancelled) return;
             setProperties(data);
@@ -209,11 +239,7 @@ export function useIFCViewer(
             selectionTicket++;
             await model.resetVisible();
             if (cancelled) return;
-            selected = [];
-            setProperties(null);
-            propertyCallback.current?.(null);
-            setAnchor(null);
-            callback.current("");
+            setIsolated(false);
             await paint();
           },
         };
@@ -234,6 +260,7 @@ export function useIFCViewer(
             ]);
             if (cancelled || ticket !== selectionTicket) return;
             selected = ids;
+            setHasTarget(true);
             setProperties(data[0]);
             propertyCallback.current?.(data[0]);
             callback.current(guid ?? String(hit.localId));
@@ -279,13 +306,21 @@ export function useIFCViewer(
       if (controls.current === current) setError(String(cause));
     });
   }, [focusId, ready]);
-  async function act(name: "focus" | "isolate" | "showAll") {
+  async function act(
+    name: "focus" | "isolate" | "showAll" | "selectMode",
+  ): Promise<void>;
+  async function act(name: "setViewMode", mode: "2d" | "3d"): Promise<void>;
+  async function act(
+    name: "focus" | "isolate" | "showAll" | "selectMode" | "setViewMode",
+    mode?: "2d" | "3d",
+  ) {
     if (actionActive.current || !controls.current) return;
     actionActive.current = true;
     setBusy(true);
     const current = epoch.current;
     try {
-      await controls.current[name]();
+      if (name === "setViewMode") await controls.current.setViewMode(mode!);
+      else await controls.current[name]();
     } catch (cause) {
       if (current === epoch.current)
         setError(cause instanceof Error ? cause.message : "查看器操作失败");
@@ -296,5 +331,17 @@ export function useIFCViewer(
       }
     }
   }
-  return { container, ready, message, error, properties, busy, act, anchor };
+  return {
+    container,
+    ready,
+    message,
+    error,
+    properties,
+    busy,
+    act,
+    anchor,
+    hasTarget,
+    isolated,
+    viewMode,
+  };
 }

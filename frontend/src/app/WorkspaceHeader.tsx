@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, PanelLeftOpen, Search } from "lucide-react";
+import { PanelLeftOpen } from "lucide-react";
 import { api, type WorkPackage, type Workspace } from "../api/client";
 import { AppTooltip } from "../components/ui/AppTooltip";
 import { icon } from "../components/ui/icon";
@@ -102,30 +102,19 @@ export function WorkspaceHeader({
         {latest && (
           <div className="header-versions">
             <span className="version-current">
-              <i />R{latest.sequence}⌄
+              <i />R{latest.sequence}
             </span>
             {baseline && (
               <>
                 <span>对比</span>
-                <span>B{baseline.sequence}⌄</span>
+                <span>B{baseline.sequence}</span>
               </>
             )}
           </div>
         )}
       </div>
       <div className="local-actions" aria-label="当前工作区操作">
-        <label className="header-search">
-          <Search size={14} />
-          <input
-            aria-label="搜索模型、问题或文档"
-            placeholder="搜索模型、问题或文档…"
-          />
-          <kbd>/</kbd>
-        </label>
         {children}
-        <button type="button" className="header-icon" aria-label="通知">
-          <Bell size={16} />
-        </button>
         <span className="header-avatar" aria-label="账户">
           J
         </span>

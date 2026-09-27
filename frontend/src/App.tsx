@@ -34,6 +34,8 @@ export function App() {
   const project = lifecycle.project;
   const [selected, setSelected] = useState("");
   const [selectedConstraint, setSelectedConstraint] = useState("");
+  const [selectedElement, setSelectedElement] = useState("");
+  const [selectedSpatialIssue, setSelectedSpatialIssue] = useState("");
   const [localIfc, setLocalIfc] = useState<{
     project: string;
     file: File;
@@ -73,6 +75,8 @@ export function App() {
   useEffect(() => {
     setSelected("");
     setSelectedConstraint("");
+    setSelectedElement("");
+    setSelectedSpatialIssue("");
     setLocalIfc(null);
     setDetailsOpen(false);
     setMappingMode(false);
@@ -288,12 +292,19 @@ export function App() {
             <WorkspaceViews
               project={project}
               data={data}
+              modelSource={sourceCatalog.data?.find(
+                (item) => item.source.kind === "BIM" && item.latest_revision_id,
+              )}
               localIfcFile={localIfcFile}
               onLocalIfcFile={(file) =>
                 setLocalIfc(file ? { project, file } : null)
               }
               selected={selected}
               selectedConstraint={selectedConstraint}
+              selectedElement={selectedElement}
+              selectedSpatialIssue={selectedSpatialIssue}
+              onElementSelected={setSelectedElement}
+              onSpatialIssueSelected={setSelectedSpatialIssue}
               tab={tab}
               busy={busy}
               detailsOpen={detailsOpen}

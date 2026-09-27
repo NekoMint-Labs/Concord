@@ -11,6 +11,10 @@ export function IssueExplorer({
   onLocalFile,
   onResolve,
   onSelectWorkPackage,
+  selectedElement,
+  selectedIssue,
+  onElementSelected,
+  onIssueSelected,
   perform: _perform,
 }: {
   project: string;
@@ -19,6 +23,10 @@ export function IssueExplorer({
   onLocalFile?: (file: File | null) => void;
   onResolve?: (id: string) => void;
   onSelectWorkPackage?: (id: string) => void;
+  selectedElement?: string;
+  selectedIssue?: string;
+  onElementSelected?: (id: string) => void;
+  onIssueSelected?: (id: string) => void;
   perform: (operation: () => Promise<unknown>) => Promise<void>;
 }) {
   const issues =
@@ -64,6 +72,10 @@ export function IssueExplorer({
           workspace={workspace}
           issues={issues}
           mode="issues"
+          focusId={selectedElement || undefined}
+          selectedIssueId={selectedIssue}
+          onViewerSelected={onElementSelected}
+          onIssueSelected={onIssueSelected}
           onIssueResolution={(id) => {
             const issue = issues.find((entry) => entry.id === id);
             if (issue) onSelectWorkPackage?.(issue.work_package_id);

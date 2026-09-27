@@ -13,9 +13,13 @@ export function ChangeExplorer({
   onModels,
   onInspect,
   onInvestigate,
+  initialElement = "",
+  onElementSelected,
 }: {
   project: string;
   workspace: Workspace;
+  initialElement?: string;
+  onElementSelected?: (id: string) => void;
   localFile?: File | null;
   onLocalFile?: (file: File | null) => void;
   onModels: () => void;
@@ -64,6 +68,14 @@ export function ChangeExplorer({
     .filter((item) => item.change_kind === "changed")
     .map((item) => item.global_id);
   useEffect(() => {
+    if (
+      initialElement &&
+      changes.some((entry) => entry.global_id === initialElement)
+    ) {
+      setSelectedId(initialElement);
+    }
+  }, [initialElement, detail.data]);
+  useEffect(() => {
     if (selectedId || !state.newModel.data) return;
     // Spatial containers such as IfcSpace have no useful camera target.
     const visible = (entry: (typeof changes)[number]) => {
@@ -76,11 +88,15 @@ export function ChangeExplorer({
       );
     };
     setSelectedId(
-      changes.find((entry) => entry.change_kind === "changed" && visible(entry))
-        ?.global_id ??
-        changes.find((entry) => entry.change_kind === "added" && visible(entry))
-          ?.global_id ??
-        "",
+      (initialElement &&
+      changes.some((entry) => entry.global_id === initialElement)
+        ? initialElement
+        : (changes.find(
+            (entry) => entry.change_kind === "changed" && visible(entry),
+          )?.global_id ??
+          changes.find(
+            (entry) => entry.change_kind === "added" && visible(entry),
+          )?.global_id)) ?? "",
     );
   }, [selectedId, detail.data, state.newModel.data]);
   const from = revisions.data?.find(
@@ -127,20 +143,25 @@ export function ChangeExplorer({
           onLocalFile={onLocalFile}
           autoProjectModel={!comparison}
           hideSourceActions={!!comparison}
-          onViewerSelected={setSelectedId}
+          onViewerSelected={(id) => {
+            setSelectedId(id);
+            onElementSelected?.(id);
+          }}
           revisionLabel={
             comparison
               ? `R${to?.sequence ?? "?"} 对比 ${baseline ? `B${baseline.sequence}` : `R${from?.sequence ?? "?"}`}`
               : undefined
           }
-          onInvestigate={(id) =>
-            comparison &&
-            onInvestigate(
-              sourceId,
-              comparison.to_revision_id,
-              comparison.from_revision_id,
-              [id],
-            )
+          onInvestigate={
+            comparison
+              ? (id) =>
+                  onInvestigate(
+                    sourceId,
+                    comparison.to_revision_id,
+                    comparison.from_revision_id,
+                    [id],
+                  )
+              : undefined
           }
           toolbar={
             <>

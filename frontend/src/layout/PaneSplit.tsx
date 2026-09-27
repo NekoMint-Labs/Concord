@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import {
   Group,
   Panel,
   Separator,
   useDefaultLayout,
   usePanelRef,
+  type GroupImperativeHandle,
   type LayoutStorage,
   type PanelImperativeHandle,
   type PanelProps,
@@ -20,7 +21,7 @@ import {
  * stays the product's only dependency on the layout library: the next migration
  * is then one file, not five call sites.
  */
-export { usePanelRef, type PanelImperativeHandle };
+export { usePanelRef, type GroupImperativeHandle, type PanelImperativeHandle };
 
 /**
  * The one place Concord touches react-resizable-panels. Product views compose
@@ -46,11 +47,15 @@ export function PaneSplit({
   persist = false,
   orientation = "horizontal",
   children,
+  groupRef,
+  elementRef,
 }: {
   id: string;
   persist?: boolean;
   orientation?: "horizontal" | "vertical";
   children: ReactNode;
+  groupRef?: Ref<GroupImperativeHandle>;
+  elementRef?: Ref<HTMLDivElement>;
 }) {
   /*
    * Only a layout the *user* set is remembered.
@@ -79,6 +84,8 @@ export function PaneSplit({
       id={id}
       className="pane-split"
       orientation={orientation}
+      elementRef={elementRef}
+      groupRef={groupRef}
       defaultLayout={persist ? saved.defaultLayout : undefined}
       onLayoutChanged={persist ? saved.onLayoutChanged : undefined}
     >

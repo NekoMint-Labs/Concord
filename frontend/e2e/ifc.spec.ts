@@ -141,23 +141,108 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     new RegExp(`[1-9]\\d*/${impacted.length} 个受影响构件 GUID`),
   );
   expect(uploads).toEqual([]); // Merely opening a local file must never upload it.
+  const spatial = page.getByRole("region", { name: "模型工作区" });
+  const pane = spatial.locator("#spatial-inspector-pane");
+  const divider = spatial.getByRole("separator", { name: "调整构件详情宽度" });
+  const originalWidth = (await pane.boundingBox())!.width;
+  expect(originalWidth).toBeGreaterThanOrEqual(270);
+  expect(originalWidth).toBeLessThanOrEqual(460);
+  const grip = (await divider.boundingBox())!;
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(grip.x - 60, grip.y + grip.height / 2, { steps: 8 });
+  await page.mouse.up();
+  const resizedWidth = (await pane.boundingBox())!.width;
+  expect(resizedWidth).toBeGreaterThan(originalWidth + 35);
+  await divider.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(async () => (await pane.boundingBox())!.width)
+    .toBeLessThan(resizedWidth);
+  const keyboardWidth = (await pane.boundingBox())!.width;
+  expect(
+    await page.evaluate(() =>
+      localStorage.getItem("react-resizable-panels:spatial-inspector"),
+    ),
+  ).toContain("spatial-inspector-pane");
+  await page.setViewportSize({ width: 1050, height: 720 });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expect
+    .poll(async () => (await pane.boundingBox())!.width)
+    .toBeGreaterThan(keyboardWidth - 5);
+  await page.reload();
+  await page
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "模型", exact: true })
+    .click();
+  await expect
+    .poll(async () => (await pane.boundingBox())!.width)
+    .toBeGreaterThan(keyboardWidth - 5);
+  await page
+    .getByLabel("本地 IFC 文件", { exact: true })
+    .setInputFiles(fixture);
+  await expect(viewer.getByRole("status")).toContainText("受影响构件 GUID");
+
+  const options = spatial.getByRole("button", { name: "检查器选项" });
+  await options.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("menuitem", { name: "重置面板宽度" }).click();
+  await expect
+    .poll(async () => (await pane.boundingBox())!.width)
+    .toBeGreaterThanOrEqual(310);
+  await options.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("menuitem", { name: "收起检查器" }).click();
+  await expect(
+    spatial.getByRole("button", { name: "展开检查器" }),
+  ).toBeVisible();
+  await spatial.getByRole("button", { name: "展开检查器" }).click();
+  await expect(options).toBeVisible();
+
+  const tabs = spatial.getByRole("tablist", { name: "构件上下文" });
+  await tabs.getByRole("tab", { name: /变更/ }).click();
+  await expect(tabs.getByRole("tab", { name: /变更/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await tabs.getByRole("tab", { name: /问题/ }).click();
+  await expect(tabs.getByRole("tab", { name: /问题/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await tabs.getByRole("tab", { name: "概览" }).click();
+  const projection = viewer.getByLabel("投影视图");
+  await projection.getByRole("button", { name: "2D" }).click();
+  await expect(viewer).toHaveAttribute("data-view-mode", "2d");
+  await projection.getByRole("button", { name: "3D" }).click();
+  await expect(viewer).toHaveAttribute("data-view-mode", "3d");
   const modelTools = viewer.getByLabel("模型工具");
   await modelTools.getByRole("button", { name: "聚焦", exact: true }).click();
   await expect(
     modelTools.getByRole("button", { name: "隔离", exact: true }),
   ).toBeEnabled();
   await modelTools.getByRole("button", { name: "隔离", exact: true }).click();
+  await expect(viewer).toHaveAttribute("data-isolated", "true");
+  await modelTools.getByRole("button", { name: "选择", exact: true }).click();
+  await expect(viewer).toHaveAttribute("data-isolated", "false");
+  await modelTools.getByRole("button", { name: "隔离", exact: true }).click();
   await expect(
     modelTools.getByRole("button", { name: "显示全部", exact: true }),
   ).toBeEnabled();
-  await modelTools.getByRole("button", { name: "显示全部", exact: true }).click();
+  await modelTools
+    .getByRole("button", { name: "显示全部", exact: true })
+    .click();
+  await expect(viewer).toHaveAttribute("data-isolated", "false");
   await expect(
     modelTools.getByRole("button", { name: "聚焦", exact: true }),
   ).toBeEnabled();
   await expect(viewer.getByRole("alert")).toHaveCount(0);
 
   // A loaded model keeps source actions behind its native Model disclosure.
-  await page.getByRole("region", { name: "模型工作区" }).locator("summary").click();
+  await page
+    .getByRole("region", { name: "模型工作区" })
+    .locator("summary")
+    .click();
   const upload = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
@@ -189,6 +274,46 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     /project-import\.ifc：已匹配 [1-9]\d*\/[1-9]\d* 个受影响构件 GUID/,
   );
   await expect(viewer.getByRole("alert")).toHaveCount(0);
+  const selectedRow = context.getByRole("row").nth(1);
+  const selectedTitle = (await selectedRow
+    .getByRole("button")
+    .textContent())!.trim();
+  await selectedRow.getByRole("button").click();
+  await expect(
+    spatial.getByRole("complementary", { name: "构件详情" }),
+  ).toContainText(selectedTitle);
+  await options.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("menuitem", { name: "技术详情" }).click();
+  await expect(
+    spatial.getByRole("button", { name: "技术详情" }),
+  ).toHaveAttribute("aria-expanded", "true");
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await options.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("menuitem", { name: "复制构件信息" }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
+    selectedTitle,
+  );
+  await page
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "问题", exact: true })
+    .click();
+  await expect(page.getByRole("region", { name: "空间问题" })).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "模型", exact: true })
+    .click();
+  await expect(
+    spatial.getByRole("complementary", { name: "构件详情" }),
+  ).toContainText("送风管 E-01");
+  await page.reload();
+  await expect
+    .poll(
+      async () =>
+        (await page.locator("#spatial-inspector-pane").boundingBox())!.width,
+    )
+    .toBeGreaterThanOrEqual(310);
   expect(remote).toEqual([]); // WASM and fragment worker must be bundled locally.
   expect(errors).toEqual([]);
 });
