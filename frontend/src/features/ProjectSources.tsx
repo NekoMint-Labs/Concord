@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import {
   api,
   type DTO,
@@ -27,10 +27,23 @@ export function revisionState(
   return "historical";
 }
 
+export function freshCheckAfterImport(
+  ready: boolean,
+  checkedAt?: string,
+  importFinishedAt?: string,
+): boolean {
+  return (
+    !!ready &&
+    !!checkedAt &&
+    !!importFinishedAt &&
+    new Date(checkedAt).getTime() > new Date(importFinishedAt).getTime()
+  );
+}
+
 const stateLabel = {
-  latest: "最新 · 待接受",
-  accepted: "已接受基线",
-  "latest-accepted": "最新 · 已接受",
+  latest: "最新版本 · 待审核",
+  accepted: "当前基线中的版本",
+  "latest-accepted": "最新版本 · 当前基线",
   historical: "历史版本",
 };
 
@@ -50,6 +63,12 @@ export function ProjectSources({
   onInvestigate,
   onInspectImpact,
   onOpenInvestigation,
+  readyForNewBaseline = false,
+  lastCheckAt,
+  checkFailed = false,
+  onRecheck,
+  onWorkPackage,
+  onChanges,
 }: {
   project: string;
   workPackages?: WorkPackage[];
@@ -72,8 +91,20 @@ export function ProjectSources({
   ) => void;
   onInspectImpact: (workPackageId: string, context: BimMappingContext) => void;
   onOpenInvestigation: () => void;
+  readyForNewBaseline?: boolean;
+  lastCheckAt?: string;
+  checkFailed?: boolean;
+  onRecheck?: () => void;
+  onWorkPackage?: () => void;
+  onChanges?: () => void;
 }) {
-  const [sourceId, setSourceId] = useState("");
+  const [sourceId, setSourceId] = useState(() => {
+    try {
+      return sessionStorage.getItem(`concord:model:${project}`) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [createOpen, setCreateOpen] = useState(false);
   const [uploadNotice, setUploadNotice] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -84,42 +115,108 @@ export function ProjectSources({
   });
   const statuses = sourceData.sources.data ?? [];
   const current = statuses.find((item) => item.source.id === sourceId);
+  const latestImport = useQuery({
+    queryKey: [
+      "revision-import",
+      project,
+      sourceId,
+      current?.latest_revision_id,
+    ],
+    queryFn: () =>
+      api.revisionImport(project, sourceId, current!.latest_revision_id!),
+    enabled: !!current?.latest_revision_id && current.source.kind === "BIM",
+    refetchInterval: (query) =>
+      ["QUEUED", "RUNNING"].includes(query.state.data?.status ?? "")
+        ? 1500
+        : false,
+  });
+  const baseline = sourceData.baselines.data?.at(-1);
+  const reviewed = (sourceData.comparisons.data ?? []).some(
+    (comparison) =>
+      comparison.from_revision_id === current?.accepted_revision_id &&
+      comparison.to_revision_id === current?.latest_revision_id,
+  );
+  const pendingReview =
+    !!current?.accepted_revision_id && current.has_pending_revision;
+  const otherSources = statuses.filter(
+    (item) => item.latest_revision_id && item.source.id !== sourceId,
+  );
+  const pendingOtherModels = otherSources.filter(
+    (item) =>
+      item.source.kind === "BIM" &&
+      item.has_pending_revision &&
+      !!item.accepted_revision_id,
+  );
+  const otherImports = useQueries({
+    queries: otherSources
+      .filter((item) => item.source.kind === "BIM")
+      .map((item) => ({
+        queryKey: [
+          "revision-import",
+          project,
+          item.source.id,
+          item.latest_revision_id,
+        ],
+        queryFn: () =>
+          api.revisionImport(project, item.source.id, item.latest_revision_id!),
+        refetchInterval: (query: {
+          state: { data?: { status?: string } | null };
+        }) =>
+          ["QUEUED", "RUNNING"].includes(query.state.data?.status ?? "")
+            ? 1500
+            : false,
+      })),
+  });
+  const otherModelsReady = otherImports.every(
+    (item) => item.data?.status === "COMPLETED",
+  );
+  const otherModelsReviewed = pendingOtherModels.length === 0;
+  const canAccept =
+    !!current?.latest_revision_id &&
+    (current.source.kind !== "BIM" ||
+      (latestImport.data?.status === "COMPLETED" &&
+        (!current.accepted_revision_id || reviewed)));
+  const freshReady =
+    readyForNewBaseline &&
+    !checkFailed &&
+    (!current?.accepted_revision_id ||
+      freshCheckAfterImport(true, lastCheckAt, latestImport.data?.updated_at));
   const revisions = useMemo(
     () => sourceData.revisions.data ?? [],
     [sourceData.revisions.data],
   );
 
   useEffect(() => {
+    if (!sourceData.sources.data) return;
     if (!statuses.length) setSourceId("");
     else if (!statuses.some((item) => item.source.id === sourceId))
       setSourceId(statuses[0].source.id);
-  }, [sourceId, statuses]);
+  }, [sourceId, sourceData.sources.data]);
   useEffect(() => {
-    if (sourceId) {
-      const revision = revisions.find(
-        (item) => item.id === current?.latest_revision_id,
-      );
-      onContext(
-        sourceId,
-        current?.latest_revision_id ?? undefined,
-        revision ? `R${revision.sequence}` : undefined,
-      );
+    if (!sourceId) return;
+    try {
+      sessionStorage.setItem(`concord:model:${project}`, sourceId);
+    } catch {
+      /* Selection remains usable without storage. */
     }
-  }, [current?.latest_revision_id, onContext, revisions, sourceId]);
-
+  }, [project, sourceId]);
   async function upload(file?: File) {
     if (!file || !sourceId) return;
     setUploadNotice("");
-    const result = await sourceData.upload.mutateAsync({
-      source: sourceId,
-      file,
-      label: "",
-    });
-    setUploadNotice(
-      result.duplicate
-        ? "相同内容已存在，未创建误导性的重复版本。"
-        : `R${result.revision.sequence} 原始文件已保存。尚未完成解析或比较。`,
-    );
+    try {
+      const result = await sourceData.upload.mutateAsync({
+        source: sourceId,
+        file,
+        label: "",
+      });
+      setUploadNotice(
+        result.duplicate
+          ? `这个文件已在项目中，仍是 R${result.revision.sequence}。`
+          : `R${result.revision.sequence} 已上传。下一步：处理模型。当前基线不会自动改变。`,
+      );
+    } catch {
+      // The mutation error is shown beside the model actions.
+    }
   }
 
   return (
@@ -127,7 +224,7 @@ export function ProjectSources({
       <div className="view-toolbar">
         <h2>模型与版本</h2>
         <span className="viewer-toolbar-note">
-          选择模型 · 查看修订 · 接受基线
+          上传模型 → 处理模型 → 查看变化 → 确认基线
         </span>
         <div className="viewer-toolbar-actions">
           <Button
@@ -135,14 +232,22 @@ export function ProjectSources({
             variant="secondary"
             onClick={() => setCreateOpen(true)}
           >
-            新建来源
+            添加模型
           </Button>
         </div>
       </div>
-      {(sourceData.sources.error || sourceData.acceptBaseline.error) && (
+      {(sourceData.sources.error ||
+        sourceData.acceptBaseline.error ||
+        sourceData.upload.error ||
+        sourceData.importRevision.error) && (
         <div className="alert" role="alert">
-          {sourceData.sources.error?.message ??
-            sourceData.acceptBaseline.error?.message}
+          {sourceData.upload.error
+            ? "上传失败，请检查文件后重试。"
+            : sourceData.importRevision.error
+              ? "无法开始处理模型，请重试。"
+              : sourceData.acceptBaseline.error
+                ? "暂时无法确认基线，请重试。"
+                : "无法读取项目模型，请重试。"}
         </div>
       )}
       <div className="sources-layout">
@@ -154,7 +259,7 @@ export function ProjectSources({
             maxSize="360px"
           >
             <header>
-              <span className="pane-header-label">来源</span>
+              <span className="pane-header-label">项目模型</span>
               <span className="count">{statuses.length}</span>
             </header>
             {statuses.map((item) => (
@@ -177,20 +282,22 @@ export function ProjectSources({
                 </span>
                 <small>
                   {item.latest_revision_id
-                    ? item.has_pending_revision
-                      ? "有待接受的新版本"
-                      : "与接受基线一致"
-                    : "尚无版本"}
+                    ? item.has_pending_revision && item.accepted_revision_id
+                      ? "新版本待审核 · 基线未变"
+                      : item.accepted_revision_id
+                        ? "当前基线"
+                        : "尚未确认基线"
+                    : "尚未上传模型"}
                 </small>
               </button>
             ))}
             {!statuses.length && (
               <p className="quiet-message pane-empty">
-                尚无工程来源。创建逻辑来源后可持续上传 R1、R2…
+                还没有项目模型。点击「添加模型」，上传第一个 IFC。
               </p>
             )}
           </Pane>
-          <PaneDivider label="调整来源列表宽度" />
+          <PaneDivider label="调整模型列表宽度" />
           <Pane className="source-detail">
             {current ? (
               <>
@@ -208,12 +315,17 @@ export function ProjectSources({
                         !current.accepted_revision_id)) && (
                       <Button
                         size="sm"
-                        disabled={sourceData.acceptBaseline.isPending}
-                        onClick={() =>
-                          void sourceData.acceptBaseline.mutateAsync()
+                        disabled={
+                          sourceData.acceptBaseline.isPending ||
+                          !canAccept ||
+                          !otherModelsReady ||
+                          !otherModelsReviewed ||
+                          (!!current.accepted_revision_id && !freshReady)
                         }
+                        onClick={() => sourceData.acceptBaseline.mutate()}
                       >
-                        建立 B{(sourceData.baselines.data?.length ?? 0) + 1}
+                        设为当前基线 B
+                        {(sourceData.baselines.data?.length ?? 0) + 1}
                       </Button>
                     )}
                     <input
@@ -234,12 +346,61 @@ export function ProjectSources({
                       disabled={sourceData.upload.isPending}
                       onClick={() => fileInput.current?.click()}
                     >
-                      上传新版本
+                      {current.latest_revision_id
+                        ? "上传新版本"
+                        : "上传第一个模型版本"}
                     </Button>
                   </div>
                 </header>
                 {uploadNotice && (
                   <p className="viewer-status">{uploadNotice}</p>
+                )}
+                {otherSources.length > 0 && canAccept && (
+                  <p className="viewer-status">
+                    确认基线时，项目中其他已上传的版本也会一同确认。
+                  </p>
+                )}
+                {pendingOtherModels.length > 0 && (
+                  <p className="viewer-status" role="status">
+                    其他模型也有待审核的新版本，请逐一查看变化后再确认基线。
+                  </p>
+                )}
+                {otherSources.length > 0 && !otherModelsReady && (
+                  <p className="viewer-status" role="status">
+                    项目中还有模型版本未处理完成，暂不能确认基线。
+                  </p>
+                )}
+                {current.has_pending_revision && baseline && (
+                  <div className="viewer-status" role="status">
+                    当前基线 B{baseline.sequence} 保持不变。
+                    {!canAccept
+                      ? "先处理新版本并查看变化。"
+                      : freshReady
+                        ? "变化已查看、工作包已重新检查，可以决定是否建立新基线。"
+                        : "变化已查看；工作包达到可施工状态后才能建立新基线。"}
+                    {pendingReview &&
+                      latestImport.data?.status === "COMPLETED" &&
+                      !reviewed &&
+                      onChanges && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={onChanges}
+                        >
+                          查看变化
+                        </Button>
+                      )}
+                    {canAccept && !freshReady && onRecheck && (
+                      <Button size="sm" variant="secondary" onClick={onRecheck}>
+                        重新检查
+                      </Button>
+                    )}
+                    {canAccept && !freshReady && onWorkPackage && (
+                      <Button size="sm" variant="ghost" onClick={onWorkPackage}>
+                        查看工作包
+                      </Button>
+                    )}
+                  </div>
                 )}
                 <div className="revision-register">
                   {!!revisions.length && (
@@ -284,28 +445,36 @@ export function ProjectSources({
                           </span>
                         </div>
                         <span className={`revision-state is-${state}`}>
-                          {stateLabel[state]}
+                          {state === "latest" && !current.accepted_revision_id
+                            ? "最新版本 · 尚未确认基线"
+                            : stateLabel[state]}
                         </span>
                         <span className="revision-storage">
-                          原始文件已保存 ·{" "}
-                          {Math.ceil(revision.size_bytes / 1024)} KiB
+                          文件已上传 · {Math.ceil(revision.size_bytes / 1024)}{" "}
+                          KiB
                         </span>
                         <div className="revision-actions">
                           {current.source.kind === "BIM" && (
                             <Button
                               size="sm"
                               variant="secondary"
-                              disabled={sourceData.importRevision.isPending}
-                              onClick={async () => {
-                                const run =
-                                  await sourceData.importRevision.mutateAsync({
-                                    source: sourceId,
-                                    revision: revision.id,
-                                  });
-                                onRun(run);
+                              disabled={
+                                sourceData.importRevision.isPending ||
+                                (revision.id === current.latest_revision_id &&
+                                  ["QUEUED", "RUNNING"].includes(
+                                    latestImport.data?.status ?? "",
+                                  ))
+                              }
+                              onClick={() => {
+                                sourceData.importRevision.mutate(
+                                  { source: sourceId, revision: revision.id },
+                                  {
+                                    onSuccess: onRun,
+                                  },
+                                );
                               }}
                             >
-                              导入 / 查看运行
+                              处理模型
                             </Button>
                           )}
                           <Button
@@ -324,12 +493,27 @@ export function ProjectSources({
                               )
                             }
                           >
-                            调查版本
+                            查看原因
                           </Button>
                         </div>
+                        {revision.id === current.latest_revision_id &&
+                          current.source.kind === "BIM" && (
+                            <p className="viewer-status" role="status">
+                              {latestImport.data?.status === "COMPLETED"
+                                ? `R${revision.sequence} 已处理，可在模型中查看。${current.has_pending_revision ? "当前基线未变，请查看变化。" : "下一步：关联工作包。"}`
+                                : latestImport.data?.status === "FAILED"
+                                  ? `R${revision.sequence} 处理失败。请确认 IFC 文件有效，然后重试「处理模型」。`
+                                  : latestImport.data &&
+                                      ["QUEUED", "RUNNING"].includes(
+                                        latestImport.data.status,
+                                      )
+                                    ? `正在处理 R${revision.sequence}，完成前不能关联或比较。`
+                                    : `R${revision.sequence} 已上传，尚未处理。`}
+                            </p>
+                          )}
                         {notice && current.has_pending_revision && (
                           <p className="source-suggestion">
-                            Concord 检测到比当前基线更新的版本。
+                            新版本尚未纳入当前基线。先查看变化，再决定是否更新。
                             <button
                               type="button"
                               onClick={() =>
@@ -345,7 +529,7 @@ export function ProjectSources({
                                 )
                               }
                             >
-                              调查此版本
+                              查看原因
                             </button>
                           </p>
                         )}
@@ -355,7 +539,7 @@ export function ProjectSources({
                   {!revisions.length && (
                     <div className="impact-empty">
                       <strong>尚无版本</strong>
-                      <span>上传文件会创建不可变的 R1，不会自动接受基线。</span>
+                      <span>上传第一个模型版本，再处理模型和关联工作包。</span>
                     </div>
                   )}
                 </div>
@@ -368,6 +552,8 @@ export function ProjectSources({
                     comparisons={sourceData.comparisons.data ?? []}
                     comparing={sourceData.compare.isPending}
                     error={sourceData.compare.error}
+                    imported={latestImport.data?.status === "COMPLETED"}
+                    acceptedRevisionId={current.accepted_revision_id}
                     onCompare={(from_revision_id, to_revision_id) =>
                       sourceData.compare.mutate({
                         from_revision_id,
@@ -427,13 +613,15 @@ export function ProjectSources({
                 )}
                 {report?.scope.source_id === sourceId && (
                   <section className="context-agent-result">
-                    <span className="eyebrow">版本调查结果</span>
+                    <span className="eyebrow">
+                      {report.scope.to_revision_id !==
+                      current.latest_revision_id
+                        ? "旧版本的调查结果 · 新版本需要重新调查"
+                        : "当前版本的调查结果"}
+                    </span>
                     <p>{demoInvestigationText(report.answer.summary)}</p>
                     <div className="context-agent-result-footer">
-                      <small>
-                        已持久化 · {report.evidence.length} 条依据 · 运行{" "}
-                        {report.run_id.slice(0, 8)}
-                      </small>
+                      <small>{report.evidence.length} 条判断依据</small>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -448,8 +636,8 @@ export function ProjectSources({
             ) : (
               <div className="empty-pane">
                 <span>
-                  <strong>选择或创建一个来源</strong>
-                  <small>来源名称保持稳定，文件名只属于各个版本。</small>
+                  <strong>添加第一个项目模型</strong>
+                  <small>以后上传的新 IFC 会出现在同一模型的版本记录中。</small>
                 </span>
               </div>
             )}

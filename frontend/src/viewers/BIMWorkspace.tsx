@@ -15,7 +15,6 @@ import {
   demoConstraintText,
   demoElementName,
 } from "../ui/demo/demoPresentation";
-import { statusLabel } from "../ui/labels";
 import { notify } from "../components/ui/AppToaster";
 import { Pane, PaneDivider, PaneSplit, usePanelRef } from "../layout/PaneSplit";
 import { SpatialContext } from "./SpatialContext";
@@ -102,9 +101,35 @@ export default function BIMWorkspace({
     queryFn: () => api.sourceStatuses(project),
     enabled: autoProjectModel && externalFile === undefined,
   });
-  const source = sources.data?.find(
-    (item) => item.source.kind === "BIM" && item.latest_revision_id,
-  );
+  const projectModels =
+    sources.data?.filter(
+      (item) => item.source.kind === "BIM" && item.latest_revision_id,
+    ) ?? [];
+  const source = projectModels.length === 1 ? projectModels[0] : undefined;
+  const sourceImport = useQuery({
+    queryKey: [
+      "revision-import",
+      project,
+      source?.source.id,
+      source?.latest_revision_id,
+    ],
+    queryFn: () =>
+      api.revisionImport(
+        project,
+        source!.source.id,
+        source!.latest_revision_id!,
+      ),
+    enabled: !!source?.latest_revision_id,
+    refetchInterval: (query) =>
+      ["QUEUED", "RUNNING"].includes(query.state.data?.status ?? "")
+        ? 1500
+        : false,
+  });
+  const modelRevisions = useQuery({
+    queryKey: ["source-revisions", project, source?.source.id],
+    queryFn: () => api.sourceRevisions(project, source!.source.id),
+    enabled: !!source,
+  });
   const revision = useQuery({
     queryKey: [
       "model-content",
@@ -208,18 +233,23 @@ export default function BIMWorkspace({
       chooseIssue(issues[0]);
   }, [mode, selectedIssue, issues[0]?.id]);
   useEffect(() => {
-    if (imported.data?.status === "COMPLETED") notify.success("IFC 导入完成");
+    if (imported.data?.status === "COMPLETED") {
+      setFile(null);
+      onLocalFile?.(null);
+      notify.success("项目模型已处理完成");
+    }
     if (imported.data?.status === "FAILED")
-      notify.error("IFC 导入失败", imported.data.error ?? undefined);
+      notify.error("模型处理失败", imported.data.error ?? undefined);
   }, [imported.data?.status, imported.data?.error]);
   const feedback =
     error ||
-    elements.error?.message ||
+    (!viewFile ? elements.error?.message : null) ||
     imported.error?.message ||
     imported.data?.error;
   const missingModel =
-    feedback?.includes("CCA_IFC_PATH") ||
-    feedback?.includes("此项目尚无可打开的模型");
+    !viewFile &&
+    (feedback?.includes("CCA_IFC_PATH") ||
+      feedback?.includes("此项目尚无可打开的模型"));
   const issue = issues.find((entry) => entry.id === selectedIssue);
   const packageFor = (id: string) =>
     workspace?.state.work_packages.find((wp) => wp.element_ids.includes(id));
@@ -275,7 +305,9 @@ export default function BIMWorkspace({
                 <span>
                   {revision.isPending && source
                     ? "正在打开项目模型…"
-                    : "选择本地 IFC 文件，或打开项目模型。"}
+                    : projectModels.length > 1
+                      ? "项目有多个模型。请到「模型版本」选择，再查看具体版本。"
+                      : "打开本地 IFC 预览，然后添加到项目。"}
                 </span>
               </div>
             )}
@@ -320,7 +352,11 @@ export default function BIMWorkspace({
                   </button>
                   <button
                     type="button"
-                    onClick={() => void openImported()}
+                    onClick={() => {
+                      void openImported().then((opened) => {
+                        if (opened) onLocalFile?.(null);
+                      });
+                    }}
                     disabled={busy}
                   >
                     <PackageOpen size={14} /> 打开项目模型
@@ -331,7 +367,7 @@ export default function BIMWorkspace({
                       onClick={() => void importSource()}
                       disabled={busy}
                     >
-                      导入项目
+                      添加到项目
                     </button>
                   )}
                   {file && (
@@ -348,7 +384,7 @@ export default function BIMWorkspace({
                   )}
                   {onModels && (
                     <button type="button" onClick={onModels}>
-                      模型生命周期 →
+                      模型版本 →
                     </button>
                   )}
                 </div>
@@ -364,16 +400,31 @@ export default function BIMWorkspace({
                 role={missingModel ? "status" : "alert"}
               >
                 {feedback.includes("CCA_IFC_PATH")
-                  ? "此项目尚无可打开的模型，请先导入本地 IFC 文件。"
+                  ? "还没有项目模型。打开本地 IFC 预览，再添加到项目。"
                   : feedback}
+              </div>
+            )}
+            {viewFile && (
+              <div className="viewer-status spatial-feedback" role="status">
+                {localFile || (file && file.name !== "project-model.ifc")
+                  ? `本地预览 · ${(localFile ?? file)!.name} · ${imported.data?.status === "FAILED" ? "项目版本处理失败" : notice ? "项目版本正在处理" : "尚未添加到项目"}`
+                  : source?.latest_revision_id
+                    ? `${sourceImport.data?.status === "COMPLETED" ? "项目模型" : "项目文件预览"} · R${modelRevisions.data?.find((item) => item.id === source.latest_revision_id)?.sequence ?? "?"}${sourceImport.data?.status === "FAILED" ? " · 处理失败" : sourceImport.data?.status === "COMPLETED" ? "" : " · 尚未完成处理"}`
+                    : "项目模型"}
               </div>
             )}
             {(notice || imported.data) && (
               <div className="viewer-status spatial-feedback" role="status">
                 {[
-                  notice,
-                  imported.data &&
-                    `导入 ${statusLabel(imported.data.status)}。`,
+                  imported.data?.status === "COMPLETED"
+                    ? "模型处理完成。下一步：关联工作包或确认基线。"
+                    : notice,
+                  imported.data?.status === "FAILED"
+                    ? "模型处理失败，可重试添加到项目。"
+                    : imported.data &&
+                        ["QUEUED", "RUNNING"].includes(imported.data.status)
+                      ? "正在处理项目模型…"
+                      : null,
                 ]
                   .filter(Boolean)
                   .join(" ")}

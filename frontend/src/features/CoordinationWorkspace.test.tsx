@@ -34,7 +34,44 @@ it("makes readiness the primary work-package conclusion", () => {
   expect(screen.getByRole("heading", { name: "可施工" })).toBeVisible();
   expect(screen.getByText("当前没有未解决的阻塞条件")).toBeVisible();
   expect(screen.getByText(/上次检查/)).toBeVisible();
-  expect(screen.getByText(/份工程来源/)).toBeVisible();
+  expect(screen.queryByText(/快照 v\d+/)).not.toBeInTheDocument();
+});
+
+it("does not call an unchecked new work package READY", () => {
+  const workspace = completed();
+  workspace.analysis = null;
+  render(<CoordinationWorkspace workspace={workspace} {...baseProps} />);
+  expect(screen.getByRole("heading", { name: "待检查" })).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: "可施工" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "重新检查" })).toBeVisible();
+});
+
+it("does not show READY after a failed re-check", () => {
+  const workspace = completed();
+  workspace.run = { ...workspace.run!, status: "FAILED" };
+  workspace.analysis_run = { ...workspace.analysis_run!, status: "FAILED" };
+  render(<CoordinationWorkspace workspace={workspace} {...baseProps} />);
+  expect(screen.getByRole("heading", { name: "检查失败" })).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: "可施工" }),
+  ).not.toBeInTheDocument();
+});
+
+it("flags a pending model revision instead of presenting an old READY judgement as current", () => {
+  const workspace = completed();
+  workspace.analysis!.readiness = workspace.analysis!.readiness.map((item) =>
+    item.work_package_id === "WP-200" ? { ...item, status: "READY" } : item,
+  );
+  render(
+    <CoordinationWorkspace workspace={workspace} {...baseProps} pendingModel />,
+  );
+  expect(screen.getByRole("heading", { name: "待审核" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "查看影响" })).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: "可施工" }),
+  ).not.toBeInTheDocument();
 });
 
 it("keeps real work-package BIM identity in the model context", () => {
@@ -71,8 +108,8 @@ it("opens evidence and action detail from a blocked work package", () => {
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
   render(<CoordinationWorkspace workspace={workspace} {...baseProps} />);
 
-  expect(screen.getByRole("heading", { name: "已阻塞" })).toBeVisible();
-  expect(screen.getByText(/未解决阻塞条件/)).toBeVisible();
+  expect(screen.getByRole("heading", { name: "待批准" })).toBeVisible();
+  expect(screen.getByText(/处理建议需要明确批准/)).toBeVisible();
 
   fireEvent.click(screen.getByRole("button", { name: /项判断依据/ }));
   expect(baseProps.onDetails).toHaveBeenCalledWith("evidence");
@@ -84,8 +121,8 @@ it("switches the overview inspector without changing domain state", () => {
   const workspace = completed();
   render(<CoordinationWorkspace workspace={workspace} {...baseProps} />);
 
-  fireEvent.click(screen.getByRole("button", { name: "工程来源" }));
-  expect(screen.getByText("当前工程来源")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "工程记录" }));
+  expect(screen.getByText("其他工程记录")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "现场资源" }));
   expect(screen.getByText("资质")).toBeVisible();
 });
@@ -112,7 +149,7 @@ it("distinguishes current coordination from the package record without changing 
   const view = render(
     <CoordinationWorkspace workspace={workspace} {...baseProps} />,
   );
-  expect(screen.getByText("当前协调")).toBeVisible();
+  expect(screen.getByText("工作包概览")).toBeVisible();
   expect(screen.getByRole("heading", { name: "协调详情" })).toBeVisible();
   view.rerender(
     <CoordinationWorkspace

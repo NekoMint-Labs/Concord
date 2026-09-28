@@ -549,13 +549,30 @@
   white-space: nowrap;
 }
 .breadcrumb span,
-.breadcrumb strong {
+.breadcrumb strong,
+.breadcrumb button {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .breadcrumb strong {
   color: var(--ink);
   font-weight: 500;
+}
+.breadcrumb button {
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+}
+.breadcrumb button:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.breadcrumb button:focus-visible {
+  outline: 2px solid currentColor;
 }
 .breadcrumb code {
   color: var(--muted-2);

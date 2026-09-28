@@ -47,7 +47,7 @@ export function Operations({
   return (
     <section className="operations-workspace">
       <header className="view-toolbar">
-        <h2>运行检查</h2>
+        <h2>活动与运行</h2>
         <span className="viewer-toolbar-note">
           显式启动工程检查，并核对每次运行的结果与轨迹
         </span>

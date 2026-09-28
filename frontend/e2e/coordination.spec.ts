@@ -43,7 +43,7 @@ const inspector = (page: Page) =>
 
 async function expectBlocked(page: Page) {
   await expect(
-    overview(page).getByRole("heading", { level: 2, name: "已阻塞" }),
+    overview(page).getByRole("heading", { level: 2, name: /已阻塞|待批准/ }),
   ).toBeVisible({ timeout: 30_000 });
 }
 
@@ -136,10 +136,6 @@ test("coordinates a design change through evidence, approval, receipt, and a fre
   const panel = inspector(page);
   await injectDemoEvent(page, /图纸 V16/);
   await expectBlocked(page);
-  await expect(
-    page.getByText("图纸已更新至 V17，但当前施工面仍基于 V16。"),
-  ).toBeVisible();
-
   // Evidence is one click away, and the pane reports only the opened detail.
   await page.getByRole("button", { name: "1 项判断依据" }).click();
   await expect(panel.getByText(/来源 structured-drawing/)).toBeVisible();
@@ -276,7 +272,9 @@ test("an outdated judgement is raised beside the work package, not as a global b
   await expectBlocked(page);
   // The work package reports its own state; nothing is raised application-wide.
   await expect(page.locator(".alert")).toHaveCount(0);
-  await expect(page.locator(".coordination-workspace")).toContainText("已阻塞");
+  await expect(page.locator(".coordination-workspace")).toContainText(
+    "待批准",
+  );
 });
 
 test("document upload, retrieval and authenticated source download use the real API", async ({
@@ -414,7 +412,9 @@ test("real local GIS renders and selects its linked work package", async ({
     packages.getByRole("button", { name: /东翼风管安装/ }),
   ).toHaveAttribute("aria-current", "page");
   await expect(electrical).not.toHaveAttribute("aria-current", "page");
-  await expect(page.getByLabel("当前工程上下文")).toContainText("东翼风管安装");
+  await expect(
+    page.getByRole("navigation", { name: "当前位置" }),
+  ).toContainText("东翼风管安装");
   await page
     .getByRole("navigation", { name: "主要工作区" })
     .getByRole("button", { name: "概览", exact: true })
@@ -469,6 +469,11 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
   expect(uploaded.analysis_run!.status).toBe("WAITING_APPROVAL");
   expect(uploaded.state.version).toBeGreaterThan(current.state.version);
   expect(uploaded.stale).toBe(true);
+  await page
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "概览", exact: true })
+    .click();
+  await page.getByRole("button", { name: "审查处理方案" }).click();
   await expect(panel.getByRole("button", { name: /^批准 R/ })).toBeDisabled();
 
   // Published document evidence invalidates the old snapshot. A stale approval

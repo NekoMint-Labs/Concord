@@ -91,6 +91,7 @@ function renderImpact(
   callbacks: {
     onSelectComparison?: (item: DTO<"RevisionComparison">) => void;
     onInvestigate?: (item: DTO<"RevisionComparison">, ids: string[]) => void;
+    acceptedRevisionId?: string;
     onInspect?: (input: {
       workPackageId: string;
       fromRevisionId: string;
@@ -114,6 +115,7 @@ function renderImpact(
         }
         comparisons={comparisons}
         comparing={false}
+        acceptedRevisionId={callbacks.acceptedRevisionId}
         onCompare={() => {}}
         onSelectComparison={callbacks.onSelectComparison ?? (() => {})}
         onInvestigate={callbacks.onInvestigate ?? (() => {})}
@@ -127,10 +129,8 @@ afterEach(() => vi.restoreAllMocks());
 
 it("states no-comparison explicitly instead of rendering an empty pane", () => {
   renderImpact([]);
-  expect(screen.getByText("尚无版本比较")).toBeVisible();
-  expect(
-    screen.getByRole("button", { name: "比较最近两个版本" }),
-  ).toBeVisible();
+  expect(screen.getByText("尚未查看版本变化")).toBeVisible();
+  expect(screen.getByRole("button", { name: "查看变化" })).toBeVisible();
 });
 
 it("surfaces summary, affected WP, Evidence and continuity warnings", async () => {
@@ -154,7 +154,7 @@ it("surfaces summary, affected WP, Evidence and continuity warnings", async () =
   renderImpact([r1ToR2]);
   expect(await screen.findByText("Ventilation")).toBeVisible();
   expect(screen.queryByText("WP-27")).toBeNull();
-  expect(screen.getByText(/GlobalId 连续性提醒/)).toBeVisible();
+  expect(screen.getByText(/构件标识变化较多/)).toBeVisible();
   fireEvent.click(screen.getByText(/比较依据 · 1 条/));
   expect(screen.getByText("evidence-1")).toBeVisible();
   expect(screen.getByText("3")).toBeVisible();
@@ -209,4 +209,10 @@ it("keeps a selected historical comparison pair for BIM inspection and investiga
   await waitFor(() =>
     expect(onInvestigate).toHaveBeenCalledWith(r1ToR2, ["gid-deleted"]),
   );
+});
+
+it("keeps R1 as the accepted baseline while R3 still needs review", () => {
+  renderImpact([r1ToR2], { acceptedRevisionId: "r1" });
+  expect(screen.getByText("新版本待审核 · 当前基线未变")).toBeVisible();
+  expect(screen.getByRole("button", { name: "查看变化" })).toBeDisabled();
 });

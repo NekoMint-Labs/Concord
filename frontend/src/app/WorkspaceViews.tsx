@@ -222,6 +222,7 @@ export function WorkspaceViews({
                           surface={tab}
                           selected={selected}
                           busy={busy}
+                          pendingModel={!!modelSource?.has_pending_revision}
                           onRecheck={onRecheck}
                           onDetails={(view) => {
                             onInspectorView(view);
@@ -233,6 +234,7 @@ export function WorkspaceViews({
                           modelContext={
                             <WorkPackageModelContext
                               project={project}
+                              workPackageId={selected}
                               elementIds={
                                 data.state.work_packages.find(
                                   (item) => item.id === selected,
@@ -248,7 +250,12 @@ export function WorkspaceViews({
                                 )?.design_revision ??
                                 "—"
                               }
-                              onOpenModel={() => onTab("bim")}
+                              onOpenModel={(id) => {
+                                if (id) onElementSelected(id);
+                                onTab("bim");
+                              }}
+                              onModels={() => onTab("sources")}
+                              onChanges={() => onTab("impact")}
                             />
                           }
                         />
@@ -328,6 +335,22 @@ export function WorkspaceViews({
                       onInvestigate={onInvestigateSource}
                       onInspectImpact={onInspectImpact}
                       onOpenInvestigation={openInvestigation}
+                      readyForNewBaseline={
+                        !!data.analysis &&
+                        !data.stale &&
+                        data.state.work_packages.every((item) =>
+                          data.analysis?.readiness.some(
+                            (entry) =>
+                              entry.work_package_id === item.id &&
+                              entry.status === "READY",
+                          ),
+                        )
+                      }
+                      lastCheckAt={data.analysis?.snapshot.captured_at}
+                      checkFailed={data.analysis_run?.status === "FAILED"}
+                      onRecheck={onRecheck}
+                      onWorkPackage={() => onTab("coordination")}
+                      onChanges={() => onTab("impact")}
                     />
                   )}
                   {tab === "bim" && mappingMode && !!selected && (
@@ -340,6 +363,8 @@ export function WorkspaceViews({
                       onContext={onBimContext}
                       onInvestigate={onInvestigateBim}
                       onOpenInvestigation={openInvestigation}
+                      onWorkPackage={() => onTab("coordination")}
+                      onModels={() => onTab("sources")}
                     />
                   )}
                   {tab === "bim" && !mappingMode && (

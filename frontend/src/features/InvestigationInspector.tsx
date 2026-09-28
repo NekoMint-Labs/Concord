@@ -69,6 +69,13 @@ export function InvestigationInspector({
       <div className="investigation-body">
         {report ? (
           <>
+            {scope?.to_revision_id &&
+              context.revisionId &&
+              scope.to_revision_id !== context.revisionId && (
+                <p className="viewer-status" role="status">
+                  这是旧版本的调查结果。请从当前模型变化重新查看原因。
+                </p>
+              )}
             <section className="investigation-answer">
               <span className="fact-label">影响</span>
               <p>
@@ -78,7 +85,7 @@ export function InvestigationInspector({
               </p>
               {comparison && <p>{demoInvestigationText(comparison)}</p>}
               <details>
-                <summary>完整判断与限制</summary>
+                <summary>查看原因与限制</summary>
                 {comparison && <p>{demoInvestigationText(summary)}</p>}
                 {report.answer.limitations.map((item) => (
                   <small key={item}>{demoInvestigationText(item)}</small>
@@ -95,13 +102,13 @@ export function InvestigationInspector({
                     run ? (
                       <Status value={run.status} />
                     ) : report.persisted ? (
-                      "已持久化"
+                      "调查已完成"
                     ) : (
                       "只读"
                     )
                   }
                 />
-                <PropertyRow label="来源" value={source || "当前项目"} />
+                <PropertyRow label="模型" value={source || "当前项目"} />
                 {(scope?.from_revision_id || scope?.to_revision_id) && (
                   <PropertyRow
                     label="版本"
@@ -205,7 +212,7 @@ export function InvestigationInspector({
                 <p className="quiet-message">本次调查没有持久化判断依据。</p>
               )}
             </section>
-            {proposal && (
+            {proposal ? (
               <section className="investigation-proposal">
                 <span className="fact-label">建议处理</span>
                 <h4>
@@ -222,6 +229,16 @@ export function InvestigationInspector({
                     审查处理方案 →
                   </Button>
                 )}
+              </section>
+            ) : (
+              <section className="investigation-proposal">
+                <span className="fact-label">处理建议</span>
+                <p>
+                  仅有模型变化并不代表施工受阻。本次调查没有需要批准的处理动作；请核对受影响工作包，再重新检查。
+                </p>
+                <Button size="sm" variant="ghost" onClick={onClose}>
+                  返回工程工作区
+                </Button>
               </section>
             )}
             <details className="investigation-process">
@@ -247,8 +264,14 @@ export function InvestigationInspector({
         ) : (
           <div className="investigation-pending">
             {run && <Status value={run.status} />}
-            <strong>调查正在进行</strong>
-            <p>完成后将在此显示上下文、调查步骤和判断依据。</p>
+            <strong>
+              {run?.status === "FAILED" ? "调查未完成" : "正在查看原因"}
+            </strong>
+            <p>
+              {run?.status === "FAILED"
+                ? "本次调查失败，请返回工程上下文重试。"
+                : "完成后将在此显示影响、判断依据与处理建议。"}
+            </p>
           </div>
         )}
       </div>

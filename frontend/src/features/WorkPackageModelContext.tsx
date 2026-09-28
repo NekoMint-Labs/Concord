@@ -13,13 +13,19 @@ export function WorkPackageModelContext({
   elementIds,
   impacted,
   revision,
+  workPackageId,
   onOpenModel,
+  onModels,
+  onChanges,
 }: {
   project: string;
   elementIds: readonly string[];
   impacted: readonly string[];
   revision: string;
-  onOpenModel: () => void;
+  workPackageId?: string;
+  onOpenModel: (elementId?: string) => void;
+  onModels?: () => void;
+  onChanges?: () => void;
 }) {
   const [selected, setSelected] = useState(elementIds[0] ?? "");
   const elements = useQuery({
@@ -30,9 +36,60 @@ export function WorkPackageModelContext({
     queryKey: ["sources", project],
     queryFn: () => api.sourceStatuses(project),
   });
-  const source = sources.data?.find(
-    (item) => item.source.kind === "BIM" && item.latest_revision_id,
-  );
+  const models =
+    sources.data?.filter(
+      (item) => item.source.kind === "BIM" && item.latest_revision_id,
+    ) ?? [];
+  const source = models.length === 1 ? models[0] : undefined;
+  const bindings = useQuery({
+    queryKey: [
+      "bim-bindings",
+      project,
+      source?.source.id,
+      source?.latest_revision_id,
+    ],
+    queryFn: () =>
+      api.bimBindings(project, source!.source.id, source!.latest_revision_id!),
+    enabled: !!workPackageId && !!source?.latest_revision_id,
+  });
+  const comparisons = useQuery({
+    queryKey: ["comparisons", project, source?.source.id],
+    queryFn: () => api.comparisons(project, source!.source.id),
+    enabled: !!source?.source.id && !!source.has_pending_revision,
+  });
+  const comparison = comparisons.data
+    ?.slice()
+    .reverse()
+    .find(
+      (item) =>
+        item.to_revision_id === source?.latest_revision_id &&
+        item.from_revision_id === source?.accepted_revision_id,
+    );
+  const changeImpact = useQuery({
+    queryKey: ["comparison", project, source?.source.id, comparison?.id],
+    queryFn: () => api.comparison(project, source!.source.id, comparison!.id),
+    enabled: !!comparison,
+  });
+  const snapshot = useQuery({
+    queryKey: [
+      "bim-snapshot",
+      project,
+      source?.source.id,
+      source?.latest_revision_id,
+    ],
+    queryFn: () =>
+      api.bimSnapshot(project, source!.source.id, source!.latest_revision_id!),
+    enabled: !!source?.latest_revision_id,
+    retry: false,
+  });
+  const linkedIds = [
+    ...new Set([
+      ...elementIds,
+      ...(bindings.data ?? [])
+        .filter((item) => item.binding.work_package_id === workPackageId)
+        .map((item) => item.binding.global_id),
+    ]),
+  ];
   const model = useQuery({
     queryKey: ["bim-content", project, source?.latest_revision_id],
     queryFn: async () => {
@@ -44,34 +101,61 @@ export function WorkPackageModelContext({
         source ? "project-model.ifc" : "project-import.ifc",
       );
     },
-    enabled: sources.isSuccess,
+    enabled:
+      sources.isSuccess && models.length <= 1 && (!source || !!snapshot.data),
     retry: false,
     staleTime: Number.POSITIVE_INFINITY,
   });
   const linked = useMemo(
     () =>
-      elementIds.map((id) => ({
+      linkedIds.map((id) => ({
         id,
         element: elements.data?.find((item) => item.id === id),
+        snapshot: snapshot.data?.elements.find((item) => item.global_id === id),
       })),
-    [elementIds, elements.data],
+    [linkedIds.join("|"), elements.data, snapshot.data],
   );
-  const affected = elementIds.filter((id) => impacted.includes(id));
+  const missingIds = (bindings.data ?? [])
+    .filter(
+      (item) =>
+        item.binding.work_package_id === workPackageId &&
+        item.state === "missing",
+    )
+    .map((item) => item.binding.global_id);
+  const comparisonChanges =
+    changeImpact.data?.affected_work_packages.find(
+      (item) => item.work_package_id === workPackageId,
+    )?.changes ?? [];
+  const affected = linkedIds.filter(
+    (id) =>
+      impacted.includes(id) ||
+      comparisonChanges.some((change) => change.global_id === id),
+  );
 
   useEffect(() => {
-    if (!elementIds.includes(selected)) setSelected(elementIds[0] ?? "");
-  }, [elementIds, selected]);
+    if (!linkedIds.includes(selected)) setSelected(linkedIds[0] ?? "");
+  }, [linkedIds.join("|"), selected]);
 
   return (
     <section className="model-context" aria-label="模型上下文">
       <header className="overview-section-header">
         <div>
           <span className="section-label">模型上下文</span>
-          <h2>{elementIds.length} 个关联构件</h2>
+          <h2>{linkedIds.length} 个关联构件</h2>
         </div>
-        <Button variant="ghost" size="sm" onClick={onOpenModel}>
+        <Button variant="ghost" size="sm" onClick={() => onOpenModel(selected)}>
           打开模型 <ExternalLink {...icon} />
         </Button>
+        {!source && onModels && (
+          <Button size="sm" onClick={onModels}>
+            {models.length > 1 ? "选择项目模型" : "上传第一个模型"}
+          </Button>
+        )}
+        {comparisonChanges.length > 0 && onChanges && (
+          <Button size="sm" onClick={onChanges}>
+            查看 {comparisonChanges.length} 个变更构件
+          </Button>
+        )}
       </header>
 
       <div className="model-context-layout">
@@ -93,16 +177,20 @@ export function WorkPackageModelContext({
               <Cuboid {...icon} aria-hidden="true" />
               <div>
                 <strong>
-                  {model.isLoading
-                    ? "正在查找项目模型"
-                    : "暂无可打开的 IFC 几何文件"}
+                  {models.length > 1
+                    ? "项目有多个模型"
+                    : model.isLoading
+                      ? "正在查找项目模型"
+                      : "暂无可打开的 IFC 几何文件"}
                 </strong>
                 <p>
-                  {model.isLoading
-                    ? "正在核对当前项目的模型来源。"
-                    : elementIds.length
-                      ? "关联关系和结构化构件仍可检查；导入 IFC 后会在此显示真实几何。"
-                      : "为工作包关联构件后，模型上下文会显示在这里。"}
+                  {models.length > 1
+                    ? "请在模型版本中选择要查看的模型，避免混淆不同模型的构件。"
+                    : model.isLoading
+                      ? "正在查找项目模型。"
+                      : linkedIds.length
+                        ? "关联关系仍可查看；处理模型后将显示几何。"
+                        : "为工作包关联构件后，模型上下文会显示在这里。"}
                 </p>
               </div>
             </div>
@@ -112,10 +200,10 @@ export function WorkPackageModelContext({
         <aside className="linked-element-panel">
           <header>
             <span>关联构件</span>
-            <small>{elementIds.length}</small>
+            <small>{linkedIds.length}</small>
           </header>
           <div className="linked-element-list">
-            {linked.map(({ id, element }, index) => (
+            {linked.map(({ id, element, snapshot: modelElement }, index) => (
               <button
                 type="button"
                 key={id}
@@ -125,12 +213,19 @@ export function WorkPackageModelContext({
                 <span className="element-index">{index + 1}</span>
                 <span className="element-copy">
                   <strong>
-                    {element
-                      ? demoElementName(element.id, element.name)
-                      : "历史关联构件"}
+                    {modelElement?.name ||
+                      (element
+                        ? demoElementName(element.id, element.name)
+                        : missingIds.includes(id)
+                          ? "此版本已删除的构件"
+                          : "历史关联构件")}
                   </strong>
                   <small>
-                    {[element?.type, element?.storey, element?.space]
+                    {[
+                      modelElement?.ifc_class ?? element?.type,
+                      modelElement?.storey ?? element?.storey,
+                      modelElement?.space ?? element?.space,
+                    ]
                       .filter(Boolean)
                       .join(" · ") || "结构化构件"}
                   </small>
@@ -158,7 +253,9 @@ export function WorkPackageModelContext({
               </strong>
               <small>
                 {affected.length
-                  ? `当前分析基于 ${revision}`
+                  ? comparison
+                    ? "新版本待审核，请到「变更」查看详情。"
+                    : `当前分析基于 ${revision}`
                   : "没有构件进入当前影响范围"}
               </small>
             </div>

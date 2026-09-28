@@ -63,8 +63,11 @@ export function useProjectSources(project: string, sourceId: string) {
   const importRevision = useMutation({
     mutationFn: ({ source, revision }: { source: string; revision: string }) =>
       api.importRevision(project, source, revision),
-    onSuccess: async () => {
+    onSuccess: async (_run, { source, revision }) => {
       await cache.invalidateQueries({ queryKey: ["runs", project] });
+      await cache.invalidateQueries({
+        queryKey: ["revision-import", project, source, revision],
+      });
     },
   });
   const acceptBaseline = useMutation({
@@ -75,7 +78,7 @@ export function useProjectSources(project: string, sourceId: string) {
           source_id: item.source.id,
           revision_id: item.latest_revision_id!,
         }));
-      if (!entries.length) throw new Error("没有可接受的来源版本");
+      if (!entries.length) throw new Error("尚未上传项目模型");
       return api.createBaseline(project, {
         name: `B${(baselines.data?.length ?? 0) + 1}`,
         entries,

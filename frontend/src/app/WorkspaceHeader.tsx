@@ -17,6 +17,7 @@ export function WorkspaceHeader({
   tab,
   navCollapsed = false,
   onToggleNav,
+  onNavigate,
   children,
 }: {
   data: Workspace;
@@ -24,6 +25,7 @@ export function WorkspaceHeader({
   tab?: WorkspaceTab;
   navCollapsed?: boolean;
   onToggleNav?: () => void;
+  onNavigate?: (tab: WorkspaceTab) => void;
   children?: ReactNode;
 }) {
   const project = data.state.project.id;
@@ -31,9 +33,11 @@ export function WorkspaceHeader({
     queryKey: ["sources", project],
     queryFn: () => api.sourceStatuses(project),
   });
-  const source = sources.data?.find(
-    (item) => item.source.kind === "BIM" && item.latest_revision_id,
-  );
+  const models =
+    sources.data?.filter(
+      (item) => item.source.kind === "BIM" && item.latest_revision_id,
+    ) ?? [];
+  const source = models.length === 1 ? models[0] : undefined;
   const revisions = useQuery({
     queryKey: ["revisions", project, source?.source.id],
     queryFn: () => api.sourceRevisions(project, source!.source.id),
@@ -63,9 +67,11 @@ export function WorkspaceHeader({
             </button>
           </AppTooltip>
         )}
-        <div className="breadcrumb" aria-label="当前工程上下文">
-          {wp ? (
+        <nav className="breadcrumb" aria-label="当前位置">
+          <span>{demoProjectName(project, data.state.project.name)}</span>
+          {wp && (
             <>
+              <span className="crumb-sep">/</span>
               <span>
                 {demoAreaName(
                   wp.area_id,
@@ -74,19 +80,27 @@ export function WorkspaceHeader({
                 )}
               </span>
               <span className="crumb-sep">/</span>
-              <strong>{demoWorkPackageName(wp.id, wp.name)}</strong>
+              {tab === "coordination" ? (
+                <strong>{demoWorkPackageName(wp.id, wp.name)}</strong>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.("coordination")}
+                >
+                  {demoWorkPackageName(wp.id, wp.name)}
+                </button>
+              )}
             </>
-          ) : (
-            <strong>{demoProjectName(project, data.state.project.name)}</strong>
           )}
-          {tab && tab !== "bim" && (
+          {tab && tab !== "coordination" && (
             <span className="workspace-location">
               {
                 (
                   {
                     coordination: "概览",
                     "work-packages": "工作包",
-                    sources: "模型生命周期",
+                    sources: "模型版本",
+                    bim: "模型",
                     impact: "变更",
                     packages: "问题",
                     documents: "文档",
@@ -98,19 +112,28 @@ export function WorkspaceHeader({
               }
             </span>
           )}
-        </div>
-        {latest && (
+        </nav>
+        {models.length > 1 ? (
           <div className="header-versions">
-            <span className="version-current">
-              <i />R{latest.sequence}
-            </span>
-            {baseline && (
-              <>
-                <span>对比</span>
-                <span>B{baseline.sequence}</span>
-              </>
-            )}
+            <span>多个项目模型 · 请在模型版本中选择</span>
           </div>
+        ) : (
+          latest && (
+            <div className="header-versions">
+              <span className="version-current">
+                <i />
+                最新版本 R{latest.sequence}
+              </span>
+              {baseline ? (
+                <span>当前基线 B{baseline.sequence}</span>
+              ) : (
+                <span>尚未确认基线</span>
+              )}
+              {source?.accepted_revision_id && source.has_pending_revision && (
+                <span>新版本待审核</span>
+              )}
+            </div>
+          )
         )}
       </div>
       <div className="local-actions" aria-label="当前工作区操作">

@@ -63,6 +63,10 @@ export function App() {
     enabled: !!project,
   });
   const data = workspace.data;
+  const projectModels =
+    sourceCatalog.data?.filter(
+      (item) => item.source.kind === "BIM" && item.latest_revision_id,
+    ) ?? [];
   const wp = data?.state.work_packages.find((item) => item.id === selected);
   const agent = useConcordAgent({
     project,
@@ -89,15 +93,48 @@ export function App() {
       setTab("bim");
       return;
     }
-    if (!data.state.work_packages.some((item) => item.id === selected))
-      setSelected(data.state.work_packages[0].id);
-  }, [data, selected]);
+    if (!data.state.work_packages.some((item) => item.id === selected)) {
+      let remembered: string | null = null;
+      try {
+        remembered = localStorage.getItem(`concord:package:${project}`);
+      } catch {
+        // Project state still loads when storage is unavailable.
+      }
+      setSelected(
+        data.state.work_packages.find((item) => item.id === remembered)?.id ??
+          data.state.work_packages[0].id,
+      );
+    }
+  }, [data, project, selected]);
+
+  function selectPackage(id: string) {
+    if (id !== selected) {
+      setSelectedElement("");
+      setSelectedSpatialIssue("");
+      setMappingContext(undefined);
+      agent.clearScope();
+    }
+    setSelected(id);
+    try {
+      localStorage.setItem(`concord:package:${project}`, id);
+    } catch {
+      // Remembering a selection must not block navigation.
+    }
+    setSelectedConstraint("");
+    setDetailsOpen(false);
+    setMappingMode(false);
+  }
+
+  function navigate(next: WorkspaceTab) {
+    if (next !== "bim") setMappingMode(false);
+    if (next !== tab || inspectorView === "investigation")
+      setDetailsOpen(false);
+    setTab(next);
+  }
 
   function createEvent(event: DTO<"ProjectEvent-Input">) {
-    setSelected(event.work_package_id);
-    setSelectedConstraint("");
-    setTab("coordination");
-    setDetailsOpen(false);
+    selectPackage(event.work_package_id);
+    navigate("coordination");
     setEventDialog(false);
     void perform(() => api.events(project, event), "变更已记录。");
   }
@@ -199,15 +236,10 @@ export function App() {
             onProjectSettings={() => setSettingsOpen(true)}
             onStructure={() => setStructureOpen(true)}
             onSelect={(id) => {
-              setSelected(id);
-              setSelectedConstraint("");
-              setDetailsOpen(false);
-              setTab("coordination");
+              selectPackage(id);
+              navigate("coordination");
             }}
-            onTab={(next) => {
-              if (next !== "bim") setMappingMode(false);
-              setTab(next);
-            }}
+            onTab={navigate}
           />
         </Pane>
         <PaneDivider label="调整导航宽度" disabled={!navOpen} />
@@ -222,6 +254,7 @@ export function App() {
                 navPanel.current?.expand();
                 setNavOpen(true);
               }}
+              onNavigate={navigate}
             >
               {wp && (tab === "coordination" || tab === "work-packages") && (
                 <Button
@@ -260,7 +293,7 @@ export function App() {
               />
               <AdvancedMenu
                 tab={tab}
-                onTab={setTab}
+                onTab={navigate}
                 project={project}
                 busy={busy}
                 profile={profile.data}
@@ -292,9 +325,9 @@ export function App() {
             <WorkspaceViews
               project={project}
               data={data}
-              modelSource={sourceCatalog.data?.find(
-                (item) => item.source.kind === "BIM" && item.latest_revision_id,
-              )}
+              modelSource={
+                projectModels.length === 1 ? projectModels[0] : undefined
+              }
               localIfcFile={localIfcFile}
               onLocalIfcFile={(file) =>
                 setLocalIfc(file ? { project, file } : null)
@@ -310,11 +343,8 @@ export function App() {
               detailsOpen={detailsOpen}
               inspectorView={inspectorView}
               perform={perform}
-              onTab={(next) => {
-                if (next !== "bim") setMappingMode(false);
-                setTab(next);
-              }}
-              onSelected={setSelected}
+              onTab={navigate}
+              onSelected={selectPackage}
               onConstraint={(id) => {
                 setSelectedConstraint(id);
                 setInspectorView("blocker");
@@ -351,7 +381,7 @@ export function App() {
                 );
                 setInspectorView("investigation");
                 setDetailsOpen(true);
-                void agent.startInvestigation("调查当前工程来源版本", {
+                void agent.startInvestigation("查看模型版本变化及影响", {
                   sourceId,
                   fromRevisionId,
                   revisionId,
@@ -372,19 +402,17 @@ export function App() {
                 );
                 setInspectorView("investigation");
                 setDetailsOpen(true);
-                void agent.startInvestigation(
-                  "调查当前工作包与选中的 BIM 构件",
-                  {
-                    sourceId,
-                    fromRevisionId,
-                    revisionId,
-                    workPackageId: selected,
-                    elementIds,
-                  },
-                );
+                void agent.startInvestigation("查看工作包与所选构件的影响", {
+                  sourceId,
+                  fromRevisionId,
+                  revisionId,
+                  workPackageId: selected,
+                  elementIds,
+                });
               }}
               onInspectImpact={(workPackageId, context) => {
-                setSelected(workPackageId);
+                selectPackage(workPackageId);
+                setSelectedElement(context.highlightIds?.[0] ?? "");
                 setMappingMode(true);
                 setMappingContext(context);
                 if (context.sourceId && context.revisionId) {
@@ -424,8 +452,8 @@ export function App() {
         workspace={data}
         onOpenChange={setStructureOpen}
         onWorkPackage={(id) => {
-          setSelected(id);
-          setTab("coordination");
+          selectPackage(id);
+          navigate("coordination");
         }}
       />
       <AppToaster />

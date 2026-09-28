@@ -14,7 +14,13 @@ export function useChangeComparison(project: string) {
   const models = (sources.data ?? []).filter(
     (item) => item.source.kind === "BIM",
   );
-  const [sourceId, setSourceId] = useState("");
+  const [sourceId, setSourceId] = useState(() => {
+    try {
+      return sessionStorage.getItem(`concord:model:${project}`) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const source = models.find((item) => item.source.id === sourceId);
   const revisions = useQuery({
     queryKey: ["revisions", project, sourceId],
@@ -26,12 +32,18 @@ export function useChangeComparison(project: string) {
     queryFn: () => api.comparisons(project, sourceId),
     enabled: !!sourceId,
   });
-  const [comparisonId, setComparisonId] = useState("");
+  const [comparisonId, setComparisonId] = useState(() => {
+    try {
+      return sessionStorage.getItem(`concord:comparison:${project}`) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const comparison = comparisons.data?.find((item) => item.id === comparisonId);
   const detail = useQuery({
     queryKey: ["comparison", project, sourceId, comparisonId],
     queryFn: () => api.comparison(project, sourceId, comparisonId),
-    enabled: !!comparisonId,
+    enabled: !!comparison,
   });
   const oldModel = useQuery({
     queryKey: ["bim-snapshot", project, sourceId, comparison?.from_revision_id],
@@ -57,10 +69,19 @@ export function useChangeComparison(project: string) {
   const [shownRevision, setShownRevision] = useState<"from" | "to">("to");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
+  const baselines = useQuery({
+    queryKey: ["baselines", project],
+    queryFn: () => api.baselines(project),
+  });
+  const fromRevisionId =
+    baselines.data
+      ?.at(-1)
+      ?.entries.find((entry) => entry.source_id === sourceId)?.revision_id ??
+    revisions.data?.at(-2)?.id;
   const compare = useMutation({
     mutationFn: () =>
       api.compareRevisions(project, sourceId, {
-        from_revision_id: revisions.data!.at(-2)!.id,
+        from_revision_id: fromRevisionId!,
         to_revision_id: revisions.data!.at(-1)!.id,
       }),
     onSuccess: async (result) => {
@@ -71,13 +92,25 @@ export function useChangeComparison(project: string) {
     },
   });
   useEffect(() => {
+    if (!sources.data) return;
     if (!models.some((model) => model.source.id === sourceId))
       setSourceId(models[0]?.source.id ?? "");
-  }, [models, sourceId]);
+  }, [sources.data, sourceId]);
   useEffect(() => {
-    if (!comparisons.data?.some((item) => item.id === comparisonId))
-      setComparisonId(comparisons.data?.at(-1)?.id ?? "");
+    if (!comparisons.data) return;
+    if (!comparisons.data.some((item) => item.id === comparisonId))
+      setComparisonId(comparisons.data.at(-1)?.id ?? "");
   }, [comparisons.data, comparisonId]);
+  useEffect(() => {
+    try {
+      if (sourceId)
+        sessionStorage.setItem(`concord:model:${project}`, sourceId);
+      if (comparisonId)
+        sessionStorage.setItem(`concord:comparison:${project}`, comparisonId);
+    } catch {
+      /* Preferences are optional. */
+    }
+  }, [project, sourceId, comparisonId]);
   useEffect(() => {
     setSelectedId("");
     setKind("all");
@@ -146,5 +179,6 @@ export function useChangeComparison(project: string) {
     file,
     fileError,
     compare,
+    fromRevisionId,
   };
 }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Box } from "lucide-react";
 import { api, readSource, type InvestigationReport } from "../api/client";
@@ -21,12 +21,20 @@ export function InvestigationWorkspace({
     queryKey: ["sources", project],
     queryFn: () => api.sourceStatuses(project),
   });
-  const source =
-    sources.data?.find((item) => item.source.id === context.sourceId) ??
-    sources.data?.find(
-      (item) => item.source.kind === "BIM" && item.latest_revision_id,
-    );
-  const revision = context.revisionId ?? source?.latest_revision_id;
+  const scopeSource = report?.scope.source_id ?? context.sourceId;
+  const source = scopeSource
+    ? sources.data?.find(
+        (item) => item.source.id === scopeSource && item.source.kind === "BIM",
+      )
+    : report
+      ? undefined
+      : sources.data?.find(
+          (item) => item.source.kind === "BIM" && item.latest_revision_id,
+        );
+  const revision =
+    report?.scope.to_revision_id ??
+    context.revisionId ??
+    source?.latest_revision_id;
   const file = useQuery({
     queryKey: ["investigation-ifc", project, source?.source.id, revision],
     enabled: !!source?.source.id && !!revision,
@@ -45,7 +53,9 @@ export function InvestigationWorkspace({
     queryKey: ["documents", project],
     queryFn: () => api.documents(project),
   });
-  const document = documents.data?.[0];
+  const document = documents.data?.find((item) =>
+    report?.evidence.some((entry) => entry.source_id === item.id),
+  );
   const chunks = useQuery({
     queryKey: ["chunks", document?.id],
     queryFn: () => api.chunks(document!.id),
@@ -56,33 +66,39 @@ export function InvestigationWorkspace({
     [report?.scope.element_ids, context.elementIds],
   );
   const [selected, setSelected] = useState(ids[0] ?? "");
+  useEffect(() => {
+    if (!ids.includes(selected)) setSelected(ids[0] ?? "");
+  }, [ids, selected]);
   const [sourceTab, setSourceTab] = useState<"model" | "documents">("model");
+  const visibleTab =
+    sourceTab === "documents" && document ? "documents" : "model";
   return (
     <section className="investigation-workspace" aria-label="调查依据工作区">
       <nav className="investigation-tabs" aria-label="调查来源">
         <button
           type="button"
-          className={sourceTab === "model" ? "active" : ""}
-          aria-current={sourceTab === "model" ? "true" : undefined}
+          className={visibleTab === "model" ? "active" : ""}
+          aria-current={visibleTab === "model" ? "true" : undefined}
           onClick={() => setSourceTab("model")}
         >
           <Box size={13} /> 模型
         </button>
-        <button
-          type="button"
-          className={sourceTab === "documents" ? "active" : ""}
-          aria-current={sourceTab === "documents" ? "true" : undefined}
-          onClick={() => setSourceTab("documents")}
-        >
-          <FileText size={13} /> 文档{" "}
-          <small>{documents.data?.length ?? 0}</small>
-        </button>
+        {document && (
+          <button
+            type="button"
+            className={visibleTab === "documents" ? "active" : ""}
+            aria-current={visibleTab === "documents" ? "true" : undefined}
+            onClick={() => setSourceTab("documents")}
+          >
+            <FileText size={13} /> 文档 <small>1</small>
+          </button>
+        )}
       </nav>
-      <div className={`investigation-visuals is-${sourceTab}`}>
+      <div className={`investigation-visuals is-${visibleTab}`}>
         <div
           className="investigation-model"
           aria-label="调查模型"
-          hidden={sourceTab !== "model"}
+          hidden={visibleTab !== "model"}
         >
           {file.data ? (
             <Suspense
@@ -111,7 +127,7 @@ export function InvestigationWorkspace({
         <div
           className="investigation-document"
           aria-label="调查文档"
-          hidden={sourceTab !== "documents"}
+          hidden={visibleTab !== "documents"}
         >
           <header>
             <FileText size={14} />

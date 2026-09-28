@@ -24,7 +24,7 @@ export function CreateSourceDialog({
       setName("");
       onOpenChange(false);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "来源创建失败");
+      setError(cause instanceof Error ? cause.message : "添加模型失败");
     }
   }
 
@@ -32,12 +32,12 @@ export function CreateSourceDialog({
     <AppDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="新建逻辑来源"
-      description="后续不同文件名仍可作为同一来源的 R2、R3。"
+      title="添加项目模型"
+      description="为模型命名；以后上传的新 IFC 会成为这个模型的 R2、R3。"
     >
       <form className="project-form" onSubmit={submit}>
         <label className="form-label">
-          来源名称
+          模型名称
           <input
             required
             value={name}
@@ -47,7 +47,7 @@ export function CreateSourceDialog({
         <label className="form-label">
           类型
           <AppSelect
-            label="来源类型"
+            label="文件类型"
             value={kind}
             onChange={(value) => setKind(value as typeof kind)}
             options={[
@@ -63,7 +63,7 @@ export function CreateSourceDialog({
           <DialogClose asChild>
             <Button variant="secondary">取消</Button>
           </DialogClose>
-          <Button type="submit">创建来源</Button>
+          <Button type="submit">添加模型</Button>
         </div>
       </form>
     </AppDialog>

@@ -44,15 +44,16 @@ export function useConcordAgent({
     setError("");
   }, [project]);
 
+  const shownRun = activeRun?.project === project ? activeRun : undefined;
   const currentRun = useQuery({
     queryKey: [
       "current-operation-run",
-      activeRun?.project,
-      activeRun?.id,
-      activeRun?.generation,
+      shownRun?.project,
+      shownRun?.id,
+      shownRun?.generation,
     ],
-    queryFn: () => api.run(activeRun!.id),
-    enabled: !!activeRun && activeRun.project === project,
+    queryFn: () => api.run(shownRun!.id),
+    enabled: !!shownRun,
     refetchInterval: (query) =>
       ["QUEUED", "RUNNING"].includes(query.state.data?.status ?? "")
         ? 1200
@@ -62,14 +63,11 @@ export function useConcordAgent({
     queryKey: [
       "investigation-report",
       project,
-      activeRun?.id,
+      shownRun?.id,
       currentRun.data?.generation,
     ],
-    queryFn: () => api.investigation(project, activeRun!.id),
-    enabled:
-      !!activeRun &&
-      activeRun.project === project &&
-      activeRun.category === "investigation",
+    queryFn: () => api.investigation(project, shownRun!.id),
+    enabled: !!shownRun && shownRun.category === "investigation",
     refetchInterval: (query) =>
       query.state.data ||
       !["QUEUED", "RUNNING"].includes(currentRun.data?.status ?? "")
@@ -194,12 +192,13 @@ export function useConcordAgent({
   );
 
   return {
-    activeRun,
+    activeRun: shownRun,
     currentRun,
     investigation,
     context,
     error,
     clearError: () => setError(""),
+    clearScope: () => setScope({ elementIds: [] }),
     rememberRun,
     sourceContext,
     bimContext,

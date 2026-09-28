@@ -36,11 +36,16 @@ export function IssueExplorer({
     queryKey: ["sources", project],
     queryFn: () => api.sourceStatuses(project),
   });
-  const model = sources.data?.find(
-    (item) => item.source.kind === "BIM" && item.latest_revision_id,
-  );
+  const models =
+    sources.data?.filter(
+      (item) => item.source.kind === "BIM" && item.latest_revision_id,
+    ) ?? [];
+  const model = models.length === 1 ? models[0] : undefined;
   useEffect(() => {
-    if (!model?.latest_revision_id) return;
+    if (!model?.latest_revision_id) {
+      setFile(null);
+      return;
+    }
     let cancelled = false;
     void readSource(
       `/api/projects/${encodeURIComponent(project)}/sources/${encodeURIComponent(model.source.id)}/revisions/${encodeURIComponent(model.latest_revision_id)}/content`,

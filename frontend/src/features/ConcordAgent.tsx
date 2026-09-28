@@ -93,15 +93,15 @@ export function ConcordAgent({
   const investigation = context.elementIds.length
     ? {
         label: `检查 ${context.elementIds.length} 个已选构件`,
-        instruction: "调查当前选中的 BIM 构件",
+        instruction: "查看所选构件的影响与依据",
       }
     : context.revisionId
       ? {
-          label: context.fromRevisionId ? "检查当前版本差异" : "检查当前版本",
-          instruction: "调查当前工程来源版本",
+          label: context.fromRevisionId ? "查看版本变化的原因" : "查看当前模型",
+          instruction: "查看模型变化及工作包影响",
         }
       : context.workPackageId
-        ? { label: "检查当前工作包", instruction: "调查当前工作包" }
+        ? { label: "查看工作包问题", instruction: "查看工作包的问题与依据" }
         : { label: "检查当前项目", instruction: "调查当前项目" };
 
   return (
@@ -141,7 +141,7 @@ export function ConcordAgent({
         </header>
 
         <section className="agent-context-block">
-          <span className="section-label">当前上下文</span>
+          <span className="section-label">调查范围</span>
           <strong>
             {context.workPackageName ??
               context.sourceName ??
@@ -170,7 +170,7 @@ export function ConcordAgent({
           }}
         >
           <label className="section-label" htmlFor="context-question">
-            询问当前上下文
+            询问当前工程问题
           </label>
           <div className="agent-ask-row">
             <input
@@ -203,7 +203,7 @@ export function ConcordAgent({
         <section className="agent-investigate">
           <div>
             <span className="section-label">调查</span>
-            <strong>核对工程事实并保存判断依据</strong>
+            <strong>查看影响、原因和判断依据</strong>
           </div>
           <Button
             size="sm"
@@ -240,7 +240,9 @@ export function ConcordAgent({
                 )}
               </>
             )}
-            {currentRun.error && <p role="alert">{currentRun.error}</p>}
+            {currentRun.status === "FAILED" && (
+              <p role="alert">调查未完成，请从当前工程位置重试。</p>
+            )}
           </section>
         )}
 
@@ -249,7 +251,7 @@ export function ConcordAgent({
             <span className="section-label">需要关注</span>
             {notices.data.slice(-3).map((notice) => (
               <div key={notice.id}>
-                <span>工程来源有新版本</span>
+                <span>发现待审核的模型版本</span>
               </div>
             ))}
           </section>
@@ -257,9 +259,11 @@ export function ConcordAgent({
 
         {(ask.error || investigate.error || configure.error) && (
           <p className="alert" role="alert">
-            {ask.error?.message ??
-              investigate.error?.message ??
-              configure.error?.message}
+            {investigate.error
+              ? "调查无法启动，请重试。"
+              : ask.error
+                ? "暂时无法回答，请重试。"
+                : "设置未保存，请重试。"}
           </p>
         )}
       </div>

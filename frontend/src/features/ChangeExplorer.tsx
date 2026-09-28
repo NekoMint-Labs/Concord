@@ -51,11 +51,29 @@ export function ChangeExplorer({
     file,
     fileError,
     compare,
+    fromRevisionId,
     selectedId,
     setSelectedId,
     shownRevision,
     setShownRevision,
   } = state;
+  const latestRevision = revisions.data?.at(-1);
+  const latestImport = useQuery({
+    queryKey: ["revision-import", project, sourceId, latestRevision?.id],
+    queryFn: () => api.revisionImport(project, sourceId, latestRevision!.id),
+    enabled: !!sourceId && !!latestRevision,
+    refetchInterval: (query) =>
+      ["QUEUED", "RUNNING"].includes(query.state.data?.status ?? "")
+        ? 1500
+        : false,
+  });
+  const needsComparison =
+    !!latestRevision &&
+    !!fromRevisionId &&
+    fromRevisionId !== latestRevision.id &&
+    (!comparison ||
+      comparison.from_revision_id !== fromRevisionId ||
+      comparison.to_revision_id !== latestRevision.id);
   const changes = detail.data?.changes ?? [];
   const [kind, setKind] = useState<"all" | "added" | "deleted" | "changed">(
     "all",
@@ -120,6 +138,27 @@ export function ChangeExplorer({
   return (
     <section className="change-workspace" aria-label="版本变更">
       <div className="change-stage">
+        {needsComparison && (
+          <p className="viewer-status" role="status">
+            {latestImport.data?.status === "COMPLETED"
+              ? `新版本 R${latestRevision!.sequence} 已处理；当前基线未变。${comparison ? "当前显示的是历史比较。" : ""}`
+              : `新版本 R${latestRevision!.sequence} 尚未处理完成。请到模型版本查看进度。`}
+            {latestImport.data?.status === "COMPLETED" && (
+              <button
+                type="button"
+                disabled={compare.isPending}
+                onClick={() => compare.mutate()}
+              >
+                {compare.isPending ? "正在比较…" : "查看与当前基线的变化"}
+              </button>
+            )}
+          </p>
+        )}
+        {compare.isError && (
+          <p className="alert" role="alert">
+            暂时无法比较模型版本，请确认模型处理完成后重试。
+          </p>
+        )}
         {fileError && (
           <p className="alert" role="alert">
             {fileError}
@@ -227,9 +266,12 @@ export function ChangeExplorer({
                 <button
                   type="button"
                   onClick={() => compare.mutate()}
-                  disabled={compare.isPending}
+                  disabled={
+                    compare.isPending ||
+                    latestImport.data?.status !== "COMPLETED"
+                  }
                 >
-                  比较最新版本
+                  查看变化
                 </button>
               ) : (
                 <button type="button" onClick={onModels}>

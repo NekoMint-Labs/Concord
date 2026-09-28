@@ -58,6 +58,7 @@ export function CoordinationWorkspace({
   onModel,
   onDocuments,
   modelContext,
+  pendingModel = false,
 }: {
   workspace: Workspace;
   surface?: "coordination" | "work-packages";
@@ -69,6 +70,7 @@ export function CoordinationWorkspace({
   onModel?: () => void;
   onDocuments?: () => void;
   modelContext?: ReactNode;
+  pendingModel?: boolean;
 }) {
   const [overviewTab, setOverviewTab] = useState<
     "overview" | "schedule" | "issues"
@@ -95,16 +97,16 @@ export function CoordinationWorkspace({
     !!activeEvent &&
     !!activeRun &&
     ["QUEUED", "RUNNING"].includes(activeRun.status);
-  const blocked =
-    readiness?.status === "BLOCKED" ||
-    (!!activeEvent && activeRun?.status === "WAITING_APPROVAL");
+  const waitingApproval =
+    activeRun?.status === "WAITING_APPROVAL" &&
+    activeEvent?.work_package_id === selected;
+  const blocked = readiness?.status === "BLOCKED" || !!waitingApproval;
   const stale = workspace.stale && !analyzing;
   const snapshot = workspace.analysis?.snapshot;
   const impactedIds = workspace.analysis?.impact.element_ids ?? [];
   const impactCount = wp.element_ids.filter((id) =>
     impactedIds.includes(id),
   ).length;
-  const sourceCount = workspace.state.sources.length;
   const missingQualifications = (wp.required_qualifications ?? []).filter(
     (item) => !(wp.qualifications ?? []).includes(item),
   );
@@ -122,36 +124,70 @@ export function CoordinationWorkspace({
         icon: LoaderCircle,
         tone: "running",
       }
-    : blocked
+    : workspace.analysis_run?.status === "FAILED"
       ? {
-          label: "已阻塞",
-          title: `${constraints.length || 1} 个未解决阻塞条件`,
-          description: constraints[0]
-            ? demoConstraintText(
-                constraints[0].kind,
-                constraints[0].description,
-              )
-            : "存在尚未解决的施工约束。",
+          label: "检查失败",
+          title: "未能完成施工条件检查",
+          description: "请查看运行结果后重新检查，不能据此判断可施工。",
           icon: CircleAlert,
-          tone: "blocked",
+          tone: "stale",
         }
-      : stale
+      : waitingApproval
         ? {
-            label: "需复核",
-            title: activeEvent
-              ? "工程变化可能影响当前工作包"
-              : "工程事实已变化，需要重新检查",
-            description: "当前判断基于较早快照，复核后再继续施工。",
+            label: "待批准",
+            title: "处理建议需要明确批准",
+            description: "查看问题、依据与风险，确认后才能执行。",
             icon: CircleAlert,
-            tone: "stale",
+            tone: "blocked",
           }
-        : {
-            label: "可施工",
-            title: "当前没有未解决的阻塞条件",
-            description: "图纸、班组或现场条件变化时，记录变更并重新检查。",
-            icon: CircleCheck,
-            tone: "ready",
-          };
+        : pendingModel
+          ? {
+              label: "待审核",
+              title: "新模型版本尚未纳入当前基线",
+              description:
+                "查看变化与受影响构件；重新检查前，施工判断仍基于旧版本。",
+              icon: CircleAlert,
+              tone: "stale",
+            }
+          : blocked
+            ? {
+                label: "已阻塞",
+                title: `${constraints.length || 1} 个未解决阻塞条件`,
+                description: constraints[0]
+                  ? demoConstraintText(
+                      constraints[0].kind,
+                      constraints[0].description,
+                    )
+                  : "存在尚未解决的施工约束。",
+                icon: CircleAlert,
+                tone: "blocked",
+              }
+            : !readiness
+              ? {
+                  label: "待检查",
+                  title: "尚未确认施工条件",
+                  description: "先上传模型、关联构件，再重新检查工作包。",
+                  icon: CircleAlert,
+                  tone: "stale",
+                }
+              : stale
+                ? {
+                    label: "需复核",
+                    title: activeEvent
+                      ? "工程变化可能影响当前工作包"
+                      : "工程事实已变化，需要重新检查",
+                    description: "当前判断基于较早快照，复核后再继续施工。",
+                    icon: CircleAlert,
+                    tone: "stale",
+                  }
+                : {
+                    label: "可施工",
+                    title: "当前没有未解决的阻塞条件",
+                    description:
+                      "图纸、班组或现场条件变化时，记录变更并重新检查。",
+                    icon: CircleCheck,
+                    tone: "ready",
+                  };
   const StateIcon = state.icon;
   const openModel = () => (onModel ?? onImpact)();
   const metrics = [
@@ -205,7 +241,7 @@ export function CoordinationWorkspace({
           <header className="work-object-header">
             <div>
               <span className="object-kicker">
-                {surface === "coordination" ? "当前协调" : "工作包"}
+                {surface === "coordination" ? "工作包概览" : "工作包"}
               </span>
               <h1>{demoWorkPackageName(wp.id, wp.name)}</h1>
               <p>
@@ -249,14 +285,14 @@ export function CoordinationWorkspace({
                 <div className="readiness-copy">
                   <div className="readiness-title-row">
                     <h2>{state.label}</h2>
-                    {analyzing && <span>正在运行</span>}
+                    {analyzing && <span>正在检查</span>}
                   </div>
                   <h3>{state.title}</h3>
                   <p>{state.description}</p>
                   <div className="readiness-meta">
-                    <span>上次检查 {checkedAt(snapshot?.captured_at)}</span>
-                    <span>快照 {snapshot ? `v${snapshot.version}` : "—"}</span>
-                    <span>{sourceCount} 份工程来源</span>
+                    {snapshot && (
+                      <span>上次检查 {checkedAt(snapshot.captured_at)}</span>
+                    )}
                   </div>
                 </div>
                 <div className="readiness-actions">
@@ -270,7 +306,10 @@ export function CoordinationWorkspace({
                       重新检查
                     </Button>
                   )}
-                  {(blocked || impactCount > 0 || analyzing) && (
+                  {(blocked ||
+                    impactCount > 0 ||
+                    analyzing ||
+                    pendingModel) && (
                     <Button variant="ghost" size="sm" onClick={onImpact}>
                       查看影响
                     </Button>
@@ -337,27 +376,31 @@ export function CoordinationWorkspace({
                 </section>
               )}
 
-              <section className="relevant-change-strip">
-                <div>
-                  <span className="section-label">最近相关变化</span>
-                  <h3>
-                    {activeEvent?.title ??
-                      (impactCount
-                        ? `${impactCount} 个关联构件进入当前影响范围`
-                        : "当前没有影响本工作包的模型变化")}
-                  </h3>
-                  <p>
-                    {activeEvent?.change.revision
-                      ? `${wp.accepted_revision} → ${activeEvent.change.revision}`
-                      : `${wp.accepted_revision} / ${wp.design_revision}`}
-                  </p>
-                </div>
-                {(activeEvent || impactCount > 0) && (
-                  <Button variant="ghost" size="sm" onClick={onImpact}>
-                    查看变化
-                  </Button>
-                )}
-              </section>
+              {(activeEvent || impactCount > 0 || !modelContext) && (
+                <section className="relevant-change-strip">
+                  <div>
+                    <span className="section-label">最近相关变化</span>
+                    <h3>
+                      {activeEvent?.title ??
+                        (impactCount
+                          ? `${impactCount} 个关联构件进入当前影响范围`
+                          : "当前没有影响本工作包的模型变化")}
+                    </h3>
+                    <p>
+                      {activeEvent?.change.revision
+                        ? `待检查版本 ${activeEvent.change.revision}`
+                        : impactCount
+                          ? "查看变更详情，确认对工作包的影响"
+                          : "有新版本时，可在模型版本中查看变化"}
+                    </p>
+                  </div>
+                  {(activeEvent || impactCount > 0) && (
+                    <Button variant="ghost" size="sm" onClick={onImpact}>
+                      查看变化
+                    </Button>
+                  )}
+                </section>
+              )}
 
               <section className="construction-conditions">
                 <header className="overview-section-header">
@@ -411,28 +454,6 @@ export function CoordinationWorkspace({
                   </PropertyTable>
                 </AppDisclosure>
               </div>
-
-              <PropertyGroup
-                className="overview-basis"
-                title={
-                  <div className="overview-section-header">
-                    <div>
-                      <span className="section-label">版本与依据</span>
-                      <h2>当前协调基准</h2>
-                    </div>
-                  </div>
-                }
-              >
-                <PropertyTable columns={2}>
-                  <PropertyRow label="施工版本" value={wp.accepted_revision} />
-                  <PropertyRow label="设计版本" value={wp.design_revision} />
-                  <PropertyRow
-                    label="分析快照"
-                    value={snapshot ? `v${snapshot.version}` : "—"}
-                  />
-                  <PropertyRow label="工程来源" value={`${sourceCount} 份`} />
-                </PropertyTable>
-              </PropertyGroup>
             </>
           )}
           {overviewTab === "schedule" && (
@@ -497,7 +518,7 @@ export function CoordinationWorkspace({
           <nav className="overview-inspector-tabs" aria-label="检查器内容">
             {[
               ["properties", "基本信息"],
-              ["sources", "工程来源"],
+              ["sources", "工程记录"],
               ["resources", "现场资源"],
             ].map(([id, label]) => (
               <button
@@ -550,10 +571,6 @@ export function CoordinationWorkspace({
                       value={`${constraints.length} 项`}
                       attention={constraints.length > 0}
                     />
-                    <PropertyRow
-                      label="关联构件"
-                      value={`${wp.element_ids.length} 个`}
-                    />
                   </PropertyTable>
                   {constraints.length > 0 && (
                     <Button
@@ -569,7 +586,7 @@ export function CoordinationWorkspace({
             )}
             {inspectorTab === "sources" && (
               <PropertyGroup
-                title={<span className="section-label">当前工程来源</span>}
+                title={<span className="section-label">其他工程记录</span>}
               >
                 <div className="overview-source-list">
                   {workspace.state.sources.map((source) => (
@@ -579,7 +596,9 @@ export function CoordinationWorkspace({
                     </div>
                   ))}
                   {!workspace.state.sources.length && (
-                    <p className="quiet-message">当前项目尚未记录工程来源。</p>
+                    <p className="quiet-message">
+                      暂无其他工程记录。项目模型与基线请到「模型版本」查看。
+                    </p>
                   )}
                 </div>
               </PropertyGroup>

@@ -11,6 +11,8 @@ export function RevisionImpact({
   revisions,
   comparisons,
   comparing,
+  imported,
+  acceptedRevisionId,
   error,
   onCompare,
   onSelectComparison,
@@ -24,6 +26,8 @@ export function RevisionImpact({
   revisions: DTO<"ProjectSourceRevision">[];
   comparisons: DTO<"RevisionComparison">[];
   comparing: boolean;
+  imported?: boolean;
+  acceptedRevisionId?: string | null;
   error?: Error | null;
   onCompare: (from: string, to: string) => void;
   onSelectComparison: (comparison: DTO<"RevisionComparison">) => void;
@@ -42,6 +46,20 @@ export function RevisionImpact({
   const onSelectComparisonRef = useRef(onSelectComparison);
   onSelectComparisonRef.current = onSelectComparison;
   const latest = comparisons.at(-1);
+  const fromRevision =
+    revisions.find((item) => item.id === acceptedRevisionId) ??
+    revisions.at(-2);
+  const toRevision = revisions.at(-1);
+  const pendingComparison =
+    !!acceptedRevisionId &&
+    acceptedRevisionId !== toRevision?.id &&
+    !!toRevision &&
+    !!fromRevision &&
+    !comparisons.some(
+      (item) =>
+        item.from_revision_id === fromRevision.id &&
+        item.to_revision_id === toRevision.id,
+    );
   useEffect(() => {
     if (latest && !comparisons.some((item) => item.id === comparisonId)) {
       setComparisonId(latest.id);
@@ -58,34 +76,40 @@ export function RevisionImpact({
     return (
       <div className="impact-empty is-error">
         <strong>比较不可用</strong>
-        <span>{error.message}</span>
+        <span>请先确认两个模型版本都已处理完成，再重试查看变化。</span>
       </div>
     );
   if (detail.isError)
     return (
       <div className="impact-empty is-error">
         <strong>比较不可用</strong>
-        <span>{detail.error.message}</span>
+        <span>暂时无法读取这次比较，请重试。</span>
       </div>
     );
-  if (!latest)
+  if (!latest || pendingComparison)
     return (
       <div className="impact-empty">
-        <strong>尚无版本比较</strong>
+        <strong>
+          {pendingComparison
+            ? "新版本待审核 · 当前基线未变"
+            : acceptedRevisionId
+              ? "当前基线已确认"
+              : "尚未查看版本变化"}
+        </strong>
         <span>
           {revisions.length < 2
-            ? "上传并导入至少两个 BIM 版本后可比较。"
-            : "两个版本已就绪，可以显式开始比较。"}
+            ? "上传并处理新版本后，可查看相对当前基线的变化。"
+            : imported
+              ? "模型已处理。查看与当前基线的变化，再决定是否更新基线。"
+              : "先处理新版本，完成后才能查看变化。"}
         </span>
-        {revisions.length >= 2 && (
+        {fromRevision && toRevision && (
           <Button
             size="sm"
-            disabled={comparing}
-            onClick={() =>
-              onCompare(revisions.at(-2)!.id, revisions.at(-1)!.id)
-            }
+            disabled={comparing || !imported}
+            onClick={() => onCompare(fromRevision.id, toRevision.id)}
           >
-            {comparing ? "正在比较…" : "比较最近两个版本"}
+            {comparing ? "正在比较…" : "查看变化"}
           </Button>
         )}
       </div>
@@ -160,9 +184,13 @@ export function RevisionImpact({
         </span>
       </div>
       {comparison.summary.warnings.map((warning) => (
-        <p className="continuity-warning" role="status" key={warning}>
-          GlobalId 连续性提醒：{warning}
-        </p>
+        <div className="continuity-warning" role="status" key={warning}>
+          构件标识变化较多，结果可能不完整。
+          <details>
+            <summary>技术详情</summary>
+            {warning}
+          </details>
+        </div>
       ))}
       {noImpact ? (
         <div className="impact-empty">
@@ -198,8 +226,8 @@ export function RevisionImpact({
         </div>
       ) : (
         <div className="impact-empty">
-          <strong>有构件变化，暂无工作包影响</strong>
-          <span>尚未有匹配这些 GlobalId 的人工确认绑定。</span>
+          <strong>有构件变化，暂未关联工作包</strong>
+          <span>这些构件尚未关联工作包；可前往模型关联后再查看影响。</span>
         </div>
       )}
       <details className="evidence-register">

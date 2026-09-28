@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import type { DTO } from "../api/client";
 import { baselineEntryLabel } from "./BaselineHistory";
-import { revisionState } from "./ProjectSources";
+import { freshCheckAfterImport, revisionState } from "./ProjectSources";
 
 const source = {
   source: {
@@ -31,6 +31,22 @@ it("keeps latest, accepted, and pending source revision meanings distinct", () =
       "r2",
     ),
   ).toBe("latest-accepted");
+});
+
+it("requires a fresh READY check after import before replacing a baseline", () => {
+  expect(
+    freshCheckAfterImport(true, "2026-01-02T00:00:00Z", "2026-01-01T00:00:00Z"),
+  ).toBe(true);
+  expect(
+    freshCheckAfterImport(true, "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z"),
+  ).toBe(false);
+  expect(
+    freshCheckAfterImport(
+      false,
+      "2026-01-02T00:00:00Z",
+      "2026-01-01T00:00:00Z",
+    ),
+  ).toBe(false);
 });
 
 it("resolves baseline entries against their own source revision catalog", () => {

@@ -149,7 +149,7 @@ it("keeps Ask read-only and only Investigate returns the current durable run", a
   fireEvent.click(screen.getByRole("button", { name: "检查 1 个已选构件" }));
   await waitFor(() =>
     expect(investigate).toHaveBeenCalledWith("project", {
-      instruction: "调查当前选中的 BIM 构件",
+      instruction: "查看所选构件的影响与依据",
       scope: {
         source_id: "source-1",
         from_revision_id: "r1",

@@ -38,7 +38,7 @@ export function BaselineHistory({
           <AppDisclosure
             key={baseline.id}
             className="baseline-entry"
-            label={`B${baseline.sequence} · ${baseline.name} · ${baseline.entries.length} 个来源版本 · ${new Date(baseline.created_at).toLocaleString("zh-CN")}`}
+            label={`B${baseline.sequence} · ${baseline.entries.length} 个模型版本 · ${new Date(baseline.created_at).toLocaleString("zh-CN")}`}
           >
             <div className="baseline-entries">
               {baseline.entries.map((entry) => (
@@ -50,7 +50,7 @@ export function BaselineHistory({
           </AppDisclosure>
         ))}
         {!baselines.length && (
-          <p className="quiet-message">尚未接受工程基线。</p>
+          <p className="quiet-message">尚未确认项目基线。</p>
         )}
       </div>
     </section>

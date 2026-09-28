@@ -43,6 +43,8 @@ export function BimMappingWorkspace({
   onContext,
   onInvestigate,
   onOpenInvestigation,
+  onWorkPackage,
+  onModels,
 }: {
   project: string;
   workPackageId: string;
@@ -64,6 +66,8 @@ export function BimMappingWorkspace({
     fromRevisionId?: string,
   ) => void;
   onOpenInvestigation?: () => void;
+  onWorkPackage?: () => void;
+  onModels?: () => void;
 }) {
   const cache = useQueryClient();
   const sources = useQuery({
@@ -221,36 +225,48 @@ export function BimMappingWorkspace({
             </Button>
           </header>
           <label className="form-label">
-            BIM 来源
+            项目模型
             <AppSelect
-              label="BIM 来源"
+              label="项目模型"
               value={sourceId || "__none__"}
               onChange={(value) => {
                 setSourceId(value === "__none__" ? "" : value);
                 setSelected([]);
               }}
               options={[
-                { value: "__none__", label: "选择已上传来源" },
+                { value: "__none__", label: "选择项目模型" },
                 ...bimSources.map((item) => ({
                   value: item.source.id,
                   label: item.source.name,
                   hint: item.has_pending_revision
-                    ? "有待接受版本"
-                    : "已同步基线",
+                    ? "新版本待审核"
+                    : item.accepted_revision_id
+                      ? "当前基线"
+                      : "尚未确认基线",
                 })),
               ]}
             />
           </label>
           {!bimSources.length && (
             <div className="impact-empty">
-              <strong>尚无 BIM 来源</strong>
-              <span>先在「项目来源」创建 BIM 来源并上传 IFC。</span>
+              <strong>尚无项目模型</strong>
+              <span>先上传并处理第一个 IFC。</span>
+              {onModels && (
+                <Button size="sm" onClick={onModels}>
+                  上传第一个模型
+                </Button>
+              )}
             </div>
           )}
           {snapshot.isError && (
             <div className="impact-empty is-error">
-              <strong>此版本尚未导入</strong>
-              <span>原始文件已保存，但 IFC 解析尚未完成。</span>
+              <strong>此版本尚未处理完成</strong>
+              <span>请查看处理进度；失败后可重试。</span>
+              {onModels && (
+                <Button size="sm" onClick={onModels}>
+                  查看模型版本
+                </Button>
+              )}
             </div>
           )}
           {changes.length > 0 && (
@@ -414,13 +430,23 @@ export function BimMappingWorkspace({
               <p className="quiet-message">尚未确认绑定。</p>
             )}
           </section>
+          {confirm.isSuccess && (
+            <p className="viewer-status" role="status">
+              已关联 {selected.length} 个构件。
+              {onWorkPackage && (
+                <Button size="sm" variant="ghost" onClick={onWorkPackage}>
+                  返回工作包查看关联
+                </Button>
+              )}
+            </p>
+          )}
           {confirm.error && <p className="alert">{confirm.error.message}</p>}
           {report?.scope.work_package_ids.includes(workPackageId) && (
             <section className="context-agent-result">
               <span className="eyebrow">构件调查结果</span>
               <p>{demoInvestigationText(report.answer.summary)}</p>
               <div className="context-agent-result-footer">
-                <small>{report.evidence.length} 条已持久化依据</small>
+                <small>{report.evidence.length} 条判断依据</small>
                 {onOpenInvestigation && (
                   <Button
                     size="sm"

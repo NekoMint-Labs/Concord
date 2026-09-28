@@ -38,7 +38,7 @@ async function openSources(page: Page) {
   await views.getByRole("button", { name: "模型", exact: true }).click();
   const model = page.getByRole("region", { name: "模型工作区" });
   await expect(model).toBeVisible();
-  const lifecycle = model.getByRole("button", { name: "模型生命周期 →" });
+  const lifecycle = model.getByRole("button", { name: "模型版本 →" });
   if (!(await lifecycle.isVisible())) await model.locator("summary").click();
   await lifecycle.click();
 }
@@ -119,7 +119,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   await expect(
     page
       .getByRole("region", { name: "工作包概览" })
-      .getByRole("heading", { level: 2, name: "已阻塞" }),
+      .getByRole("heading", { level: 2, name: /已阻塞|待批准/ }),
   ).toBeVisible();
   await page
     .getByRole("navigation", { name: "主要工作区" })
@@ -127,7 +127,11 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     .click();
   const uploads: string[] = [];
   page.on("request", (request) => {
-    if (request.method() === "POST" && request.url().includes("/bim/import"))
+    if (
+      request.method() === "POST" &&
+      request.url().includes("/revisions") &&
+      !request.url().includes("/import")
+    )
       uploads.push(request.url());
   });
   await page
@@ -246,32 +250,43 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   const upload = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
-      response.url().includes("/bim/import"),
+      response.url().includes("/revisions") &&
+      !response.url().includes("/import"),
   );
-  await page.getByRole("button", { name: "导入项目", exact: true }).click();
-  expect((await upload).status()).toBe(202);
+  await page.getByRole("button", { name: "添加到项目", exact: true }).click();
+  expect((await upload).status()).toBe(201);
   await expect(
     page
       .locator(".bim-workspace")
       .getByRole("status")
-      .filter({ hasText: "导入 已完成。" }),
+      .filter({ hasText: "处理完成" }),
   ).toBeVisible();
   expect(uploads).toHaveLength(1);
-  const source = await request.get(`${project}/bim/content`, { headers });
-  expect(source.status()).toBe(200);
-  expect(digest(await source.body())).toBe(digest(original));
-  const elements = await request.get(`${project}/bim/elements`, { headers });
-  expect(elements.ok()).toBeTruthy();
-  expect((await elements.json()).length).toBe(3);
+  const catalog = await request.get(`${project}/sources`, { headers });
+  const importedModel = (await catalog.json()).find(
+    (item: { source: { kind: string } }) => item.source.kind === "BIM",
+  );
+  const content = await request.get(
+    `${project}/sources/${importedModel.source.id}/revisions/${importedModel.latest_revision_id}/content`,
+    { headers },
+  );
+  expect(content.status()).toBe(200);
+  expect(digest(await content.body())).toBe(digest(original));
+  const snapshot = await request.get(
+    `${project}/sources/${importedModel.source.id}/revisions/${importedModel.latest_revision_id}/bim-snapshot`,
+    { headers },
+  );
+  expect(snapshot.ok()).toBeTruthy();
+  expect((await snapshot.json()).elements.length).toBe(3);
   // The current model keeps structured impacted elements in 模型上下文
   // alongside the viewer rather than switching to a separate list view.
   const context = page.getByRole("region", { name: "模型上下文" });
   await context.getByRole("button", { name: "展开上下文列表" }).click();
   await expect(context.getByRole("row")).toHaveCount(impacted.length + 1);
-  await page.getByRole("button", { name: "关闭本地视图" }).click();
+  await expect(page.getByText(/项目模型 · R1/).first()).toBeVisible();
   await page.getByRole("button", { name: "打开项目模型" }).click();
   await expect(viewer.getByRole("status")).toContainText(
-    /project-import\.ifc：已匹配 [1-9]\d*\/[1-9]\d* 个受影响构件 GUID/,
+    /project-model\.ifc：已匹配 [1-9]\d*\/[1-9]\d* 个受影响构件 GUID/,
   );
   await expect(viewer.getByRole("alert")).toHaveCount(0);
   const selectedRow = context.getByRole("row").nth(1);
@@ -329,8 +344,15 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     localStorage.removeItem("concord:recent-projects");
   });
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "新建项目" })).toBeVisible();
-  await page.getByRole("button", { name: "新建项目" }).click();
+  const createProject = page.getByRole("button", { name: "新建项目" });
+  const projectPicker = page.getByRole("button", { name: "项目", exact: true });
+  await expect(createProject.or(projectPicker).first()).toBeVisible();
+  if (await projectPicker.isVisible()) {
+    await projectPicker.click();
+    await page.getByRole("menuitem", { name: "新建项目" }).click();
+  } else {
+    await createProject.click();
+  }
   await page.getByLabel("项目名称").fill(name);
   await page.getByLabel("说明").fill("Issue 10 browser qualification");
   await page
@@ -370,20 +392,25 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   const projectPath = `/api/projects/${created.id}`;
 
   await openSources(page);
-  await page.getByRole("button", { name: "新建来源" }).click();
-  await page.getByLabel("来源名称").fill("MEP Model");
-  await page.getByRole("button", { name: "创建来源" }).click();
+  await page.getByRole("button", { name: "添加模型" }).click();
+  await page.getByLabel("模型名称").fill("MEP Model");
+  await page
+    .getByRole("dialog", { name: "添加项目模型" })
+    .getByRole("button", { name: "添加模型" })
+    .click();
   await expect(
     page.getByText("MEP Model", { exact: true }).first(),
   ).toBeVisible();
 
   const revisionInput = page.locator(".source-detail input[type=file]");
   await revisionInput.setInputFiles(fixtureV16);
-  await expect(page.getByText(/R1 原始文件已保存/)).toBeVisible();
+  await expect(
+    page.locator(".source-detail > .viewer-status").first(),
+  ).toContainText("R1 已上传");
   await page
     .locator(".revision-row")
     .first()
-    .getByRole("button", { name: "导入 / 查看运行" })
+    .getByRole("button", { name: "处理模型" })
     .click();
   const sourceList = await request.get(`${projectPath}/sources`, { headers });
   const source = (await sourceList.json())[0];
@@ -429,10 +456,10 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     .toBe(3);
 
   await openSources(page);
-  await page.getByRole("button", { name: "建立 B1" }).click();
+  await page.getByRole("button", { name: "设为当前基线 B1" }).click();
   await page.getByText("历史基线").click();
   await expect(
-    page.getByRole("button", { name: /^B1 · B1 · 1 个来源版本/ }),
+    page.getByRole("button", { name: /^B1 · 1 个模型版本/ }),
   ).toBeVisible();
 
   await page.reload();
@@ -446,13 +473,15 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   ).toBeVisible();
   await page.getByText("历史基线").click();
   await expect(
-    page.getByRole("button", { name: /^B1 · B1 · 1 个来源版本/ }),
+    page.getByRole("button", { name: /^B1 · 1 个模型版本/ }),
   ).toBeVisible();
 
   await revisionInput.setInputFiles(fixtureV17);
-  await expect(page.getByText(/R2 原始文件已保存/)).toBeVisible();
+  await expect(
+    page.locator(".source-detail > .viewer-status").first(),
+  ).toContainText("R2 已上传");
   const rows = page.locator(".revision-row");
-  await rows.last().getByRole("button", { name: "导入 / 查看运行" }).click();
+  await rows.last().getByRole("button", { name: "处理模型" }).click();
   const revisionsAfter = await request.get(
     `${projectPath}/sources/${source.source.id}/revisions`,
     { headers },
@@ -471,14 +500,21 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     .toBe(200);
   await page.reload();
   await openSources(page);
-  await expect(page.getByText("最新 · 待接受")).toBeVisible();
-  await page.getByRole("button", { name: "比较最近两个版本" }).click();
+  await expect(page.getByText("最新版本 · 待审核")).toBeVisible();
+  await page
+    .locator(".impact-empty")
+    .getByRole("button", { name: "查看变化" })
+    .click();
   await expect(page.locator(".impact-summary")).toContainText("新增");
   await expect(page.locator(".revision-impact")).toContainText(
     /受影响工作包|有构件变化/,
   );
 
-  await rows.last().getByRole("button", { name: "调查版本" }).click();
+  await rows
+    .last()
+    .locator(".revision-actions")
+    .getByRole("button", { name: "查看原因" })
+    .click();
   let investigationRun: { id: string; status: string } | undefined;
   await expect
     .poll(
