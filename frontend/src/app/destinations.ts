@@ -5,7 +5,11 @@ export const advancedTabs = [
 ] as const;
 
 export type WorkspaceTab =
+  | "work"
+  | "project"
   | "coordination"
+  | "history"
+  | "settings"
   | "work-packages"
   | "bim"
   | "sources"

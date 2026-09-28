@@ -69,7 +69,7 @@ export function WorkspaceHeader({
         )}
         <nav className="breadcrumb" aria-label="当前位置">
           <span>{demoProjectName(project, data.state.project.name)}</span>
-          {wp && (
+          {wp && (tab === "coordination" || tab === "bim") && (
             <>
               <span className="crumb-sep">/</span>
               <span>
@@ -97,9 +97,13 @@ export function WorkspaceHeader({
               {
                 (
                   {
-                    coordination: "概览",
+                    work: "工作",
+                    project: "项目",
+                    coordination: "工作包详情",
+                    history: "历史",
+                    settings: "项目设置",
                     "work-packages": "工作包",
-                    sources: "模型版本",
+                    sources: "模型与版本",
                     bim: "模型",
                     impact: "变更",
                     packages: "问题",
@@ -113,28 +117,28 @@ export function WorkspaceHeader({
             </span>
           )}
         </nav>
-        {models.length > 1 ? (
-          <div className="header-versions">
-            <span>多个项目模型 · 请在模型版本中选择</span>
-          </div>
-        ) : (
-          latest && (
+        {(tab === "bim" || tab === "sources" || tab === "history") &&
+          (models.length > 1 ? (
             <div className="header-versions">
-              <span className="version-current">
-                <i />
-                最新版本 R{latest.sequence}
-              </span>
-              {baseline ? (
-                <span>当前基线 B{baseline.sequence}</span>
-              ) : (
-                <span>尚未确认基线</span>
-              )}
-              {source?.accepted_revision_id && source.has_pending_revision && (
-                <span>新版本待审核</span>
-              )}
+              <span>多个项目模型 · 请在模型与版本中选择</span>
             </div>
-          )
-        )}
+          ) : (
+            latest && (
+              <div className="header-versions">
+                <span className="version-current">
+                  <i />
+                  最新版本 R{latest.sequence}
+                </span>
+                {baseline ? (
+                  <span>当前基线 B{baseline.sequence}</span>
+                ) : (
+                  <span>尚未确认基线</span>
+                )}
+                {source?.accepted_revision_id &&
+                  source.has_pending_revision && <span>新版本待审核</span>}
+              </div>
+            )
+          ))}
       </div>
       <div className="local-actions" aria-label="当前工作区操作">
         {children}

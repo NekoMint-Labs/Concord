@@ -32,15 +32,30 @@ async function workspace(request: APIRequestContext): Promise<Workspace> {
 }
 
 async function openSources(page: Page) {
-  const views = page.getByRole("navigation", { name: "主要工作区" });
-  // Leaving mapping mode through 概览 restores the normal 模型 workspace.
-  await views.getByRole("button", { name: "概览", exact: true }).click();
-  await views.getByRole("button", { name: "模型", exact: true }).click();
-  const model = page.getByRole("region", { name: "模型工作区" });
-  await expect(model).toBeVisible();
-  const lifecycle = model.getByRole("button", { name: "模型版本 →" });
-  if (!(await lifecycle.isVisible())) await model.locator("summary").click();
-  await lifecycle.click();
+  await page
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "项目", exact: true })
+    .click();
+  await page
+    .getByRole("navigation", { name: "项目内容" })
+    .getByRole("button", { name: /模型与版本/ })
+    .click();
+  await expect(page.getByRole("heading", { name: "模型与版本" })).toBeVisible();
+}
+
+async function openPackage(page: Page, name: string) {
+  await page
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "项目", exact: true })
+    .click();
+  await page
+    .getByRole("navigation", { name: "项目内容" })
+    .getByRole("button", { name: /工作包/ })
+    .click();
+  await page
+    .getByRole("region", { name: "项目工作包" })
+    .getByRole("button", { name: new RegExp(name) })
+    .click();
 }
 
 test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged", async ({
@@ -107,10 +122,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     localStorage.setItem("concord:last-project", "harbor-east");
   });
   await page.goto("/");
-  await page
-    .getByRole("navigation", { name: "工作包" })
-    .getByRole("button", { name: /东翼风管安装/ })
-    .click();
+  await openPackage(page, "东翼风管安装");
   /*
    * The work package reports the judgement beside its own title, so the browser is
    * demonstrably rendering the same analysis whose impacted GUIDs the viewer is
@@ -284,10 +296,12 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   await context.getByRole("button", { name: "展开上下文列表" }).click();
   await expect(context.getByRole("row")).toHaveCount(impacted.length + 1);
   await expect(page.getByText(/项目模型 · R1/).first()).toBeVisible();
-  await page.getByRole("button", { name: "打开项目模型" }).click();
   await expect(viewer.getByRole("status")).toContainText(
     /project-model\.ifc：已匹配 [1-9]\d*\/[1-9]\d* 个受影响构件 GUID/,
   );
+  await expect(
+    spatial.getByRole("status").filter({ hasText: "本地预览" }),
+  ).toHaveCount(0);
   await expect(viewer.getByRole("alert")).toHaveCount(0);
   const selectedRow = context.getByRole("row").nth(1);
   const selectedTitle = (await selectedRow
@@ -310,10 +324,15 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
     selectedTitle,
   );
+  await openPackage(page, "东翼风管安装");
+  await expect(page.getByRole("region", { name: "工作包概览" })).toBeVisible({
+    timeout: 10_000,
+  });
   await page
-    .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "问题", exact: true })
+    .getByRole("navigation", { name: "工作包栏目" })
+    .getByRole("button", { name: /问题/ })
     .click();
+  await page.getByRole("button", { name: "在模型中查看 →" }).click();
   await expect(page.getByRole("region", { name: "空间问题" })).toBeVisible();
   await page
     .getByRole("navigation", { name: "主要工作区" })
@@ -323,6 +342,11 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     spatial.getByRole("complementary", { name: "构件详情" }),
   ).toContainText("送风管 E-01");
   await page.reload();
+  await page
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "模型", exact: true })
+    .click();
+  await expect(viewer.getByRole("status")).toContainText("project-model.ifc");
   await expect
     .poll(
       async () =>
@@ -345,7 +369,10 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   });
   await page.goto("/");
   const createProject = page.getByRole("button", { name: "新建项目" });
-  const projectPicker = page.getByRole("button", { name: "项目", exact: true });
+  const projectPicker = page.getByRole("button", {
+    name: "切换项目",
+    exact: true,
+  });
   await expect(createProject.or(projectPicker).first()).toBeVisible();
   if (await projectPicker.isVisible()) {
     await projectPicker.click();
@@ -362,7 +389,15 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
 
   await page
-    .getByRole("navigation", { name: "工作包" })
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "项目", exact: true })
+    .click();
+  await page
+    .getByRole("navigation", { name: "项目内容" })
+    .getByRole("button", { name: /工作包/ })
+    .click();
+  await page
+    .getByRole("region", { name: "项目工作包" })
     .getByRole("button", { name: "新建工作包" })
     .click();
   const structure = page.getByRole("dialog", { name: "新建工作包" });
@@ -430,10 +465,7 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     )
     .toBe(200);
 
-  await page
-    .getByRole("navigation", { name: "工作包" })
-    .getByRole("button", { name: /Ventilation/ })
-    .click();
+  await openPackage(page, "Ventilation");
   await page
     .getByRole("navigation", { name: "主要工作区" })
     .getByRole("button", { name: "模型", exact: true })
@@ -464,9 +496,9 @@ test("real project survives restart through source, BIM mapping, baseline, revis
 
   await page.reload();
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
-  await expect(
-    page.getByText("Ventilation", { exact: true }).first(),
-  ).toBeVisible();
+  await expect(page.getByRole("region", { name: "等待中" })).toContainText(
+    "Ventilation",
+  );
   await openSources(page);
   await expect(
     page.getByText("MEP Model", { exact: true }).first(),
@@ -499,6 +531,9 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     )
     .toBe(200);
   await page.reload();
+  await expect(page.getByRole("region", { name: "需要处理" })).toContainText(
+    "MEP Model 有新版本",
+  );
   await openSources(page);
   await expect(page.getByText("最新版本 · 待审核")).toBeVisible();
   await page
@@ -546,8 +581,14 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   expect(report.evidence.length).toBeGreaterThan(0);
   await page.reload();
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+  const completed = page.getByRole("region", { name: "最近完成" });
+  await expect(completed).toContainText("Concord 已完成调查");
+  await completed.getByRole("button", { name: "查看调查依据 →" }).click();
+  await expect(
+    page.getByRole("complementary", { name: "工程调查详情" }),
+  ).toContainText("判断依据");
 
-  const picker = page.getByRole("button", { name: "项目", exact: true });
+  const picker = page.getByRole("button", { name: "切换项目", exact: true });
   await picker.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("menuitem", { name: "新建项目" })).toBeVisible();

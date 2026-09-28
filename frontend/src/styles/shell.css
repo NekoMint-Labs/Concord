@@ -1329,3 +1329,96 @@
     padding-right: 14px;
   }
 }
+
+/* Work is a scanable queue, not a second dashboard. */
+.work-list,
+.project-home {
+  padding: 28px 36px;
+  overflow: auto;
+  height: 100%;
+  color: var(--ink);
+}
+.work-list > header,
+.project-home > header {
+  margin-bottom: 26px;
+}
+.work-list h1,
+.project-home h1 {
+  margin: 4px 0 6px;
+  font-size: 22px;
+}
+.work-list header p,
+.project-home header p {
+  margin: 0;
+  color: var(--muted);
+}
+.work-list > section {
+  margin-bottom: 28px;
+}
+.work-list h2 {
+  font-size: var(--fs-section);
+  margin: 0 0 8px;
+}
+.work-list h2 .count {
+  margin-left: 8px;
+}
+.work-rows {
+  border-top: 1px solid var(--line-soft);
+}
+.work-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 13px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  text-align: left;
+  color: var(--ink);
+}
+.work-row > div {
+  min-width: 0;
+}
+.work-row strong {
+  font-size: var(--fs-action);
+}
+.work-row p {
+  margin: 4px 0;
+  color: var(--ink-2);
+}
+.work-row small {
+  color: var(--muted);
+}
+.work-row button {
+  flex-shrink: 0;
+}
+.project-home nav {
+  max-width: 760px;
+  border-top: 1px solid var(--line-soft);
+}
+.project-home nav button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.project-home nav button:hover,
+.project-home .work-row:hover {
+  background: var(--hover);
+}
+.project-home nav button span:nth-child(2) {
+  color: var(--muted);
+  margin-left: auto;
+}
+.project-home nav button span:last-child {
+  color: var(--muted);
+}

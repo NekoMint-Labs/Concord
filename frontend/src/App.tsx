@@ -41,7 +41,7 @@ export function App() {
     file: File;
   } | null>(null);
   const localIfcFile = localIfc?.project === project ? localIfc.file : null;
-  const [tab, setTab] = useState<WorkspaceTab>("bim");
+  const [tab, setTab] = useState<WorkspaceTab>("work");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [inspectorView, setInspectorView] =
     useState<WorkspaceInspectorView>("blocker");
@@ -78,6 +78,7 @@ export function App() {
 
   useEffect(() => {
     setSelected("");
+    setTab("work");
     setSelectedConstraint("");
     setSelectedElement("");
     setSelectedSpatialIssue("");
@@ -90,7 +91,6 @@ export function App() {
     if (!data) return;
     if (!data.state.work_packages.length) {
       setSelected("");
-      setTab("bim");
       return;
     }
     if (!data.state.work_packages.some((item) => item.id === selected)) {
@@ -126,6 +126,10 @@ export function App() {
   }
 
   function navigate(next: WorkspaceTab) {
+    if (next === "settings") {
+      setSettingsOpen(true);
+      return;
+    }
     if (next !== "bim") setMappingMode(false);
     if (next !== tab || inspectorView === "investigation")
       setDetailsOpen(false);
@@ -256,7 +260,7 @@ export function App() {
               }}
               onNavigate={navigate}
             >
-              {wp && (tab === "coordination" || tab === "work-packages") && (
+              {wp && tab === "coordination" && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -301,7 +305,7 @@ export function App() {
                 onReset={() => {
                   setSelectedConstraint("");
                   setDetailsOpen(false);
-                  setTab("coordination");
+                  setTab("work");
                   void perform(api.reset, "演示项目已重置。");
                 }}
               />
@@ -328,6 +332,7 @@ export function App() {
               modelSource={
                 projectModels.length === 1 ? projectModels[0] : undefined
               }
+              modelSources={sourceCatalog.data ?? []}
               localIfcFile={localIfcFile}
               onLocalIfcFile={(file) =>
                 setLocalIfc(file ? { project, file } : null)

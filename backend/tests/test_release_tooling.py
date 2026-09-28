@@ -211,6 +211,14 @@ def test_native_webdriver_never_reports_protocol_errors_as_success():
             module.NativeSession(client).request("POST", "/session", {})
 
 
+def test_native_wait_identifies_phase_without_exposing_script_or_credentials():
+    module = load("native_webdriver_client")
+    session = module.NativeSession(None)
+    with pytest.raises(module.WebDriverError, match="project import completed") as error:
+        session.wait("return 'private-credential'", timeout=0, phase="project import completed")
+    assert "private-credential" not in str(error.value)
+
+
 def test_native_preflight_requires_a_real_executable(tmp_path, monkeypatch):
     module = load("native_webdriver_smoke")
     monkeypatch.setattr(module.sys, "platform", "linux")

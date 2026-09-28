@@ -76,6 +76,7 @@ it("defaults initiative to Suggest and persists an explicit mode change", async 
     .spyOn(api, "setAgentSettings")
     .mockResolvedValue({ initiative: "manual" });
   view();
+  fireEvent.click(screen.getByRole("button", { name: "调查方式" }));
   expect(await screen.findByLabelText("调查方式")).toHaveTextContent("建议");
   fireEvent.change(screen.getByLabelText("调查方式"), {
     target: { value: "manual" },

@@ -44,7 +44,24 @@ export function useConcordAgent({
     setError("");
   }, [project]);
 
-  const shownRun = activeRun?.project === project ? activeRun : undefined;
+  const history = useQuery({
+    queryKey: ["runs", project],
+    queryFn: () => api.runs(project),
+    enabled: !!project,
+  });
+  // The runs endpoint returns newest first; a saved report survives a browser restart.
+  const recentRun = history.data?.find(
+    (run) => run.category === "investigation",
+  );
+  const recent = recentRun
+    ? {
+        id: recentRun.id,
+        category: recentRun.category,
+        generation: recentRun.generation,
+        project,
+      }
+    : undefined;
+  const shownRun = activeRun?.project === project ? activeRun : recent;
   const currentRun = useQuery({
     queryKey: [
       "current-operation-run",
@@ -97,8 +114,9 @@ export function useConcordAgent({
         project,
       });
       setError("");
+      void cache.invalidateQueries({ queryKey: ["runs", project] });
     },
-    [project],
+    [project, cache],
   );
   const sourceContext = useCallback(
     (

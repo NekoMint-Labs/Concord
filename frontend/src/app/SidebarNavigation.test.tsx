@@ -79,7 +79,7 @@ function sidebar({ collapsed = false, onCollapse = vi.fn() } = {}) {
 
 it("carries the collapse control and the current project in its own header", () => {
   const onCollapse = sidebar();
-  const current = screen.getByRole("button", { name: "项目" });
+  const current = screen.getByRole("button", { name: "切换项目" });
   expect(within(current).getByText("A 栋项目")).toBeVisible();
   expect(document.querySelector(".sidebar")).not.toHaveAttribute("inert");
 
@@ -140,7 +140,7 @@ it("keeps fixture/debug wording out of the project picker", () => {
     />,
   );
 
-  const trigger = screen.getByRole("button", { name: "项目" });
+  const trigger = screen.getByRole("button", { name: "切换项目" });
   expect(within(trigger).getByText("A 栋项目")).toBeVisible();
   expect(within(trigger).queryByText("演示 / 示例")).toBeNull();
 });
@@ -192,6 +192,9 @@ it("labels work-package creation as an explicit sidebar action", () => {
     />,
   );
 
+  fireEvent.change(screen.getByPlaceholderText("搜索工作包"), {
+    target: { value: "风管" },
+  });
   fireEvent.click(screen.getByRole("button", { name: "新建工作包" }));
   expect(onStructure).toHaveBeenCalledOnce();
 });

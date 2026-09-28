@@ -94,13 +94,25 @@ async function openSecondaryView(page: Page, label: string) {
 }
 
 async function selectDemoPackage(page: Page) {
+  await openProjectView(page, "工作包");
   await page
-    .getByRole("navigation", { name: "工作包" })
+    .getByRole("region", { name: "项目工作包" })
     .getByRole("button", { name: /东翼风管安装/ })
     .click();
   await expect(
     page.getByRole("heading", { level: 1, name: "东翼风管安装" }),
   ).toBeVisible();
+}
+
+async function openProjectView(page: Page, name: string) {
+  await page
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "项目", exact: true })
+    .click();
+  await page
+    .getByRole("navigation", { name: "项目内容" })
+    .getByRole("button", { name: new RegExp(`^${name}`) })
+    .click();
 }
 
 test.beforeEach(async ({ request, page }) => {
@@ -127,6 +139,20 @@ test.beforeEach(async ({ request, page }) => {
   });
   await page.goto("/");
   await selectDemoPackage(page);
+});
+
+test("primary workspace has three intentions and surfaces a real decision", async ({
+  page,
+}) => {
+  const nav = page.getByRole("navigation", { name: "主要工作区" });
+  await expect(nav.getByRole("button")).toHaveCount(3);
+  await injectDemoEvent(page, /图纸 V16/);
+  await expectBlocked(page);
+  await nav.getByRole("button", { name: "工作", exact: true }).click();
+  const needs = page.getByRole("region", { name: "需要处理" });
+  await expect(needs.getByText(/东翼风管安装.*需要决定/)).toBeVisible();
+  await needs.getByRole("button", { name: "处理 →" }).click();
+  await expectBlocked(page);
 });
 
 test("coordinates a design change through evidence, approval, receipt, and a fresh recheck", async ({
@@ -272,18 +298,13 @@ test("an outdated judgement is raised beside the work package, not as a global b
   await expectBlocked(page);
   // The work package reports its own state; nothing is raised application-wide.
   await expect(page.locator(".alert")).toHaveCount(0);
-  await expect(page.locator(".coordination-workspace")).toContainText(
-    "待批准",
-  );
+  await expect(page.locator(".coordination-workspace")).toContainText("待批准");
 });
 
 test("document upload, retrieval and authenticated source download use the real API", async ({
   page,
 }) => {
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "文档", exact: true })
-    .click();
+  await openProjectView(page, "文档");
   await page.locator("input[type=file]").setInputFiles({
     name: "browser-evidence.md",
     mimeType: "text/markdown",
@@ -393,10 +414,11 @@ test("structured BIM, capability status, and run history remain usable without o
 test("real local GIS renders and selects its linked work package", async ({
   page,
 }) => {
-  const packages = page.getByRole("navigation", { name: "工作包" });
-  const electrical = packages.getByRole("button", { name: /03 层电气粗装/ });
-  await electrical.click();
-  await expect(electrical).toHaveAttribute("aria-current", "page");
+  await openProjectView(page, "工作包");
+  await page
+    .getByRole("region", { name: "项目工作包" })
+    .getByRole("button", { name: /03 层电气粗装/ })
+    .click();
   await openSecondaryView(page, "现场地图");
   await expect(page.locator(".view-toolbar")).toContainText("地图已就绪");
   // The map says what it is showing: the site polygon, the work-package points,
@@ -408,16 +430,10 @@ test("real local GIS renders and selects its linked work package", async ({
   expect(box).not.toBeNull();
   // The original synthetic WP-200 marker is exactly at the map's declared center.
   await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } });
-  await expect(
-    packages.getByRole("button", { name: /东翼风管安装/ }),
-  ).toHaveAttribute("aria-current", "page");
-  await expect(electrical).not.toHaveAttribute("aria-current", "page");
-  await expect(
-    page.getByRole("navigation", { name: "当前位置" }),
-  ).toContainText("东翼风管安装");
+  await expect(page.locator(".gis-selected")).toContainText("东翼风管安装");
   await page
     .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "概览", exact: true })
+    .getByRole("button", { name: "工作", exact: true })
     .click();
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
 });
@@ -444,10 +460,7 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
   const proposal = current.proposals.find(
     (item) => item.work_package_id === "WP-200",
   )!;
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "文档", exact: true })
-    .click();
+  await openProjectView(page, "文档");
   await page.locator("input[type=file]").setInputFiles({
     name: "approval-stream.md",
     mimeType: "text/markdown",
@@ -469,9 +482,10 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
   expect(uploaded.analysis_run!.status).toBe("WAITING_APPROVAL");
   expect(uploaded.state.version).toBeGreaterThan(current.state.version);
   expect(uploaded.stale).toBe(true);
+  await openProjectView(page, "工作包");
   await page
-    .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "概览", exact: true })
+    .getByRole("region", { name: "项目工作包" })
+    .getByRole("button", { name: /东翼风管安装/ })
     .click();
   await page.getByRole("button", { name: "审查处理方案" }).click();
   await expect(panel.getByRole("button", { name: /^批准 R/ })).toBeDisabled();

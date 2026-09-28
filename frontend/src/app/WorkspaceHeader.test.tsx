@@ -15,12 +15,7 @@ it("carries project and location context without repeating the work package", ()
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <WorkspaceHeader
-        data={data}
-        wp={wp}
-        tab="sources"
-        onNavigate={onNavigate}
-      />
+      <WorkspaceHeader data={data} wp={wp} tab="bim" onNavigate={onNavigate} />
     </QueryClientProvider>,
   );
 
@@ -35,7 +30,7 @@ it("carries project and location context without repeating the work package", ()
   ).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "东翼风管安装" }));
   expect(onNavigate).toHaveBeenCalledWith("coordination");
-  expect(screen.getByText("模型版本")).toBeVisible();
+  expect(screen.getByText("模型")).toBeVisible();
   expect(screen.queryByText("WP-200")).not.toBeInTheDocument();
 
   // Title, status, and actions belong to the coordination workspace.

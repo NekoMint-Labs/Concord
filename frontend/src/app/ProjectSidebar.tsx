@@ -3,10 +3,7 @@ import {
   Box,
   Building2,
   ChevronsUpDown,
-  CircleDot,
-  FileText,
   FolderOpen,
-  History,
   Home,
   PanelLeftClose,
   Plus,
@@ -15,7 +12,6 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { DTO, Workspace } from "../api/client";
-import { Status } from "../components/Status";
 import {
   AppMenu,
   AppMenuItem,
@@ -32,20 +28,14 @@ import {
 } from "../ui/demo/demoPresentation";
 import type { WorkspaceTab } from "./destinations";
 
-/** Abnormal states earn the only labels here; normal rows stay plain text. */
-const notable = new Set(["BLOCKED", "WAITING_APPROVAL", "STALE"]);
-
 const workspaceLinks: {
   tab: WorkspaceTab;
   label: string;
   icon: LucideIcon;
 }[] = [
-  { tab: "coordination", label: "概览", icon: Home },
+  { tab: "work", label: "工作", icon: Home },
   { tab: "bim", label: "模型", icon: Box },
-  { tab: "impact", label: "变更", icon: History },
-  { tab: "packages", label: "问题", icon: CircleDot },
-  { tab: "work-packages", label: "工作包", icon: Building2 },
-  { tab: "documents", label: "文档", icon: FileText },
+  { tab: "project", label: "项目", icon: Building2 },
 ];
 
 export function ProjectSidebar({
@@ -54,7 +44,7 @@ export function ProjectSidebar({
   projects,
   recent = [],
   selected,
-  tab = "coordination",
+  tab = "work",
   collapsed = false,
   onCollapse,
   onProject,
@@ -101,7 +91,7 @@ export function ProjectSidebar({
   );
 
   return (
-    <aside className="sidebar" aria-label="项目与工作包" inert={collapsed}>
+    <aside className="sidebar" aria-label="项目导航" inert={collapsed}>
       <header className="sidebar-header">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">
@@ -123,7 +113,7 @@ export function ProjectSidebar({
         </div>
         <div className="project-picker">
           <AppMenu
-            label="项目"
+            label="切换项目"
             align="start"
             triggerClassName="project-trigger"
             trigger={
@@ -218,73 +208,64 @@ export function ProjectSidebar({
           })}
         </nav>
 
-        <nav className="sidebar-group" aria-label="工作包">
-          <div className="sidebar-group-heading">
-            <span>专业与工作包</span>
-            <AppTooltip label="新建工作包" side="right">
-              <button
-                type="button"
-                className="sidebar-group-create"
-                aria-label="新建工作包"
-                onClick={() => onStructure?.()}
-              >
-                <Plus {...icon} />
-              </button>
-            </AppTooltip>
-          </div>
-          {data.state.areas.map((area) => {
-            const packages = visiblePackages.filter(
-              (item) => item.area_id === area.id,
-            );
-            if (search && !packages.length) return null;
-            return (
-              <section key={area.id} className="area-group">
-                <h2 className="area-title">
-                  {demoAreaName(area.id, area.name)}
-                </h2>
-                <ul className="package-nav-list">
-                  {packages.map((item) => {
-                    const status =
-                      data.analysis?.readiness.find(
-                        (readiness) => readiness.work_package_id === item.id,
-                      )?.status ?? "UNCHECKED";
-                    return (
-                      <li className="package-nav-row" key={item.id}>
-                        <button
-                          className={`package-nav ${selected === item.id ? "selected" : ""}`}
-                          aria-current={
-                            selected === item.id ? "page" : undefined
-                          }
-                          onClick={() => onSelect(item.id)}
-                        >
-                          <span>
-                            <strong>
-                              {demoWorkPackageName(item.id, item.name)}
-                            </strong>
-                            <small>{demoDiscipline(item.discipline)}</small>
-                          </span>
-                          {notable.has(status) && <Status value={status} />}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            );
-          })}
-          {!visiblePackages.length && (
-            <p className="quiet-message sidebar-empty">
-              {search ? "没有匹配的工作包。" : "还没有区域或工作包。"}
-            </p>
-          )}
-        </nav>
+        {search && (
+          <nav className="sidebar-group" aria-label="搜索工作包结果">
+            <div className="sidebar-group-heading">
+              <span>专业与工作包</span>
+              <AppTooltip label="新建工作包" side="right">
+                <button
+                  type="button"
+                  className="sidebar-group-create"
+                  aria-label="新建工作包"
+                  onClick={() => onStructure?.()}
+                >
+                  <Plus {...icon} />
+                </button>
+              </AppTooltip>
+            </div>
+            {data.state.areas.map((area) => {
+              const packages = visiblePackages.filter(
+                (item) => item.area_id === area.id,
+              );
+              if (search && !packages.length) return null;
+              return (
+                <section key={area.id} className="area-group">
+                  <h2 className="area-title">
+                    {demoAreaName(area.id, area.name)}
+                  </h2>
+                  <ul className="package-nav-list">
+                    {packages.map((item) => {
+                      return (
+                        <li className="package-nav-row" key={item.id}>
+                          <button
+                            className={`package-nav ${selected === item.id ? "selected" : ""}`}
+                            aria-current={
+                              selected === item.id ? "page" : undefined
+                            }
+                            onClick={() => onSelect(item.id)}
+                          >
+                            <span>
+                              <strong>
+                                {demoWorkPackageName(item.id, item.name)}
+                              </strong>
+                              <small>{demoDiscipline(item.discipline)}</small>
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            })}
+            {!visiblePackages.length && (
+              <p className="quiet-message sidebar-empty">
+                {search ? "没有匹配的工作包。" : "还没有区域或工作包。"}
+              </p>
+            )}
+          </nav>
+        )}
       </div>
-
-      <footer className="sidebar-footer">
-        <button type="button" onClick={() => onProjectSettings?.()}>
-          <Settings2 {...icon} /> 设置
-        </button>
-      </footer>
     </aside>
   );
 }

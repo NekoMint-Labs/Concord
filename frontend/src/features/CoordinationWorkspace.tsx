@@ -56,6 +56,7 @@ export function CoordinationWorkspace({
   onDetails,
   onImpact,
   onModel,
+  onIssues,
   onDocuments,
   modelContext,
   pendingModel = false,
@@ -68,6 +69,7 @@ export function CoordinationWorkspace({
   onDetails: (view: InspectorView) => void;
   onImpact: () => void;
   onModel?: () => void;
+  onIssues?: () => void;
   onDocuments?: () => void;
   modelContext?: ReactNode;
   pendingModel?: boolean;
@@ -296,16 +298,21 @@ export function CoordinationWorkspace({
                   </div>
                 </div>
                 <div className="readiness-actions">
-                  {!analyzing && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled={busy}
-                      onClick={onRecheck}
-                    >
-                      重新检查
-                    </Button>
-                  )}
+                  {!analyzing &&
+                    (!proposal ||
+                      !readiness ||
+                      stale ||
+                      workspace.analysis_run?.status === "FAILED") &&
+                    !pendingModel && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={busy}
+                        onClick={onRecheck}
+                      >
+                        重新检查
+                      </Button>
+                    )}
                   {(blocked ||
                     impactCount > 0 ||
                     analyzing ||
@@ -478,6 +485,11 @@ export function CoordinationWorkspace({
           {overviewTab === "issues" && (
             <section className="package-tab-content">
               <h2>未解决问题 · {constraints.length}</h2>
+              {!!constraints.length && onIssues && (
+                <Button variant="ghost" size="sm" onClick={onIssues}>
+                  在模型中查看 →
+                </Button>
+              )}
               {constraints.length ? (
                 constraints.map((issue) => (
                   <button

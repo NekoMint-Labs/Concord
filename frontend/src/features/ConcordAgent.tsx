@@ -10,6 +10,7 @@ import {
 import { PropertyRow, PropertyTable } from "../components/PropertyTable";
 import { Status } from "../components/Status";
 import { AppPopover, AppPopoverClose } from "../components/ui/AppPopover";
+import { AppDisclosure } from "../components/ui/AppDisclosure";
 import { AppSelect } from "../components/ui/AppSelect";
 import { Button } from "../components/ui/button";
 import { icon } from "../components/ui/icon";
@@ -106,10 +107,10 @@ export function ConcordAgent({
 
   return (
     <AppPopover
-      label="工程调查"
+      label="询问 Concord"
       side="bottom"
       trigger={
-        <Button variant="ghost" size="sm" aria-label="工程调查">
+        <Button variant="ghost" size="sm" aria-label="询问 Concord">
           <ScanSearch {...icon} />
         </Button>
       }
@@ -118,8 +119,10 @@ export function ConcordAgent({
         <header className="agent-header">
           <div>
             <span className="eyebrow">Concord</span>
-            <h3>工程调查</h3>
+            <h3>询问与检查</h3>
           </div>
+        </header>
+        <AppDisclosure label="调查方式">
           <label>
             <span>模式</span>
             <AppSelect
@@ -138,7 +141,7 @@ export function ConcordAgent({
               ]}
             />
           </label>
-        </header>
+        </AppDisclosure>
 
         <section className="agent-context-block">
           <span className="section-label">调查范围</span>
@@ -203,7 +206,7 @@ export function ConcordAgent({
         <section className="agent-investigate">
           <div>
             <span className="section-label">调查</span>
-            <strong>查看影响、原因和判断依据</strong>
+            <strong>Concord 核对影响、原因和判断依据</strong>
           </div>
           <Button
             size="sm"
@@ -217,7 +220,7 @@ export function ConcordAgent({
         {currentRun && (
           <section className="agent-current-run">
             <div className="agent-run-heading">
-              <span className="section-label">最近调查</span>
+              <span className="section-label">Concord 调查状态</span>
               <Status value={currentRun.status} />
             </div>
             <PropertyTable>

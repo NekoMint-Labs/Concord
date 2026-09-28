@@ -56,6 +56,7 @@ const sourceKindLabel: Record<string, string> = {
 
 export function ProjectSources({
   project,
+  historyOnly = false,
   workPackages = [],
   report,
   onContext,
@@ -71,6 +72,7 @@ export function ProjectSources({
   onChanges,
 }: {
   project: string;
+  historyOnly?: boolean;
   workPackages?: WorkPackage[];
   report?: InvestigationReport | null;
   onContext: (
@@ -219,6 +221,24 @@ export function ProjectSources({
     }
   }
 
+  if (historyOnly)
+    return (
+      <section className="sources-workspace project-home" aria-label="模型历史">
+        <header>
+          <h1>历史</h1>
+          <p>已确认的模型基线及版本。</p>
+        </header>
+        <BaselineHistory
+          baselines={sourceData.baselines.data ?? []}
+          statuses={statuses}
+          revisions={sourceData.revisionCatalog}
+        />
+        <Button variant="secondary" onClick={onChanges}>
+          查看模型变化 →
+        </Button>
+      </section>
+    );
+
   return (
     <section className="sources-workspace">
       <div className="view-toolbar">
@@ -310,24 +330,22 @@ export function ProjectSources({
                     <h3>{current.source.name}</h3>
                   </div>
                   <div className="source-heading-actions">
-                    {(current.has_pending_revision ||
-                      (current.latest_revision_id &&
-                        !current.accepted_revision_id)) && (
-                      <Button
-                        size="sm"
-                        disabled={
-                          sourceData.acceptBaseline.isPending ||
-                          !canAccept ||
-                          !otherModelsReady ||
-                          !otherModelsReviewed ||
-                          (!!current.accepted_revision_id && !freshReady)
-                        }
-                        onClick={() => sourceData.acceptBaseline.mutate()}
-                      >
-                        设为当前基线 B
-                        {(sourceData.baselines.data?.length ?? 0) + 1}
-                      </Button>
-                    )}
+                    {(!current.accepted_revision_id || freshReady) &&
+                      canAccept &&
+                      otherModelsReady &&
+                      otherModelsReviewed &&
+                      (current.has_pending_revision ||
+                        (current.latest_revision_id &&
+                          !current.accepted_revision_id)) && (
+                        <Button
+                          size="sm"
+                          disabled={sourceData.acceptBaseline.isPending}
+                          onClick={() => sourceData.acceptBaseline.mutate()}
+                        >
+                          设为当前基线 B
+                          {(sourceData.baselines.data?.length ?? 0) + 1}
+                        </Button>
+                      )}
                     <input
                       ref={fileInput}
                       hidden
@@ -454,47 +472,53 @@ export function ProjectSources({
                           KiB
                         </span>
                         <div className="revision-actions">
-                          {current.source.kind === "BIM" && (
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              disabled={
-                                sourceData.importRevision.isPending ||
-                                (revision.id === current.latest_revision_id &&
-                                  ["QUEUED", "RUNNING"].includes(
-                                    latestImport.data?.status ?? "",
-                                  ))
-                              }
-                              onClick={() => {
-                                sourceData.importRevision.mutate(
-                                  { source: sourceId, revision: revision.id },
-                                  {
-                                    onSuccess: onRun,
-                                  },
-                                );
-                              }}
-                            >
-                              处理模型
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              onInvestigate(
-                                sourceId,
-                                revision.id,
-                                fromRevisionId,
-                                undefined,
-                                `R${revision.sequence}`,
-                                fromRevisionId
-                                  ? `R${revisions.find((item) => item.id === fromRevisionId)?.sequence ?? fromRevisionId.slice(0, 8)}`
-                                  : undefined,
-                              )
-                            }
-                          >
-                            查看原因
-                          </Button>
+                          {current.source.kind === "BIM" &&
+                            (revision.id !== current.latest_revision_id ||
+                              latestImport.data?.status !== "COMPLETED") && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={
+                                  sourceData.importRevision.isPending ||
+                                  (revision.id === current.latest_revision_id &&
+                                    ["QUEUED", "RUNNING"].includes(
+                                      latestImport.data?.status ?? "",
+                                    ))
+                                }
+                                onClick={() => {
+                                  sourceData.importRevision.mutate(
+                                    { source: sourceId, revision: revision.id },
+                                    {
+                                      onSuccess: onRun,
+                                    },
+                                  );
+                                }}
+                              >
+                                处理模型
+                              </Button>
+                            )}
+                          {current.source.kind === "BIM" &&
+                            latestImport.data?.status === "COMPLETED" &&
+                            revision.id === current.latest_revision_id && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  onInvestigate(
+                                    sourceId,
+                                    revision.id,
+                                    fromRevisionId,
+                                    undefined,
+                                    `R${revision.sequence}`,
+                                    fromRevisionId
+                                      ? `R${revisions.find((item) => item.id === fromRevisionId)?.sequence ?? fromRevisionId.slice(0, 8)}`
+                                      : undefined,
+                                  )
+                                }
+                              >
+                                查看原因
+                              </Button>
+                            )}
                         </div>
                         {revision.id === current.latest_revision_id &&
                           current.source.kind === "BIM" && (
@@ -511,28 +535,6 @@ export function ProjectSources({
                                     : `R${revision.sequence} 已上传，尚未处理。`}
                             </p>
                           )}
-                        {notice && current.has_pending_revision && (
-                          <p className="source-suggestion">
-                            新版本尚未纳入当前基线。先查看变化，再决定是否更新。
-                            <button
-                              type="button"
-                              onClick={() =>
-                                onInvestigate(
-                                  sourceId,
-                                  revision.id,
-                                  fromRevisionId,
-                                  undefined,
-                                  `R${revision.sequence}`,
-                                  fromRevisionId
-                                    ? `R${revisions.find((item) => item.id === fromRevisionId)?.sequence ?? fromRevisionId.slice(0, 8)}`
-                                    : undefined,
-                                )
-                              }
-                            >
-                              查看原因
-                            </button>
-                          </p>
-                        )}
                       </article>
                     );
                   })}
