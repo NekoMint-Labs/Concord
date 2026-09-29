@@ -1,4 +1,4 @@
-import { Box, Focus, Layers3, MousePointer2, Sun } from "lucide-react";
+import { Box, Focus, Layers3, MousePointer2 } from "lucide-react";
 import { useIFCViewer } from "./useIFCViewer";
 
 /** Geometry and controls remain on the canvas, not in a second technical pane. */
@@ -82,13 +82,6 @@ export default function IFCViewer({
           <Layers3 size={17} />
         </button>
       </div>
-      <div className="viewer-orientation" aria-hidden="true">
-        <span>Z</span>
-        <span>Y　◇　X</span>
-      </div>
-      <span className="viewer-light" aria-hidden="true">
-        <Sun size={17} />
-      </span>
       {ready && selectedLabel && anchor && (
         <div
           className="viewer-object-label"

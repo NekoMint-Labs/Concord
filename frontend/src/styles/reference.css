@@ -2,6 +2,8 @@
 .application-shell {
   --accent: var(--concord-accent);
   --accent-muted: var(--concord-accent-tint);
+  --primary: var(--concord-accent);
+  --primary-hover: var(--concord-accent-strong);
   --surface-nav: var(--concord-shell-surface);
   --surface-detail: var(--concord-shell-surface);
   --ink: var(--concord-ink);

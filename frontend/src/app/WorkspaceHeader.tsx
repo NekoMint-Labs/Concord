@@ -127,15 +127,19 @@ export function WorkspaceHeader({
               <div className="header-versions">
                 <span className="version-current">
                   <i />
-                  最新版本 R{latest.sequence}
+                  最新版本 <strong>R{latest.sequence}</strong>
                 </span>
                 {baseline ? (
-                  <span>当前基线 B{baseline.sequence}</span>
+                  <span>
+                    当前基线 <strong>B{baseline.sequence}</strong>
+                  </span>
                 ) : (
                   <span>尚未确认基线</span>
                 )}
                 {source?.accepted_revision_id &&
-                  source.has_pending_revision && <span>新版本待审核</span>}
+                  source.has_pending_revision && (
+                    <span className="version-pending">新版本待审核</span>
+                  )}
               </div>
             )
           ))}

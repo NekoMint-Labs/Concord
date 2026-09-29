@@ -217,7 +217,7 @@ export function App() {
           panelRef={navPanel}
           collapsible
           collapsedSize="0px"
-          defaultSize="204px"
+          defaultSize="220px"
           minSize="176px"
           maxSize="264px"
           onResize={(size) => setNavOpen(size.inPixels > 0)}
@@ -227,6 +227,7 @@ export function App() {
             project={project}
             projects={lifecycle.projects.data}
             recent={lifecycle.recent}
+            sources={sourceCatalog.data ?? []}
             selected={selected}
             tab={tab}
             collapsed={!navOpen}

@@ -29,6 +29,7 @@ export function SpatialContext({
   onWorkPackage,
   workPackageId,
   onExpandInspector,
+  onNavigate,
 }: {
   context: "changes" | "issues";
   setContext: (value: "changes" | "issues") => void;
@@ -47,6 +48,7 @@ export function SpatialContext({
   onWorkPackage?: (id: string) => void;
   workPackageId?: string;
   onExpandInspector?: () => void;
+  onNavigate?: (tab: "sources" | "documents" | "history") => void;
 }) {
   const packageFor = (id: string) =>
     workspace?.state.work_packages.find((wp) => wp.element_ids.includes(id));
@@ -76,7 +78,7 @@ export function SpatialContext({
               setOpen(true);
             }}
           >
-            变更 <small>{rows.length}</small>
+            变更对比 <small>{rows.length}</small>
           </button>
           <button
             type="button"
@@ -87,8 +89,11 @@ export function SpatialContext({
               setOpen(true);
             }}
           >
-            问题 <small>{issues.length}</small>
+            相关问题 <small>{issues.length}</small>
           </button>
+        </div>
+        {/* Links leave the model; they are a separate, quieter group from the in-place views. */}
+        <nav className="spatial-context-links" aria-label="相关页面">
           <button
             type="button"
             disabled={!workPackageId || !onWorkPackage}
@@ -97,7 +102,20 @@ export function SpatialContext({
           >
             工作包
           </button>
-        </div>
+          {onNavigate && (
+            <>
+              <button type="button" onClick={() => onNavigate("sources")}>
+                模型版本
+              </button>
+              <button type="button" onClick={() => onNavigate("documents")}>
+                文档
+              </button>
+              <button type="button" onClick={() => onNavigate("history")}>
+                历史
+              </button>
+            </>
+          )}
+        </nav>
         <span>{revisionLabel}</span>
         {onExpandInspector && (
           <button

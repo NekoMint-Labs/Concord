@@ -31,14 +31,22 @@ async function workspace(request: APIRequestContext): Promise<Workspace> {
   return response.json() as Promise<Workspace>;
 }
 
+/**
+ * 模型与版本 is the model workspace's own bottom-bar entry.
+ *
+ * The project sheet links to it only once a model exists, because its 版本记录
+ * section is what states that fact; the model workspace carries the 模型版本 entry
+ * unconditionally, which is also the route that works for a project with no models
+ * yet. Leaving 工作 first clears any open mapping session, whose workspace hides its
+ * source actions.
+ */
 async function openSources(page: Page) {
+  const nav = page.getByRole("navigation", { name: "主要工作区" });
+  await nav.getByRole("button", { name: "工作", exact: true }).click();
+  await nav.getByRole("button", { name: "模型", exact: true }).click();
   await page
-    .getByRole("navigation", { name: "主要工作区" })
-    .getByRole("button", { name: "项目", exact: true })
-    .click();
-  await page
-    .getByRole("navigation", { name: "项目内容" })
-    .getByRole("button", { name: /模型与版本/ })
+    .locator(".spatial-context-links")
+    .getByRole("button", { name: "模型版本" })
     .click();
   await expect(page.getByRole("heading", { name: "模型与版本" })).toBeVisible();
 }
@@ -49,8 +57,8 @@ async function openPackage(page: Page, name: string) {
     .getByRole("button", { name: "项目", exact: true })
     .click();
   await page
-    .getByRole("navigation", { name: "项目内容" })
-    .getByRole("button", { name: /工作包/ })
+    .getByRole("region", { name: "工作包状态" })
+    .getByRole("button", { name: /^全部/ })
     .click();
   await page
     .getByRole("region", { name: "项目工作包" })
@@ -393,8 +401,8 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     .getByRole("button", { name: "项目", exact: true })
     .click();
   await page
-    .getByRole("navigation", { name: "项目内容" })
-    .getByRole("button", { name: /工作包/ })
+    .getByRole("region", { name: "工作包状态" })
+    .getByRole("button", { name: /^全部/ })
     .click();
   await page
     .getByRole("region", { name: "项目工作包" })

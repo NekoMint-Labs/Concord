@@ -44,6 +44,7 @@ export default function BIMWorkspace({
   toolbar,
   onInvestigate,
   onModels,
+  onNavigate,
   onWorkPackage,
   mode = "model",
   onIssueResolution,
@@ -68,6 +69,7 @@ export default function BIMWorkspace({
   toolbar?: ReactNode;
   onInvestigate?: (id: string) => void;
   onModels?: () => void;
+  onNavigate?: (tab: "sources" | "documents" | "history") => void;
   onWorkPackage?: (id: string) => void;
   mode?: "model" | "changes" | "issues";
   onIssueResolution?: (id: string) => void;
@@ -447,6 +449,7 @@ export default function BIMWorkspace({
             onSelect={select}
             onIssue={chooseIssue}
             onWorkPackage={onWorkPackage}
+            onNavigate={onNavigate}
             workPackageId={workPackage?.id}
             onExpandInspector={
               inspectorOpen ? undefined : () => inspectorPane.current?.expand()

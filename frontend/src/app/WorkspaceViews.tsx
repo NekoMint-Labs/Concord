@@ -214,9 +214,20 @@ export function WorkspaceViews({
                       onRecheck={onRecheck}
                       onReport={openInvestigation}
                       onProject={() => onTab("project")}
+                      onTab={onTab}
                     />
                   )}
-                  {tab === "project" && <ProjectHome onTab={onTab} />}
+                  {tab === "project" && (
+                    <ProjectHome
+                      workspace={data}
+                      sources={modelSources}
+                      onTab={onTab}
+                      onPackage={(id) => {
+                        onSelected(id);
+                        onTab("coordination");
+                      }}
+                    />
+                  )}
                   {tab === "work-packages" && (
                     <section className="project-home" aria-label="项目工作包">
                       <header>
@@ -456,6 +467,7 @@ export function WorkspaceViews({
                         ) ?? []
                       }
                       onModels={() => onTab("sources")}
+                      onNavigate={onTab}
                       onWorkPackage={(id) => {
                         onSelected(id);
                         onTab("coordination");

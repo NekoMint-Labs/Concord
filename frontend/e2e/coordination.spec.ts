@@ -104,14 +104,27 @@ async function selectDemoPackage(page: Page) {
   ).toBeVisible();
 }
 
-async function openProjectView(page: Page, name: string) {
+/**
+ * The project sheet's own sections are the doors to its records.
+ *
+ * The reworked 项目 page leads with the project's real content, so each list's
+ * heading carries the way into its full view (工作包 → 全部, 项目文件 → 全部) rather
+ * than the page being a generic index of links. The 项目内容 nav that remains holds
+ * only the two record types that have no table on the sheet.
+ */
+const projectSections = {
+  工作包: "工作包状态",
+  文档: "项目文件",
+} as const;
+
+async function openProjectView(page: Page, name: keyof typeof projectSections) {
   await page
     .getByRole("navigation", { name: "主要工作区" })
     .getByRole("button", { name: "项目", exact: true })
     .click();
   await page
-    .getByRole("navigation", { name: "项目内容" })
-    .getByRole("button", { name: new RegExp(`^${name}`) })
+    .getByRole("region", { name: projectSections[name] })
+    .getByRole("button", { name: /^全部/ })
     .click();
 }
 

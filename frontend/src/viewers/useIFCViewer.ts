@@ -164,7 +164,7 @@ export function useIFCViewer(
               });
             if (selected.length)
               await model.highlight(selected, {
-                color: new THREE.Color("#397ad5"),
+                color: new THREE.Color("#2f86b3"),
                 renderedFaces: FRAGS.RenderedFaces.TWO,
                 opacity: 1,
                 transparent: false,

@@ -159,10 +159,9 @@ export function SpatialInspectorDetails({
                   <span>{classification}</span>
                 </div>
                 <dl className="element-facts">
-                  <div>
-                    <dt>类别</dt>
-                    <dd>{classification}</dd>
-                  </div>
+                  {/* 类别 is already the panel subtitle; repeating it here spends a
+                      row of the most-read block on a value the reader has just
+                      been shown. */}
                   <div>
                     <dt>系统</dt>
                     <dd>{item?.space ?? snapshot?.space ?? "—"}</dd>
@@ -232,24 +231,26 @@ export function SpatialInspectorDetails({
             )}
             {inspectorTab === "overview" && (
               <>
-                <section className="element-section">
-                  <h3>关联构件</h3>
-                  {item?.related_ids.map((id) => (
-                    <button
-                      type="button"
-                      className="element-context-row"
-                      key={id}
-                      onClick={() => select(id)}
-                    >
-                      <Box size={13} />
-                      {demoElementName(
-                        id,
-                        elements?.find((e) => e.id === id)?.name ?? id,
-                      )}
-                      <ChevronRight size={13} />
-                    </button>
-                  ))}
-                </section>
+                {!!item?.related_ids.length && (
+                  <section className="element-section">
+                    <h3>关联构件</h3>
+                    {item?.related_ids.map((id) => (
+                      <button
+                        type="button"
+                        className="element-context-row"
+                        key={id}
+                        onClick={() => select(id)}
+                      >
+                        <Box size={13} />
+                        {demoElementName(
+                          id,
+                          elements?.find((e) => e.id === id)?.name ?? id,
+                        )}
+                        <ChevronRight size={13} />
+                      </button>
+                    ))}
+                  </section>
+                )}
                 <AppDisclosure
                   label="技术详情"
                   open={technicalOpen}
@@ -306,13 +307,15 @@ export function SpatialInspectorDetails({
         </p>
       )}
       {change && onInvestigate && (
-        <button
-          type="button"
-          className="investigate-link"
-          onClick={() => onInvestigate(activeId)}
-        >
-          调查变更 →
-        </button>
+        <div className="inspector-foot">
+          <button
+            type="button"
+            className="investigate-link"
+            onClick={() => onInvestigate(activeId)}
+          >
+            调查变更 →
+          </button>
+        </div>
       )}
     </div>
   );

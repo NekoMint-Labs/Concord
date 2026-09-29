@@ -1,0 +1,368 @@
+/* ---------- 工作: coordination inbox ---------- */
+
+.application-shell .work-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 190px;
+  height: 26px;
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+}
+.application-shell .work-search:hover {
+  background: var(--hover);
+}
+.application-shell .work-search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  background: var(--surface);
+}
+.application-shell .work-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  font-size: 12px;
+}
+.application-shell .work-group {
+  margin: 0;
+}
+.application-shell .work-group + .work-group {
+  margin-top: 26px;
+}
+
+/* The decision tray. The one container on 工作, and it is spent on the only
+   thing the page is for: the items that are waiting on the reader. Everything
+   below it sits flat on the work plane, so the page has a head and a tail
+   instead of three identical lists.
+
+   Its plane is `--surface-inset`, a well cut one step into the work plane. It
+   used to be `--bg-app`, the window backdrop and the dimmest plane in the
+   ladder, which at this area made the container the loudest object on the page:
+   the reader met a grey slab before meeting a single decision, and the rows'
+   own text lost contrast against it (the red state label measured 4.57:1 there
+   against 4.79:1 here). One step lighter keeps a recess the eye reads as a
+   recess - 1.11:1 on the work plane - and hands the emphasis to the rows. */
+.application-shell .work-list .work-group.is-attention .work-rows {
+  overflow: hidden;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: var(--surface-inset);
+  /* the fill alone is an area; the well's *boundary* is what tells the reader
+     where the tray starts, and a boundary has to be identifiable - the one case
+     where a hairline is spent */
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+}
+.application-shell .work-list .work-rows {
+  border-top: 0;
+}
+.application-shell .work-list .work-row {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) 72px 118px;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 2px;
+  min-height: 50px;
+  padding: 9px 12px;
+  border-bottom: var(--row-rule);
+  background: transparent;
+}
+.application-shell .work-group.is-attention .work-row {
+  min-height: 58px;
+  padding: 10px 0;
+  /* one step stronger than the quiet divider: on the lighter well the rows have
+     to stay separable as rows, which is the job the weaker tone stopped doing */
+  border-bottom-color: var(--line-soft);
+}
+/* the last row keeps its border's *box* and drops only its colour, so every row
+   in the stack is the same height - removing the border outright made the last
+   one a pixel short and put the stack off its own rhythm */
+.application-shell
+  .work-list
+  .work-group.is-attention
+  .work-rows
+  .work-row:last-child {
+  border-bottom-color: transparent;
+}
+.application-shell .work-list .work-group.is-done .work-row:last-child {
+  border-bottom-color: transparent;
+}
+.application-shell .work-list .work-row:hover {
+  background: var(--concord-row-hover);
+}
+.application-shell .work-list .work-row > .work-mark {
+  grid-area: 1 / 1 / 3 / 2;
+  align-self: center;
+  justify-self: center;
+}
+.application-shell .work-list .work-row > .work-title {
+  grid-area: 1 / 2 / 2 / 3;
+  min-width: 0;
+}
+.application-shell .work-list .work-row > .work-reason {
+  grid-area: 2 / 2 / 3 / 3;
+  min-width: 0;
+}
+.application-shell .work-list .work-row strong {
+  display: block;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .work-list .work-group.is-attention .work-row strong {
+  font-size: 14px;
+  letter-spacing: -0.005em;
+}
+.application-shell .work-list .work-row p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* where the work sits is part of why it is waiting, so it reads on the same
+   line rather than in a column of its own across a gap of empty row */
+.application-shell .work-list .work-row p .work-context {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.application-shell .work-list .work-row p .work-context::before {
+  margin-right: 8px;
+  color: var(--line);
+  content: "·";
+}
+.application-shell .work-state {
+  grid-area: 1 / 3 / 2 / 4;
+  justify-self: end;
+  align-self: center;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+}
+.application-shell .work-row.is-attention .work-state {
+  color: var(--concord-danger-text);
+  font-weight: 500;
+}
+.application-shell .work-row.is-waiting .work-state {
+  color: var(--concord-warning-text);
+  font-weight: 500;
+}
+.application-shell .work-list .work-row .button {
+  grid-area: 1 / 4 / 3 / 5;
+  justify-self: end;
+  height: 28px;
+  padding: 0 10px;
+  /* A repeated action is a ghost until it is the thing to do: four accented
+     links in one queue read as four equal priorities, which is the opposite of
+     what the row's own state column just said. The single next step keeps the
+     accent; its siblings take the row's own ink and answer the pointer. */
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.application-shell .work-list .work-row:hover .button {
+  color: var(--accent);
+}
+.application-shell .work-list .work-row.is-next .button {
+  border-color: var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+}
+.application-shell .work-list .work-row.is-next .button:hover {
+  background: var(--concord-accent-tint);
+}
+.application-shell .work-group.is-done .work-row {
+  min-height: 42px;
+  padding: 7px 12px;
+}
+.application-shell .work-group.is-done .work-row strong {
+  color: var(--ink-2);
+  font-size: var(--fs-action);
+  font-weight: 500;
+}
+.application-shell .work-group.is-done .work-row p {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.application-shell .work-group.is-done .work-row .button {
+  height: 26px;
+  color: var(--muted);
+}
+.application-shell .work-group.is-done .work-row:hover .button {
+  color: var(--accent);
+}
+.application-shell .work-more {
+  margin: 4px 0 0;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+}
+.application-shell .work-more:hover {
+  background: var(--hover);
+}
+
+/*
+ * The queue's own context, below the decisions.
+ *
+ * Two columns of standing facts on the same section-heading tier as the groups
+ * above. The heading drops the state dot, because that dot means "this group is
+ * a state you are in" and this region is not one - it is what the states are
+ * read against. Rows are the page's ordinary hairline rows, so the region reads
+ * as the tail of 工作 rather than as a second product bolted to the bottom.
+ */
+.application-shell .work-standing {
+  display: grid;
+  /* the facts ledger is a short label/value pair and reads badly across a half
+     of the page; the packages column carries a name, a place and a state, so
+     the width leans its way */
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  align-items: start;
+  gap: 26px 44px;
+  margin-top: 34px;
+}
+.application-shell .work-group.is-context > h2 {
+  height: 24px;
+  padding-left: 12px;
+  color: var(--ink-2);
+}
+.application-shell .work-group.is-context > h2::before {
+  display: none;
+}
+.application-shell .work-group.is-context > h2 > button {
+  margin-left: auto;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--accent);
+  font-size: var(--fs-label);
+  font-weight: 400;
+}
+.application-shell .work-group.is-context > h2 > button:hover {
+  background: var(--hover);
+}
+.application-shell .work-standing-facts {
+  margin: 0;
+  /* the same 12px the tray's rows are inset by, so every rule and every label
+     in the region starts on the column's own content edge */
+  padding: 0 12px;
+}
+.application-shell .work-standing-facts > div {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  min-height: 38px;
+  padding: 8px 0;
+  border-bottom: var(--row-rule);
+}
+.application-shell .work-standing-facts > div:last-child {
+  border-bottom: 0;
+}
+.application-shell .work-standing-facts dt {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.application-shell .work-standing-facts dd {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+}
+.application-shell .work-standing-facts dd button {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  text-align: left;
+}
+/* a model and the revision it is at are one fact stated as two tokens */
+.application-shell .work-standing-facts dd button > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.application-shell .work-standing-facts dd button:hover {
+  color: var(--accent);
+}
+.application-shell .work-standing-facts dd small,
+.application-shell .work-standing-facts dd .quiet {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+/* the one exception colour in this region, and only when the judgement is not
+   current - a stale result is a fact about trust, not decoration */
+.application-shell .work-standing-facts dd .is-attention {
+  color: var(--concord-warning-text);
+}
+.application-shell .work-standing-facts dd .mono {
+  color: var(--ink);
+  font-weight: 600;
+}
+.application-shell .work-standing-packages {
+  margin: 0;
+  padding: 0 12px;
+  list-style: none;
+}
+.application-shell .work-standing-packages li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  padding: 6px 0;
+  border-bottom: var(--row-rule);
+}
+.application-shell .work-standing-packages li:last-child {
+  border-bottom: 0;
+}
+.application-shell .work-standing-packages li > button {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+.application-shell .work-standing-packages li > button strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .work-standing-packages li > button small {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.application-shell .work-standing-packages li > button:hover strong {
+  color: var(--accent);
+}

@@ -1,0 +1,457 @@
+/* ---------- 项目: project sheet ---------- */
+
+.application-shell .project-overview-head {
+  align-items: center !important;
+  justify-content: space-between;
+  margin-bottom: 18px !important;
+}
+.application-shell .project-overview-head > div {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.application-shell .project-overview-head > button {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--line-control-soft);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+.application-shell .project-overview-head > button:hover {
+  background: var(--hover);
+}
+
+/*
+ * The project's state, as one object.
+ *
+ * This replaces a four-cell counter strip. Four equal cells said the number of
+ * project files mattered as much as the number of work packages that cannot be
+ * built, and a reader had to assemble the story from four disconnected figures.
+ * Here the story is a chain reading left to right - the baseline in force,
+ * therefore how many work packages are stopped - with the model ledger that will
+ * move that baseline on the right. The band is closed by the one rule the page
+ * spends at its top edge, so the sheet below it starts clean.
+ */
+.application-shell .project-state {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  align-items: start;
+  gap: 40px;
+  margin-bottom: 30px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+.application-shell .state-chain {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.application-shell .state-label {
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.application-shell .state-line {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  min-width: 0;
+}
+.application-shell .state-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex: none;
+}
+.application-shell .state-figure strong {
+  color: var(--ink);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.application-shell .state-figure small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.application-shell .state-arrow {
+  flex: none;
+  color: var(--muted);
+  font-size: 14px;
+}
+.application-shell .state-blocked {
+  color: var(--ink-2);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.application-shell .state-blocked strong {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.application-shell .state-blocked.is-attention,
+.application-shell .state-blocked.is-attention strong {
+  color: var(--concord-danger-text);
+}
+.application-shell .state-totals {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  font-variant-numeric: tabular-nums;
+}
+.application-shell .state-models {
+  min-width: 0;
+}
+.application-shell .state-models-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  height: 18px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.application-shell .state-models-head button {
+  margin-left: auto;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--fs-label);
+}
+/* a ledger, not a table: four facts on one line, the name carrying the weight */
+.application-shell .state-models ul {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.application-shell .state-models li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 34px;
+  border-top: 1px solid var(--concord-shell-divider);
+}
+.application-shell .state-models li > button {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .state-models li > button:hover {
+  color: var(--accent);
+}
+.application-shell .state-rev {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  flex: none;
+}
+.application-shell .state-rev small {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.application-shell .state-rev .mono {
+  /* the same identifier the 版本记录 list leads with, so B1/R2 read as one
+     datum wherever the product states a revision; at the quiet tier this was
+     the palest text in the band and the two surfaces disagreed */
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--fs-label);
+}
+.application-shell .state-models .package-status {
+  flex: none;
+  min-width: 84px;
+  justify-content: flex-end;
+}
+.application-shell .state-models .quiet-message {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+.application-shell .project-columns {
+  display: grid;
+  /* the sheet's rail takes the same track as the state band's, so the page has
+     one right-hand edge instead of two rails that start 80px apart */
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  align-items: start;
+  gap: 40px;
+}
+.application-shell .project-main h2 {
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+.application-shell .project-main,
+.application-shell .project-side {
+  display: grid;
+  gap: 26px;
+  min-width: 0;
+}
+
+.application-shell .project-packages {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.application-shell .project-packages th {
+  height: 28px;
+  padding: 0 12px;
+  border-bottom: var(--row-rule);
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.application-shell .project-packages td {
+  height: 42px;
+  padding: 0 12px;
+  border-bottom: var(--row-rule);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.application-shell .project-packages th:first-child,
+.application-shell .project-packages td:first-child {
+  width: 100%;
+  padding-left: 4px;
+}
+.application-shell .project-packages .numeric,
+.application-shell .project-packages th:nth-child(4):not(:last-child) {
+  text-align: right;
+}
+.application-shell .project-packages th:last-child,
+.application-shell .project-packages td:last-child {
+  text-align: right;
+}
+.application-shell .project-packages .mono {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.application-shell .project-packages tbody tr:hover {
+  background: var(--concord-row-hover);
+}
+.application-shell .project-packages td button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.application-shell .project-packages td button:hover {
+  color: var(--accent);
+}
+.application-shell .project-packages td small {
+  /* the cell stacks the id under the name, so this must not carry the indent the
+     rule was written for when the two sat on one line: it pushed every work
+     package id 8px right of the name it belongs to */
+  display: block;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+}
+.application-shell .package-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.application-shell .package-status.is-blocked {
+  color: var(--concord-danger-text);
+}
+.application-shell .package-status.is-waiting {
+  color: var(--concord-warning-text);
+}
+
+.application-shell .project-home nav {
+  display: grid;
+  max-width: none;
+}
+.application-shell .project-home nav button {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 4px;
+  border: 0;
+  border-bottom: var(--row-rule);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.application-shell .project-home nav button strong {
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.application-shell .project-home nav button small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .project-home nav button:hover,
+.application-shell .project-activity button:hover {
+  background: var(--concord-row-hover);
+}
+.application-shell .project-home nav button:hover strong {
+  color: var(--accent);
+}
+.application-shell .project-activity button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 36px;
+  padding: 5px 4px;
+  border: 0;
+  border-bottom: var(--row-rule);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.application-shell .project-activity button > span {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.application-shell .project-activity button strong {
+  overflow: hidden;
+  font-size: var(--fs-action);
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .project-activity button small {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.application-shell .project-activity time {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+
+/*
+ * The project's record rows.
+ *
+ * Three lists below the state band share one row grammar - a leading
+ * identifier, what it is, its state, and when - so a revision, a file and a
+ * baseline read as the same kind of fact in the same kind of row. Each is the
+ * detail behind something the state band states in summary, which is what stops
+ * the lower half of the page being a restatement of the top.
+ */
+.application-shell .project-revisions,
+.application-shell .project-baselines {
+  margin: 0;
+}
+.application-shell .project-revision,
+.application-shell .project-baselines > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  padding: 6px 12px 6px 4px;
+  border-bottom: var(--row-rule);
+}
+.application-shell .project-baselines > div {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+.application-shell .project-revision:last-child,
+.application-shell .project-baselines > div:last-child {
+  border-bottom: 0;
+}
+.application-shell .project-revision .mono,
+.application-shell .project-baselines .mono {
+  color: var(--ink);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+.application-shell .project-revision-name {
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .project-baselines > div > span:not(.mono) {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .project-revision time,
+.application-shell .project-baselines time {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-variant-numeric: tabular-nums;
+}
+.application-shell .project-files {
+  display: grid;
+}
+.application-shell .project-files button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 4px;
+  border: 0;
+  border-bottom: var(--row-rule);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.application-shell .project-files button:last-child {
+  border-bottom: 0;
+}
+.application-shell .project-files button > span {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.application-shell .project-files button strong {
+  overflow: hidden;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .project-files button small,
+.application-shell .project-files time {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.application-shell .project-files button:hover,
+.application-shell .project-baselines > div:hover {
+  background: var(--concord-row-hover);
+}
+.application-shell .project-files button:hover strong {
+  color: var(--accent);
+}

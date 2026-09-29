@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { Search } from "lucide-react";
 import type {
   InvestigationReport,
   ProjectSourceStatus,
@@ -5,12 +7,16 @@ import type {
 } from "../api/client";
 import { Button } from "../components/ui/button";
 import { activeCoordinationRun } from "../app/coordination";
+import { useProjectContext } from "../app/useProjectContext";
+import type { WorkspaceTab } from "../app/destinations";
 import {
   demoAreaName,
   demoConstraintText,
+  demoDiscipline,
   demoInvestigationText,
   demoWorkPackageName,
 } from "../ui/demo/demoPresentation";
+import { statusLabel, statusTone, shortDate } from "../ui/labels";
 
 type WorkRow = {
   key: string;
@@ -32,6 +38,7 @@ export function WorkList({
   onRecheck,
   onReport,
   onProject,
+  onTab,
 }: {
   workspace: Workspace;
   sources: ProjectSourceStatus[];
@@ -41,7 +48,13 @@ export function WorkList({
   onRecheck: () => void;
   onReport: () => void;
   onProject: () => void;
+  onTab: (tab: WorkspaceTab) => void;
 }) {
+  const [showAllDone, setShowAllDone] = useState(false);
+  const [query, setQuery] = useState("");
+  const projectId = workspace.state.project.id;
+  const { baseline, documents, models, revisionNo, pendingModels } =
+    useProjectContext(projectId, sources);
   const needs: WorkRow[] = [];
   const waiting: WorkRow[] = [];
   const completed: WorkRow[] = [];
@@ -184,48 +197,235 @@ export function WorkList({
     ["等待中", waiting],
     ["最近完成", completed],
   ] as const;
+  const tone = {
+    需要处理: "attention",
+    等待中: "waiting",
+    最近完成: "done",
+  } as const;
+  const matches = (item: WorkRow) =>
+    `${item.title} ${item.reason} ${item.context}`
+      .toLocaleLowerCase()
+      .includes(query.trim().toLocaleLowerCase());
+  /* One row grammar for every section: state mark, what + why + where, state,
+     action. Two lines, because the title is what the reader is deciding about and
+     the reason is why - side by side they were a single whispered line. Exactly
+     one row on the page carries a bordered action: the first thing to do. */
+  const next = needs.find(matches)?.key;
+  const renderRow = (item: WorkRow, label: keyof typeof tone) => (
+    <article
+      key={item.key}
+      className={`work-row is-${tone[label]}${item.key === next ? " is-next" : ""}`}
+      data-work-key={item.key}
+    >
+      <i className="work-mark" aria-hidden="true" />
+      <strong className="work-title">{item.title}</strong>
+      <p className="work-reason">
+        {item.reason}
+        <small className="work-context">{item.context}</small>
+      </p>
+      <span className="work-state">{item.state}</span>
+      <Button
+        size="sm"
+        variant={item.key === next ? "secondary" : "ghost"}
+        onClick={item.open}
+      >
+        {item.action} →
+      </Button>
+    </article>
+  );
+  const total = needs.length + waiting.length + completed.length;
+  const packages = workspace.state.work_packages;
+  const readiness = (id: string) =>
+    workspace.analysis?.readiness.find((item) => item.work_package_id === id)
+      ?.status ?? "UNCHECKED";
+  const blocked = packages.filter(
+    (item) => readiness(item.id) === "BLOCKED",
+  ).length;
+  const judgement = workspace.stale
+    ? "需要重新检查"
+    : workspace.analysis_run?.status === "FAILED"
+      ? "检查未完成"
+      : workspace.analysis
+        ? "已核对当前基线"
+        : "尚未检查";
   return (
     <section className="work-list" aria-label="工作">
       <header>
-        <span className="eyebrow">当前项目</span>
         <h1>工作</h1>
-        <p>先处理需要决定的事项；模型、依据和历史可在详情中查看。</p>
-      </header>
-      {sections.map(([label, rows]) => (
-        <section key={label} aria-label={label}>
-          <h2>
-            {label} <span className="count">{rows.length}</span>
-          </h2>
-          {rows.length ? (
-            <div className="work-rows">
-              {rows.map((item) => (
-                <article
-                  key={item.key}
-                  className="work-row"
-                  data-work-key={item.key}
-                >
-                  <div>
-                    <strong>{item.title}</strong>
-                    <p>{item.reason}</p>
-                    <small>
-                      {item.context} · {item.state}
-                    </small>
-                  </div>
-                  <Button size="sm" variant="secondary" onClick={item.open}>
-                    {item.action} →
-                  </Button>
-                </article>
-              ))}
-            </div>
+        <p>
+          {needs.length ? (
+            <>
+              <strong>{needs.length} 项需要你决定</strong>
+              <span>共 {total} 项</span>
+            </>
           ) : (
-            <p className="quiet-message">
-              {label === "需要处理"
-                ? "当前没有需要立即处理的事项。"
-                : "暂无记录。"}
-            </p>
+            "当前没有需要立即处理的事项"
           )}
-        </section>
-      ))}
+        </p>
+        <label className="work-search">
+          <Search size={14} />
+          <span className="sr-only">搜索工作事项</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="搜索工作事项"
+          />
+        </label>
+      </header>
+      {sections.map(([label, rows]) => {
+        const visible = rows.filter(matches);
+        // A group with nothing in it is a heading about an absence: the header
+        // summary already states the count, so the group itself is dropped.
+        if (!visible.length && !query) return null;
+        const collapsed = label === "最近完成" && !showAllDone && !query;
+        const shown = collapsed ? visible.slice(0, 3) : visible;
+        return (
+          <section
+            key={label}
+            aria-label={label}
+            className={`work-group is-${tone[label]}`}
+          >
+            <h2>
+              {label} <span>{visible.length}</span>
+            </h2>
+            {shown.length ? (
+              <div className="work-rows">
+                {shown.map((item) => renderRow(item, label))}
+              </div>
+            ) : (
+              <p className="quiet-message">
+                {query
+                  ? "没有匹配的工作事项。"
+                  : label === "需要处理"
+                    ? "当前没有需要立即处理的事项。"
+                    : label === "等待中"
+                      ? "没有正在检查或等待条件的工作包。"
+                      : "暂无记录。"}
+              </p>
+            )}
+            {collapsed && visible.length > 3 && (
+              <button
+                type="button"
+                className="work-more"
+                onClick={() => setShowAllDone(true)}
+              >
+                显示全部 {visible.length} 项
+              </button>
+            )}
+          </section>
+        );
+      })}
+      {/*
+       * The queue's context.
+       *
+       * The page above this point answers "what is waiting on me". Below it,
+       * the same page states the standing facts those decisions are read
+       * against - the baseline in force, the model revision still waiting on
+       * review, whether the recorded judgement is still current, and the work
+       * packages the queue is about. Every value here already exists in the
+       * workspace payload or in a query the header and 项目 already make, so
+       * this is the page using its own context rather than a new surface.
+       *
+       * It is deliberately flat: the same section-heading tier as the groups
+       * above, hairline rows, no container and no figures. Secondary context
+       * must not compete with an open decision, which is why the heading drops
+       * the state dot the decision groups carry.
+       */}
+      {!!packages.length && (
+        <div className="work-standing">
+          <section className="work-group is-context" aria-label="项目现状">
+            <h2>项目现状</h2>
+            <dl className="work-standing-facts">
+              <div>
+                <dt>当前基线</dt>
+                <dd>
+                  {baseline ? (
+                    <button type="button" onClick={() => onTab("history")}>
+                      <span className="mono">B{baseline.sequence}</span>
+                      <small>{shortDate(baseline.created_at)} 已确认</small>
+                    </button>
+                  ) : (
+                    <span className="quiet">尚未确认</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>待审核模型</dt>
+                <dd>
+                  {pendingModels.length ? (
+                    <button type="button" onClick={() => onTab("sources")}>
+                      {pendingModels.map((item, index) => (
+                        <span key={item.source.id}>
+                          {item.source.name}
+                          <small>
+                            {revisionNo(
+                              models.indexOf(item),
+                              item.latest_revision_id,
+                            )}
+                          </small>
+                        </span>
+                      ))}
+                    </button>
+                  ) : (
+                    <span className="quiet">没有待审核的模型</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>判断状态</dt>
+                <dd>
+                  <span className={workspace.stale ? "is-attention" : ""}>
+                    {judgement}
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt>项目文件</dt>
+                <dd>
+                  <button type="button" onClick={() => onTab("documents")}>
+                    {documents.length
+                      ? `${documents.length} 个项目文件`
+                      : "还没有项目文件"}
+                  </button>
+                </dd>
+              </div>
+            </dl>
+          </section>
+          <section className="work-group is-context" aria-label="工作包状态">
+            <h2>
+              工作包 <span>{packages.length}</span>
+              <button type="button" onClick={() => onTab("work-packages")}>
+                {blocked ? `${blocked} 个受阻 · 全部 →` : "全部 →"}
+              </button>
+            </h2>
+            <ul className="work-standing-packages">
+              {packages.map((item) => {
+                const status = readiness(item.id);
+                const area = workspace.state.areas.find(
+                  (entry) => entry.id === item.area_id,
+                );
+                return (
+                  <li key={item.id}>
+                    <button type="button" onClick={() => onPackage(item.id)}>
+                      <strong>{demoWorkPackageName(item.id, item.name)}</strong>
+                      <small>
+                        {demoAreaName(item.area_id, area?.name ?? item.area_id)}
+                        {" · "}
+                        {demoDiscipline(item.discipline)}
+                      </small>
+                    </button>
+                    <span className={`package-status is-${statusTone(status)}`}>
+                      <i aria-hidden="true" />
+                      {statusLabel(status)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        </div>
+      )}
       {!workspace.state.work_packages.length && !sources.length && (
         <Button onClick={onProject}>设置项目与工作包 →</Button>
       )}

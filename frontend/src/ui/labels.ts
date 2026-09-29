@@ -223,6 +223,21 @@ export function domainLabel(set: LabelSet, value: string): string {
   return SETS[set][value] ?? value;
 }
 
+/**
+ * A project timestamp at the resolution a records row needs.
+ *
+ * Two pages now state the same dates - the baseline in force, the day a model
+ * revision arrived - and a date is product copy in the same sense an enum label
+ * is: the format belongs to the product, not to the call site. Month and day are
+ * enough because every date on these pages is inside the project's own recent
+ * history; the full timestamp already has an owner where a run needs it.
+ */
+export function shortDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+}
+
 /** Booleans as words, for the places a value reads as `是 / 否`. */
 export function yesNo(value: boolean): string {
   return value ? "是" : "否";
