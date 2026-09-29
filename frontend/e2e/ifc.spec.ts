@@ -32,21 +32,26 @@ async function workspace(request: APIRequestContext): Promise<Workspace> {
 }
 
 /**
- * 模型与版本 is the model workspace's own bottom-bar entry.
+ * 模型与版本 is reached from the project sheet's own 模型与版本 section.
  *
- * The project sheet links to it only once a model exists, because its 版本记录
- * section is what states that fact; the model workspace carries the 模型版本 entry
- * unconditionally, which is also the route that works for a project with no models
- * yet. Leaving 工作 first clears any open mapping session, whose workspace hides its
- * source actions.
+ * Its head carries the way in whether or not a model exists yet - 管理 → when the
+ * project has models, 添加模型 → when it does not - so both the populated project
+ * and the project just created below take the same route. `action` is that label, so
+ * each call states the state it expects and an empty project can no longer stop at
+ * "还没有上传模型。" with nowhere to go. Navigating through 项目 also clears any open
+ * mapping session, whose workspace hides its source actions.
  */
-async function openSources(page: Page) {
-  const nav = page.getByRole("navigation", { name: "主要工作区" });
-  await nav.getByRole("button", { name: "工作", exact: true }).click();
-  await nav.getByRole("button", { name: "模型", exact: true }).click();
+async function openSources(
+  page: Page,
+  action: "管理 →" | "添加模型 →" = "管理 →",
+) {
   await page
-    .locator(".spatial-context-links")
-    .getByRole("button", { name: "模型版本" })
+    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("button", { name: "项目", exact: true })
+    .click();
+  await page
+    .locator(".state-models")
+    .getByRole("button", { name: action, exact: true })
     .click();
   await expect(page.getByRole("heading", { name: "模型与版本" })).toBeVisible();
 }
@@ -434,7 +439,9 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   expect(created).toBeTruthy();
   const projectPath = `/api/projects/${created.id}`;
 
-  await openSources(page);
+  // The project was just created, so it has no models yet: the sheet's own
+  // 模型与版本 section is the entry that starts model setup.
+  await openSources(page, "添加模型 →");
   await page.getByRole("button", { name: "添加模型" }).click();
   await page.getByLabel("模型名称").fill("MEP Model");
   await page

@@ -107,11 +107,14 @@ export function ProjectHome({
         <div className="state-models" aria-label="模型与版本">
           <div className="state-models-head">
             <span>模型与版本</span>
-            {!!models.length && (
-              <button type="button" onClick={() => onTab("sources")}>
-                管理 →
-              </button>
-            )}
+            {/* A project with no models has nowhere else on this page to
+                start: the empty state below names the absence, so the head has to
+                carry the one action that ends it. It is the same destination the
+                populated head already offers, so an empty project steps into
+                模型与版本 rather than stopping at a dead end. */}
+            <button type="button" onClick={() => onTab("sources")}>
+              {models.length ? "管理 →" : "添加模型 →"}
+            </button>
           </div>
           {models.length ? (
             <ul>
