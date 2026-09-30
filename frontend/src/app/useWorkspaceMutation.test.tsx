@@ -23,9 +23,16 @@ it("reconciles workspace first, then the existing dependent cache families", asy
   await act(() => result.current.perform(operation));
   expect(operation).toHaveBeenCalledOnce();
   expect(invalidate.mock.calls).toEqual(
-    ["workspace", "timeline", "runs", "documents", "bim", "job"].map((key) => [
-      { queryKey: [key] },
-    ]),
+    [
+      "workspace",
+      "timeline",
+      "runs",
+      "documents",
+      "bim",
+      "job",
+      "current-operation-run",
+      "investigation-report",
+    ].map((key) => [{ queryKey: [key] }]),
   );
   expect(result.current.busy).toBe(false);
   expect(result.current.error).toBe("");

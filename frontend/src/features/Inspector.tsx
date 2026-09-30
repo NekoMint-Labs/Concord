@@ -4,6 +4,7 @@ import { api, type Workspace } from "../api/client";
 import { DetailInspectorHeader } from "../components/DetailInspector";
 import { PropertyRow, PropertyTable } from "../components/PropertyTable";
 import { Button } from "../components/ui/button";
+import { proposalRejected } from "./proposalState";
 import { AppDisclosure } from "../components/ui/AppDisclosure";
 import { useMotion } from "../motion";
 import {
@@ -47,6 +48,7 @@ export function Inspector({
   onView: (view: InspectorView) => void;
 }) {
   const [confirmation, setConfirmation] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
   const [focusedConstraint, setFocusedConstraint] =
     useState(selectedConstraint);
   const wp = workspace.state.work_packages.find(
@@ -58,17 +60,26 @@ export function Inspector({
   const proposal = workspace.proposals.find(
     (item) => item.work_package_id === selected,
   );
-  const actionRun =
-    workspace.analysis_run ??
-    (workspace.run?.id === proposal?.run_id ? workspace.run : null);
+  const actionRun = proposal
+    ? [workspace.analysis_run, workspace.run].find(
+        (candidate) =>
+          candidate?.id === proposal.run_id &&
+          candidate.project_id === workspace.state.project.id,
+      )
+    : undefined;
   const inactive =
-    !!actionRun &&
-    (actionRun.status !== "WAITING_APPROVAL" ||
-      proposal?.generation !== actionRun.generation);
+    !actionRun ||
+    actionRun.status !== "WAITING_APPROVAL" ||
+    proposal?.generation !== actionRun.generation;
+  const rejected = proposalRejected(workspace, proposal?.id);
   const approved =
+    !rejected &&
     !!proposal &&
     workspace.approvals.some((item) => item.proposal_id === proposal.id);
-  useEffect(() => setConfirmation(""), [proposal?.id]);
+  useEffect(() => {
+    setConfirmation("");
+    setRejectionReason("");
+  }, [proposal?.id]);
   useEffect(
     () => setFocusedConstraint(selectedConstraint),
     [selectedConstraint],
@@ -238,6 +249,12 @@ export function Inspector({
                     {demoProposalExplanation(proposal.resolution.explanation)}
                   </p>
                   <div className="effect-list">
+                    <div>
+                      执行方式：
+                      {proposal.execution_mode === "simulated"
+                        ? "模拟执行（不会修改外部系统）"
+                        : "外部系统执行"}
+                    </div>
                     {proposal.resolution.effects.map((effect, index) => (
                       <div key={index}>{demoEffectKind(effect.kind)}</div>
                     ))}
@@ -252,10 +269,11 @@ export function Inspector({
                   */}
                   <div className="action-gate">
                     <p className="approval-required">
-                      执行前需要批准
-                      {proposal.risk >= 4 ? "；R4 需要强确认。" : "。"}
+                      {rejected
+                        ? "方案已拒绝；既有阻塞事实保留，此方案不可执行。"
+                        : `执行前需要批准${proposal.risk >= 4 ? "；R4 需要强确认。" : "。"}`}
                     </p>
-                    {proposal.risk >= 4 && !approved && (
+                    {proposal.risk >= 4 && !approved && !rejected && (
                       <label className="form-label">
                         强确认：输入 APPROVE R4
                         <input
@@ -268,10 +286,37 @@ export function Inspector({
                         />
                       </label>
                     )}
+                    {!rejected && (
+                      <label className="form-label">
+                        拒绝原因（可选）
+                        <input
+                          aria-label="拒绝原因（可选）"
+                          maxLength={500}
+                          value={rejectionReason}
+                          onChange={(event) =>
+                            setRejectionReason(event.target.value)
+                          }
+                        />
+                      </label>
+                    )}
                     <div className="action-buttons">
+                      <Button
+                        variant="ghost"
+                        disabled={
+                          busy || inactive || workspace.stale || rejected
+                        }
+                        onClick={() =>
+                          void perform(() =>
+                            api.reject(proposal.id!, rejectionReason),
+                          )
+                        }
+                      >
+                        {rejected ? "已拒绝" : "拒绝"}
+                      </Button>
                       <Button
                         disabled={
                           busy ||
+                          rejected ||
                           inactive ||
                           workspace.stale ||
                           approved ||
@@ -292,7 +337,11 @@ export function Inspector({
                       </Button>
                       <Button
                         disabled={
-                          busy || inactive || workspace.stale || !approved
+                          busy ||
+                          rejected ||
+                          inactive ||
+                          workspace.stale ||
+                          !approved
                         }
                         onClick={() =>
                           void perform(() => api.execute(proposal.id!))

@@ -9,6 +9,7 @@ vi.mock("./useIFCViewer", async () => {
     useIFCViewer: () => {
       const container = useRef<HTMLDivElement>(null);
       const [isolated, setIsolated] = useState(false);
+      const [candidatesHighlighted, setCandidatesHighlighted] = useState(true);
       const [viewMode, setViewMode] = useState<"2d" | "3d">("3d");
       return {
         container,
@@ -19,10 +20,18 @@ vi.mock("./useIFCViewer", async () => {
         anchor: null,
         hasTarget: true,
         isolated,
+        candidatesHighlighted,
         viewMode,
         act: async (name: string, mode?: "2d" | "3d") => {
           actions(name, mode);
-          if (name === "isolate") setIsolated(true);
+          if (
+            name === "isolate" ||
+            name === "isolateCandidates" ||
+            name === "isolateSelected"
+          )
+            setIsolated(true);
+          if (name === "highlightCandidates")
+            setCandidatesHighlighted((value) => !value);
           if (name === "selectMode" || name === "showAll") setIsolated(false);
           if (mode) setViewMode(mode);
         },
@@ -61,4 +70,28 @@ it("uses one selection toolbar and a real stateful projection/isolation contract
   expect(viewer).toHaveAttribute("data-view-mode", "3d");
   expect(actions).toHaveBeenCalledWith("setViewMode", "2d");
   expect(actions).toHaveBeenCalledWith("setViewMode", "3d");
+});
+
+it("exposes separate candidate and batch-selection targets only in mapping mode", () => {
+  actions.mockClear();
+  render(
+    <IFCViewer
+      file={new File(["IFC"], "model.ifc")}
+      impacted={[]}
+      onSelected={() => {}}
+      mapping={{
+        candidateIds: ["candidate"],
+        selectedIds: ["selected"],
+        allowedIds: ["candidate", "selected"],
+      }}
+    />,
+  );
+  const highlight = screen.getByRole("button", { name: "高亮候选" });
+  expect(highlight).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(highlight);
+  expect(highlight).toHaveAttribute("aria-pressed", "false");
+  fireEvent.click(screen.getByRole("button", { name: "隔离候选" }));
+  fireEvent.click(screen.getByRole("button", { name: "隔离已选" }));
+  expect(actions).toHaveBeenCalledWith("isolateCandidates", undefined);
+  expect(actions).toHaveBeenCalledWith("isolateSelected", undefined);
 });

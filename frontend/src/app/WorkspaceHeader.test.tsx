@@ -1,8 +1,12 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
-import type { Workspace } from "../api/client";
+import { api, type DTO, type Workspace } from "../api/client";
+import { useProjectSources } from "../features/useProjectSources";
+import { useProjectContext } from "./useProjectContext";
+
+afterEach(() => vi.restoreAllMocks());
 import { WorkspaceHeader } from "./WorkspaceHeader";
 
 it("carries project and location context without repeating the work package", () => {
@@ -41,4 +45,87 @@ it("carries project and location context without repeating the work package", ()
   expect(
     screen.queryByRole("button", { name: /重新检查/ }),
   ).not.toBeInTheDocument();
+});
+
+it("updates mounted header and project context revisions after source upload without reload", async () => {
+  const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  const project = data.state.project.id;
+  let latest = "r1";
+  const r1 = {
+    id: "r1",
+    source_id: "model",
+    sequence: 1,
+  } as DTO<"ProjectSourceRevision">;
+  const r2 = {
+    id: "r2",
+    source_id: "model",
+    sequence: 2,
+  } as DTO<"ProjectSourceRevision">;
+  vi.spyOn(api, "sourceStatuses").mockImplementation(async () => [
+    {
+      source: {
+        id: "model",
+        project_id: project,
+        name: "MEP",
+        kind: "BIM",
+        created_at: "2026-01-01",
+      },
+      latest_revision_id: latest,
+      accepted_revision_id: "r1",
+      baseline_id: "b1",
+      has_pending_revision: latest === "r2",
+    },
+  ]);
+  vi.spyOn(api, "sourceRevisions").mockImplementation(async () =>
+    latest === "r1" ? [r1] : [r1, r2],
+  );
+  vi.spyOn(api, "baselines").mockResolvedValue([]);
+  vi.spyOn(api, "documents").mockResolvedValue([]);
+  vi.spyOn(api, "comparisons").mockResolvedValue([]);
+  const upload = vi
+    .spyOn(api, "uploadRevision")
+    .mockImplementation(async () => {
+      latest = "r2";
+      return { revision: r2, duplicate: false };
+    });
+  const file = new File(["IFC"], "revision.ifc");
+  function SourceFlow() {
+    const source = useProjectSources(project, "model");
+    const context = useProjectContext(project, source.sources.data ?? []);
+    return (
+      <>
+        <button
+          onClick={() =>
+            source.upload.mutate({ source: "model", file, label: "Revision 2" })
+          }
+        >
+          Upload revision
+        </button>
+        <output aria-label="Project context revision">
+          {context.revisionNo(0, latest)}
+        </output>
+      </>
+    );
+  }
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({
+          defaultOptions: { queries: { retry: false, gcTime: 0 } },
+        })
+      }
+    >
+      <WorkspaceHeader data={data} tab="bim" />
+      <SourceFlow />
+    </QueryClientProvider>,
+  );
+  const header = within(screen.getByRole("banner"));
+  expect(await header.findByText("R1", { exact: true })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Upload revision" }));
+  expect(await header.findByText("R2", { exact: true })).toBeVisible();
+  expect(screen.getByLabelText("Project context revision")).toHaveTextContent(
+    "R2",
+  );
+  expect(header.getByText("新版本待审核")).toBeVisible();
+  expect(upload).toHaveBeenCalledWith(project, "model", file, "Revision 2");
 });

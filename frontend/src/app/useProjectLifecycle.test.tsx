@@ -66,3 +66,43 @@ it("does not silently open the demo when no user project exists", async () => {
   await waitFor(() => expect(result.current.projects.isSuccess).toBe(true));
   expect(result.current.project).toBe("");
 });
+
+it("creates a persisted project and opens its returned identity immediately", async () => {
+  const created = {
+    id: "new-id",
+    name: "施工项目",
+    description: "",
+    timezone: "UTC",
+  };
+  vi.spyOn(api, "projects").mockResolvedValue([]);
+  const create = vi.spyOn(api, "createProject").mockResolvedValue(created);
+  const { result } = renderHook(useProjectLifecycle, { wrapper });
+  await waitFor(() => expect(result.current.projects.isSuccess).toBe(true));
+  await act(async () => {
+    await result.current.create.mutateAsync({
+      name: created.name,
+      timezone: "UTC",
+    });
+  });
+  expect(create).toHaveBeenCalledWith({ name: created.name, timezone: "UTC" });
+  expect(result.current.project).toBe(created.id);
+  expect(localStorage.getItem("concord:last-project")).toBe(created.id);
+});
+
+it("keeps an empty catalog at startup and does not reset a demo until explicitly requested", async () => {
+  vi.spyOn(api, "projects").mockResolvedValue([]);
+  const reset = vi
+    .spyOn(api, "reset")
+    .mockRejectedValue(new Error("示例项目无法准备"));
+  const { result } = renderHook(useProjectLifecycle, { wrapper });
+  await waitFor(() => expect(result.current.projects.isSuccess).toBe(true));
+  expect(result.current.project).toBe("");
+  expect(reset).not.toHaveBeenCalled();
+  await act(async () => {
+    await result.current.openDemo.mutateAsync().catch(() => {});
+  });
+  expect(result.current.project).toBe("");
+  await waitFor(() =>
+    expect(result.current.openDemo.error?.message).toBe("示例项目无法准备"),
+  );
+});

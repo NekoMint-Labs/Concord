@@ -24,24 +24,37 @@ import {
   ProjectStructureDialog,
 } from "./app/ProjectDialogs";
 import { ConcordAgent } from "./features/ConcordAgent";
+import { ContextRunProgress } from "./features/ContextRunProgress";
 import { useConcordAgent } from "./features/useConcordAgent";
 import type { BimMappingContext } from "./features/BimMappingWorkspace";
 import { demoWorkPackageName } from "./ui/demo/demoPresentation";
 
 export function App() {
-  const cache = useQueryClient();
   const lifecycle = useProjectLifecycle();
+  // Project-local interactions never survive a project switch, including cached projects.
+  return <ProjectApplication key={lifecycle.project} lifecycle={lifecycle} />;
+}
+
+function ProjectApplication({
+  lifecycle,
+}: {
+  lifecycle: ReturnType<typeof useProjectLifecycle>;
+}) {
+  const cache = useQueryClient();
   const project = lifecycle.project;
   const [selected, setSelected] = useState("");
   const [selectedConstraint, setSelectedConstraint] = useState("");
   const [selectedElement, setSelectedElement] = useState("");
   const [selectedSpatialIssue, setSelectedSpatialIssue] = useState("");
+  const [projectSourceId, setProjectSourceId] = useState("");
   const [localIfc, setLocalIfc] = useState<{
     project: string;
     file: File;
   } | null>(null);
   const localIfcFile = localIfc?.project === project ? localIfc.file : null;
-  const [tab, setTab] = useState<WorkspaceTab>("work");
+  const [tab, setTab] = useState<WorkspaceTab>(
+    lifecycle.newProjectId === project ? "project" : "work",
+  );
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [inspectorView, setInspectorView] =
     useState<WorkspaceInspectorView>("blocker");
@@ -71,14 +84,21 @@ export function App() {
   const agent = useConcordAgent({
     project,
     projectName: data?.state.project.name ?? project,
-    workPackageId: selected || undefined,
-    workPackageName: wp ? demoWorkPackageName(wp.id, wp.name) : undefined,
+    workPackageId:
+      tab === "coordination" || tab === "bim"
+        ? selected || undefined
+        : undefined,
+    workPackageName:
+      wp && (tab === "coordination" || tab === "bim")
+        ? demoWorkPackageName(wp.id, wp.name)
+        : undefined,
     sources: sourceCatalog.data,
+    workPackages: data?.state.work_packages,
   });
 
   useEffect(() => {
     setSelected("");
-    setTab("work");
+    setTab(lifecycle.newProjectId === project ? "project" : "work");
     setSelectedConstraint("");
     setSelectedElement("");
     setSelectedSpatialIssue("");
@@ -86,7 +106,7 @@ export function App() {
     setDetailsOpen(false);
     setMappingMode(false);
     setMappingContext(undefined);
-  }, [project]);
+  }, [project, lifecycle.newProjectId]);
   useEffect(() => {
     if (!data) return;
     if (!data.state.work_packages.length) {
@@ -112,8 +132,8 @@ export function App() {
       setSelectedElement("");
       setSelectedSpatialIssue("");
       setMappingContext(undefined);
-      agent.clearScope();
     }
+    agent.clearScope();
     setSelected(id);
     try {
       localStorage.setItem(`concord:package:${project}`, id);
@@ -126,11 +146,22 @@ export function App() {
   }
 
   function navigate(next: WorkspaceTab) {
+    if (next === "sources") {
+      setProjectSourceId(
+        (id) => id || sourceCatalog.data?.[0]?.source.id || "",
+      );
+      agent.clearScope();
+      setMappingMode(false);
+      setDetailsOpen(false);
+      setTab("project");
+      return;
+    }
     if (next === "settings") {
       setSettingsOpen(true);
       return;
     }
     if (next !== "bim") setMappingMode(false);
+    if (next === "work" || next === "project") agent.clearScope();
     if (next !== tab || inspectorView === "investigation")
       setDetailsOpen(false);
     setTab(next);
@@ -181,6 +212,7 @@ export function App() {
           pending={false}
           connected
           demoAvailable={!lifecycle.openDemo.isPending}
+          demoError={lifecycle.openDemo.error?.message}
           desktop={isDesktop}
           onNewProject={() => setNewProjectOpen(true)}
           onOpenDemo={() => lifecycle.openDemo.mutate()}
@@ -217,9 +249,9 @@ export function App() {
           panelRef={navPanel}
           collapsible
           collapsedSize="0px"
-          defaultSize="220px"
-          minSize="176px"
-          maxSize="264px"
+          defaultSize="88px"
+          minSize="80px"
+          maxSize="104px"
           onResize={(size) => setNavOpen(size.inPixels > 0)}
         >
           <ProjectSidebar
@@ -236,6 +268,7 @@ export function App() {
               setNavOpen(false);
             }}
             onProject={lifecycle.openProject}
+            onOpenDemo={() => lifecycle.openDemo.mutate()}
             onNewProject={() => setNewProjectOpen(true)}
             onOpenProject={() => setOpenProjectOpen(true)}
             onProjectSettings={() => setSettingsOpen(true)}
@@ -286,11 +319,15 @@ export function App() {
                 </Button>
               )}
               <ConcordAgent
+                key={project}
                 project={project}
                 context={agent.context}
                 currentRun={agent.currentRun.data}
                 report={agent.investigation.data}
                 onRun={agent.rememberRun}
+                onInvestigate={(instruction, context) =>
+                  agent.startInvestigation(instruction, context)
+                }
                 onOpenReport={() => {
                   setInspectorView("investigation");
                   setDetailsOpen(true);
@@ -311,14 +348,15 @@ export function App() {
                 }}
               />
             </WorkspaceHeader>
-            {(error || agent.error) && (
+            {(error || agent.error || lifecycle.openDemo.error) && (
               <div className="alert" role="alert">
-                {error || agent.error}
+                {error || agent.error || lifecycle.openDemo.error?.message}
                 <AppTooltip label="关闭提示">
                   <button
                     onClick={() => {
                       setError("");
                       agent.clearError();
+                      lifecycle.openDemo.reset();
                     }}
                     aria-label="关闭提示"
                   >
@@ -362,11 +400,53 @@ export function App() {
                 void perform(() => api.recheck(project), "重新检查已提交。")
               }
               onStructure={() => setStructureOpen(true)}
+              onLinkBim={() => {
+                agent.clearScope();
+                setMappingContext(undefined);
+                setMappingMode(true);
+                setDetailsOpen(false);
+                setTab("bim");
+              }}
+              onInvestigateWork={(context) => {
+                setInspectorView("investigation");
+                setDetailsOpen(true);
+                void agent.startInvestigation("调查此资料版本与比较影响", {
+                  ...context,
+                  sourceName: sourceCatalog.data?.find(
+                    (source) => source.source.id === context.sourceId,
+                  )?.source.name,
+                  workPackageId: null,
+                });
+              }}
+              onInvestigateWorkPackage={(id) => {
+                agent.clearScope();
+                setInspectorView("investigation");
+                setDetailsOpen(true);
+                void agent.startInvestigation(
+                  "调查当前工作包的变化、依据与处理建议",
+                  { workPackageId: id, elementIds: [] },
+                );
+              }}
+              projectSourceId={projectSourceId}
+              onProjectSourceSelected={setProjectSourceId}
               mappingMode={mappingMode}
               mappingContext={mappingContext}
               report={agent.investigation.data}
               run={agent.currentRun.data}
-              investigationContext={agent.context}
+              investigationContext={agent.reportContext}
+              investigationProgress={
+                <ContextRunProgress
+                  run={
+                    agent.currentRun.data?.category === "investigation"
+                      ? agent.currentRun.data
+                      : undefined
+                  }
+                  error={agent.error}
+                  onRetry={() => void agent.retryRun()}
+                />
+              }
+              investigationError={agent.error}
+              onRetryInvestigation={() => void agent.retryRun()}
               onSourceContext={agent.sourceContext}
               onBimContext={agent.bimContext}
               onAgentRun={agent.rememberRun}
@@ -420,7 +500,7 @@ export function App() {
                 selectPackage(workPackageId);
                 setSelectedElement(context.highlightIds?.[0] ?? "");
                 setMappingMode(true);
-                setMappingContext(context);
+                setMappingContext({ ...context, intent: "inspect" });
                 if (context.sourceId && context.revisionId) {
                   agent.bimContext(
                     context.sourceId,

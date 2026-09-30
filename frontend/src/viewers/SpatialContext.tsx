@@ -1,4 +1,4 @@
-import { MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type { DTO, Workspace } from "../api/client";
 import {
   demoConstraintKind,
@@ -134,7 +134,7 @@ export function SpatialContext({
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          <MoreHorizontal size={16} />
+          {open ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
         </button>
       </header>
       <div className="spatial-context-scroll" hidden={!open}>

@@ -24,6 +24,7 @@ export function StartupView({
   desktop,
   connected = false,
   demoAvailable = true,
+  demoError,
   onNewProject,
   onOpenDemo,
   onReconnect,
@@ -34,6 +35,7 @@ export function StartupView({
   desktop: boolean;
   connected?: boolean;
   demoAvailable?: boolean;
+  demoError?: string;
   onNewProject?: () => void;
   onOpenDemo?: () => void;
   onReconnect: () => void;
@@ -49,7 +51,7 @@ export function StartupView({
         <p>正在连接项目工作区…</p>
       ) : connected ? (
         <>
-          <p>开始一个本地工程工作区。</p>
+          <p>打开一个项目开始工作。</p>
           <div className="startup-actions">
             <Button onClick={onNewProject}>新建项目</Button>
             <Button
@@ -57,9 +59,10 @@ export function StartupView({
               disabled={!demoAvailable}
               onClick={onOpenDemo}
             >
-              {demoAvailable ? "打开演示项目" : "正在准备演示项目…"}
+              {demoAvailable ? "打开示例项目" : "正在准备示例项目…"}
             </Button>
           </div>
+          {demoError && <p role="alert">{demoError}</p>}
         </>
       ) : (
         <>

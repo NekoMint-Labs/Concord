@@ -29,6 +29,33 @@ class OfficialIfcDiffEngine:
             raise CapabilityUnavailable(
                 "Install the bim extra for official IfcDiff support"
             ) from exc
+
+        class GuidAwareIfcDiff(ifcdiff.IfcDiff):
+            def diff_element_relationships(self, old, new):
+                # IfcDiff 0.8.5 compares parent entities by file-local identity.
+                # Skip only verified equal GUIDs; keep its other comparison semantics.
+                relationships = self.relationships
+                equivalent = set()
+                for relationship, get_parent in (
+                    ("container", ifcopenshell.util.element.get_container),
+                    ("aggregate", ifcopenshell.util.element.get_aggregate),
+                ):
+                    if relationship not in relationships:
+                        continue
+                    old_parent, new_parent = get_parent(old), get_parent(new)
+                    if (
+                        old_parent is not None
+                        and new_parent is not None
+                        and old_parent.GlobalId
+                        and old_parent.GlobalId == new_parent.GlobalId
+                    ):
+                        equivalent.add(relationship)
+                self.relationships = [r for r in relationships if r not in equivalent]
+                try:
+                    return super().diff_element_relationships(old, new)
+                finally:
+                    self.relationships = relationships
+
         provider_errors = (OSError, RuntimeError, ValueError, ifcopenshell.Error)
         started = time.perf_counter()
         try:
@@ -38,7 +65,7 @@ class OfficialIfcDiffEngine:
                 new_path.write_bytes(new_content)
                 old_model = ifcopenshell.open(str(old_path))
                 new_model = ifcopenshell.open(str(new_path))
-                diff = ifcdiff.IfcDiff(
+                diff = GuidAwareIfcDiff(
                     old_model,
                     new_model,
                     relationships=self.relationships,

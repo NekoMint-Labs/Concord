@@ -1,368 +1,429 @@
-/* ---------- 工作: coordination inbox ---------- */
-
+/* The list is the workspace; Peek is a temporary layer, never a standing column. */
+.application-shell .work-list {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+.application-shell .work-layout {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  --work-peek-width: 480px;
+}
+.application-shell .work-queue {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface-workspace);
+}
+.application-shell .work-queue-head {
+  flex: none;
+  padding: 24px 32px 16px;
+}
+.application-shell .work-queue-head h1 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 600;
+}
+.application-shell .work-queue-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
 .application-shell .work-search {
   display: flex;
   align-items: center;
-  gap: 6px;
-  width: 190px;
-  height: 26px;
-  margin-left: auto;
-  padding: 0 7px;
-  border-radius: 4px;
-  background: transparent;
+  gap: 8px;
+  width: min(360px, 100%);
+  height: 32px;
+  margin-top: 16px;
+  padding: 0 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  background: var(--surface-list);
   color: var(--muted);
-}
-.application-shell .work-search:hover {
-  background: var(--hover);
 }
 .application-shell .work-search:focus-within {
   outline: 2px solid var(--accent);
-  outline-offset: -1px;
-  background: var(--surface);
+  outline-offset: -2px;
 }
 .application-shell .work-search input {
   width: 100%;
   min-width: 0;
-  padding: 0;
   border: 0;
   outline: 0;
   background: none;
-  font-size: 12px;
+  font-size: 13px;
 }
-.application-shell .work-group {
-  margin: 0;
+.application-shell .work-queue-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 24px 32px;
 }
-.application-shell .work-group + .work-group {
-  margin-top: 26px;
+.application-shell .work-layout:has(.work-peek) .work-queue-scroll {
+  padding-right: calc(var(--work-peek-width) + 32px);
 }
-
-/* The decision tray. The one container on 工作, and it is spent on the only
-   thing the page is for: the items that are waiting on the reader. Everything
-   below it sits flat on the work plane, so the page has a head and a tail
-   instead of three identical lists.
-
-   Its plane is `--surface-inset`, a well cut one step into the work plane. It
-   used to be `--bg-app`, the window backdrop and the dimmest plane in the
-   ladder, which at this area made the container the loudest object on the page:
-   the reader met a grey slab before meeting a single decision, and the rows'
-   own text lost contrast against it (the red state label measured 4.57:1 there
-   against 4.79:1 here). One step lighter keeps a recess the eye reads as a
-   recess - 1.11:1 on the work plane - and hands the emphasis to the rows. */
-.application-shell .work-list .work-group.is-attention .work-rows {
-  overflow: hidden;
-  padding: 0 12px;
-  border-radius: 6px;
-  background: var(--surface-inset);
-  /* the fill alone is an area; the well's *boundary* is what tells the reader
-     where the tray starts, and a boundary has to be identifiable - the one case
-     where a hairline is spent */
-  box-shadow: inset 0 0 0 1px var(--line-soft);
+.application-shell .work-list .work-group {
+  margin: 0 0 24px;
 }
-.application-shell .work-list .work-rows {
-  border-top: 0;
-}
-.application-shell .work-list .work-row {
-  display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) 72px 118px;
-  grid-template-rows: auto auto;
-  align-items: center;
-  column-gap: 14px;
-  row-gap: 2px;
-  min-height: 50px;
-  padding: 9px 12px;
-  border-bottom: var(--row-rule);
-  background: transparent;
-}
-.application-shell .work-group.is-attention .work-row {
-  min-height: 58px;
-  padding: 10px 0;
-  /* one step stronger than the quiet divider: on the lighter well the rows have
-     to stay separable as rows, which is the job the weaker tone stopped doing */
-  border-bottom-color: var(--line-soft);
-}
-/* the last row keeps its border's *box* and drops only its colour, so every row
-   in the stack is the same height - removing the border outright made the last
-   one a pixel short and put the stack off its own rhythm */
-.application-shell
-  .work-list
-  .work-group.is-attention
-  .work-rows
-  .work-row:last-child {
-  border-bottom-color: transparent;
-}
-.application-shell .work-list .work-group.is-done .work-row:last-child {
-  border-bottom-color: transparent;
-}
-.application-shell .work-list .work-row:hover {
-  background: var(--concord-row-hover);
-}
-.application-shell .work-list .work-row > .work-mark {
-  grid-area: 1 / 1 / 3 / 2;
-  align-self: center;
-  justify-self: center;
-}
-.application-shell .work-list .work-row > .work-title {
-  grid-area: 1 / 2 / 2 / 3;
-  min-width: 0;
-}
-.application-shell .work-list .work-row > .work-reason {
-  grid-area: 2 / 2 / 3 / 3;
-  min-width: 0;
-}
-.application-shell .work-list .work-row strong {
-  display: block;
-  overflow: hidden;
-  color: var(--ink);
+.application-shell .work-list .work-group > h2 {
+  margin: 0 8px 8px;
+  padding: 0;
+  color: var(--ink-2);
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.45;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
-.application-shell .work-list .work-group.is-attention .work-row strong {
-  font-size: 14px;
-  letter-spacing: -0.005em;
-}
-.application-shell .work-list .work-row p {
-  margin: 0;
-  overflow: hidden;
-  color: var(--ink-2);
-  font-size: 12px;
-  line-height: 1.45;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-/* where the work sits is part of why it is waiting, so it reads on the same
-   line rather than in a column of its own across a gap of empty row */
-.application-shell .work-list .work-row p .work-context {
-  margin-left: 6px;
-  color: var(--muted);
-  font-size: var(--fs-label);
-}
-.application-shell .work-list .work-row p .work-context::before {
-  margin-right: 8px;
-  color: var(--line);
-  content: "·";
-}
-.application-shell .work-state {
-  grid-area: 1 / 3 / 2 / 4;
-  justify-self: end;
-  align-self: center;
-  color: var(--muted);
-  font-size: var(--fs-label);
-  white-space: nowrap;
-}
-.application-shell .work-row.is-attention .work-state {
-  color: var(--concord-danger-text);
-  font-weight: 500;
-}
-.application-shell .work-row.is-waiting .work-state {
-  color: var(--concord-warning-text);
-  font-weight: 500;
-}
-.application-shell .work-list .work-row .button {
-  grid-area: 1 / 4 / 3 / 5;
-  justify-self: end;
-  height: 28px;
-  padding: 0 10px;
-  /* A repeated action is a ghost until it is the thing to do: four accented
-     links in one queue read as four equal priorities, which is the opposite of
-     what the row's own state column just said. The single next step keeps the
-     accent; its siblings take the row's own ink and answer the pointer. */
-  color: var(--ink-2);
-  font-size: 12px;
-}
-.application-shell .work-list .work-row:hover .button {
-  color: var(--accent);
-}
-.application-shell .work-list .work-row.is-next .button {
-  border-color: var(--accent);
-  background: var(--surface);
-  color: var(--accent);
-}
-.application-shell .work-list .work-row.is-next .button:hover {
-  background: var(--concord-accent-tint);
-}
-.application-shell .work-group.is-done .work-row {
-  min-height: 42px;
-  padding: 7px 12px;
-}
-.application-shell .work-group.is-done .work-row strong {
-  color: var(--ink-2);
-  font-size: var(--fs-action);
-  font-weight: 500;
-}
-.application-shell .work-group.is-done .work-row p {
-  color: var(--muted);
-  font-size: var(--fs-label);
-}
-.application-shell .work-group.is-done .work-row .button {
-  height: 26px;
-  color: var(--muted);
-}
-.application-shell .work-group.is-done .work-row:hover .button {
-  color: var(--accent);
-}
-.application-shell .work-more {
-  margin: 4px 0 0;
-  padding: 4px 12px;
-  border: 0;
-  border-radius: 4px;
-  background: none;
-  color: var(--accent);
-  font-size: 12px;
-}
-.application-shell .work-more:hover {
-  background: var(--hover);
-}
-
-/*
- * The queue's own context, below the decisions.
- *
- * Two columns of standing facts on the same section-heading tier as the groups
- * above. The heading drops the state dot, because that dot means "this group is
- * a state you are in" and this region is not one - it is what the states are
- * read against. Rows are the page's ordinary hairline rows, so the region reads
- * as the tail of 工作 rather than as a second product bolted to the bottom.
- */
-.application-shell .work-standing {
-  display: grid;
-  /* the facts ledger is a short label/value pair and reads badly across a half
-     of the page; the packages column carries a name, a place and a state, so
-     the width leans its way */
-  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
-  align-items: start;
-  gap: 26px 44px;
-  margin-top: 34px;
-}
-.application-shell .work-group.is-context > h2 {
-  height: 24px;
-  padding-left: 12px;
-  color: var(--ink-2);
-}
-.application-shell .work-group.is-context > h2::before {
+.application-shell .work-list .work-group > h2::before {
   display: none;
 }
-.application-shell .work-group.is-context > h2 > button {
-  margin-left: auto;
-  padding: 2px 4px;
+.application-shell .work-rows {
   border: 0;
-  border-radius: 4px;
-  background: none;
-  color: var(--accent);
-  font-size: var(--fs-label);
-  font-weight: 400;
+  container: work-rows / inline-size;
 }
-.application-shell .work-group.is-context > h2 > button:hover {
+.application-shell .work-list .work-row {
+  display: block;
+  width: 100%;
+  min-height: 60px;
+  margin: 2px 0;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-instant) var(--ease);
+}
+.application-shell .work-list .work-row:hover:not(.is-selected) {
   background: var(--hover);
 }
-.application-shell .work-standing-facts {
-  margin: 0;
-  /* the same 12px the tray's rows are inset by, so every rule and every label
-     in the region starts on the column's own content edge */
-  padding: 0 12px;
+.application-shell .work-list .work-row.is-selected {
+  background: var(--concord-row-selected);
 }
-.application-shell .work-standing-facts > div {
+.application-shell .work-list .work-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.application-shell .work-row-content {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
-  align-items: baseline;
-  gap: 12px;
-  min-height: 38px;
-  padding: 8px 0;
-  border-bottom: var(--row-rule);
-}
-.application-shell .work-standing-facts > div:last-child {
-  border-bottom: 0;
-}
-.application-shell .work-standing-facts dt {
-  color: var(--muted);
-  font-size: var(--fs-label);
-}
-.application-shell .work-standing-facts dd {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-  margin: 0;
-  color: var(--ink-2);
-  font-size: var(--fs-label);
-}
-.application-shell .work-standing-facts dd button {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--ink-2);
-  font-size: var(--fs-label);
-  text-align: left;
-}
-/* a model and the revision it is at are one fact stated as two tokens */
-.application-shell .work-standing-facts dd button > span {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
-}
-.application-shell .work-standing-facts dd button:hover {
-  color: var(--accent);
-}
-.application-shell .work-standing-facts dd small,
-.application-shell .work-standing-facts dd .quiet {
-  color: var(--muted);
-  font-size: var(--fs-label);
-}
-/* the one exception colour in this region, and only when the judgement is not
-   current - a stale result is a fact about trust, not decoration */
-.application-shell .work-standing-facts dd .is-attention {
-  color: var(--concord-warning-text);
-}
-.application-shell .work-standing-facts dd .mono {
-  color: var(--ink);
-  font-weight: 600;
-}
-.application-shell .work-standing-packages {
-  margin: 0;
-  padding: 0 12px;
-  list-style: none;
-}
-.application-shell .work-standing-packages li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 8px minmax(0, 1fr) 88px;
   align-items: center;
   gap: 12px;
-  min-height: 38px;
-  padding: 6px 0;
-  border-bottom: var(--row-rule);
+  width: 100%;
+  max-width: 880px;
 }
-.application-shell .work-standing-packages li:last-child {
-  border-bottom: 0;
+.application-shell .work-list .work-row .work-mark {
+  margin: 0;
 }
-.application-shell .work-standing-packages li > button {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
+.application-shell .work-row-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 4px 24px;
+  line-height: 1.5;
   min-width: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  text-align: left;
 }
-.application-shell .work-standing-packages li > button strong {
+.application-shell .work-row-copy strong,
+.application-shell .work-row-copy small,
+.application-shell .work-row-reason {
   overflow: hidden;
-  color: var(--ink);
-  font-size: var(--fs-label);
-  font-weight: 500;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.application-shell .work-standing-packages li > button small {
-  flex: none;
-  color: var(--muted);
-  font-size: var(--fs-label);
+.application-shell .work-row-copy strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
 }
-.application-shell .work-standing-packages li > button:hover strong {
+.application-shell .work-row-copy small {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.application-shell .work-row-reason {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+.application-shell .work-list .work-state {
+  grid-column: 3;
+  grid-row: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.application-shell .work-row-open {
+  opacity: 0;
+  color: var(--muted);
+  transition: opacity var(--motion-instant) var(--ease);
+}
+.application-shell .work-row:hover .work-row-open,
+.application-shell .work-row:focus-visible .work-row-open {
+  opacity: 1;
+}
+.application-shell .work-list .work-row.is-attention .work-state {
+  color: var(--concord-warning-text);
+}
+.application-shell .work-list .work-row[data-work-state="已阻塞"] .work-state {
+  color: var(--concord-danger-text);
+}
+.application-shell .work-list .work-row.is-attention .work-mark {
+  background: var(--concord-warning-text);
+}
+.application-shell .work-list .work-row[data-work-state="已阻塞"] .work-mark {
+  background: var(--concord-danger-text);
+}
+.application-shell .work-list .work-row.is-done .work-state {
+  color: var(--concord-ready-text);
+}
+.application-shell .work-more {
+  padding: 8px 12px;
+  border: 0;
+  background: none;
   color: var(--accent);
+  font-size: 13px;
+}
+.application-shell .work-peek {
+  position: absolute;
+  inset: 12px 12px 12px auto;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: var(--work-peek-width);
+  max-width: calc(100% - 24px);
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-detail);
+  box-shadow: var(--float-shadow);
+  animation: work-peek-enter 200ms var(--ease);
+}
+@keyframes work-peek-enter {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .application-shell .work-peek {
+    animation: none;
+  }
+}
+.application-shell .work-peek .detail-inspector-header {
+  flex: none;
+  padding: 20px;
+  border-bottom: 0;
+  background: transparent;
+}
+.application-shell .work-peek .detail-inspector-title {
+  gap: 6px;
+}
+.application-shell .work-peek .detail-inspector-title strong {
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.application-shell .work-peek .pane-header-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 8px 12px;
+}
+.application-shell .work-peek .detail-inspector-meta {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 12.5px;
+}
+.application-shell .work-peek .pane-header-row > .icon-button {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+}
+.application-shell .work-peek-scroll {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 20px 20px;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.application-shell .work-peek-section + .work-peek-section {
+  margin-top: 24px;
+}
+.application-shell .work-peek-section h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+.application-shell .work-peek-section h3 span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.application-shell .work-peek-section p {
+  margin: 0 0 8px;
+}
+.application-shell .work-peek-location {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.application-shell .work-peek-section > .button {
+  height: 32px;
+  margin-top: 4px;
+  font-size: 13px;
+}
+.application-shell .work-peek-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+.application-shell .work-peek-section > .work-peek-state {
+  display: flex;
+}
+.application-shell .work-peek .quiet-message {
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.application-shell .work-peek-state i {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+.application-shell .work-peek-state.is-ready {
+  color: var(--concord-ready-text);
+}
+.application-shell .work-peek-state.is-ready i {
+  background: var(--concord-ready-text);
+}
+.application-shell .work-peek-state.is-blocked {
+  color: var(--concord-danger-text);
+}
+.application-shell .work-peek-state.is-blocked i {
+  background: var(--concord-danger-text);
+}
+.application-shell .work-model-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--ink-2);
+}
+.application-shell .work-project-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.application-shell .work-project-facts > p {
+  margin: 0;
+}
+.application-shell .work-project-facts strong,
+.application-shell .work-model-list strong {
+  font-weight: 550;
+}
+.application-shell .work-project-facts button {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.application-shell .work-project-facts button:hover {
+  color: var(--accent);
+}
+.application-shell .work-project-facts small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.application-shell .work-project-facts p > span {
+  color: var(--muted);
+}
+.application-shell .work-project-facts .is-attention {
+  color: var(--concord-warning-text);
+}
+.application-shell .work-context-action,
+.application-shell .work-detail-links button {
+  padding: 3px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  text-align: left;
+}
+.application-shell .work-context-action:hover,
+.application-shell .work-detail-links button:hover {
+  text-decoration: underline;
+}
+.application-shell .work-detail-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+}
+.application-shell .work-model-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.application-shell .work-model-list li {
+  display: grid;
+  gap: 4px;
+}
+.application-shell .work-model-list li > span {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+@container work-rows (max-width: 720px) {
+  .application-shell .work-row-copy {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .application-shell .work-row-reason {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}
+@container workspace (max-width: 800px) {
+  .application-shell .work-layout:has(.work-peek) .work-queue-scroll {
+    padding-right: 24px;
+  }
+  .application-shell .work-row-copy {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .application-shell .work-row-reason {
+    grid-column: 1;
+    grid-row: 3;
+  }
 }

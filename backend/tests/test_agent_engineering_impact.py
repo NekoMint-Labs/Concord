@@ -13,6 +13,7 @@ from app.domain.agent_tools import (
     WorkPackageQuery,
 )
 from app.domain.errors import ProviderError
+from app.domain.events import ProjectEvent
 from app.domain.models import Evidence, ProjectSnapshot, utcnow
 from app.domain.project_lifecycle import CreateArea, CreateProject, CreateWorkPackage
 from app.domain.project_sources import CreateProjectSource
@@ -109,6 +110,51 @@ def test_persisted_binding_drives_impact_without_legacy_membership_or_seeded_blo
         assert not analysis.constraints and not repo.proposals(run.id)
         assert not analysis.readiness  # Impact alone is neither a safety blocker nor READY.
         assert not repo.latest_baseline(project.id)
+
+
+def test_verified_action_recheck_keeps_scoped_ready_row_after_bim_impact(
+    services, admin, engineering
+):
+    project, packages, source, _ = engineering
+    with services.factory.open() as repo:
+        revision = repo.source_revisions(project.id, source.id)[0]
+    services.coordination.ingest(
+        ProjectEvent(
+            project_id=project.id,
+            work_package_id=packages[0].id,
+            kind="design_revision",
+            title="Design revision",
+            change={"revision": "V17"},
+        ),
+        admin,
+    )
+    request = AgentRequest(
+        instruction="Investigate changes",
+        scope=AgentScope(
+            source_id=source.id,
+            from_revision_id=revision.id,
+            to_revision_id=revision.id,
+            work_package_ids=(packages[0].id,),
+            element_ids=("removed-element",),
+        ),
+    )
+    run = services.agent.enqueue(project.id, request, admin)
+    with services.factory.open() as repo:
+        proposal = repo.proposals(run.id)[0]
+    services.actions.approve(proposal.id, admin)
+    receipt = services.actions.execute(proposal.id, admin)
+    assert services.actions.execute(proposal.id, admin) == receipt
+
+    with services.factory.open() as repo:
+        fresh = repo.analysis(repo.run(run.id).analysis_id)
+        persisted_scope = repo.investigation(run.id).request.scope
+        readiness = next(r for r in fresh.readiness if r.work_package_id == packages[0].id)
+        assert persisted_scope == request.scope
+        assert readiness.status == "READY"
+        assert fresh.impact.work_package_ids == (packages[0].id,)
+        assert fresh.impact.element_ids == ("removed-element",)
+        assert fresh.snapshot.version == receipt.after_version == repo.state(project.id).version
+        assert repo.execution(proposal.operation_id) == receipt
 
 
 @pytest.mark.parametrize("invalid", ["change", "binding", "unavailable"])

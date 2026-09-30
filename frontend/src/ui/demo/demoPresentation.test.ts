@@ -125,3 +125,13 @@ it("passes unknown and runtime-authored strings through unchanged", () => {
     "Coordinate Tower crane setup",
   );
 });
+
+it("localizes deterministic facts in a multiline real-project report without rewriting original content", () => {
+  expect(
+    demoInvestigationText(
+      "Recorded project version 37; showing 2 scoped work packages; 1 returned sources differ from baseline.\nCompared IFC revisions: 1 added, 1 deleted, 1 changed; GlobalId continuity 85.7%.\nOriginal review note: 保留原文",
+    ),
+  ).toBe(
+    "已记录项目版本 37；当前范围包含 2 个工作包；1 个工程来源与基准不同。\nIFC 版本对比：新增 1、删除 1、修改 1；构件标识连续率 85.7%。\nOriginal review note: 保留原文",
+  );
+});

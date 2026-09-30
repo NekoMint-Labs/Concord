@@ -69,6 +69,7 @@ export interface components { schemas: {
   "ProjectSourceStatus": { "source": components["schemas"]["ProjectSource"]; "latest_revision_id": (string | null); "accepted_revision_id": (string | null); "baseline_id": (string | null); "has_pending_revision": boolean; };
   "ProjectState": { "project": components["schemas"]["Project"]; "version": number; "areas": Array<components["schemas"]["Area"]>; "work_packages": Array<components["schemas"]["WorkPackage"]>; "sources": Array<components["schemas"]["SourceRevision"]>; };
   "Readiness": { "work_package_id": string; "status": "READY" | "BLOCKED"; "constraint_ids": Array<string>; "snapshot_id": string; };
+  "RejectionRequest": { "reason"?: string; };
   "ResolutionOption": { "id": string; "title": string; "explanation": string; "constraint_ids": Array<string>; "effects": Array<components["schemas"]["Effect"]>; "resolver": string; };
   "RevisionComparison": { "id": string; "project_id": string; "source_id": string; "from_revision_id": string; "to_revision_id": string; "engine": string; "engine_version": string; "status": "COMPLETED"; "summary": components["schemas"]["ComparisonSummary"]; "raw_result_key": string; "evidence_ids": Array<string>; "created_at": string; };
   "RevisionComparisonDetail": { "comparison": components["schemas"]["RevisionComparison"]; "changes": Array<components["schemas"]["BimElementChange"]>; "affected_work_packages": Array<components["schemas"]["AffectedWorkPackage"]>; };

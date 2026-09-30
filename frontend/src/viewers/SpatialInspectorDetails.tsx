@@ -21,8 +21,10 @@ type DetailsProps = Pick<
   | "linkedIssues"
   | "item"
   | "snapshot"
+  | "geometryAvailable"
   | "workPackage"
   | "revisionLabel"
+  | "fromRevisionLabel"
   | "sourceName"
   | "viewFile"
   | "viewerProperties"
@@ -49,8 +51,10 @@ export function SpatialInspectorDetails({
   linkedIssues,
   item,
   snapshot,
+  geometryAvailable,
   workPackage,
   revisionLabel,
+  fromRevisionLabel,
   sourceName,
   viewFile,
   viewerProperties,
@@ -90,11 +94,11 @@ export function SpatialInspectorDetails({
           </span>
           <h3>修订记录</h3>
           <div className="comparison-step">
-            <strong>R2</strong>
+            <strong>{revisionLabel ?? "目标版本"}</strong>
             <span>{description(change.changed_aspects)}</span>
           </div>
           <div className="comparison-step">
-            <strong>R1</strong>
+            <strong>{fromRevisionLabel ?? "上一版本"}</strong>
             <span>上一模型版本</span>
           </div>
           <h3>变更标识</h3>
@@ -149,143 +153,153 @@ export function SpatialInspectorDetails({
           )}
         </section>
       )}
-      {mode !== "issues" &&
-        (item || snapshot || (activeId && !!viewerProperties)) && (
-          <>
-            {inspectorTab === "overview" && (
-              <>
-                <div className="element-identity">
-                  <Box size={44} strokeWidth={1} />
-                  <span>{classification}</span>
-                </div>
-                <dl className="element-facts">
-                  {/* 类别 is already the panel subtitle; repeating it here spends a
+      {mode !== "issues" && (item || snapshot || activeId) && (
+        <>
+          {inspectorTab === "overview" && (
+            <>
+              {(geometryAvailable === false ||
+                (!item && !snapshot && !viewerProperties)) && (
+                <p className="quiet-message">
+                  {change?.change_kind === "deleted"
+                    ? "目标版本无几何（历史变更保留）"
+                    : "当前版本缺失（保留历史关联）"}
+                  {snapshot
+                    ? "；以下为已保存的历史属性，不是目标版本几何。"
+                    : "；当前版本无构件属性。"}
+                </p>
+              )}
+              <div className="element-identity">
+                <Box size={44} strokeWidth={1} />
+                <span>{classification}</span>
+              </div>
+              <dl className="element-facts">
+                {/* 类别 is already the panel subtitle; repeating it here spends a
                       row of the most-read block on a value the reader has just
                       been shown. */}
+                <div>
+                  <dt>系统</dt>
+                  <dd>{item?.space ?? snapshot?.space ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>楼层</dt>
+                  <dd>{snapshot?.storey ?? item?.storey ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>工作包</dt>
+                  <dd>
+                    {workPackage
+                      ? demoWorkPackageName(workPackage.id, workPackage.name)
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>模型</dt>
+                  <dd>
+                    {revisionLabel ?? sourceName ?? viewFile?.name ?? "—"}
+                  </dd>
+                </div>
+              </dl>
+            </>
+          )}
+          {(inspectorTab === "overview" || inspectorTab === "changes") && (
+            <section className="element-section">
+              <h3>
+                变更 <small>{change ? 1 : 0}</small>
+              </h3>
+              {change ? (
+                <button
+                  type="button"
+                  className="element-context-row"
+                  onClick={openChanges}
+                >
+                  <i className="dot amber" />
+                  {description(change.changed_aspects)}
+                  <ChevronRight size={13} />
+                </button>
+              ) : (
+                <p className="quiet-message">此构件暂无变更。</p>
+              )}
+            </section>
+          )}
+          {(inspectorTab === "overview" || inspectorTab === "issues") && (
+            <section className="element-section">
+              <h3>
+                问题 <small>{linkedIssues.length}</small>
+              </h3>
+              {linkedIssues.map((entry) => (
+                <button
+                  type="button"
+                  className="element-context-row"
+                  key={entry.id}
+                  onClick={() => chooseIssue(entry)}
+                >
+                  <i className="dot red" />
+                  {demoConstraintText(entry.kind, entry.description)}
+                  <ChevronRight size={13} />
+                </button>
+              ))}
+              {!linkedIssues.length && (
+                <p className="quiet-message">暂无关联问题。</p>
+              )}
+            </section>
+          )}
+          {inspectorTab === "overview" && (
+            <>
+              {!!item?.related_ids.length && (
+                <section className="element-section">
+                  <h3>关联构件</h3>
+                  {item?.related_ids.map((id) => (
+                    <button
+                      type="button"
+                      className="element-context-row"
+                      key={id}
+                      onClick={() => select(id)}
+                    >
+                      <Box size={13} />
+                      {demoElementName(
+                        id,
+                        elements?.find((e) => e.id === id)?.name ?? id,
+                      )}
+                      <ChevronRight size={13} />
+                    </button>
+                  ))}
+                </section>
+              )}
+              <AppDisclosure
+                label="技术详情"
+                open={technicalOpen}
+                onOpenChange={setTechnicalOpen}
+              >
+                <dl className="element-facts">
                   <div>
-                    <dt>系统</dt>
-                    <dd>{item?.space ?? snapshot?.space ?? "—"}</dd>
+                    <dt>GlobalId</dt>
+                    <dd className="mono">{activeId}</dd>
                   </div>
                   <div>
-                    <dt>楼层</dt>
-                    <dd>{snapshot?.storey ?? item?.storey ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt>工作包</dt>
-                    <dd>
-                      {workPackage
-                        ? demoWorkPackageName(workPackage.id, workPackage.name)
-                        : "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>模型</dt>
-                    <dd>
-                      {revisionLabel ?? sourceName ?? viewFile?.name ?? "—"}
-                    </dd>
+                    <dt>修订</dt>
+                    <dd>{item?.revision ?? snapshot?.revision_id}</dd>
                   </div>
                 </dl>
-              </>
-            )}
-            {(inspectorTab === "overview" || inspectorTab === "changes") && (
-              <section className="element-section">
-                <h3>
-                  变更 <small>{change ? 1 : 0}</small>
-                </h3>
-                {change ? (
-                  <button
-                    type="button"
-                    className="element-context-row"
-                    onClick={openChanges}
-                  >
-                    <i className="dot amber" />
-                    {description(change.changed_aspects)}
-                    <ChevronRight size={13} />
-                  </button>
-                ) : (
-                  <p className="quiet-message">此构件暂无变更。</p>
-                )}
-              </section>
-            )}
-            {(inspectorTab === "overview" || inspectorTab === "issues") && (
-              <section className="element-section">
-                <h3>
-                  问题 <small>{linkedIssues.length}</small>
-                </h3>
-                {linkedIssues.map((entry) => (
-                  <button
-                    type="button"
-                    className="element-context-row"
-                    key={entry.id}
-                    onClick={() => chooseIssue(entry)}
-                  >
-                    <i className="dot red" />
-                    {demoConstraintText(entry.kind, entry.description)}
-                    <ChevronRight size={13} />
-                  </button>
+                {propertySections(
+                  snapshot?.properties ?? item?.properties ?? viewerProperties,
+                ).map((section, i) => (
+                  <div key={i} className="technical-properties">
+                    <strong>{section.title ?? "其他属性"}</strong>
+                    <dl>
+                      {section.fields.map((field, j) => (
+                        <div key={j}>
+                          <dt>{field.label}</dt>
+                          <dd>{field.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
                 ))}
-                {!linkedIssues.length && (
-                  <p className="quiet-message">暂无关联问题。</p>
-                )}
-              </section>
-            )}
-            {inspectorTab === "overview" && (
-              <>
-                {!!item?.related_ids.length && (
-                  <section className="element-section">
-                    <h3>关联构件</h3>
-                    {item?.related_ids.map((id) => (
-                      <button
-                        type="button"
-                        className="element-context-row"
-                        key={id}
-                        onClick={() => select(id)}
-                      >
-                        <Box size={13} />
-                        {demoElementName(
-                          id,
-                          elements?.find((e) => e.id === id)?.name ?? id,
-                        )}
-                        <ChevronRight size={13} />
-                      </button>
-                    ))}
-                  </section>
-                )}
-                <AppDisclosure
-                  label="技术详情"
-                  open={technicalOpen}
-                  onOpenChange={setTechnicalOpen}
-                >
-                  <dl className="element-facts">
-                    <div>
-                      <dt>GlobalId</dt>
-                      <dd className="mono">{activeId}</dd>
-                    </div>
-                    <div>
-                      <dt>修订</dt>
-                      <dd>{item?.revision ?? snapshot?.revision_id}</dd>
-                    </div>
-                  </dl>
-                  {propertySections(item?.properties ?? viewerProperties).map(
-                    (section, i) => (
-                      <div key={i} className="technical-properties">
-                        <strong>{section.title ?? "其他属性"}</strong>
-                        <dl>
-                          {section.fields.map((field, j) => (
-                            <div key={j}>
-                              <dt>{field.label}</dt>
-                              <dd>{field.value}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </div>
-                    ),
-                  )}
-                </AppDisclosure>
-              </>
-            )}
-          </>
-        )}
+              </AppDisclosure>
+            </>
+          )}
+        </>
+      )}
       {mode !== "issues" && issue && (
         <section className="element-section issue-inspection">
           <h3>问题上下文</h3>
@@ -301,7 +315,7 @@ export function SpatialInspectorDetails({
           </small>
         </section>
       )}
-      {!item && !snapshot && !issue && (
+      {!activeId && !item && !snapshot && !issue && (
         <p className="quiet-message">
           选择模型构件或下方列表项，查看相关上下文。
         </p>

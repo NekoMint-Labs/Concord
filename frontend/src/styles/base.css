@@ -1,53 +1,8 @@
 /*
- * Visual language: Quiet Instrument.
- *
- * Concord is a desktop coordination instrument: calm material, loud typography,
- * dense facts. Three rules carry the system, and every value below serves one.
- *
- * 1. LINES -> SURFACES. Structure is carried by plane value, spacing,
- *    typography, selected-state surfaces, and pane headers. A region does not
- *    prove it owns its area with a border. The previous pass separated five
- *    planes by about 1.06:1 while drawing seven 1px rules across them, so the
- *    only structure the eye could reliably detect was the linework: the
- *    product read as a ruled table. Every neighbouring step of the ladder now
- *    clears 1.08:1, the work plane is the single lightest plane on screen, and
- *    the shell itself draws no structural hairline at all. A line is spent only
- *    where it is content (a table row, an evidence boundary) or a control
- *    boundary that has to be identifiable.
- *
- * 2. SURFACES RECEDE, THEY DO NOT FLOAT. A grouped block of engineering values
- *    is cut *into* the plane (`--surface-detail`) rather than lifted above it,
- *    and floating surfaces are the only objects that carry elevation. This is
- *    why the earlier card pass could not work: white on `--surface-workspace` is
- *    1.02:1, so a "card" was visible only by its border and its shadow, which is
- *    exactly the failure mode rule 1 removes.
- *
- * 3. HIERARCHY IS TYPE AND WEIGHT, NOT SIZE. Seven roles with a real size step
- *    each (20 / 18 / 14.5 / 13.5 / 13 / 12 / 11.5), three weights of which 600 is
- *    spent only where it carries information, and tabular figures. The previous
- *    scale was one notch larger at the top and used 600 on every label, which is
- *    the "heavy" half of the density problem: the product read as coarser than it
- *    was, because the two tiers that carry the most text were the two tiers that
- *    had been emphasised.
- *
- * The ladder is cool-stone graphite: a true neutral with a whisper of cool and
- * no more. The previous pass carried a few points of warmth in every plane,
- * which at this density stopped reading as material and started reading as a
- * yellow-green cast - the workspace looked slightly dirty rather than slightly
- * warm. Warmth is gone from the structural ladder entirely rather than merely
- * reduced: a neutral whose red and blue channels sit within a few points of each
- * other reads as *unpainted*, which is what a desktop instrument should look
- * like. It is deliberately not a blue-grey either - the blue channel is held
- * inside a whisper so the product never reads as a theme, and a cold blue-grey
- * at this density reads as an absence of colour.
- *
- * One slate-ink accent carries both "you are here" and commitment: focus, the
- * selected-object surface, the active view indicator, and the primary control.
- * That is the identity this product was missing - a neutral workspace with a
- * restrained ink/slate signature - and it replaces the previous black primary
- * button, which read as a generic template control rather than as this
- * product's own. Amber is reserved for blocking state and is never decoration,
- * and it is spent on small semantic objects rather than on large surfaces.
+ * Quiet Precision: neutral structural planes, readable engineering text, and a
+ * single blue accent for navigation, selection, focus and primary actions.
+ * Status colours describe real state; elevation belongs only to floating UI.
+ * The existing semantic tokens below keep every workspace on one palette.
  */
 :root {
   font-family: var(--font-ui);
@@ -109,7 +64,7 @@
    * has to move `--line-control` (and then `--muted-2`, which is spaced against
    * the same plane) *with* the navigation plane, not one of them alone.
    */
-  --bg-app: #eceeef;
+  --bg-app: #eef1f5;
   /*
    * A well cut into the work plane, and the only one in the product: the
    * decision tray on 工作. It is its own value rather than `--bg-app` because
@@ -121,12 +76,12 @@
    * while letting the row titles carry the emphasis, and it lifts every text
    * tone drawn on it, including the red state label, by about 5%.
    */
-  --surface-inset: #f2f3f4;
-  --surface-nav: #f4f5f6;
-  --surface-detail: #f6f7f8;
+  --surface-inset: #f3f6fa;
+  --surface-nav: #f2f4f8;
+  --surface-detail: #f5f7fa;
   /* the local object list's own body: a plane of its own, one full step below the
      chrome bands it is named by and one above persistent navigation */
-  --surface-list: #f7f8f9;
+  --surface-list: #f7f9fb;
   --surface-chrome: #fafafa;
   --surface-workspace: #ffffff;
   /* controls, content objects, and floating surfaces stay plain white so they
@@ -139,9 +94,9 @@
    */
   /* content rules: table rows, evidence boundaries. Decorative, so no
      contrast floor - but it must stay visible on the work plane it is drawn on */
-  --line: #d7d9db;
+  --line: #e5e8eb;
   /* the quieter content rule, for a second-order separation on a light plane */
-  --line-soft: #e0e2e4;
+  --line-soft: #e9ebee;
   /*
    * Control boundaries. Two tokens, and the split is a placement rule rather
    * than a tone preference: a boundary has to clear WCAG 1.4.11 (3:1) against
@@ -188,7 +143,7 @@
   /* interaction overlays are neutral ink at low alpha, so a hover reads as the
      same material darkening under the pointer rather than as grey paint */
   --surface-search: rgba(255, 255, 255, 0.62);
-  --hover: rgba(23, 25, 27, 0.05);
+  --hover: rgba(31, 47, 74, 0.05);
   /*
    * The second depth of the same overlay, and the reason it exists is that a
    * secondary control now rests on the first one. A white rectangle on a chrome
@@ -199,7 +154,7 @@
    * than the only one - and the pointer then darkens it by `--hover-strong`, so
    * rest and hover are one material at two depths.
    */
-  --hover-strong: rgba(23, 25, 27, 0.09);
+  --hover-strong: rgba(31, 47, 74, 0.09);
   --focus: var(--accent);
 
   /*
@@ -242,40 +197,16 @@
      than as a tint laid over it */
   --scrim: rgba(20, 23, 27, 0.4);
 
-  /* one restrained petrol accent: focus, selection, active position, and -
-     because it is the only colour this product owns - commitment. Held at a
-     mid value/saturation rather than a bright web blue, so it reads as an
-     instrument's ink instead of a marketing link. */
-  --accent: #2f5e75;
-  /*
-   * Accent has area. The accent is a *surface*, not just a 1-2px indicator: a
-   * selected work package, source, or BIM element is a tinted row, and the
-   * current view in a menu is a tinted item. 10% is calibrated to clear a
-   * visible step from both the work plane and the recessed pane plane while
-   * staying a tint rather than a fill - the accent never floods a pane. It
-   * replaced a 13% of the previous brighter accent, which on the darker
-   * navigation plane the sidebar's selected row sits on read as one more grey
-   * rather than as the current row.
-   */
-  --accent-muted: rgba(47, 94, 117, 0.1);
-  /*
-   * The same family, one step denser, for the one job the selection tint cannot
-   * do: a highlight inside running text. At 10% a mark inside a paragraph
-   * disappears among the words around it, and a found match has to be the first
-   * thing the eye lands on in the chunk.
-   */
-  --accent-strong: rgba(47, 94, 117, 0.18);
+  /* Accent is reserved for position, focus and primary action. */
+  --accent: #2866de;
+  /* A persistent selected row has a distinct surface, not a hover colour. */
+  --accent-muted: rgba(47, 111, 242, 0.12);
+  /* Stronger only for matches highlighted inside running text. */
+  --accent-strong: rgba(47, 111, 242, 0.2);
 
-  /*
-   * The primary control fill. It is the accent family taken down to a working
-   * depth rather than a second colour: the same petrol the selected row and the
-   * active view are cut from, dark enough to carry white text comfortably. A
-   * committed action and the current position therefore belong to one identity
-   * instead of two, and the button stops being the one black object in a
-   * graphite product.
-   */
-  --primary: #24566b;
-  --primary-hover: #2f6480;
+  /* Primary controls share the accent identity and carry white action text. */
+  --primary: #2866de;
+  --primary-hover: #2159c6;
   --on-primary: #fff;
 
   /*
@@ -476,31 +407,22 @@
    */
   --success: #2f6b4f;
 
-  /* Approved Concord palette. Feature styles consume these roles rather than
-     declaring colour locally; shared values are defined only once here.
-
-     Direction ("drafting table"): graphite neutrals, one deep petrol accent
-     spent only on position and commitment, status as small marks + text
-     colour. The accent was a bright product blue (#2876db) - the colour every
-     template ships with - and it was the single biggest reason the product
-     read as generic. Petrol is still cool (tests hold that), but it reads as
-     an instrument, not a marketing site; this pass pulled the saturation down
-     further and turned the hue slightly greener, because the remaining excess
-     was still reading as this product's version of a link colour. */
-  --concord-accent: #2f5e75;
-  --concord-accent-strong: #28536a;
-  --concord-accent-tint: #e4e9ec;
+  /* Concord feature roles resolve here so selection, status and shell materials
+     remain consistent across Work, Model and Project. */
+  --concord-accent: #2866de;
+  --concord-accent-strong: #2159c6;
+  --concord-accent-tint: #eaf1ff;
   --concord-action-hover: #edf2f5;
-  --concord-shell-surface: #f6f7f8;
+  --concord-shell-surface: #f2f4f8;
   --concord-shell-divider: #e4e6e9;
   --concord-ink: #1f262d;
   --concord-muted: #5c6670;
   --concord-divider: #e7e9ec;
   --concord-brand-mark: #1f262d;
   --concord-nav-text: #3e4852;
-  --concord-nav-selection: #e2eaee;
-  --concord-nav-active: #234757;
-  --concord-row-rail: #2f5e75;
+  --concord-nav-selection: #e5edfc;
+  --concord-nav-active: #2159c6;
+  --concord-row-rail: #2866de;
   --concord-float-edge: #d9dde1;
   --concord-float-shadow: #1f262d1f;
   --concord-stage-chip: #ffffffeb;
@@ -512,11 +434,7 @@
   --concord-header-control: #f6f8fa;
   --concord-dark-ink: #273543;
   --concord-ready-mark: #278455;
-  --concord-search-placeholder: #7b8590;
-  --concord-search-hint: #8a949d;
-  --concord-header-icon: #445363;
-  --concord-avatar: #a9b1ba;
-  --concord-workspace-surface: #f6f8f9;
+  --concord-workspace-surface: #ffffff;
   --concord-model-surface: #e9edef;
   --concord-viewer-stage: #e4e7ea;
   --concord-context-divider: #e3e8ed;
@@ -542,8 +460,8 @@
   --concord-context-active: #253241;
   --concord-table-label: #657381;
   --concord-table-value: #495563;
-  --concord-table-action: #2f5e75;
-  --concord-row-selected: #e9f0f3;
+  --concord-table-action: #2866de;
+  --concord-row-selected: #eaf1ff;
   --concord-warning-surface: #fff4e4;
   --concord-warning-text: #8f5e18;
   --concord-danger-surface: #fcebea;
@@ -558,12 +476,12 @@
   --concord-issue-shadow: #24354323;
   --concord-issue-text: #37424e;
   --concord-toolbar-shadow: #27354330;
-  --concord-toolbar-active: #2f5e75;
+  --concord-toolbar-active: #2866de;
   --concord-disabled-tab: #9aa4ad;
   --concord-ready-surface: #eaf4ee;
   --concord-ready-text: #2f6b4f;
   --concord-comparison-border: #eef1f4;
-  --concord-comparison-surface: #e9f0f3;
+  --concord-comparison-surface: #eaf1ff;
   --concord-comparison-text: #5f6d7c;
   --concord-issue-icon: #b5473f;
   --concord-issue-body: #45515d;
@@ -585,19 +503,19 @@
   --concord-document-list: #f9fafc;
   --concord-list-heading: #364251;
   --concord-document-filter: #596b7b;
-  --concord-document-active: #2f5e75;
+  --concord-document-active: #2866de;
   --concord-document-filter-active: #e9eff2;
   --concord-document-row-border: #e5eaf0;
-  --concord-document-selected: #edf3f6;
-  --concord-document-selected-border: #93b1c2;
-  --concord-document-icon: #3c6b83;
+  --concord-document-selected: #eaf1ff;
+  --concord-document-selected-border: #a7bfe8;
+  --concord-document-icon: #596b7a;
   --concord-document-preview: #f3f5f8;
-  --concord-document-header-icon: #3c6b83;
+  --concord-document-header-icon: #596b7a;
   --concord-document-sheet-border: #e4e8ee;
   --concord-document-sheet-shadow: #27333f0a;
   --concord-metadata-label: #687684;
   --concord-worktab-text: #596b7a;
-  --concord-worktab-active: #2f5e75;
+  --concord-worktab-active: #2866de;
   --concord-package-description: #687785;
   --concord-package-issue: #b5473f;
   --concord-package-meta: #70808b;

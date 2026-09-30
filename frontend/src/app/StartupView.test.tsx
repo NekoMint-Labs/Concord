@@ -96,7 +96,7 @@ it("shows the connected no-project entry separately from a connection failure", 
 
   expect(screen.queryByRole("alert")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "新建项目" }));
-  fireEvent.click(screen.getByRole("button", { name: "打开演示项目" }));
+  fireEvent.click(screen.getByRole("button", { name: "打开示例项目" }));
   expect(onNewProject).toHaveBeenCalledOnce();
   expect(onOpenDemo).toHaveBeenCalledOnce();
 });

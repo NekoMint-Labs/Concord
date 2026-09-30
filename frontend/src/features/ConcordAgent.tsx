@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScanSearch } from "lucide-react";
 import {
@@ -7,6 +7,8 @@ import {
   type DTO,
   type InvestigationReport,
 } from "../api/client";
+import { useRunStream } from "../api/stream";
+import { reportMatchesRun, scopeFor } from "./agentContext";
 import { PropertyRow, PropertyTable } from "../components/PropertyTable";
 import { Status } from "../components/Status";
 import { AppPopover, AppPopoverClose } from "../components/ui/AppPopover";
@@ -29,16 +31,6 @@ export type ConcordContext = {
   elementIds: string[];
 };
 
-function scopeFor(context: ConcordContext): DTO<"AgentScope-Input"> {
-  return {
-    source_id: context.sourceId,
-    from_revision_id: context.fromRevisionId,
-    to_revision_id: context.revisionId,
-    work_package_ids: context.workPackageId ? [context.workPackageId] : [],
-    element_ids: context.elementIds,
-  };
-}
-
 export function ConcordAgent({
   project,
   context,
@@ -46,6 +38,7 @@ export function ConcordAgent({
   report,
   onRun,
   onOpenReport,
+  onInvestigate,
 }: {
   project: string;
   context: ConcordContext;
@@ -53,10 +46,43 @@ export function ConcordAgent({
   report?: InvestigationReport | null;
   onRun: (run: AgentRun) => void;
   onOpenReport?: () => void;
+  onInvestigate?: (
+    instruction: string,
+    context: ConcordContext,
+  ) => Promise<AgentRun | void> | AgentRun | void;
 }) {
   const cache = useQueryClient();
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<DTO<"AgentResponse"> | null>(null);
+  const validRun = currentRun?.project_id === project ? currentRun : null;
+  const validReport = reportMatchesRun(report, validRun) ? report : null;
+  const investigation = useMemo(
+    () =>
+      context.elementIds.length
+        ? {
+            label: `检查 ${context.elementIds.length} 个已选构件`,
+            instruction: "查看所选构件的影响与依据",
+          }
+        : context.revisionId
+          ? {
+              label: context.fromRevisionId
+                ? "查看版本变化的原因"
+                : "查看当前模型",
+              instruction: "查看模型变化及工作包影响",
+            }
+          : context.workPackageId
+            ? { label: "查看工作包问题", instruction: "查看工作包的问题与依据" }
+            : { label: "检查当前项目", instruction: "调查当前项目" },
+    [context],
+  );
+  const submittedInstruction = question.trim() || investigation.instruction;
+  const stream = useRunStream(
+    validRun?.id,
+    !!validRun &&
+      ["QUEUED", "RUNNING", "WAITING_APPROVAL"].includes(validRun.status),
+    validRun?.generation ?? 0,
+    project,
+  );
   const settings = useQuery({
     queryKey: ["agent-settings", project],
     queryFn: () => api.agentSettings(project),
@@ -75,35 +101,29 @@ export function ConcordAgent({
   const ask = useMutation({
     mutationFn: () =>
       api.askAgent(project, {
-        instruction: question,
+        instruction: question.trim(),
         scope: scopeFor(context),
       }),
     onSuccess: setAnswer,
   });
   const investigate = useMutation({
-    mutationFn: (instruction: string) =>
-      api.investigate(project, {
-        instruction,
-        scope: scopeFor(context),
-      }),
-    onSuccess: (run) => {
-      setAnswer(null);
-      onRun(run);
+    mutationFn: async (instruction: string) => {
+      const next = onInvestigate
+        ? await onInvestigate(instruction, context)
+        : await api.investigate(project, {
+            instruction,
+            scope: scopeFor(context),
+          });
+      if (!next) return;
+      onRun(next);
+      return next;
     },
+    onSuccess: () => setAnswer(null),
   });
-  const investigation = context.elementIds.length
-    ? {
-        label: `检查 ${context.elementIds.length} 个已选构件`,
-        instruction: "查看所选构件的影响与依据",
-      }
-    : context.revisionId
-      ? {
-          label: context.fromRevisionId ? "查看版本变化的原因" : "查看当前模型",
-          instruction: "查看模型变化及工作包影响",
-        }
-      : context.workPackageId
-        ? { label: "查看工作包问题", instruction: "查看工作包的问题与依据" }
-        : { label: "检查当前项目", instruction: "调查当前项目" };
+  const retry = useMutation({
+    mutationFn: () => api.resume(validRun!.id),
+    onSuccess: (next) => onRun(next),
+  });
 
   return (
     <AppPopover
@@ -211,29 +231,33 @@ export function ConcordAgent({
           <Button
             size="sm"
             disabled={investigate.isPending}
-            onClick={() => investigate.mutate(investigation.instruction)}
+            onClick={() => investigate.mutate(submittedInstruction)}
           >
-            {investigate.isPending ? "正在启动" : investigation.label}
+            {investigate.isPending
+              ? "正在启动"
+              : question.trim()
+                ? "保存为工程调查"
+                : investigation.label}
           </Button>
         </section>
 
-        {currentRun && (
+        {validRun && (
           <section className="agent-current-run">
             <div className="agent-run-heading">
               <span className="section-label">Concord 调查状态</span>
-              <Status value={currentRun.status} />
+              <Status value={validRun.status} />
             </div>
             <PropertyTable>
-              {report?.run_id === currentRun.id && (
+              {validReport && (
                 <PropertyRow
                   label="判断依据"
-                  value={`${report.evidence.length} 条`}
+                  value={`${validReport.evidence.length} 条`}
                 />
               )}
             </PropertyTable>
-            {report?.run_id === currentRun.id && (
+            {validReport && (
               <>
-                <p>{demoInvestigationText(report.answer.summary)}</p>
+                <p>{demoInvestigationText(validReport.answer.summary)}</p>
                 {onOpenReport && (
                   <AppPopoverClose>
                     <Button size="sm" variant="ghost" onClick={onOpenReport}>
@@ -243,8 +267,38 @@ export function ConcordAgent({
                 )}
               </>
             )}
-            {currentRun.status === "FAILED" && (
-              <p role="alert">调查未完成，请从当前工程位置重试。</p>
+            {validRun.status === "FAILED" && (
+              <div className="agent-run-failure">
+                <p role="alert">调查未完成，请从当前工程位置重试。</p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={retry.isPending}
+                  onClick={() => retry.mutate()}
+                >
+                  {retry.isPending ? "正在恢复" : "重试调查"}
+                </Button>
+              </div>
+            )}
+            {!!stream.events.length && (
+              <ol className="agent-run-timeline" aria-label="调查进度">
+                {stream.events.slice(-5).map((event) => (
+                  <li key={event.sequence}>
+                    <span>
+                      {event.type === "RUN_FINISHED"
+                        ? "运行已完成"
+                        : event.type === "RUN_ERROR"
+                          ? "运行失败"
+                          : event.type === "CUSTOM"
+                            ? (event.name ?? "已记录活动")
+                            : event.type === "STEP_FINISHED"
+                              ? "读取步骤已完成"
+                              : "运行进行中"}
+                    </span>
+                    {event.stepName && <small>{event.stepName}</small>}
+                  </li>
+                ))}
+              </ol>
             )}
           </section>
         )}
@@ -260,13 +314,19 @@ export function ConcordAgent({
           </section>
         )}
 
-        {(ask.error || investigate.error || configure.error) && (
+        {(ask.error ||
+          investigate.error ||
+          retry.error ||
+          configure.error ||
+          stream.error) && (
           <p className="alert" role="alert">
-            {investigate.error
-              ? "调查无法启动，请重试。"
+            {retry.error || investigate.error
+              ? "调查无法启动或恢复，请重试。"
               : ask.error
                 ? "暂时无法回答，请重试。"
-                : "设置未保存，请重试。"}
+                : stream.error
+                  ? "调查进度暂时不可用。"
+                  : "设置未保存，请重试。"}
           </p>
         )}
       </div>

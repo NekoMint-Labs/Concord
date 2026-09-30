@@ -12,8 +12,20 @@ import fixture from "../../tests/fixtures/inspector.json";
 import { api, type AgentRun } from "../api/client";
 import BIMWorkspace from "./BIMWorkspace";
 
+const viewer = vi.hoisted(() => ({
+  properties: null as null | ((properties: unknown, id?: string) => void),
+}));
 vi.mock("./IFCViewer", () => ({
-  default: ({ file }: { file: File }) => <div>Local viewer: {file.name}</div>,
+  default: ({
+    file,
+    onProperties,
+  }: {
+    file: File;
+    onProperties?: (properties: unknown, id?: string) => void;
+  }) => {
+    viewer.properties = onProperties ?? null;
+    return <div>Local viewer: {file.name}</div>;
+  },
 }));
 afterEach(() => vi.restoreAllMocks());
 
@@ -253,5 +265,82 @@ it("switches from a local preview to the saved project file without retaining th
     await screen.findByText("Local viewer: project-model.ifc"),
   ).toBeVisible();
   expect(screen.queryByText(/本地预览 · local.ifc/)).not.toBeInTheDocument();
+  cache.clear();
+});
+
+it("keeps a revision-scoped deleted target inspectable without leaking stale index or delayed geometry properties", async () => {
+  vi.spyOn(api, "bim").mockResolvedValue([
+    {
+      id: "deleted",
+      name: "Wrong index name",
+      type: "IfcWall",
+      storey: "Old floor",
+      space: "Old room",
+      properties: { FireRating: "Wrong rating" },
+      related_ids: [],
+      revision: "OLD",
+      ifc_schema: null,
+    },
+  ]);
+  const cache = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  const file = new File(["IFC"], "exact-r88.ifc");
+  const props = {
+    project: "project",
+    impacted: ["wall", "deleted"],
+    externalFile: file,
+    revisionScoped: true,
+    snapshots: [
+      {
+        revision_id: "r88",
+        global_id: "wall",
+        name: "Current wall",
+        ifc_class: "IfcWall",
+        storey: "New floor",
+        space: "New room",
+        properties: { FireRating: "Current rating" },
+      },
+    ],
+    revisionLabel: "R88 Issued",
+    fromRevisionLabel: "R73 Baseline",
+    changes: [
+      {
+        comparison_id: "c1",
+        global_id: "deleted",
+        change_kind: "deleted" as const,
+        changed_aspects: ["geometry"],
+      },
+    ],
+    mode: "changes" as const,
+    hideSourceActions: true,
+  };
+  const { rerender } = render(
+    <QueryClientProvider client={cache}>
+      <BIMWorkspace {...props} focusId="wall" />
+    </QueryClientProvider>,
+  );
+  await screen.findByText("Local viewer: exact-r88.ifc");
+  act(() => viewer.properties?.({ Name: "Current geometry name" }, "wall"));
+  fireEvent.click(screen.getByRole("button", { name: "技术详情" }));
+  expect(screen.getByText("Current rating")).toBeVisible();
+  rerender(
+    <QueryClientProvider client={cache}>
+      <BIMWorkspace {...props} focusId="deleted" />
+    </QueryClientProvider>,
+  );
+  act(() =>
+    viewer.properties?.(
+      { Name: "Delayed old geometry", FireRating: "Leaked geometry rating" },
+      "wall",
+    ),
+  );
+  const inspector = screen.getByRole("complementary", { name: "构件详情" });
+  expect(within(inspector).getByText(/当前版本无构件属性/)).toBeVisible();
+  expect(within(inspector).getByText("R73 Baseline")).toBeVisible();
+  expect(within(inspector).getAllByText("R88 Issued")[0]).toBeVisible();
+  expect(within(inspector).queryByText("Wrong index name")).toBeNull();
+  expect(within(inspector).queryByText("Old floor")).toBeNull();
+  expect(within(inspector).queryByText("Leaked geometry rating")).toBeNull();
   cache.clear();
 });

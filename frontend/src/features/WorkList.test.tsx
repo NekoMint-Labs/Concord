@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
 import { api, type Workspace } from "../api/client";
@@ -37,7 +43,15 @@ it("routes authoritative approval and stale states to one next action", () => {
   );
   const needs = screen.getByRole("region", { name: "需要处理" });
   expect(within(needs).getByText(/需要决定/)).toBeVisible();
-  fireEvent.click(within(needs).getByRole("button", { name: "处理 →" }));
+  expect(
+    screen.queryByRole("complementary", { name: "所选工作事项" }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(within(needs).getByRole("button", { name: /需要决定/ }));
+  fireEvent.click(
+    within(
+      screen.getByRole("complementary", { name: "所选工作事项" }),
+    ).getByRole("button", { name: "处理" }),
+  );
   expect(onPackage).toHaveBeenCalledWith("WP-200");
 
   workspace.proposals = [];
@@ -49,10 +63,9 @@ it("routes authoritative approval and stale states to one next action", () => {
     </QueryClientProvider>,
   );
   fireEvent.click(
-    within(screen.getByRole("region", { name: "需要处理" })).getAllByRole(
-      "button",
-      { name: "重新检查 →" },
-    )[0],
+    within(
+      screen.getByRole("complementary", { name: "所选工作事项" }),
+    ).getByRole("button", { name: "重新检查" }),
   );
   expect(onRecheck).toHaveBeenCalledOnce();
 });
@@ -99,9 +112,186 @@ it("shows a pending model as work without claiming a newer baseline", () => {
   );
   const needs = screen.getByRole("region", { name: "需要处理" });
   expect(within(needs).getByText("MEP 有新版本")).toBeVisible();
-  fireEvent.click(within(needs).getByRole("button", { name: "处理新版本 →" }));
+  fireEvent.click(within(needs).getByRole("button", { name: /MEP 有新版本/ }));
+  fireEvent.click(
+    within(
+      screen.getByRole("complementary", { name: "所选工作事项" }),
+    ).getByRole("button", { name: "处理新版本" }),
+  );
   expect(onModels).toHaveBeenCalledOnce();
   expect(screen.getByRole("region", { name: "最近完成" })).toHaveTextContent(
     "基于当前基线",
   );
+});
+
+it("selects a work item in place before taking its real action", async () => {
+  vi.spyOn(api, "baselines").mockResolvedValue([]);
+  vi.spyOn(api, "documents").mockResolvedValue([]);
+  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
+  const onPackage = vi.fn();
+  render(
+    <QueryClientProvider client={cache()}>
+      <WorkList
+        workspace={workspace}
+        sources={[]}
+        onPackage={onPackage}
+        onRecheck={vi.fn()}
+        onModels={vi.fn()}
+        onReport={vi.fn()}
+        onProject={vi.fn()}
+        onTab={vi.fn()}
+      />
+    </QueryClientProvider>,
+  );
+  const row = screen.getByRole("button", { name: /需要决定/ });
+  fireEvent.click(row);
+  expect(row).toHaveAttribute("aria-pressed", "true");
+  expect(
+    screen.getByRole("complementary", { name: "所选工作事项" }),
+  ).toHaveTextContent("工作包");
+  expect(onPackage).not.toHaveBeenCalled();
+  const peek = screen.getByRole("complementary", { name: "所选工作事项" });
+  expect(
+    within(peek).getByRole("region", { name: "关联工作包" }),
+  ).toHaveTextContent("WP-200");
+  expect(
+    within(peek).getByRole("region", { name: "项目状态" }),
+  ).toHaveTextContent("当前基线");
+  expect(
+    within(peek).getByRole("region", { name: "模型上下文" }),
+  ).toHaveTextContent("V16");
+  expect(
+    within(peek).getByRole("region", { name: "模型上下文" }),
+  ).toHaveTextContent("2 个关联构件");
+  expect(
+    within(peek).getByRole("region", { name: "关联工作包" }),
+  ).toHaveTextContent("L02 东翼 · 机电");
+  fireEvent.click(within(peek).getByRole("button", { name: "关闭详情" }));
+  expect(
+    screen.queryByRole("complementary", { name: "所选工作事项" }),
+  ).not.toBeInTheDocument();
+  expect(row).toHaveAttribute("aria-pressed", "true");
+  await waitFor(() => expect(row).toHaveFocus());
+  fireEvent.click(row);
+  fireEvent.keyDown(row, { key: "ArrowDown" });
+  const next = screen.getByRole("button", { name: /结构交接.*可施工/ });
+  expect(next).toHaveAttribute("aria-pressed", "true");
+  expect(
+    screen.getByRole("complementary", { name: "所选工作事项" }),
+  ).toHaveTextContent("WP-100");
+  fireEvent.keyDown(next, { key: "Escape" });
+  expect(
+    screen.queryByRole("complementary", { name: "所选工作事项" }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(row);
+  fireEvent.click(
+    within(
+      screen.getByRole("complementary", { name: "所选工作事项" }),
+    ).getByRole("button", { name: "处理" }),
+  );
+  expect(onPackage).toHaveBeenCalledWith("WP-200");
+  const search = screen.getByRole("searchbox", { name: "搜索工作事项" });
+  search.focus();
+  fireEvent.change(search, { target: { value: "结构交接" } });
+  expect(
+    screen.queryByRole("complementary", { name: "所选工作事项" }),
+  ).not.toBeInTheDocument();
+  await waitFor(() => expect(search).toHaveFocus());
+  fireEvent.change(search, { target: { value: "" } });
+  expect(
+    screen.queryByRole("complementary", { name: "所选工作事项" }),
+  ).not.toBeInTheDocument();
+});
+
+it("closes a disappearing selection without reopening it after a refresh", () => {
+  vi.spyOn(api, "baselines").mockResolvedValue([]);
+  vi.spyOn(api, "documents").mockResolvedValue([]);
+  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
+  const client = cache();
+  const content = () => (
+    <QueryClientProvider client={client}>
+      <WorkList
+        workspace={workspace}
+        sources={[]}
+        onPackage={vi.fn()}
+        onModels={vi.fn()}
+        onRecheck={vi.fn()}
+        onReport={vi.fn()}
+        onProject={vi.fn()}
+        onTab={vi.fn()}
+      />
+    </QueryClientProvider>
+  );
+  const view = render(content());
+  const row = screen.getByRole("button", { name: /结构交接.*可施工/ });
+  row.focus();
+  fireEvent.click(row);
+  expect(
+    screen.getByRole("complementary", { name: "所选工作事项" }),
+  ).toHaveTextContent("WP-100");
+  workspace.stale = true;
+  view.rerender(content());
+  expect(
+    screen.queryByRole("complementary", { name: "所选工作事项" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("searchbox", { name: "搜索工作事项" })).toHaveFocus();
+  workspace.stale = false;
+  view.rerender(content());
+  expect(
+    screen.getByRole("button", { name: /结构交接.*可施工/ }),
+  ).toHaveAttribute("aria-pressed", "false");
+  expect(
+    screen.queryByRole("complementary", { name: "所选工作事项" }),
+  ).not.toBeInTheDocument();
+});
+
+it("navigates displayed decisions while closed and dismisses without stealing outside focus", () => {
+  vi.spyOn(api, "baselines").mockResolvedValue([]);
+  vi.spyOn(api, "documents").mockResolvedValue([]);
+  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
+  render(
+    <QueryClientProvider client={cache()}>
+      <button type="button">Outside action</button>
+      <WorkList
+        workspace={workspace}
+        sources={[]}
+        onPackage={vi.fn()}
+        onModels={vi.fn()}
+        onRecheck={vi.fn()}
+        onReport={vi.fn()}
+        onProject={vi.fn()}
+        onTab={vi.fn()}
+      />
+    </QueryClientProvider>,
+  );
+  const needs = within(
+    screen.getByRole("region", { name: "需要处理" }),
+  ).getByRole("button");
+  const done = within(
+    screen.getByRole("region", { name: "最近完成" }),
+  ).getAllByRole("button");
+  needs.focus();
+  fireEvent.keyDown(needs, { key: "End" });
+  expect(done.at(-1)).toHaveFocus();
+  expect(
+    screen.queryByRole("complementary", { name: "所选工作事项" }),
+  ).toBeNull();
+  fireEvent.keyDown(done.at(-1)!, { key: "Home" });
+  expect(needs).toHaveFocus();
+  fireEvent.click(needs);
+  const target = done[0];
+  fireEvent.keyDown(needs, { key: "ArrowDown" });
+  expect(target).toHaveFocus();
+  expect(target).toHaveAttribute("aria-pressed", "true");
+  expect(
+    screen.getByRole("complementary", { name: "所选工作事项" }),
+  ).toHaveTextContent("WP-100");
+  const outside = screen.getByRole("button", { name: "Outside action" });
+  outside.focus();
+  fireEvent.pointerDown(outside);
+  expect(outside).toHaveFocus();
+  expect(
+    screen.queryByRole("complementary", { name: "所选工作事项" }),
+  ).toBeNull();
+  expect(target).toHaveAttribute("aria-pressed", "true");
 });

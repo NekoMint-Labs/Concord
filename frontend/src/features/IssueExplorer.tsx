@@ -15,7 +15,6 @@ export function IssueExplorer({
   selectedIssue,
   onElementSelected,
   onIssueSelected,
-  perform: _perform,
 }: {
   project: string;
   workspace: Workspace;
@@ -27,7 +26,6 @@ export function IssueExplorer({
   selectedIssue?: string;
   onElementSelected?: (id: string) => void;
   onIssueSelected?: (id: string) => void;
-  perform: (operation: () => Promise<unknown>) => Promise<void>;
 }) {
   const issues =
     workspace.analysis?.constraints.filter((item) => item.blocking) ?? [];
@@ -84,6 +82,8 @@ export function IssueExplorer({
           onIssueResolution={(id) => {
             const issue = issues.find((entry) => entry.id === id);
             if (issue) onSelectWorkPackage?.(issue.work_package_id);
+            // Package navigation clears spatial selection; keep this explicit issue.
+            onIssueSelected?.(id);
             onResolve?.(id);
           }}
           impacted={impacted}

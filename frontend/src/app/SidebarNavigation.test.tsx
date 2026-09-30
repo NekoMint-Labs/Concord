@@ -192,9 +192,76 @@ it("labels work-package creation as an explicit sidebar action", () => {
     />,
   );
 
+  fireEvent.click(screen.getByRole("button", { name: "浏览工作包与模型" }));
   fireEvent.change(screen.getByPlaceholderText("搜索工作包"), {
     target: { value: "风管" },
   });
   fireEvent.click(screen.getByRole("button", { name: "新建工作包" }));
   expect(onStructure).toHaveBeenCalledOnce();
+});
+
+it("returns browser dismissal and activation focus to Browse, but preserves outside pointer focus", () => {
+  const onSelect = vi.fn();
+  const onTab = vi.fn();
+  render(
+    <>
+      <input aria-label="Outside search" />
+      <ProjectSidebar
+        data={data}
+        project="harbor-east"
+        projects={projects}
+        selected="WP-200"
+        onCollapse={vi.fn()}
+        onProject={vi.fn()}
+        onSelect={onSelect}
+        onTab={onTab}
+        sources={[
+          {
+            source: {
+              id: "model-1",
+              project_id: "harbor-east",
+              name: "MEP model",
+              kind: "BIM",
+              created_at: "2026-01-01T00:00:00Z",
+            },
+            latest_revision_id: "r1",
+            accepted_revision_id: "r1",
+            baseline_id: "b1",
+            has_pending_revision: false,
+          },
+        ]}
+      />
+    </>,
+  );
+  const browse = screen.getByRole("button", { name: "浏览工作包与模型" });
+  fireEvent.click(browse);
+  const search = screen.getByRole("searchbox", { name: "搜索工作包" });
+  search.focus();
+  fireEvent.keyDown(search, { key: "Escape" });
+  expect(browse).toHaveAttribute("aria-expanded", "false");
+  expect(browse).toHaveFocus();
+  expect(screen.queryByRole("navigation", { name: "工作包" })).toBeNull();
+  fireEvent.click(browse);
+  const packageButton = within(
+    screen.getByRole("navigation", { name: "工作包" }),
+  ).getByRole("button", { name: /东翼风管安装/ });
+  packageButton.focus();
+  fireEvent.click(packageButton);
+  expect(onSelect).toHaveBeenCalledWith("WP-200");
+  expect(browse).toHaveFocus();
+  expect(browse).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(browse);
+  const model = within(
+    screen.getByRole("navigation", { name: "项目模型" }),
+  ).getByRole("button", { name: /MEP model/ });
+  model.focus();
+  fireEvent.click(model);
+  expect(onTab).toHaveBeenCalledWith("bim");
+  expect(browse).toHaveFocus();
+  fireEvent.click(browse);
+  const outside = screen.getByRole("textbox", { name: "Outside search" });
+  outside.focus();
+  fireEvent.pointerDown(outside);
+  expect(browse).toHaveAttribute("aria-expanded", "false");
+  expect(outside).toHaveFocus();
 });

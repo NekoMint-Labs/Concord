@@ -1,4 +1,6 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode, type ComponentProps } from "react";
+import { proposalRejected } from "../features/proposalState";
+import { scopeFor } from "../features/agentContext";
 import { Plus } from "lucide-react";
 import type {
   AgentRun,
@@ -26,7 +28,6 @@ import { WorkList } from "../features/WorkList";
 import { ProjectHome } from "./ProjectHome";
 import { ChangeExplorer } from "../features/ChangeExplorer";
 import { IssueExplorer } from "../features/IssueExplorer";
-import { InvestigationWorkspace } from "../features/InvestigationWorkspace";
 import { WorkPackageModelContext } from "../features/WorkPackageModelContext";
 import { Inspector } from "../features/Inspector";
 import {
@@ -91,6 +92,14 @@ export function WorkspaceViews({
   onInvestigateSource,
   onInvestigateBim,
   onInspectImpact,
+  projectSourceId,
+  onProjectSourceSelected,
+  onLinkBim,
+  onInvestigateWorkPackage,
+  onInvestigateWork,
+  investigationProgress,
+  investigationError,
+  onRetryInvestigation,
 }: {
   project: string;
   data: Workspace;
@@ -152,6 +161,14 @@ export function WorkspaceViews({
     fromRevisionId?: string,
   ) => void;
   onInspectImpact: (workPackageId: string, context: BimMappingContext) => void;
+  projectSourceId?: string;
+  onProjectSourceSelected?: (id: string) => void;
+  onLinkBim?: () => void;
+  onInvestigateWorkPackage?: (id: string) => void;
+  onInvestigateWork?: ComponentProps<typeof WorkList>["onInvestigate"];
+  investigationProgress?: ReactNode;
+  investigationError?: string;
+  onRetryInvestigation?: () => void;
 }) {
   /*
    * The pane budget: the Inspector is what the user just opened, so it always
@@ -162,6 +179,22 @@ export function WorkspaceViews({
   const width = usePaneWidth();
   const condensed = condensedFor(width, detailsOpen);
   const stackedInspector = detailsOpen && width <= 1120;
+  const openWorkPackage = (id: string) => {
+    onSelected(id);
+    onTab("coordination");
+  };
+  const reportProposal =
+    report &&
+    data.analysis?.id === report.analysis_id &&
+    data.analysis_run?.id === report.run_id &&
+    data.analysis_run.generation === report.generation
+      ? data.proposals.find(
+          (proposal) =>
+            proposal.run_id === report.run_id &&
+            proposal.generation === report.generation &&
+            !proposalRejected(data, proposal.id),
+        )
+      : undefined;
   const openInvestigation = () => {
     onInspectorView("investigation");
     onDetailsOpen(true);
@@ -193,116 +226,159 @@ export function WorkspaceViews({
                 />
               }
             >
-              {detailsOpen && inspectorView === "investigation" ? (
-                <InvestigationWorkspace
-                  project={project}
-                  context={investigationContext}
-                  report={report}
-                />
-              ) : (
-                <>
-                  {tab === "work" && (
-                    <WorkList
-                      workspace={data}
-                      sources={modelSources}
-                      report={report}
-                      onPackage={(id) => {
-                        onSelected(id);
-                        onTab("coordination");
-                      }}
-                      onModels={() => onTab("sources")}
-                      onRecheck={onRecheck}
-                      onReport={openInvestigation}
-                      onProject={() => onTab("project")}
-                      onTab={onTab}
-                    />
-                  )}
-                  {tab === "project" && (
-                    <ProjectHome
-                      workspace={data}
-                      sources={modelSources}
-                      onTab={onTab}
-                      onPackage={(id) => {
-                        onSelected(id);
-                        onTab("coordination");
-                      }}
-                    />
-                  )}
-                  {tab === "work-packages" && (
-                    <section className="project-home" aria-label="项目工作包">
-                      <header>
-                        <h1>工作包</h1>
-                        {!!data.state.work_packages.length && (
-                          <Button onClick={onStructure}>
-                            <Plus {...icon} /> 新建工作包
-                          </Button>
-                        )}
-                      </header>
-                      <div className="work-rows">
-                        {data.state.work_packages.map((wp) => (
-                          <button
-                            type="button"
-                            className="work-row"
-                            key={wp.id}
-                            onClick={() => {
-                              onSelected(wp.id);
-                              onTab("coordination");
-                            }}
-                          >
-                            <strong>
-                              {demoWorkPackageName(wp.id, wp.name)}
-                            </strong>
-                            <span>
-                              {demoDiscipline(wp.discipline)} · 查看详情 →
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                      {!data.state.work_packages.length && (
-                        <EmptyWorkPackages onCreate={onStructure} />
+              <>
+                {tab === "work" && (
+                  <WorkList
+                    workspace={data}
+                    sources={modelSources}
+                    report={report}
+                    run={run}
+                    onSource={(sourceId) => {
+                      onProjectSourceSelected?.(sourceId);
+                      onTab("project");
+                    }}
+                    onInvestigate={
+                      onInvestigateWork ??
+                      ((context) => {
+                        onSourceContext?.(
+                          context.sourceId,
+                          context.revisionId,
+                          context.revisionLabel,
+                          context.fromRevisionId,
+                          context.fromRevisionLabel,
+                        );
+                        onInvestigateSource?.(
+                          context.sourceId,
+                          context.revisionId,
+                          context.fromRevisionId,
+                        );
+                      })
+                    }
+                    onPackage={openWorkPackage}
+                    onModels={() => onTab("sources")}
+                    onRecheck={onRecheck}
+                    onReport={openInvestigation}
+                    onProject={() => onTab("project")}
+                    onTab={onTab}
+                  />
+                )}
+                {tab === "project" && (
+                  <ProjectHome
+                    workspace={data}
+                    sources={modelSources}
+                    selected={selected}
+                    onStructure={onStructure}
+                    onTab={onTab}
+                    onPackage={openWorkPackage}
+                    sourceId={projectSourceId}
+                    onSourceSelected={onProjectSourceSelected}
+                    sourceContext={{
+                      onRun: onAgentRun,
+                      onContext: onSourceContext,
+                      onInvestigate: onInvestigateSource,
+                      onInspectImpact,
+                      onOpenInvestigation: openInvestigation,
+                      report,
+                      investigation: {
+                        scope: scopeFor(investigationContext),
+                        run:
+                          run?.category === "investigation" ? run : undefined,
+                        error: investigationError,
+                        progress: investigationProgress,
+                        onRetry: onRetryInvestigation,
+                      },
+                    }}
+                  />
+                )}
+                {tab === "work-packages" && (
+                  <section className="project-home" aria-label="项目工作包">
+                    <header>
+                      <h1>工作包</h1>
+                      {!!data.state.work_packages.length && (
+                        <Button onClick={onStructure}>
+                          <Plus {...icon} /> 新建工作包
+                        </Button>
                       )}
-                    </section>
-                  )}
-                  {tab === "coordination" && !selected && (
-                    <EmptyWorkPackages onCreate={onStructure} />
-                  )}
-                  {tab === "coordination" && !!selected && (
-                    <>
-                      {report?.scope.work_package_ids.includes(selected) && (
-                        <section className="context-agent-result workspace-agent-result">
-                          <span className="eyebrow">工程调查</span>
-                          <strong>调查结果已保存到当前工作包</strong>
-                          <div className="context-agent-result-footer">
-                            <small>
-                              {report.evidence.length} 条判断依据 ·{" "}
-                              {report.tools.length} 个调查步骤
-                            </small>
+                    </header>
+                    <div className="work-rows">
+                      {data.state.work_packages.map((wp) => (
+                        <button
+                          type="button"
+                          className="work-row"
+                          key={wp.id}
+                          onClick={() => openWorkPackage(wp.id)}
+                        >
+                          <strong>{demoWorkPackageName(wp.id, wp.name)}</strong>
+                          <span>
+                            {demoDiscipline(wp.discipline)} · 查看详情 →
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    {!data.state.work_packages.length && (
+                      <EmptyWorkPackages onCreate={onStructure} />
+                    )}
+                  </section>
+                )}
+                {tab === "coordination" && !selected && (
+                  <EmptyWorkPackages onCreate={onStructure} />
+                )}
+                {tab === "coordination" && !!selected && (
+                  <>
+                    {report?.scope.work_package_ids.includes(selected) && (
+                      <section className="context-agent-result workspace-agent-result">
+                        <span className="eyebrow">工程调查</span>
+                        <strong>调查结果已保存到当前工作包</strong>
+                        <div className="context-agent-result-footer">
+                          <small>
+                            {report.evidence.length} 条判断依据 ·{" "}
+                            {report.tools.length} 个调查步骤
+                          </small>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={openInvestigation}
+                          >
+                            查看调查结果
+                          </Button>
+                        </div>
+                      </section>
+                    )}
+                    <CoordinationWorkspace
+                      workspace={data}
+                      surface="coordination"
+                      selected={selected}
+                      busy={busy}
+                      pendingModel={!!modelSource?.has_pending_revision}
+                      onRecheck={onRecheck}
+                      onDetails={(view) => {
+                        onInspectorView(view);
+                        onDetailsOpen(true);
+                      }}
+                      onImpact={() => onTab("impact")}
+                      onModel={() => onTab("bim")}
+                      onIssues={() => onTab("packages")}
+                      onDocuments={() => onTab("documents")}
+                      modelContext={
+                        <>
+                          <div className="source-heading-actions">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={onLinkBim}
+                            >
+                              关联 BIM
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={openInvestigation}
+                              onClick={() =>
+                                onInvestigateWorkPackage?.(selected)
+                              }
                             >
-                              查看调查结果
+                              调查工作包
                             </Button>
                           </div>
-                        </section>
-                      )}
-                      <CoordinationWorkspace
-                        workspace={data}
-                        surface="coordination"
-                        selected={selected}
-                        busy={busy}
-                        pendingModel={!!modelSource?.has_pending_revision}
-                        onRecheck={onRecheck}
-                        onDetails={(view) => {
-                          onInspectorView(view);
-                          onDetailsOpen(true);
-                        }}
-                        onImpact={() => onTab("impact")}
-                        onModel={() => onTab("bim")}
-                        onIssues={() => onTab("packages")}
-                        onDocuments={() => onTab("documents")}
-                        modelContext={
                           <WorkPackageModelContext
                             project={project}
                             workPackageId={selected}
@@ -321,169 +397,179 @@ export function WorkspaceViews({
                               )?.design_revision ??
                               "—"
                             }
-                            onOpenModel={(id) => {
-                              if (id) onElementSelected(id);
-                              onTab("bim");
+                            onOpenModel={(id, context) => {
+                              if (context)
+                                onInspectImpact(selected, {
+                                  ...context,
+                                  highlightIds: id
+                                    ? [id]
+                                    : context.highlightIds,
+                                });
+                              else {
+                                if (id) onElementSelected(id);
+                                onTab("bim");
+                              }
                             }}
                             onModels={() => onTab("sources")}
-                            onChanges={() => onTab("impact")}
+                            onChanges={(context) =>
+                              context
+                                ? onInspectImpact(selected, context)
+                                : onTab("impact")
+                            }
                           />
-                        }
-                      />
-                    </>
-                  )}
-                  {tab === "operations" && (
-                    <Operations project={project} perform={perform} />
-                  )}
-                  {tab === "impact" && (
-                    <ChangeExplorer
-                      project={project}
-                      workspace={data}
-                      initialElement={selectedElement}
-                      onElementSelected={onElementSelected}
-                      localFile={localIfcFile}
-                      onLocalFile={onLocalIfcFile}
-                      onModels={() => onTab("sources")}
-                      onInvestigate={(
+                        </>
+                      }
+                    />
+                  </>
+                )}
+                {tab === "operations" && (
+                  <Operations project={project} perform={perform} />
+                )}
+                {tab === "impact" && (
+                  <ChangeExplorer
+                    project={project}
+                    workspace={data}
+                    initialElement={selectedElement}
+                    onElementSelected={onElementSelected}
+                    localFile={localIfcFile}
+                    onLocalFile={onLocalIfcFile}
+                    onModels={() => onTab("sources")}
+                    onInvestigate={(
+                      sourceId,
+                      revisionId,
+                      fromRevisionId,
+                      ids,
+                    ) =>
+                      onInvestigateSource(
                         sourceId,
                         revisionId,
                         fromRevisionId,
                         ids,
-                      ) =>
-                        onInvestigateSource(
-                          sourceId,
-                          revisionId,
-                          fromRevisionId,
-                          ids,
-                        )
-                      }
-                      onInspect={(
-                        workPackageId,
+                      )
+                    }
+                    onInspect={(workPackageId, sourceId, comparison, change) =>
+                      onInspectImpact(workPackageId, {
                         sourceId,
-                        comparison,
-                        change,
-                      ) =>
-                        onInspectImpact(workPackageId, {
-                          sourceId,
-                          fromRevisionId: comparison.from_revision_id,
-                          revisionId: comparison.to_revision_id,
-                          highlightIds: [change.global_id],
-                          changes: [change],
-                        })
-                      }
-                    />
-                  )}
-                  {tab === "packages" && (
-                    <IssueExplorer
-                      project={project}
-                      workspace={data}
-                      selectedElement={selectedElement}
-                      selectedIssue={selectedSpatialIssue}
-                      onElementSelected={onElementSelected}
-                      onIssueSelected={onSpatialIssueSelected}
-                      localFile={localIfcFile}
-                      onLocalFile={onLocalIfcFile}
-                      onResolve={onConstraint}
-                      onSelectWorkPackage={onSelected}
-                      perform={perform}
-                    />
-                  )}
-                  {tab === "documents" && (
-                    <Documents
-                      project={project}
-                      perform={perform}
-                      condensed={condensed}
-                    />
-                  )}
-                  {tab === "capabilities" && <Capabilities />}
-                  {(tab === "sources" || tab === "history") && (
-                    <ProjectSources
-                      project={project}
-                      historyOnly={tab === "history"}
-                      workPackages={data.state.work_packages}
-                      report={report}
-                      onContext={onSourceContext}
-                      onRun={onAgentRun}
-                      onInvestigate={onInvestigateSource}
-                      onInspectImpact={onInspectImpact}
-                      onOpenInvestigation={openInvestigation}
-                      readyForNewBaseline={
-                        !!data.analysis &&
-                        !data.stale &&
-                        data.state.work_packages.every((item) =>
-                          data.analysis?.readiness.some(
-                            (entry) =>
-                              entry.work_package_id === item.id &&
-                              entry.status === "READY",
-                          ),
-                        )
-                      }
-                      lastCheckAt={data.analysis?.snapshot.captured_at}
-                      checkFailed={data.analysis_run?.status === "FAILED"}
-                      onRecheck={onRecheck}
-                      onWorkPackage={() => onTab("coordination")}
-                      onChanges={() => onTab("impact")}
-                    />
-                  )}
-                  {tab === "bim" && mappingMode && !!selected && (
-                    <BimMappingWorkspace
-                      project={project}
-                      workPackageId={selected}
-                      initial={mappingContext}
-                      report={report}
-                      condensed={condensed}
-                      onContext={onBimContext}
-                      onInvestigate={onInvestigateBim}
-                      onOpenInvestigation={openInvestigation}
-                      onWorkPackage={() => onTab("coordination")}
-                      onModels={() => onTab("sources")}
-                    />
-                  )}
-                  {tab === "bim" && !mappingMode && (
-                    <BIMWorkspace
-                      project={project}
-                      impacted={data.analysis?.impact.element_ids ?? []}
-                      focusId={selectedElement || undefined}
-                      onViewerSelected={onElementSelected}
-                      selectedIssueId={selectedSpatialIssue}
-                      onIssueSelected={onSpatialIssueSelected}
-                      onInvestigate={
-                        modelSource?.latest_revision_id
-                          ? (id) =>
-                              onInvestigateBim(
-                                modelSource.source.id,
-                                modelSource.latest_revision_id!,
-                                [id],
-                              )
-                          : undefined
-                      }
-                      localFile={localIfcFile}
-                      onLocalFile={onLocalIfcFile}
-                      autoProjectModel
-                      workspace={data}
-                      issues={
-                        data.analysis?.constraints.filter(
-                          (item) => item.blocking,
-                        ) ?? []
-                      }
-                      onModels={() => onTab("sources")}
-                      onNavigate={onTab}
-                      onWorkPackage={(id) => {
-                        onSelected(id);
-                        onTab("coordination");
-                      }}
-                      condensed={condensed}
-                    />
-                  )}
-                  {tab === "gis" && (
-                    <GISWorkspace
-                      project={project}
-                      selected={selected}
-                      onSelected={onSelected}
-                    />
-                  )}
-                </>
-              )}
+                        fromRevisionId: comparison.from_revision_id,
+                        revisionId: comparison.to_revision_id,
+                        highlightIds: [change.global_id],
+                        changes: [change],
+                      })
+                    }
+                  />
+                )}
+                {tab === "packages" && (
+                  <IssueExplorer
+                    project={project}
+                    workspace={data}
+                    selectedElement={selectedElement}
+                    selectedIssue={selectedSpatialIssue}
+                    onElementSelected={onElementSelected}
+                    onIssueSelected={onSpatialIssueSelected}
+                    localFile={localIfcFile}
+                    onLocalFile={onLocalIfcFile}
+                    onResolve={onConstraint}
+                    onSelectWorkPackage={onSelected}
+                  />
+                )}
+                {tab === "documents" && (
+                  <Documents
+                    project={project}
+                    perform={perform}
+                    condensed={condensed}
+                  />
+                )}
+                {tab === "capabilities" && <Capabilities />}
+                {(tab === "sources" || tab === "history") && (
+                  <ProjectSources
+                    project={project}
+                    historyOnly={tab === "history"}
+                    workPackages={data.state.work_packages}
+                    report={report}
+                    onContext={onSourceContext}
+                    onRun={onAgentRun}
+                    onInvestigate={onInvestigateSource}
+                    onInspectImpact={onInspectImpact}
+                    onOpenInvestigation={openInvestigation}
+                    readyForNewBaseline={
+                      !!data.analysis &&
+                      !data.stale &&
+                      data.state.work_packages.every((item) =>
+                        data.analysis?.readiness.some(
+                          (entry) =>
+                            entry.work_package_id === item.id &&
+                            entry.status === "READY",
+                        ),
+                      )
+                    }
+                    lastCheckAt={data.analysis?.snapshot.captured_at}
+                    checkFailed={data.analysis_run?.status === "FAILED"}
+                    onRecheck={onRecheck}
+                    onWorkPackage={() => onTab("coordination")}
+                    onChanges={() => onTab("impact")}
+                  />
+                )}
+                {tab === "bim" && mappingMode && !!selected && (
+                  <BimMappingWorkspace
+                    project={project}
+                    workspace={data}
+                    workPackageId={selected}
+                    investigationProgress={
+                      investigationContext.workPackageId === selected
+                        ? investigationProgress
+                        : undefined
+                    }
+                    initial={mappingContext}
+                    report={report}
+                    condensed={condensed}
+                    onContext={onBimContext}
+                    onInvestigate={onInvestigateBim}
+                    onOpenInvestigation={openInvestigation}
+                    onWorkPackage={() => onTab("coordination")}
+                    onModels={() => onTab("sources")}
+                  />
+                )}
+                {tab === "bim" && !mappingMode && (
+                  <BIMWorkspace
+                    project={project}
+                    impacted={data.analysis?.impact.element_ids ?? []}
+                    focusId={selectedElement || undefined}
+                    onViewerSelected={onElementSelected}
+                    selectedIssueId={selectedSpatialIssue}
+                    onIssueSelected={onSpatialIssueSelected}
+                    onInvestigate={
+                      modelSource?.latest_revision_id
+                        ? (id) =>
+                            onInvestigateBim(
+                              modelSource.source.id,
+                              modelSource.latest_revision_id!,
+                              [id],
+                            )
+                        : undefined
+                    }
+                    localFile={localIfcFile}
+                    onLocalFile={onLocalIfcFile}
+                    autoProjectModel
+                    workspace={data}
+                    issues={
+                      data.analysis?.constraints.filter(
+                        (item) => item.blocking,
+                      ) ?? []
+                    }
+                    onModels={() => onTab("sources")}
+                    onNavigate={onTab}
+                    onWorkPackage={openWorkPackage}
+                    condensed={condensed}
+                  />
+                )}
+                {tab === "gis" && (
+                  <GISWorkspace
+                    project={project}
+                    selected={selected}
+                    onSelected={onSelected}
+                  />
+                )}
+              </>
             </Suspense>
           </ViewerBoundary>
         </Pane>
@@ -508,19 +594,13 @@ export function WorkspaceViews({
                   report={report}
                   run={run}
                   context={investigationContext}
-                  proposal={data.proposals.find((item) =>
-                    report?.scope.work_package_ids.includes(
-                      item.work_package_id,
-                    ),
-                  )}
+                  proposal={reportProposal}
                   onReview={() => {
-                    const workPackage = data.proposals.find((item) =>
-                      report?.scope.work_package_ids.includes(
-                        item.work_package_id,
-                      ),
-                    );
-                    if (workPackage) onSelected(workPackage.work_package_id);
+                    if (!reportProposal) return;
+                    onSelected(reportProposal.work_package_id);
+                    onTab("coordination");
                     onInspectorView("action");
+                    onDetailsOpen(true);
                   }}
                   onClose={() => onDetailsOpen(false)}
                 />

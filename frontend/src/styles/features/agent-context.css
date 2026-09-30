@@ -1,0 +1,41 @@
+.agent-run-failure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agent-run-timeline,
+.investigation-activity ol {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-run-timeline li,
+.investigation-activity li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+
+.agent-run-timeline small,
+.investigation-activity small {
+  overflow: hidden;
+  color: var(--ink-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.investigation-activity {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.investigation-activity h4 {
+  margin: 0;
+}

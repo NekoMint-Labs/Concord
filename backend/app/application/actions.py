@@ -1,6 +1,6 @@
 from app.application.analysis import AnalysisService
 from app.application.streaming import custom, emit
-from app.domain.actions import ActionExecution, Approval, AuditRecord, Principal
+from app.domain.actions import ActionExecution, ActionProposal, Approval, AuditRecord, Principal
 from app.domain.errors import Conflict, DomainError, PermissionDenied, StaleSnapshotError
 from app.domain.runs import TERMINAL_STATUSES
 from app.policies.actions import (
@@ -28,6 +28,7 @@ class ActionService:
             proposal = repo.proposal(proposal_id)
         with self.factory.open(proposal.project_id, write=True) as repo:
             proposal = repo.proposal(proposal_id)
+            self._check_not_rejected(repo, proposal)
             check_business_rules(proposal)
             run = repo.run(proposal.run_id)
             check_proposal_generation(proposal, run)
@@ -80,10 +81,50 @@ class ActionService:
             )
             return approval
 
+    def reject(self, proposal_id: str, principal: Principal, reason: str = "") -> AuditRecord:
+        require(principal, "approve")
+        with self.factory.open() as repo:
+            proposal = repo.proposal(proposal_id)
+        with self.factory.open(proposal.project_id, write=True) as repo:
+            proposal = repo.proposal(proposal_id)
+            run = repo.run(proposal.run_id)
+            check_proposal_generation(proposal, run)
+            if run.status in TERMINAL_STATUSES:
+                raise Conflict("Run is no longer awaiting approval")
+            check_fresh(repo.snapshot(proposal.snapshot_id), repo.state(proposal.project_id))
+            if repo.execution(proposal.operation_id):
+                raise Conflict("Executed proposals cannot be rejected")
+            previous = self._proposal_rejection(repo, proposal)
+            if previous is not None:
+                return previous
+            record = AuditRecord(
+                project_id=proposal.project_id,
+                action="ACTION_PROPOSAL_REJECTED",
+                actor=principal.id,
+                run_id=proposal.run_id,
+                snapshot_id=proposal.snapshot_id,
+                operation_id=proposal.operation_id,
+                detail={
+                    "proposal_id": proposal.id,
+                    "work_package_id": proposal.work_package_id,
+                    "generation": proposal.generation,
+                    "reason": reason,
+                },
+            )
+            repo.audit(record)
+            custom(
+                repo,
+                proposal.run_id,
+                "action-rejected",
+                {"proposal_id": proposal.id, "work_package_id": proposal.work_package_id},
+            )
+            return record
+
     def authorize_execution(self, proposal_id: str, principal: Principal) -> int:
         require(principal, "execute")
         with self.factory.open() as repo:
             proposal = repo.proposal(proposal_id)
+            self._check_not_rejected(repo, proposal)
             check_business_rules(proposal)
             # Bind this authorization to the generation observed here, never to
             # a later post-authorization read in the HTTP dispatch path.
@@ -121,22 +162,23 @@ class ActionService:
             return receipt
         except DomainError as exc:
             with self.factory.open(proposal.project_id, write=True) as repo:
-                repo.audit(
-                    AuditRecord(
-                        project_id=proposal.project_id,
-                        action="ACTION_REJECTED",
-                        actor=principal.id,
-                        run_id=proposal.run_id,
-                        operation_id=proposal.operation_id,
-                        detail={"code": exc.code},
+                if self._proposal_rejection(repo, proposal) is None:
+                    repo.audit(
+                        AuditRecord(
+                            project_id=proposal.project_id,
+                            action="ACTION_REJECTED",
+                            actor=principal.id,
+                            run_id=proposal.run_id,
+                            operation_id=proposal.operation_id,
+                            detail={"code": exc.code},
+                        )
                     )
-                )
-                custom(
-                    repo,
-                    proposal.run_id,
-                    "action-rejected",
-                    {"code": exc.code, "proposal_id": proposal_id},
-                )
+                    custom(
+                        repo,
+                        proposal.run_id,
+                        "action-rejected",
+                        {"code": exc.code, "proposal_id": proposal_id},
+                    )
             if isinstance(exc, StaleSnapshotError):
                 self.analysis.analyze(proposal.run_id, generation=generation)
             raise
@@ -151,6 +193,7 @@ class ActionService:
     ) -> ActionExecution:
         with self.factory.open(project_id, write=True) as repo:
             proposal = repo.proposal(proposal_id)
+            self._check_not_rejected(repo, proposal)
             # Completed operations return their original receipt, not a second side effect.
             check_business_rules(proposal)
             receipt = repo.execution(proposal.operation_id)
@@ -205,3 +248,19 @@ class ActionService:
             custom(repo, run.id, "action-result", receipt.model_dump(mode="json"))
             emit(repo, run.id, "STEP_FINISHED", stepName="execute-and-verify")
         return receipt
+
+    @staticmethod
+    def _proposal_rejection(repo, proposal: ActionProposal) -> AuditRecord | None:
+        for record in repo.audits(proposal.project_id):
+            if (
+                record.action == "ACTION_PROPOSAL_REJECTED"
+                and record.operation_id == proposal.operation_id
+                and record.detail.get("proposal_id") == proposal.id
+            ):
+                return record
+        return None
+
+    @classmethod
+    def _check_not_rejected(cls, repo, proposal: ActionProposal) -> None:
+        if cls._proposal_rejection(repo, proposal) is not None:
+            raise Conflict("Proposal has been rejected")

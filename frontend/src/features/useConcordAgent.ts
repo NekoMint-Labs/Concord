@@ -1,47 +1,53 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type AgentRun, type ProjectSourceStatus } from "../api/client";
+import {
+  api,
+  type AgentRun,
+  type ProjectSourceStatus,
+  type WorkPackage,
+} from "../api/client";
 import type { ConcordContext } from "./ConcordAgent";
+import {
+  reportMatchesRun,
+  runIsActive,
+  scopeFor,
+  type AgentContext,
+} from "./agentContext";
 
-/** Owns current Agent operation identity and real workspace scope. */
+/** One launcher for the header, sources, Work and model selections. */
 export function useConcordAgent({
   project,
   projectName,
   workPackageId,
   workPackageName,
   sources,
+  workPackages = [],
 }: {
   project: string;
   projectName: string;
   workPackageId?: string;
   workPackageName?: string;
   sources?: ProjectSourceStatus[];
+  workPackages?: WorkPackage[];
 }) {
   const cache = useQueryClient();
+  const fence = useRef({ project, attempt: 0 });
+  if (fence.current.project !== project)
+    fence.current = { project, attempt: fence.current.attempt + 1 };
   const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
   const [scope, setScope] = useState<
-    Pick<
-      ConcordContext,
-      | "sourceId"
-      | "sourceName"
-      | "fromRevisionId"
-      | "fromRevisionLabel"
-      | "revisionId"
-      | "revisionLabel"
-      | "elementIds"
-    >
+    AgentContext & { workPackageId?: string | null }
   >({ elementIds: [] });
-  const [activeRun, setActiveRun] = useState<{
-    id: string;
-    generation: number;
-    category: AgentRun["category"];
-    project: string;
+  const [active, setActive] = useState<{
+    run: AgentRun;
+    context?: AgentContext;
   }>();
-
   useEffect(() => {
     setScope({ elementIds: [] });
-    setActiveRun(undefined);
+    setActive(undefined);
     setError("");
+    setPending(false);
   }, [project]);
 
   const history = useQuery({
@@ -49,75 +55,147 @@ export function useConcordAgent({
     queryFn: () => api.runs(project),
     enabled: !!project,
   });
-  // The runs endpoint returns newest first; a saved report survives a browser restart.
-  const recentRun = history.data?.find(
-    (run) => run.category === "investigation",
-  );
-  const recent = recentRun
-    ? {
-        id: recentRun.id,
-        category: recentRun.category,
-        generation: recentRun.generation,
-        project,
-      }
-    : undefined;
-  const shownRun = activeRun?.project === project ? activeRun : recent;
+  const recent = history.data
+    ?.filter(
+      (run) => run.project_id === project && run.category === "investigation",
+    )
+    .slice()
+    .sort((left, right) => right.created_at.localeCompare(left.created_at))[0];
+  const remembered = active?.run.project_id === project ? active : undefined;
+  const shownRun = remembered?.run ?? recent;
   const currentRun = useQuery({
-    queryKey: [
-      "current-operation-run",
-      shownRun?.project,
-      shownRun?.id,
-      shownRun?.generation,
-    ],
+    queryKey: ["current-operation-run", project, shownRun?.id],
     queryFn: () => api.run(shownRun!.id),
     enabled: !!shownRun,
-    refetchInterval: (query) =>
-      ["QUEUED", "RUNNING"].includes(query.state.data?.status ?? "")
-        ? 1200
-        : false,
+    initialData: shownRun,
+    refetchInterval: (query) => (runIsActive(query.state.data) ? 1200 : false),
   });
-  const investigation = useQuery({
+  const run =
+    currentRun.data?.project_id === project &&
+    currentRun.data.id === shownRun?.id
+      ? currentRun.data
+      : undefined;
+  const reportQuery = useQuery({
     queryKey: [
       "investigation-report",
       project,
-      shownRun?.id,
-      currentRun.data?.generation,
+      run?.id,
+      run?.generation,
+      run?.analysis_id,
     ],
-    queryFn: () => api.investigation(project, shownRun!.id),
-    enabled: !!shownRun && shownRun.category === "investigation",
+    queryFn: () => api.investigation(project, run!.id),
+    enabled: !!run && run.category === "investigation",
     refetchInterval: (query) =>
-      query.state.data ||
-      !["QUEUED", "RUNNING"].includes(currentRun.data?.status ?? "")
-        ? false
-        : 1200,
+      runIsActive(run) ||
+      (!!run?.analysis_id && !reportMatchesRun(query.state.data, run))
+        ? 1200
+        : false,
   });
+  const report = reportMatchesRun(reportQuery.data, run)
+    ? reportQuery.data
+    : undefined;
 
   useEffect(() => {
-    if (currentRun.data?.status !== "COMPLETED") return;
+    if (!run?.analysis_id) return;
     for (const key of [
       "workspace",
       "sources",
       "bim-snapshot",
       "bim-bindings",
       "comparisons",
+      "comparison",
+      "runs",
     ]) {
       void cache.invalidateQueries({ queryKey: [key, project] });
     }
-  }, [cache, currentRun.data?.status, project]);
+  }, [cache, project, run?.id, run?.generation, run?.analysis_id, run?.status]);
 
   const rememberRun = useCallback(
-    (run: AgentRun) => {
-      setActiveRun({
-        id: run.id,
-        generation: run.generation,
-        category: run.category,
-        project,
-      });
+    (next: AgentRun) => {
+      if (fence.current.project !== project || next.project_id !== project)
+        return;
+      // Externally launched imports/rechecks also supersede an in-flight investigation.
+      fence.current.attempt++;
+      setActive({ run: next });
       setError("");
+      setPending(false);
       void cache.invalidateQueries({ queryKey: ["runs", project] });
+      void cache.invalidateQueries({
+        queryKey: ["current-operation-run", project, next.id],
+      });
     },
     [project, cache],
   );
+
+  const context = useMemo<ConcordContext>(
+    () => ({
+      projectName,
+      ...scope,
+      elementIds: scope.elementIds ?? [],
+      workPackageId:
+        scope.workPackageId === null
+          ? undefined
+          : (scope.workPackageId ?? workPackageId),
+      workPackageName:
+        scope.workPackageId === null
+          ? undefined
+          : scope.workPackageId
+            ? workPackages.find((item) => item.id === scope.workPackageId)?.name
+            : workPackageName,
+    }),
+    [projectName, scope, workPackageId, workPackageName, workPackages],
+  );
+
+  const launch = useCallback(
+    async (operation: () => Promise<AgentRun>, submitted?: AgentContext) => {
+      const attempt = ++fence.current.attempt;
+      const current = () =>
+        fence.current.project === project && fence.current.attempt === attempt;
+      setError("");
+      setPending(true);
+      try {
+        const next = await operation();
+        if (!current() || next.project_id !== project) return;
+        setActive({ run: next, context: submitted });
+        await cache.invalidateQueries({ queryKey: ["runs", project] });
+        void cache.invalidateQueries({
+          queryKey: ["current-operation-run", project, next.id],
+        });
+        return next;
+      } catch (cause) {
+        if (current())
+          setError(cause instanceof Error ? cause.message : "调查启动失败");
+      } finally {
+        if (current()) setPending(false);
+      }
+    },
+    [cache, project],
+  );
+  const startInvestigation = useCallback(
+    (instruction: string, submitted: AgentContext = context) =>
+      launch(
+        () =>
+          api.investigate(project, {
+            instruction: instruction.trim(),
+            scope: scopeFor(submitted),
+          }),
+        { ...submitted, elementIds: [...(submitted.elementIds ?? [])] },
+      ),
+    [context, launch, project],
+  );
+  const retryRun = useCallback(
+    (next: AgentRun = run!) => {
+      if (
+        !next ||
+        next.project_id !== project ||
+        !["FAILED", "CANCELLED", "EXPIRED"].includes(next.status)
+      )
+        return Promise.resolve(undefined);
+      return launch(() => api.resume(next.id), remembered?.context);
+    },
+    [launch, project, remembered?.context, run],
+  );
+
   const sourceContext = useCallback(
     (
       sourceId: string,
@@ -126,17 +204,16 @@ export function useConcordAgent({
       fromRevisionId?: string,
       fromRevisionLabel?: string,
     ) => {
-      const source = sources?.find((item) => item.source.id === sourceId);
       setScope({
         sourceId,
-        sourceName: source?.source.name ?? sourceId,
-        fromRevisionId,
-        fromRevisionLabel:
-          fromRevisionLabel ??
-          (fromRevisionId ? fromRevisionId.slice(0, 8) : undefined),
+        sourceName:
+          sources?.find((item) => item.source.id === sourceId)?.source.name ??
+          sourceId,
         revisionId,
-        revisionLabel:
-          revisionLabel ?? (revisionId ? revisionId.slice(0, 8) : undefined),
+        revisionLabel,
+        fromRevisionId,
+        fromRevisionLabel,
+        workPackageId: null,
         elementIds: [],
       });
     },
@@ -151,69 +228,95 @@ export function useConcordAgent({
       revisionLabel?: string,
       fromRevisionLabel?: string,
     ) => {
-      const source = sources?.find((item) => item.source.id === sourceId);
       setScope({
         sourceId,
-        sourceName: source?.source.name ?? sourceId,
-        fromRevisionId,
-        fromRevisionLabel:
-          fromRevisionLabel ??
-          (fromRevisionId ? fromRevisionId.slice(0, 8) : undefined),
+        sourceName:
+          sources?.find((item) => item.source.id === sourceId)?.source.name ??
+          sourceId,
         revisionId,
-        revisionLabel: revisionLabel ?? revisionId.slice(0, 8),
+        revisionLabel,
+        fromRevisionId,
+        fromRevisionLabel,
         elementIds,
       });
     },
     [sources],
   );
-  const startInvestigation = useCallback(
-    async (
-      instruction: string,
-      context: {
-        sourceId?: string;
-        fromRevisionId?: string;
-        revisionId?: string;
-        workPackageId?: string;
-        elementIds?: string[];
-      },
-    ) => {
-      setError("");
-      try {
-        rememberRun(
-          await api.investigate(project, {
-            instruction,
-            scope: {
-              source_id: context.sourceId ?? null,
-              from_revision_id: context.fromRevisionId ?? null,
-              to_revision_id: context.revisionId ?? null,
-              work_package_ids: context.workPackageId
-                ? [context.workPackageId]
-                : [],
-              element_ids: context.elementIds ?? [],
-            },
-          }),
-        );
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "调查启动失败");
+
+  // Resolve saved scope labels from immutable revision metadata, not today's selection.
+  const reportSource = report?.scope.source_id;
+  const revisions = useQuery({
+    queryKey: ["source-revisions", project, reportSource],
+    queryFn: () => api.sourceRevisions(project, reportSource!),
+    enabled: !!reportSource,
+  });
+  const revisionLabel = (id?: string | null) => {
+    const revision = revisions.data?.find((item) => item.id === id);
+    return revision
+      ? `R${revision.sequence}${revision.external_label ? ` · ${revision.external_label}` : ""}`
+      : id?.slice(0, 8);
+  };
+  const reportContext: ConcordContext = report
+    ? {
+        projectName,
+        sourceId: report.scope.source_id ?? undefined,
+        sourceName:
+          sources?.find((item) => item.source.id === report.scope.source_id)
+            ?.source.name ??
+          report.scope.source_id ??
+          undefined,
+        fromRevisionId: report.scope.from_revision_id ?? undefined,
+        fromRevisionLabel: revisionLabel(report.scope.from_revision_id),
+        revisionId: report.scope.to_revision_id ?? undefined,
+        revisionLabel: revisionLabel(report.scope.to_revision_id),
+        workPackageId:
+          report.scope.work_package_ids.length === 1
+            ? report.scope.work_package_ids[0]
+            : undefined,
+        workPackageName:
+          report.scope.work_package_ids
+            .map(
+              (id) =>
+                workPackages.find((item) => item.id === id)?.name ??
+                (id === workPackageId ? workPackageName : undefined) ??
+                id,
+            )
+            .join("、") || undefined,
+        elementIds: report.scope.element_ids,
       }
-    },
-    [project, rememberRun],
-  );
-  const context = useMemo<ConcordContext>(
-    () => ({
-      projectName,
-      ...scope,
-      workPackageId,
-      workPackageName,
-    }),
-    [projectName, scope, workPackageId, workPackageName],
-  );
+    : (() => {
+        const saved =
+          run?.category === "investigation"
+            ? (remembered?.context ?? context)
+            : context;
+        return {
+          projectName,
+          sourceId: saved.sourceId,
+          sourceName: saved.sourceName,
+          fromRevisionId: saved.fromRevisionId,
+          fromRevisionLabel: saved.fromRevisionLabel,
+          revisionId: saved.revisionId,
+          revisionLabel: saved.revisionLabel,
+          workPackageId: saved.workPackageId ?? undefined,
+          workPackageName: saved.workPackageName,
+          elementIds: saved.elementIds ?? [],
+        };
+      })();
 
   return {
-    activeRun: shownRun,
-    currentRun,
-    investigation,
+    activeRun: shownRun
+      ? {
+          id: shownRun.id,
+          generation: run?.generation ?? shownRun.generation,
+          category: shownRun.category,
+          project,
+        }
+      : undefined,
+    currentRun: { ...currentRun, data: run },
+    investigation: { ...reportQuery, data: report },
     context,
+    reportContext,
+    pending,
     error,
     clearError: () => setError(""),
     clearScope: () => setScope({ elementIds: [] }),
@@ -221,5 +324,6 @@ export function useConcordAgent({
     sourceContext,
     bimContext,
     startInvestigation,
+    retryRun,
   };
 }

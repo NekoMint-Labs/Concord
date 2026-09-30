@@ -165,52 +165,6 @@
   height: 27px;
   padding: 0 7px;
 }
-.application-shell .header-search {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 25px;
-  width: clamp(140px, 18vw, 245px);
-  padding: 0 8px;
-  border-radius: 5px;
-  background: var(--concord-header-control);
-  color: var(--concord-search-placeholder);
-}
-.application-shell .header-search input {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font-size: 11px;
-}
-.application-shell .header-search:focus-within {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.application-shell .header-search kbd {
-  font-size: 10px;
-  color: var(--concord-search-hint);
-}
-.application-shell .header-icon {
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border: 0;
-  background: transparent;
-  color: var(--concord-header-icon);
-}
-.application-shell .header-avatar {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--concord-avatar);
-  color: var(--on-primary);
-  font-size: 10px;
-}
 .application-shell .central-workspace {
   background: var(--surface);
 }
@@ -1615,14 +1569,11 @@
   font-weight: 500;
 }
 .application-shell .local-actions > .button,
-.application-shell .header-search input,
 .application-shell .spatial-inspector-tabs button,
 .application-shell .spatial-context-tabs button {
   font-size: 12px;
 }
-.application-shell .spatial-inspector,
-.application-shell .change-inspector,
-.application-shell .issue-detail {
+.application-shell .spatial-inspector {
   background: var(--surface);
   border-left-color: var(--concord-context-divider);
 }

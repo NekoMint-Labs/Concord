@@ -25,8 +25,10 @@ export type SpatialInspectorProps = {
   linkedIssues: DTO<"Constraint">[];
   item?: DTO<"BIMElement">;
   snapshot?: DTO<"BimElementSnapshot">;
+  geometryAvailable?: boolean;
   workPackage?: DTO<"WorkPackage">;
   revisionLabel?: string;
+  fromRevisionLabel?: string;
   sourceName?: string;
   viewFile: File | null;
   viewerProperties: unknown;
@@ -53,8 +55,10 @@ export function SpatialInspector({
   linkedIssues,
   item,
   snapshot,
+  geometryAvailable,
   workPackage,
   revisionLabel,
+  fromRevisionLabel,
   sourceName,
   viewFile,
   viewerProperties,
@@ -192,8 +196,10 @@ export function SpatialInspector({
         linkedIssues={linkedIssues}
         item={item}
         snapshot={snapshot}
+        geometryAvailable={geometryAvailable}
         workPackage={workPackage}
         revisionLabel={revisionLabel}
+        fromRevisionLabel={fromRevisionLabel}
         sourceName={sourceName}
         viewFile={viewFile}
         viewerProperties={viewerProperties}

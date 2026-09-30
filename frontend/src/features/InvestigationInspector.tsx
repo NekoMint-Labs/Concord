@@ -3,6 +3,8 @@ import type {
   AgentRun,
   InvestigationReport,
 } from "../api/client";
+import { useRunStream } from "../api/stream";
+import { reportMatchesRun } from "./agentContext";
 import { Button } from "../components/ui/button";
 import { DetailInspectorHeader } from "../components/DetailInspector";
 import { PropertyRow, PropertyTable } from "../components/PropertyTable";
@@ -22,13 +24,40 @@ export type WorkspaceInspectorView = InspectorView | "investigation";
 
 const shortId = (value?: string | null) => (value ? value.slice(0, 8) : "—");
 
+function InvestigationActivity({
+  run,
+  project,
+}: {
+  run?: AgentRun | null;
+  project?: string;
+}) {
+  const stream = useRunStream(run?.id, !!run, run?.generation ?? 0, project);
+  if (!stream.events.length) return null;
+  return (
+    <section className="investigation-activity" aria-label="调查活动">
+      <h4>调查活动</h4>
+      <ol>
+        {stream.events.slice(-6).map((event) => (
+          <li key={event.sequence}>
+            {domainLabel("runTrace", event.name ?? event.type)}
+            {event.stepName && (
+              <small>{domainLabel("runTrace", event.stepName)}</small>
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 export function InvestigationInspector({
-  report,
+  report: incomingReport,
   run,
   context,
   onClose,
   proposal,
   onReview,
+  project,
 }: {
   report?: InvestigationReport | null;
   proposal?: ActionProposal;
@@ -36,7 +65,13 @@ export function InvestigationInspector({
   run?: AgentRun | null;
   context: ConcordContext;
   onClose: () => void;
+  project?: string;
 }) {
+  const report = run
+    ? reportMatchesRun(incomingReport, run)
+      ? incomingReport
+      : null
+    : incomingReport;
   const scope = report?.scope;
   const source = scope?.source_id
     ? scope.source_id === context.sourceId
@@ -67,6 +102,9 @@ export function InvestigationInspector({
       />
 
       <div className="investigation-body">
+        {run && project && (
+          <InvestigationActivity run={run} project={project} />
+        )}
         {report ? (
           <>
             {scope?.to_revision_id &&

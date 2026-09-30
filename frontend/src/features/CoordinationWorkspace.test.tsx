@@ -61,6 +61,7 @@ it("does not show READY after a failed re-check", () => {
 
 it("flags a pending model revision instead of presenting an old READY judgement as current", () => {
   const workspace = completed();
+  workspace.stale = true;
   workspace.analysis!.readiness = workspace.analysis!.readiness.map((item) =>
     item.work_package_id === "WP-200" ? { ...item, status: "READY" } : item,
   );
@@ -160,4 +161,33 @@ it("distinguishes current coordination from the package record without changing 
   );
   expect(screen.getByRole("heading", { name: "工作包详情" })).toBeVisible();
   expect(screen.getByRole("button", { name: "工作包" })).toBeVisible();
+});
+
+it("does not let a pending baseline hide an authoritative blocker or a fresh recheck result", () => {
+  const workspace = completed();
+  workspace.state.project.id = "real-project";
+  workspace.proposals = [];
+  const wp = workspace.state.work_packages.find(
+    (item) => item.id === "WP-200",
+  )!;
+  wp.required_workers = 0;
+  wp.available_workers = 0;
+  wp.inspection_passed = true;
+  workspace.events = [];
+  const view = render(
+    <CoordinationWorkspace workspace={workspace} {...baseProps} pendingModel />,
+  );
+  expect(screen.getByRole("heading", { name: "已阻塞" })).toBeVisible();
+  workspace.analysis!.readiness = workspace.analysis!.readiness.map((item) =>
+    item.work_package_id === "WP-200" ? { ...item, status: "READY" } : item,
+  );
+  workspace.analysis!.constraints = [];
+  view.rerender(
+    <CoordinationWorkspace workspace={workspace} {...baseProps} pendingModel />,
+  );
+  expect(screen.getByRole("heading", { name: "可施工" })).toBeVisible();
+  expect(screen.getByText(/不代替现场核验或安全确认/)).toBeVisible();
+  expect(screen.getByText("未记录要求")).toBeVisible();
+  expect(screen.getByText("需要现场核验")).toBeVisible();
+  expect(screen.queryByText("检查有效")).toBeNull();
 });

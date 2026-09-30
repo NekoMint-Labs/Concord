@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
@@ -14,6 +15,7 @@ vi.mock("../viewers/BIMWorkspace", () => ({
     toolbar,
     issues,
     onIssueResolution,
+    selectedIssueId,
   }: {
     impacted: readonly string[];
     changes?: DTO<"BimElementChange">[];
@@ -21,6 +23,7 @@ vi.mock("../viewers/BIMWorkspace", () => ({
     toolbar?: React.ReactNode;
     issues?: DTO<"Constraint">[];
     onIssueResolution?: (id: string) => void;
+    selectedIssueId?: string;
   }) => (
     <div>
       <div data-testid="model-selection">{impacted.join(",")}</div>
@@ -32,11 +35,18 @@ vi.mock("../viewers/BIMWorkspace", () => ({
       </button>
       {toolbar}
       <span>Issues {issues?.length ?? 0}</span>
-      {issues?.[0] && (
-        <button type="button" onClick={() => onIssueResolution?.(issues[0].id)}>
-          Review resolution
+      <output aria-label="Selected spatial issue">
+        {selectedIssueId || issues?.[0]?.id}
+      </output>
+      {issues?.map((issue, index) => (
+        <button
+          key={issue.id}
+          type="button"
+          onClick={() => onIssueResolution?.(issue.id)}
+        >
+          {index === 0 ? "Review resolution" : `Review resolution ${issue.id}`}
         </button>
-      )}
+      ))}
     </div>
   ),
 }));
@@ -131,7 +141,6 @@ it("lists only blocking constraints, preserving the inspection path", () => {
       workspace={workspace}
       onResolve={onResolve}
       onSelectWorkPackage={onSelectWorkPackage}
-      perform={async () => {}}
     />,
   );
   expect(screen.getByRole("region", { name: "空间问题" })).toBeInTheDocument();
@@ -140,4 +149,51 @@ it("lists only blocking constraints, preserving the inspection path", () => {
   const issue = workspace.analysis!.constraints.find((item) => item.blocking)!;
   expect(onSelectWorkPackage).toHaveBeenCalledWith(issue.work_package_id);
   expect(onResolve).toHaveBeenCalledWith(issue.id);
+});
+
+it("preserves a non-first spatial issue when resolving its other work package", () => {
+  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
+  const template = workspace.analysis!.constraints.find(
+    (item) => item.blocking,
+  )!;
+  workspace.analysis!.constraints = [
+    { ...template, id: "first", work_package_id: "WP-100" },
+    { ...template, id: "second", work_package_id: "WP-200" },
+  ];
+  vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
+  function Host() {
+    const [selectedPackage, setSelectedPackage] = useState("WP-100");
+    const [selectedIssue, setSelectedIssue] = useState("second");
+    const [constraint, setConstraint] = useState("");
+    return (
+      <>
+        <IssueExplorer
+          project="harbor-east"
+          workspace={workspace}
+          selectedIssue={selectedIssue}
+          onIssueSelected={setSelectedIssue}
+          onSelectWorkPackage={(id) => {
+            if (id !== selectedPackage) setSelectedIssue("");
+            setSelectedPackage(id);
+          }}
+          onResolve={setConstraint}
+        />
+        <output aria-label="Selected work package">{selectedPackage}</output>
+        <output aria-label="Inspected constraint">{constraint}</output>
+      </>
+    );
+  }
+  wrap(<Host />);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Review resolution second" }),
+  );
+  expect(screen.getByLabelText("Selected work package")).toHaveTextContent(
+    "WP-200",
+  );
+  expect(screen.getByLabelText("Selected spatial issue")).toHaveTextContent(
+    "second",
+  );
+  expect(screen.getByLabelText("Inspected constraint")).toHaveTextContent(
+    "second",
+  );
 });

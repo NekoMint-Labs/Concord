@@ -39,7 +39,7 @@ export function EventComposer({
 }) {
   const [kind, setKind] =
     useState<DTO<"ProjectEvent-Input">["kind"]>("design_revision");
-  const [value, setValue] = useState("V17");
+  const [value, setValue] = useState("");
   const [note, setNote] = useState("");
   function submit() {
     const change: DTO<"EventChange-Input"> = {};
@@ -61,7 +61,7 @@ export function EventComposer({
       kind,
       title: `${domainLabel("eventKind", kind)} / ${wp.id}`,
       note,
-      source: "local-demo-ui",
+      source: project === "harbor-east" ? "local-demo-ui" : "user-observation",
       change,
     });
   }
@@ -93,7 +93,7 @@ export function EventComposer({
                     ? (Object.keys(wp.equipment ?? {})[0] ?? "")
                     : k === "predecessor"
                       ? (wp.predecessors?.[0] ?? "")
-                      : "V17",
+                      : "",
             );
           }}
           options={KIND_OPTIONS}
@@ -127,7 +127,12 @@ export function EventComposer({
         <DialogClose asChild>
           <Button variant="secondary">取消</Button>
         </DialogClose>
-        <Button onClick={submit}>提交并分析</Button>
+        <Button
+          onClick={submit}
+          disabled={!["inspection", "external"].includes(kind) && !value.trim()}
+        >
+          提交并分析
+        </Button>
       </div>
       <small>变更会更新已记录事实，但不会授予任何代理权限。</small>
     </AppDialog>

@@ -23,7 +23,7 @@ export function useChangeComparison(project: string) {
   });
   const source = models.find((item) => item.source.id === sourceId);
   const revisions = useQuery({
-    queryKey: ["revisions", project, sourceId],
+    queryKey: ["source-revisions", project, sourceId],
     queryFn: () => api.sourceRevisions(project, sourceId),
     enabled: !!sourceId,
   });

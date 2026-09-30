@@ -1,7 +1,13 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Box } from "lucide-react";
-import { api, readSource, type InvestigationReport } from "../api/client";
+import {
+  api,
+  readSource,
+  type AgentRun,
+  type InvestigationReport,
+} from "../api/client";
+import { reportMatchesRun } from "./agentContext";
 import { documentLocation } from "../ui/labels";
 import type { ConcordContext } from "./ConcordAgent";
 
@@ -12,27 +18,34 @@ export function InvestigationWorkspace({
   project,
   context,
   report,
+  run,
 }: {
   project: string;
   context: ConcordContext;
   report?: InvestigationReport | null;
+  run?: AgentRun | null;
 }) {
+  const savedReport = run
+    ? reportMatchesRun(report, run)
+      ? report
+      : null
+    : report;
   const sources = useQuery({
     queryKey: ["sources", project],
     queryFn: () => api.sourceStatuses(project),
   });
-  const scopeSource = report?.scope.source_id ?? context.sourceId;
+  const scopeSource = savedReport?.scope.source_id ?? context.sourceId;
   const source = scopeSource
     ? sources.data?.find(
         (item) => item.source.id === scopeSource && item.source.kind === "BIM",
       )
-    : report
+    : savedReport
       ? undefined
       : sources.data?.find(
           (item) => item.source.kind === "BIM" && item.latest_revision_id,
         );
   const revision =
-    report?.scope.to_revision_id ??
+    savedReport?.scope.to_revision_id ??
     context.revisionId ??
     source?.latest_revision_id;
   const file = useQuery({
@@ -54,7 +67,7 @@ export function InvestigationWorkspace({
     queryFn: () => api.documents(project),
   });
   const document = documents.data?.find((item) =>
-    report?.evidence.some((entry) => entry.source_id === item.id),
+    savedReport?.evidence.some((entry) => entry.source_id === item.id),
   );
   const chunks = useQuery({
     queryKey: ["chunks", document?.id],
@@ -62,8 +75,8 @@ export function InvestigationWorkspace({
     enabled: !!document,
   });
   const ids = useMemo(
-    () => report?.scope.element_ids ?? context.elementIds,
-    [report?.scope.element_ids, context.elementIds],
+    () => savedReport?.scope.element_ids ?? context.elementIds,
+    [savedReport?.scope.element_ids, context.elementIds],
   );
   const [selected, setSelected] = useState(ids[0] ?? "");
   useEffect(() => {

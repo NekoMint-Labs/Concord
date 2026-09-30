@@ -239,6 +239,8 @@ const INVESTIGATION_LIMITATIONS: Record<string, string> = {
 
 export function demoInvestigationText(text: string): string {
   if (locale !== "zh") return text;
+  if (text.includes("\n"))
+    return text.split("\n").map(demoInvestigationText).join("\n");
   if (INVESTIGATION_LIMITATIONS[text]) return INVESTIGATION_LIMITATIONS[text];
   const projectState =
     /^Recorded project version (\d+); showing (\d+) scoped work packages; (\d+) returned sources differ from baseline\.$/.exec(

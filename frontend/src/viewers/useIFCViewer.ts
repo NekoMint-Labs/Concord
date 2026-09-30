@@ -4,6 +4,73 @@ import * as FRAGS from "@thatopen/fragments";
 import * as THREE from "three";
 import { viewerProjection } from "./viewerProjection";
 
+export type MappingSelection = {
+  candidateIds: readonly string[];
+  selectedIds: readonly string[];
+  allowedIds: readonly string[];
+};
+
+/** Mapping uses a click, never a camera drag or a click on canvas chrome. */
+export function bindGeometrySelection(
+  element: HTMLElement,
+  canvas: HTMLElement,
+  select: (event: MouseEvent) => void,
+  single: () => boolean,
+) {
+  let down: { x: number; y: number; pointerId: number; moved: boolean } | null =
+    null;
+  const start = (event: PointerEvent) => {
+    if (
+      event.target === canvas &&
+      event.button === 0 &&
+      event.isPrimary !== false
+    )
+      down = {
+        x: event.clientX,
+        y: event.clientY,
+        pointerId: event.pointerId,
+        moved: false,
+      };
+  };
+  const move = (event: PointerEvent) => {
+    if (down && Math.hypot(event.clientX - down.x, event.clientY - down.y) > 4)
+      down.moved = true;
+  };
+  const end = (event: PointerEvent) => {
+    const click = down;
+    down = null;
+    if (
+      single() &&
+      click &&
+      !click.moved &&
+      click.pointerId === event.pointerId &&
+      event.target === canvas &&
+      Math.hypot(event.clientX - click.x, event.clientY - click.y) <= 4
+    )
+      select(event);
+  };
+  const cancel = () => {
+    down = null;
+  };
+  const double = (event: MouseEvent) => {
+    if (!single() && event.target === canvas) select(event);
+  };
+  element.addEventListener("pointerdown", start);
+  element.addEventListener("pointermove", move);
+  element.addEventListener("pointerup", end);
+  element.addEventListener("pointercancel", cancel);
+  element.addEventListener("pointerleave", cancel);
+  element.addEventListener("dblclick", double);
+  return () => {
+    element.removeEventListener("pointerdown", start);
+    element.removeEventListener("pointermove", move);
+    element.removeEventListener("pointerup", end);
+    element.removeEventListener("pointercancel", cancel);
+    element.removeEventListener("pointerleave", cancel);
+    element.removeEventListener("dblclick", double);
+  };
+}
+
 type ViewerControls = {
   impacts(ids: readonly string[]): Promise<void>;
   focus(): Promise<void>;
@@ -12,6 +79,10 @@ type ViewerControls = {
   selectMode(): Promise<void>;
   setViewMode(mode: "2d" | "3d"): Promise<void>;
   selectGuid(id: string): Promise<void>;
+  mapping(value?: MappingSelection): Promise<void>;
+  highlightCandidates(): Promise<void>;
+  isolateCandidates(): Promise<void>;
+  isolateSelected(): Promise<void>;
 };
 
 /** Own the complete SDK lifetime inside the lazy IFC boundary. */
@@ -20,7 +91,8 @@ export function useIFCViewer(
   impacted: readonly string[],
   onSelected: (id: string) => void,
   focusId?: string,
-  onProperties?: (properties: unknown) => void,
+  onProperties?: (properties: unknown, id?: string) => void,
+  mapping?: MappingSelection,
 ) {
   const container = useRef<HTMLDivElement>(null);
   const controls = useRef<ViewerControls | null>(null);
@@ -28,6 +100,8 @@ export function useIFCViewer(
   callback.current = onSelected;
   const propertyCallback = useRef(onProperties);
   propertyCallback.current = onProperties;
+  const mappingRef = useRef(mapping);
+  mappingRef.current = mapping;
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("正在准备本地 IFC 引擎…");
   const [error, setError] = useState("");
@@ -42,6 +116,7 @@ export function useIFCViewer(
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
   const [hasTarget, setHasTarget] = useState(false);
   const [isolated, setIsolated] = useState(false);
+  const [candidatesHighlighted, setCandidatesHighlighted] = useState(true);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("3d");
   const actionActive = useRef(false);
   const epoch = useRef(0);
@@ -58,6 +133,7 @@ export function useIFCViewer(
     setAnchor(null);
     setHasTarget(false);
     setIsolated(false);
+    setCandidatesHighlighted(true);
     setViewMode("3d");
     setBusy(false);
     setMessage("正在准备本地 IFC 引擎…");
@@ -131,6 +207,10 @@ export function useIFCViewer(
         if (cancelled) return;
         let selected: number[] = [];
         let impactIds: number[] = [];
+        let candidateIds: number[] = [];
+        let mappedIds: number[] = [];
+        let mappingTicket = 0;
+        let showCandidates = true;
         const updateAnchor = async () => {
           if (!selected.length || cancelled) return;
           const box = await model.getMergedBox(selected);
@@ -162,6 +242,20 @@ export function useIFCViewer(
                 opacity: 1,
                 transparent: false,
               });
+            if (showCandidates && candidateIds.length)
+              await model.highlight(candidateIds, {
+                color: new THREE.Color("#d99c43"),
+                renderedFaces: FRAGS.RenderedFaces.TWO,
+                opacity: 1,
+                transparent: false,
+              });
+            if (mappedIds.length)
+              await model.highlight(mappedIds, {
+                color: new THREE.Color("#268d75"),
+                renderedFaces: FRAGS.RenderedFaces.TWO,
+                opacity: 1,
+                transparent: false,
+              });
             if (selected.length)
               await model.highlight(selected, {
                 color: new THREE.Color("#2f86b3"),
@@ -177,7 +271,40 @@ export function useIFCViewer(
         const project = viewerProjection(world.camera, model.box, () =>
           model.useCamera(world.camera.three),
         );
+        const isolateIds = async (ids: number[]) => {
+          if (!ids.length) return;
+          await model.setVisible(undefined, false);
+          await model.setVisible(ids, true);
+          await fragments.core.update(true);
+          if (!cancelled) setIsolated(true);
+        };
         controls.current = {
+          async mapping(value) {
+            const ticket = ++mappingTicket;
+            const [candidates, mapped] = await Promise.all([
+              model.getLocalIdsByGuids([...(value?.candidateIds ?? [])]),
+              model.getLocalIdsByGuids([...(value?.selectedIds ?? [])]),
+            ]);
+            if (cancelled || ticket !== mappingTicket) return;
+            candidateIds = candidates.filter(
+              (id): id is number => typeof id === "number",
+            );
+            mappedIds = mapped.filter(
+              (id): id is number => typeof id === "number",
+            );
+            await paint();
+          },
+          async highlightCandidates() {
+            showCandidates = !showCandidates;
+            setCandidatesHighlighted(showCandidates);
+            await paint();
+          },
+          async isolateCandidates() {
+            await isolateIds(candidateIds);
+          },
+          async isolateSelected() {
+            await isolateIds(mappedIds);
+          },
           async impacts(ids) {
             const ticket = ++impactTicket;
             const matches = await model.getLocalIdsByGuids([...ids]);
@@ -189,7 +316,7 @@ export function useIFCViewer(
             await paint();
             if (cancelled || ticket !== impactTicket) return;
             setMessage(
-              `${file.name}：已匹配 ${impactIds.length}/${ids.length} 个受影响构件 GUID。双击构件选择；聚焦和隔离以当前选择为准。`,
+              `${file.name}：已匹配 ${impactIds.length}/${ids.length} 个受影响构件 GUID。${mappingRef.current ? "单击构件选择；候选、已选与当前构件分别标识。" : "双击构件选择；聚焦和隔离以当前选择为准。"}`,
             );
           },
           async focus() {
@@ -218,14 +345,24 @@ export function useIFCViewer(
             setViewMode(mode);
           },
           async selectGuid(id) {
-            const [localId] = await model.getLocalIdsByGuids([id]);
-            if (cancelled || typeof localId !== "number") return;
+            const ticket = ++selectionTicket;
+            selected = [];
+            setProperties(null);
+            setAnchor(null);
+            propertyCallback.current?.(null, id);
+            const [localId] = id ? await model.getLocalIdsByGuids([id]) : [];
+            if (cancelled || ticket !== selectionTicket) return;
+            if (typeof localId !== "number") {
+              setHasTarget(impactIds.length > 0);
+              await paint();
+              return;
+            }
             selected = [localId];
             setHasTarget(true);
             const [data] = await model.getItemsData(selected);
-            if (cancelled) return;
+            if (cancelled || ticket !== selectionTicket) return;
             setProperties(data);
-            propertyCallback.current?.(data);
+            propertyCallback.current?.(data, id);
             await paint();
             const contextBox = (await model.getMergedBox(selected)).clone();
             const sceneSize = model.box.getSize(new THREE.Vector3());
@@ -258,12 +395,19 @@ export function useIFCViewer(
               model.getItemsData(ids),
               model.getGuidsByLocalIds(ids),
             ]);
-            if (cancelled || ticket !== selectionTicket) return;
+            if (
+              cancelled ||
+              ticket !== selectionTicket ||
+              !guid ||
+              (mappingRef.current &&
+                !mappingRef.current.allowedIds.includes(guid))
+            )
+              return;
             selected = ids;
             setHasTarget(true);
             setProperties(data[0]);
-            propertyCallback.current?.(data[0]);
-            callback.current(guid ?? String(hit.localId));
+            callback.current(guid);
+            propertyCallback.current?.(data[0], guid);
             await paint();
             await updateAnchor();
           } catch (cause) {
@@ -271,9 +415,12 @@ export function useIFCViewer(
               setError(cause instanceof Error ? cause.message : "构件选择失败");
           }
         };
-        element.addEventListener("dblclick", select);
-        cleanupSelection = () =>
-          element.removeEventListener("dblclick", select);
+        cleanupSelection = bindGeometrySelection(
+          element,
+          world.renderer!.three.domElement,
+          (event) => void select(event),
+          () => !!mappingRef.current,
+        );
         if (!cancelled) setReady(true);
       } catch (cause) {
         if (!cancelled)
@@ -300,18 +447,40 @@ export function useIFCViewer(
     });
   }, [impacted, ready]);
   useEffect(() => {
-    if (!ready || !focusId) return;
+    if (!ready || focusId === undefined) return;
     const current = controls.current;
     void current?.selectGuid(focusId).catch((cause) => {
       if (controls.current === current) setError(String(cause));
     });
   }, [focusId, ready]);
+  useEffect(() => {
+    if (!ready || !mapping) return;
+    const current = controls.current;
+    void current?.mapping(mapping).catch((cause) => {
+      if (controls.current === current) setError(String(cause));
+    });
+  }, [mapping?.candidateIds, mapping?.selectedIds, ready]);
   async function act(
-    name: "focus" | "isolate" | "showAll" | "selectMode",
+    name:
+      | "focus"
+      | "isolate"
+      | "showAll"
+      | "selectMode"
+      | "highlightCandidates"
+      | "isolateCandidates"
+      | "isolateSelected",
   ): Promise<void>;
   async function act(name: "setViewMode", mode: "2d" | "3d"): Promise<void>;
   async function act(
-    name: "focus" | "isolate" | "showAll" | "selectMode" | "setViewMode",
+    name:
+      | "focus"
+      | "isolate"
+      | "showAll"
+      | "selectMode"
+      | "setViewMode"
+      | "highlightCandidates"
+      | "isolateCandidates"
+      | "isolateSelected",
     mode?: "2d" | "3d",
   ) {
     if (actionActive.current || !controls.current) return;
@@ -342,6 +511,7 @@ export function useIFCViewer(
     anchor,
     hasTarget,
     isolated,
+    candidatesHighlighted,
     viewMode,
   };
 }

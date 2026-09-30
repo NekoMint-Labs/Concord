@@ -25,6 +25,14 @@ type Change = DTO<"BimElementChange">;
 type Snapshot = DTO<"BimElementSnapshot">;
 type Issue = DTO<"Constraint">;
 
+export type MappingPresentation = {
+  contextBar: ReactNode;
+  dock: ReactNode;
+  candidateIds: readonly string[];
+  selectedIds: readonly string[];
+  allowedIds: readonly string[];
+};
+
 /** The same spatial surface serves the current model, revision comparisons and issues. */
 export default function BIMWorkspace({
   project,
@@ -50,6 +58,11 @@ export default function BIMWorkspace({
   onIssueResolution,
   selectedIssueId,
   onIssueSelected,
+  mapping,
+  sourceName,
+  fromRevisionLabel,
+  workPackage: explicitWorkPackage,
+  revisionScoped = false,
 }: {
   project: string;
   impacted: readonly string[];
@@ -75,6 +88,11 @@ export default function BIMWorkspace({
   onIssueResolution?: (id: string) => void;
   selectedIssueId?: string;
   onIssueSelected?: (id: string) => void;
+  mapping?: MappingPresentation;
+  sourceName?: string;
+  fromRevisionLabel?: string;
+  workPackage?: DTO<"WorkPackage">;
+  revisionScoped?: boolean;
 }) {
   const elements = useQuery({
     queryKey: ["bim", project],
@@ -107,7 +125,10 @@ export default function BIMWorkspace({
     sources.data?.filter(
       (item) => item.source.kind === "BIM" && item.latest_revision_id,
     ) ?? [];
-  const source = projectModels.length === 1 ? projectModels[0] : undefined;
+  const source =
+    autoProjectModel && externalFile === undefined && projectModels.length === 1
+      ? projectModels[0]
+      : undefined;
   const sourceImport = useQuery({
     queryKey: [
       "revision-import",
@@ -154,7 +175,7 @@ export default function BIMWorkspace({
   const viewFile =
     externalFile === undefined ? (file ?? revision.data ?? null) : externalFile;
   useEffect(() => {
-    if (viewFile && !selected && !focusId && impacted.length)
+    if (viewFile && !selected && focusId === undefined && impacted.length)
       setSelected(impacted[0]);
   }, [viewFile, selected, focusId, impacted, setSelected]);
   const [context, setContext] = useState<"changes" | "issues">("changes");
@@ -168,8 +189,20 @@ export default function BIMWorkspace({
     setLocalIssue(id);
     onIssueSelected?.(id);
   };
-  const [viewerProperties, setViewerProperties] = useState<unknown>(null);
+  const [propertyResult, setPropertyResult] = useState<{
+    id: string;
+    file: File | null;
+    properties: unknown;
+  } | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const activeId = focusId ?? selected;
+  const viewerProperties =
+    propertyResult?.id === activeId &&
+    propertyResult.file === viewFile &&
+    (!revisionScoped ||
+      snapshots.some((element) => element.global_id === activeId))
+      ? propertyResult.properties
+      : null;
   const viewerRecord =
     viewerProperties && typeof viewerProperties === "object"
       ? (viewerProperties as Record<string, unknown>)
@@ -181,12 +214,13 @@ export default function BIMWorkspace({
       : viewerName && typeof viewerName === "object" && "value" in viewerName
         ? String(viewerName.value)
         : "";
-  const activeId = focusId ?? selected;
-  const item = elements.data?.find((element) => element.id === activeId);
+  const item = revisionScoped
+    ? undefined
+    : elements.data?.find((element) => element.id === activeId);
   const snapshot = snapshots.find((element) => element.global_id === activeId);
   const change =
     changes.find((entry) => entry.global_id === activeId) ??
-    (impacted.includes(activeId)
+    (!revisionScoped && impacted.includes(activeId)
       ? {
           global_id: activeId,
           change_kind: "changed" as const,
@@ -209,14 +243,25 @@ export default function BIMWorkspace({
       )) ||
     (item && demoElementName(item.id, item.name)) ||
     modelName ||
-    (activeId ? "所选构件" : "选择构件");
+    (activeId
+      ? change?.change_kind === "deleted"
+        ? "历史变更构件"
+        : "所选构件"
+      : "选择构件");
   const classification =
     snapshot?.ifc_class ??
     item?.type ??
     (typeof viewerRecord?.type === "string" ? viewerRecord.type : "模型构件");
   const select = (id: string) => {
+    if (
+      mapping &&
+      id &&
+      !mapping.allowedIds.includes(id) &&
+      !changes.some((change) => change.global_id === id)
+    )
+      return;
     setSelected(id);
-    setViewerProperties(null);
+    setPropertyResult(null);
     setSelectedIssue("");
     onViewerSelected?.(id);
   };
@@ -256,24 +301,28 @@ export default function BIMWorkspace({
   const packageFor = (id: string) =>
     workspace?.state.work_packages.find((wp) => wp.element_ids.includes(id));
   const workPackage =
+    explicitWorkPackage ??
     packageFor(activeId) ??
     workspace?.state.work_packages.find(
       (wp) => wp.id === issue?.work_package_id,
     );
   const rows = changes.length
     ? changes
-    : (elements.data ?? [])
-        .filter((element) => impacted.includes(element.id))
-        .map((element) => ({
-          global_id: element.id,
-          change_kind: "changed" as const,
-          changed_aspects: ["impact"],
-        }));
+    : revisionScoped
+      ? []
+      : (elements.data ?? [])
+          .filter((element) => impacted.includes(element.id))
+          .map((element) => ({
+            global_id: element.id,
+            change_kind: "changed" as const,
+            changed_aspects: ["impact"],
+          }));
   return (
     <section
-      className={`bim-workspace spatial-workspace is-${mode}${listOpen ? " is-list-open" : ""}`}
+      className={`bim-workspace spatial-workspace is-${mode}${mapping ? " is-mapping" : ""}${listOpen ? " is-list-open" : ""}`}
       aria-label="模型工作区"
     >
+      {mapping?.contextBar}
       <PaneSplit id="spatial-inspector" persist>
         <Pane id="spatial-main-pane" className="spatial-main" minSize="320px">
           <div className="spatial-stage">
@@ -297,7 +346,14 @@ export default function BIMWorkspace({
                         )
                       : undefined
                   }
-                  onProperties={setViewerProperties}
+                  mapping={mapping}
+                  onProperties={(properties, id) =>
+                    setPropertyResult({
+                      id: id ?? activeId,
+                      file: viewFile,
+                      properties,
+                    })
+                  }
                 />
               </Suspense>
             ) : (
@@ -315,6 +371,15 @@ export default function BIMWorkspace({
             )}
             {toolbar && (
               <div className="spatial-context-controls">{toolbar}</div>
+            )}
+            {mapping && !inspectorOpen && (
+              <button
+                type="button"
+                className="mapping-inspector-toggle"
+                onClick={() => inspectorPane.current?.expand()}
+              >
+                展开检查器
+              </button>
             )}
             {!hideSourceActions && (
               <details
@@ -433,28 +498,34 @@ export default function BIMWorkspace({
               </div>
             )}
           </div>
-          <SpatialContext
-            context={context}
-            setContext={setContext}
-            open={listOpen}
-            setOpen={setListOpen}
-            rows={rows}
-            issues={issues}
-            activeId={activeId}
-            selectedIssue={selectedIssue}
-            snapshots={snapshots}
-            elements={elements.data}
-            workspace={workspace}
-            revisionLabel={revisionLabel}
-            onSelect={select}
-            onIssue={chooseIssue}
-            onWorkPackage={onWorkPackage}
-            onNavigate={onNavigate}
-            workPackageId={workPackage?.id}
-            onExpandInspector={
-              inspectorOpen ? undefined : () => inspectorPane.current?.expand()
-            }
-          />
+          {mapping ? (
+            mapping.dock
+          ) : (
+            <SpatialContext
+              context={context}
+              setContext={setContext}
+              open={listOpen}
+              setOpen={setListOpen}
+              rows={rows}
+              issues={issues}
+              activeId={activeId}
+              selectedIssue={selectedIssue}
+              snapshots={snapshots}
+              elements={revisionScoped ? undefined : elements.data}
+              workspace={workspace}
+              revisionLabel={revisionLabel}
+              onSelect={select}
+              onIssue={chooseIssue}
+              onWorkPackage={onWorkPackage}
+              onNavigate={onNavigate}
+              workPackageId={workPackage?.id}
+              onExpandInspector={
+                inspectorOpen
+                  ? undefined
+                  : () => inspectorPane.current?.expand()
+              }
+            />
+          )}
         </Pane>
         <PaneDivider label="调整构件详情宽度" disabled={!inspectorOpen} />
         <Pane
@@ -480,12 +551,16 @@ export default function BIMWorkspace({
             linkedIssues={linkedIssues}
             item={item}
             snapshot={snapshot}
+            geometryAvailable={
+              mapping ? mapping.allowedIds.includes(activeId) : undefined
+            }
             workPackage={workPackage}
             revisionLabel={revisionLabel}
-            sourceName={source?.source.name}
+            sourceName={sourceName ?? source?.source.name}
+            fromRevisionLabel={fromRevisionLabel}
             viewFile={viewFile}
             viewerProperties={viewerProperties}
-            elements={elements.data}
+            elements={revisionScoped ? undefined : elements.data}
             workspace={workspace}
             inspectorOpen={inspectorOpen}
             inspectorPane={inspectorPane}

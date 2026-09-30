@@ -29,6 +29,7 @@ export function useProjectLifecycle() {
   const cache = useQueryClient();
   const [project, setProject] = useState(() => read(LAST_PROJECT));
   const [recent, setRecent] = useState(recentIds);
+  const [newProjectId, setNewProjectId] = useState("");
   const projects = useQuery({
     queryKey: ["projects"],
     queryFn: api.projects,
@@ -64,6 +65,7 @@ export function useProjectLifecycle() {
     mutationFn: (input: DTO<"CreateProject">) => api.createProject(input),
     onSuccess: async (created) => {
       await cache.invalidateQueries({ queryKey: ["projects"] });
+      setNewProjectId(created.id);
       openProject(created.id);
     },
   });
@@ -83,6 +85,7 @@ export function useProjectLifecycle() {
 
   return {
     project,
+    newProjectId,
     projects,
     recent: recent
       .map((id) => projects.data?.find((item) => item.id === id))

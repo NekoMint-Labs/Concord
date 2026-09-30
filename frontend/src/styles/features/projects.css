@@ -378,19 +378,6 @@
   padding: 7px 8px;
 }
 
-.impact-empty {
-  display: grid;
-  gap: 5px;
-  justify-items: start;
-  padding: 18px;
-  background: var(--surface-chrome);
-  color: var(--muted);
-}
-
-.impact-empty.is-error {
-  color: var(--warning);
-}
-
 .affected-packages,
 .evidence-register,
 .existing-bindings {

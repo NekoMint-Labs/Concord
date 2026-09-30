@@ -147,10 +147,10 @@ it("keeps Ask read-only and only Investigate returns the current durable run", a
   });
   expect(onRun).not.toHaveBeenCalled();
 
-  fireEvent.click(screen.getByRole("button", { name: "检查 1 个已选构件" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存为工程调查" }));
   await waitFor(() =>
     expect(investigate).toHaveBeenCalledWith("project", {
-      instruction: "查看所选构件的影响与依据",
+      instruction: "Why is this pending?",
       scope: {
         source_id: "source-1",
         from_revision_id: "r1",
@@ -213,4 +213,32 @@ it("does not present an old run result as the current operation", () => {
   expect(screen.getByText("分析中")).toBeVisible();
   expect(screen.queryByText("run-curr")).toBeNull();
   expect(screen.queryByText("Old failed investigation")).toBeNull();
+});
+
+it("uses the shared investigation launcher and the typed instruction", async () => {
+  vi.spyOn(api, "agentSettings").mockResolvedValue({ initiative: "suggest" });
+  vi.spyOn(api, "agentNotices").mockResolvedValue([]);
+  const investigate = vi.spyOn(api, "investigate");
+  const onInvestigate = vi.fn().mockResolvedValue(undefined);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ConcordAgent
+        project="project"
+        context={context}
+        onRun={vi.fn()}
+        onInvestigate={onInvestigate}
+      />
+    </QueryClientProvider>,
+  );
+  fireEvent.change(screen.getByPlaceholderText(/当前为什么不能施工/), {
+    target: { value: "Check only this comparison" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "保存为工程调查" }));
+  await waitFor(() =>
+    expect(onInvestigate).toHaveBeenCalledWith(
+      "Check only this comparison",
+      context,
+    ),
+  );
+  expect(investigate).not.toHaveBeenCalled();
 });

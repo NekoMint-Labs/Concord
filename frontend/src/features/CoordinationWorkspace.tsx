@@ -22,6 +22,7 @@ import {
   activeCoordinationEvent,
   activeCoordinationRun,
 } from "../app/coordination";
+import { proposalRejected } from "./proposalState";
 import type { InspectorView } from "./Inspector";
 import {
   demoAreaName,
@@ -93,15 +94,28 @@ export function CoordinationWorkspace({
     (item) => item.work_package_id === selected && item.blocking,
   );
   const proposal = workspace.proposals.find(
-    (item) => item.work_package_id === selected,
+    (item) =>
+      item.work_package_id === selected &&
+      !proposalRejected(workspace, item.id),
   );
+  const analysisOwner = workspace.analysis_run;
   const analyzing =
-    !!activeEvent &&
-    !!activeRun &&
-    ["QUEUED", "RUNNING"].includes(activeRun.status);
+    (!!activeEvent &&
+      !!activeRun &&
+      ["QUEUED", "RUNNING"].includes(activeRun.status)) ||
+    (!!analysisOwner &&
+      ["QUEUED", "RUNNING"].includes(analysisOwner.status) &&
+      workspace.proposals.some(
+        (item) =>
+          item.work_package_id === selected && item.run_id === analysisOwner.id,
+      ));
   const waitingApproval =
-    activeRun?.status === "WAITING_APPROVAL" &&
-    activeEvent?.work_package_id === selected;
+    (activeRun?.status === "WAITING_APPROVAL" &&
+      activeEvent?.work_package_id === selected) ||
+    (analysisOwner?.status === "WAITING_APPROVAL" &&
+      !!proposal &&
+      proposal.run_id === analysisOwner.id &&
+      proposal.generation === analysisOwner.generation);
   const blocked = readiness?.status === "BLOCKED" || !!waitingApproval;
   const stale = workspace.stale && !analyzing;
   const snapshot = workspace.analysis?.snapshot;
@@ -142,7 +156,7 @@ export function CoordinationWorkspace({
             icon: CircleAlert,
             tone: "blocked",
           }
-        : pendingModel
+        : pendingModel && !blocked && (workspace.stale || !readiness)
           ? {
               label: "待审核",
               title: "新模型版本尚未纳入当前基线",
@@ -186,19 +200,32 @@ export function CoordinationWorkspace({
                     label: "可施工",
                     title: "当前没有未解决的阻塞条件",
                     description:
-                      "图纸、班组或现场条件变化时，记录变更并重新检查。",
+                      workspace.state.project.id === "harbor-east"
+                        ? "图纸、班组或现场条件变化时，记录变更并重新检查。"
+                        : "仅表示已记录条件没有阻塞，不代替现场核验或安全确认。资料基线需另行接受。",
                     icon: CircleCheck,
                     tone: "ready",
                   };
   const StateIcon = state.icon;
   const openModel = () => (onModel ?? onImpact)();
+  const inspectionRecorded =
+    workspace.state.project.id === "harbor-east" ||
+    workspace.events.some(
+      (event) =>
+        event.work_package_id === selected && event.kind === "inspection",
+    );
   const metrics = [
     {
       label: "班组",
       value: `${wp.available_workers} / ${wp.required_workers} 人`,
       status:
-        wp.available_workers >= wp.required_workers ? "已就绪" : "人员不足",
-      ready: wp.available_workers >= wp.required_workers,
+        wp.required_workers === 0 && wp.available_workers === 0
+          ? "未记录要求"
+          : wp.available_workers >= wp.required_workers
+            ? "已就绪"
+            : "人员不足",
+      ready:
+        wp.required_workers > 0 && wp.available_workers >= wp.required_workers,
       icon: Users,
     },
     {
@@ -229,9 +256,17 @@ export function CoordinationWorkspace({
     },
     {
       label: "验收",
-      value: wp.inspection_passed ? "已通过" : "未通过",
-      status: wp.inspection_passed ? "检查有效" : "需要处理",
-      ready: wp.inspection_passed,
+      value: !inspectionRecorded
+        ? "未记录"
+        : wp.inspection_passed
+          ? "已通过"
+          : "未通过",
+      status: !inspectionRecorded
+        ? "需要现场核验"
+        : wp.inspection_passed
+          ? "检查有效"
+          : "需要处理",
+      ready: inspectionRecorded && wp.inspection_passed,
       icon: ClipboardCheck,
     },
   ];

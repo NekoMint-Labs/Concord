@@ -1,5 +1,5 @@
 import { Box, Focus, Layers3, MousePointer2 } from "lucide-react";
-import { useIFCViewer } from "./useIFCViewer";
+import { useIFCViewer, type MappingSelection } from "./useIFCViewer";
 
 /** Geometry and controls remain on the canvas, not in a second technical pane. */
 export default function IFCViewer({
@@ -10,6 +10,7 @@ export default function IFCViewer({
   selectedLabel,
   issueLabel,
   onProperties,
+  mapping,
 }: {
   file: File;
   impacted: readonly string[];
@@ -17,7 +18,8 @@ export default function IFCViewer({
   focusId?: string;
   selectedLabel?: string;
   issueLabel?: string;
-  onProperties?: (properties: unknown) => void;
+  onProperties?: (properties: unknown, id?: string) => void;
+  mapping?: MappingSelection;
 }) {
   const {
     container,
@@ -29,8 +31,9 @@ export default function IFCViewer({
     anchor,
     hasTarget,
     isolated,
+    candidatesHighlighted,
     viewMode,
-  } = useIFCViewer(file, impacted, onSelected, focusId, onProperties);
+  } = useIFCViewer(file, impacted, onSelected, focusId, onProperties, mapping);
   const canTarget = ready && !busy && hasTarget;
   return (
     <div
@@ -81,6 +84,36 @@ export default function IFCViewer({
         >
           <Layers3 size={17} />
         </button>
+        {mapping && (
+          <>
+            <button
+              type="button"
+              aria-label="高亮候选"
+              aria-pressed={candidatesHighlighted}
+              className={candidatesHighlighted ? "is-active" : undefined}
+              disabled={!ready || busy || !mapping.candidateIds.length}
+              onClick={() => void act("highlightCandidates")}
+            >
+              高亮候选
+            </button>
+            <button
+              type="button"
+              aria-label="隔离候选"
+              disabled={!ready || busy || !mapping.candidateIds.length}
+              onClick={() => void act("isolateCandidates")}
+            >
+              隔离候选
+            </button>
+            <button
+              type="button"
+              aria-label="隔离已选"
+              disabled={!ready || busy || !mapping.selectedIds.length}
+              onClick={() => void act("isolateSelected")}
+            >
+              隔离已选
+            </button>
+          </>
+        )}
       </div>
       {ready && selectedLabel && anchor && (
         <div

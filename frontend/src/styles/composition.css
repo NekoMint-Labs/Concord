@@ -1,26 +1,6 @@
-/*
- * Concord visual system - the last layer, and the only place page composition
- * is decided. Direction: a drafting table. Graphite neutrals, one deep petrol
- * accent spent on position and commitment only, status as a 6px mark plus text
- * colour (never a pill), structure by plane and hairline (never a box).
- *
- *   Type      16/600 page title · 12/600 section · 13/600 row title
- *             12 body · 11.5 meta · 11 label · 20/600 figures · mono for ids
- *   Rhythm    4px base · 24px page inset · 20px between sections
- *   Heights   40 header · 36 context bar · 28 controls & nav · 26 tree rows
- *             36 table rows · 52 inbox rows
- *   Planes    white work plane · shell grey for sidebar/inspector · stage grey
- *   Lines     one hairline (--line-soft) between rows; panes by plane step
- *   State     hover = neutral tint · selected = petrol tint + petrol text
- *   Status    red = needs you · amber = waiting/pending · green = ready · grey = none
- *   Buttons   primary fill (rare) · secondary outlined (the one next step) · ghost
- *   Floating  white, 1px edge, 4px radius, one shallow shadow - all viewer chrome
- *
- * One file per responsibility; the order below is the cascade order and is
- * load-bearing (later layers win ties against base.css). foundation holds the
- * layer's own scale, the rest follow the product's surfaces: shell chrome and
- * sidebar, the page frame shared by 工作 and 项目, then 工作, 项目, 模型, and the
- * responsive steps last.
+/* Final composition overrides for the shell, pages and Model workspace.
+ * Import order is cascade order; foundation owns shared composition roles,
+ * surface files own their layouts, and responsive adjustments come last.
  */
 
 @import "./composition/foundation.css";

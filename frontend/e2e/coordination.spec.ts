@@ -124,7 +124,7 @@ async function openProjectView(page: Page, name: keyof typeof projectSections) {
     .click();
   await page
     .getByRole("region", { name: projectSections[name] })
-    .getByRole("button", { name: /^全部/ })
+    .getByRole("button", { name: name === "工作包" ? "查看全部 →" : "全部 →" })
     .click();
 }
 
@@ -164,7 +164,14 @@ test("primary workspace has three intentions and surfaces a real decision", asyn
   await nav.getByRole("button", { name: "工作", exact: true }).click();
   const needs = page.getByRole("region", { name: "需要处理" });
   await expect(needs.getByText(/东翼风管安装.*需要决定/)).toBeVisible();
-  await needs.getByRole("button", { name: "处理 →" }).click();
+  await needs.getByRole("button", { name: /东翼风管安装.*需要决定/ }).click();
+  await expect(
+    page.getByRole("complementary", { name: "所选工作事项" }),
+  ).toContainText("需要决定");
+  await page
+    .getByRole("complementary", { name: "所选工作事项" })
+    .getByRole("button", { name: "处理", exact: true })
+    .click();
   await expectBlocked(page);
 });
 

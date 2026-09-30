@@ -2,16 +2,9 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { api, type ProjectSourceStatus } from "../api/client";
 
 /**
- * The standing project context both 工作 and 项目 read.
- *
- * Three surfaces already needed the same three reads - the header, the project
- * sheet, and now the inbox's lower half - so the wiring lives here once and the
- * query keys stay shared. Navigating between 工作 and 项目 is a cache read, never
- * a second fetch.
- *
- * This hook adds no endpoint: it is the baseline in force, the model revisions
- * that baseline was cut from, and the project's own files, which is exactly what
- * `/baselines`, `/sources/{id}/revisions` and `/documents` already return.
+ * Standing project records shared by Work and Project.
+ * Cache keys match the source upload/import flow; queries retain TanStack's normal
+ * freshness and refetch policy. This hook adds no endpoints or authoritative state.
  */
 export function useProjectContext(
   project: string,
@@ -28,10 +21,10 @@ export function useProjectContext(
   const models = sources.filter(
     (item) => item.source.kind === "BIM" && item.latest_revision_id,
   );
-  // Same query keys as the header and the model workspace, so this is a cache read.
+  // Shared cache identity; normal query freshness still determines refetching.
   const revisions = useQueries({
     queries: models.map((item) => ({
-      queryKey: ["revisions", project, item.source.id],
+      queryKey: ["source-revisions", project, item.source.id],
       queryFn: () => api.sourceRevisions(project, item.source.id),
     })),
   });
@@ -50,3 +43,5 @@ export function useProjectContext(
     pendingModels: models.filter((item) => item.has_pending_revision),
   };
 }
+
+export type ProjectContext = ReturnType<typeof useProjectContext>;

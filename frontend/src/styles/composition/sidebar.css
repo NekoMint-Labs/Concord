@@ -1,54 +1,7 @@
-/* ---------- sidebar: nav, then the project's standing content ---------- */
-
-.application-shell .sidebar {
-  background: var(--concord-shell-surface);
-  border-right: 1px solid var(--concord-shell-divider);
-}
-/* The project switcher heads the column as a control, not as a fourth nav row. */
-.application-shell .project-picker {
-  padding: 5px 8px 9px;
-  border-bottom: 1px solid var(--concord-nav-divider);
-}
-.application-shell .project-trigger {
-  height: 30px;
-  border-radius: 4px;
-}
-.application-shell .sidebar-primary {
-  display: grid;
-  gap: 1px;
-  padding: 4px 8px 10px;
-}
-.application-shell .sidebar-primary button {
-  position: relative;
-  height: 28px;
-  padding: 0 8px;
-  gap: 10px;
-  border-radius: 4px;
-  color: var(--concord-nav-text);
-  font-size: 12.5px;
-  font-weight: 500;
-}
+/* Compact navigation rail and anchored project browser. */
 .application-shell .sidebar-primary button:hover {
   background: var(--hover);
   color: var(--ink);
-}
-/* Position is a rail and a weight step, not a filled pill: the row keeps the
-   sidebar's own plane so the nav reads as a list of places, not as controls. */
-.application-shell .sidebar-primary button.active {
-  background: var(--hover);
-  color: var(--ink);
-  font-weight: 600;
-}
-.application-shell .sidebar-primary button.active::before {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 2px;
-  height: 16px;
-  border-radius: 1px;
-  background: var(--accent);
-  transform: translateY(-50%);
-  content: "";
 }
 .application-shell .sidebar-primary button.active svg {
   color: var(--accent);
@@ -118,37 +71,6 @@
   color: var(--concord-nav-active);
   font-weight: 600;
 }
-
-/* The status mark: one object, used by the tree, the inbox and the tables. */
-.package-state,
-.application-shell .work-mark,
-.application-shell .package-status i {
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--line);
-}
-.package-state.is-ready,
-.application-shell .package-status.is-ready i,
-.application-shell .work-row.is-done .work-mark {
-  background: var(--concord-ready-mark);
-}
-.package-state.is-blocked,
-.application-shell .package-status.is-blocked i,
-.application-shell .work-row.is-attention .work-mark {
-  background: var(--concord-danger-text);
-}
-.package-state.is-waiting,
-.application-shell .package-status.is-waiting i,
-.application-shell .work-row.is-waiting .work-mark {
-  background: var(--concord-amber-mark);
-}
-
-.application-shell .sidebar-footer {
-  padding: 6px 8px 8px;
-  border-top: 1px solid var(--concord-nav-divider);
-}
 .application-shell .sidebar-search {
   display: flex;
   align-items: center;
@@ -183,12 +105,186 @@
   background: none;
   font-size: 12px;
 }
+
+/* Compact rail; the existing project tree remains available as an anchored browser. */
+.application-shell:not(.is-nav-collapsed) .sidebar-pane {
+  overflow: visible;
+  z-index: 12;
+}
+.application-shell .sidebar {
+  background: var(--concord-shell-surface);
+  position: relative;
+  border-right: 0;
+}
+.application-shell .brand {
+  justify-content: center;
+  padding: 0;
+}
+.application-shell .brand-mark {
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+}
+.application-shell .brand .icon-button {
+  position: absolute;
+  top: 7px;
+  right: 2px;
+  width: 22px;
+  height: 26px;
+  opacity: 0;
+}
+.application-shell .brand:hover .icon-button,
+.application-shell .brand .icon-button:focus-visible {
+  opacity: 1;
+}
+.application-shell .brand-name,
+.application-shell .project-trigger .project-name,
+.application-shell .project-trigger .project-chevron {
+  display: none;
+}
+.application-shell .project-picker {
+  padding: 8px 12px 12px;
+  border: 0;
+}
+.application-shell .project-trigger {
+  border-radius: 4px;
+  justify-content: center;
+  height: 36px;
+  padding: 0;
+}
+.application-shell .project-trigger .project-mark {
+  width: 18px;
+  height: 18px;
+}
+.application-shell .sidebar-content {
+  overflow: visible;
+}
+.application-shell .sidebar-primary {
+  display: grid;
+  gap: 6px;
+  padding: 12px 8px;
+}
+.application-shell .sidebar-primary button {
+  position: relative;
+  color: var(--concord-nav-text);
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  height: 58px;
+  padding: 6px 2px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.application-shell .sidebar-primary button svg {
+  width: 19px;
+  height: 19px;
+}
+.application-shell .sidebar-primary button.active {
+  font-weight: 600;
+  background: var(--concord-nav-selection);
+  color: var(--concord-nav-active);
+}
+.application-shell .sidebar-primary button.active::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 2px;
+  height: 16px;
+  border-radius: 1px;
+  background: var(--accent);
+  transform: translateY(-50%);
+  content: "";
+  display: none;
+}
+.application-shell .sidebar-tree {
+  position: absolute;
+  top: 92px;
+  left: calc(100% + 8px);
+  z-index: 15;
+  width: 264px;
+  max-height: calc(100dvh - 112px);
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+.application-shell .sidebar-tree[hidden] {
+  display: none;
+}
+.application-shell .sidebar-tree .sidebar-group {
+  border: 0;
+  padding: 8px;
+}
+.application-shell .sidebar-tree .sidebar-group + .sidebar-group {
+  border-top: 1px solid var(--line-soft);
+}
+.application-shell .sidebar-tree .package-nav > span {
+  display: grid;
+  gap: 0;
+}
+.application-shell .sidebar-tree .package-nav small {
+  margin: 0;
+  font-size: var(--fs-label);
+}
+.application-shell .sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 0;
+}
+.application-shell .sidebar-tree .sidebar-search {
+  margin: 0 0 8px;
+  background: var(--surface-list);
+}
+.application-shell .sidebar-tree .sidebar-search input {
+  position: static;
+  width: 100%;
+}
 .application-shell .sidebar-footer button {
-  height: 28px;
-  padding: 0 8px;
-  gap: 10px;
   border-radius: 4px;
   color: var(--concord-nav-text);
-  font-size: 12px;
   font-weight: 400;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  height: 48px;
+  padding: 4px;
+  font-size: 12px;
+}
+.application-shell .sidebar-footer button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.application-shell .sidebar-browse {
+  padding: 0 8px;
+}
+.application-shell .sidebar-browse button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 58px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--concord-nav-text);
+  font-size: 12px;
+}
+.application-shell .sidebar-browse button svg {
+  width: 19px;
+  height: 19px;
+}
+.application-shell .sidebar-browse button:hover,
+.application-shell .sidebar-browse button.active {
+  background: var(--hover);
+  color: var(--accent);
 }

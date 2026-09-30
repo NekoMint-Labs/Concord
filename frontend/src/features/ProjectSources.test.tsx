@@ -33,7 +33,7 @@ it("keeps latest, accepted, and pending source revision meanings distinct", () =
   ).toBe("latest-accepted");
 });
 
-it("requires a fresh READY check after import before replacing a baseline", () => {
+it("preserves the legacy freshness helper without imposing a baseline gate", () => {
   expect(
     freshCheckAfterImport(true, "2026-01-02T00:00:00Z", "2026-01-01T00:00:00Z"),
   ).toBe(true);

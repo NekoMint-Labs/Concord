@@ -86,38 +86,7 @@
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
-.application-shell .project-columns h2 {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  height: 20px;
-  margin: 0 0 8px;
-  color: var(--ink);
-  font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-.application-shell .project-columns h2 > span {
-  color: var(--muted);
-  font-size: var(--fs-label);
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-}
-.application-shell .project-columns h2 > button {
-  margin-left: auto;
-  padding: 2px 4px;
-  border: 0;
-  border-radius: 4px;
-  background: none;
-  color: var(--accent);
-  font-size: var(--fs-label);
-  font-weight: 400;
-}
-.application-shell .project-columns h2 > button:hover {
-  background: var(--hover);
-}
-.application-shell .work-list .quiet-message,
-.application-shell .project-columns .quiet-message {
+.application-shell .work-list .quiet-message {
   margin: 0;
   padding: 12px;
   color: var(--muted);

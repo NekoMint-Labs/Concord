@@ -152,6 +152,11 @@ export const api = {
   recheck: (project: string) =>
     request<AgentRun>(`/api/projects/${project}/recheck`, { method: "POST" }),
   reset: () => request<AgentRun>("/api/demo/reset", { method: "POST" }),
+  reject: (id: string, reason = "") =>
+    request<DTO<"AuditRecord">>(
+      `/api/proposals/${encodeURIComponent(id)}/reject`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    ),
   approve: (id: string, strong = false, confirmation = "") =>
     request<DTO<"Approval">>(`/api/proposals/${id}/approve`, {
       method: "POST",

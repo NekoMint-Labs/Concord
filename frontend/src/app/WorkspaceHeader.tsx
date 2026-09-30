@@ -39,7 +39,7 @@ export function WorkspaceHeader({
     ) ?? [];
   const source = models.length === 1 ? models[0] : undefined;
   const revisions = useQuery({
-    queryKey: ["revisions", project, source?.source.id],
+    queryKey: ["source-revisions", project, source?.source.id],
     queryFn: () => api.sourceRevisions(project, source!.source.id),
     enabled: !!source,
   });
@@ -146,9 +146,6 @@ export function WorkspaceHeader({
       </div>
       <div className="local-actions" aria-label="当前工作区操作">
         {children}
-        <span className="header-avatar" aria-label="账户">
-          J
-        </span>
       </div>
     </header>
   );
