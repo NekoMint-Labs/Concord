@@ -32,7 +32,7 @@ def rendered(session: NativeSession, phase: str):
 
 def import_ifc(session: NativeSession, fixture: Path) -> dict:
     session.wait("return !!document.querySelector('.startup')", phase="startup ready")
-    session.click(".startup", "打开演示项目")
+    session.click(".startup", "打开示例项目")
     session.wait("return !!document.querySelector('.work-list')", phase="initial workspace ready")
     profile = session.api("/api/profile")
     assert profile["profile"] == "desktop" and profile["runtime"] == "dbos"

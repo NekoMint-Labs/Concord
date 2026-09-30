@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 
 import httpx
-from native_webdriver_client import NativeSession, WebDriverError
+from native_webdriver_client import ELEMENT_KEY, NativeSession, WebDriverError
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -88,9 +88,10 @@ def stop_driver(driver: subprocess.Popen):
 
 def coordination(session: NativeSession, artifacts: Path) -> dict:
     session.wait("return !!document.querySelector('.startup')", phase="startup ready")
-    session.click(".startup", "打开演示项目")
+    session.click(".startup", "打开示例项目")
     session.wait("return !!document.querySelector('.work-list')", phase="initial workspace ready")
-    session.click("article[data-work-key='WP-200']", "查看详情 →")
+    session.click(".work-list", "东翼风管安装", startswith=True)
+    session.click("[aria-label='所选工作事项']", "查看详情")
     readiness = '[aria-label="工作包概览"] .readiness-summary'
     ready = """
         const overview = document.querySelector(arguments[0]);
@@ -112,8 +113,14 @@ def coordination(session: NativeSession, artifacts: Path) -> dict:
         phase="capability page ready",
     )
     session.click("nav[aria-label='主要工作区']", "工作")
-    session.click("article[data-work-key='WP-200']", "查看详情 →")
+    session.click(".work-list", "东翼风管安装", startswith=True)
+    session.click("[aria-label='所选工作事项']", "查看详情")
     session.click("[aria-label='当前工作区操作']", "记录变更")
+    revision = session.wait(
+        "return document.querySelector('.event-dialog input[type=text]')",
+        phase="design revision input ready",
+    )
+    session.request("POST", session.path(f"element/{revision[ELEMENT_KEY]}/value"), {"text": "V17"})
     session.click(".event-dialog", "提交并分析")
     session.wait(
         "return ['已阻塞', '待批准'].includes("
