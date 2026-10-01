@@ -431,12 +431,8 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     .getByRole("button", { name: "项目", exact: true })
     .click();
   await page
-    .getByRole("region", { name: "工作包状态" })
-    .getByRole("button", { name: "查看全部 →" })
-    .click();
-  await page
-    .getByRole("region", { name: "项目工作包" })
-    .getByRole("button", { name: "新建工作包" })
+    .getByRole("region", { name: "当前状态" })
+    .getByRole("button", { name: "添加工作包 →", exact: true })
     .click();
   const structure = page.getByRole("dialog", { name: "新建工作包" });
   await structure
@@ -466,9 +462,8 @@ test("real project survives restart through source, BIM mapping, baseline, revis
 
   // New projects add a logical source and its first revision in one dialog.
   const register = await openSources(page);
-  await register
-    .getByRole("button", { name: "+ 添加资料", exact: true })
-    .click();
+  await register.getByRole("button", { name: "资料操作", exact: true }).click();
+  await page.getByRole("menuitem", { name: "添加资料", exact: true }).click();
   const addDialog = page.getByRole("dialog", { name: "添加资料", exact: true });
   await addDialog.getByLabel("选择文件（可多选）").setInputFiles(fixtureV16);
   await addDialog
@@ -531,6 +526,9 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     .toBe(3);
 
   const baselineRegister = await openSources(page, "MEP Model");
+  await baselineRegister
+    .getByRole("button", { name: "基线记录与操作", exact: true })
+    .click();
   await baselineRegister.getByRole("button", { name: "确认新基线" }).click();
   const baselineDialog = page.getByRole("dialog", { name: "确认基线 B1" });
   await expect(baselineDialog).toContainText("MEP Model");
@@ -539,10 +537,7 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     .getByRole("button", { name: "确认 B1", exact: true })
     .click();
   await expect(baselineDialog).not.toBeVisible();
-  await expect(
-    baselineRegister.getByText("基线历史 · 1", { exact: true }),
-  ).toBeVisible();
-  await baselineRegister.getByText("基线历史 · 1", { exact: true }).click();
+  await expect(baselineRegister.locator(".baseline-entry")).toHaveCount(1);
   await expect(
     baselineRegister.getByRole("button", { name: /^B1 · 1 个资料版本/ }),
   ).toBeVisible();
@@ -557,17 +552,18 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     "Ventilation",
   );
   const reloadedRegister = await openSources(page, "MEP Model");
-  await expect(
-    reloadedRegister.getByText("基线历史 · 1", { exact: true }),
-  ).toBeVisible();
-  await reloadedRegister.getByText("基线历史 · 1", { exact: true }).click();
+  await reloadedRegister
+    .getByRole("button", { name: "基线记录与操作", exact: true })
+    .click();
+  await expect(reloadedRegister.locator(".baseline-entry")).toHaveCount(1);
   await expect(
     reloadedRegister.getByRole("button", { name: /^B1 · 1 个资料版本/ }),
   ).toBeVisible();
 
   await reloadedRegister
-    .getByRole("button", { name: "+ 添加资料", exact: true })
+    .getByRole("button", { name: "资料操作", exact: true })
     .click();
+  await page.getByRole("menuitem", { name: "添加资料", exact: true }).click();
   const secondDialog = page.getByRole("dialog", {
     name: "添加资料",
     exact: true,
@@ -608,13 +604,25 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     name: "基线与最新版本比较",
     exact: true,
   });
+  await impact
+    .getByRole("button", { name: "比较详情与操作", exact: true })
+    .click();
   await expect(impact).toContainText("新版本待审核");
-  await impact.getByRole("button", { name: "查看变化" }).click();
+  await impact
+    .locator(".impact-empty")
+    .getByRole("button", { name: "查看变化" })
+    .click();
   await expect(page.locator(".impact-summary")).toContainText("新增");
   await expect(page.locator(".revision-impact")).toContainText(
     /受影响工作包|有构件变化/,
   );
 
+  const revisionHistory = page
+    .getByRole("complementary", { name: "资料上下文" })
+    .getByRole("button", { name: "版本历史与操作", exact: true });
+  if ((await revisionHistory.getAttribute("aria-expanded")) === "false") {
+    await revisionHistory.click();
+  }
   await page
     .locator(".sources-context-revision")
     .filter({ hasText: "R2" })
