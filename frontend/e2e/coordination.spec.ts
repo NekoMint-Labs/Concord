@@ -104,28 +104,23 @@ async function selectDemoPackage(page: Page) {
   ).toBeVisible();
 }
 
-/**
- * The project sheet's own sections are the doors to its records.
- *
- * The reworked 项目 page leads with the project's real content, so each list's
- * heading carries the way into its full view (工作包 → 全部, 项目文件 → 全部) rather
- * than the page being a generic index of links. The 项目内容 nav that remains holds
- * only the two record types that have no table on the sheet.
- */
-const projectSections = {
-  工作包: "工作包状态",
-  文档: "项目文件",
-} as const;
-
-async function openProjectView(page: Page, name: keyof typeof projectSections) {
+/** Packages open from their register; Documents from the project-record navigation. */
+async function openProjectView(page: Page, name: "工作包" | "文档") {
   await page
     .getByRole("navigation", { name: "主要工作区" })
     .getByRole("button", { name: "项目", exact: true })
     .click();
-  await page
-    .getByRole("region", { name: projectSections[name] })
-    .getByRole("button", { name: name === "工作包" ? "查看全部 →" : "全部 →" })
-    .click();
+  if (name === "文档") {
+    await page
+      .getByRole("navigation", { name: "项目内容" })
+      .getByRole("button", { name: /^文档/ })
+      .click();
+  } else {
+    await page
+      .getByRole("region", { name: "工作包状态" })
+      .getByRole("button", { name: "查看全部 →" })
+      .click();
+  }
 }
 
 test.beforeEach(async ({ request, page }) => {
@@ -330,15 +325,21 @@ test("document upload, retrieval and authenticated source download use the real 
     mimeType: "text/markdown",
     buffer: Buffer.from("# Browser evidence\nunique-browser-evidence-phrase"),
   });
-  await expect(
-    page.getByText("browser-evidence.md", { exact: true }),
-  ).toBeVisible();
-  await page.getByText("browser-evidence.md", { exact: true }).click();
+  const document = page.getByRole("button", {
+    name: /^browser-evidence\.md\s/,
+  });
+  await expect(document).toBeVisible();
+  await document.click();
   await page.getByLabel("搜索文档").fill("unique-browser-evidence-phrase");
   await page.getByRole("search").getByRole("button", { name: "搜索" }).click();
   await expect(page.locator(".document-chunk")).toContainText(
     "unique-browser-evidence-phrase",
   );
+  await page
+    .getByRole("search")
+    .getByRole("button", { name: "清除", exact: true })
+    .click();
+  await page.getByRole("button", { name: "来源详情", exact: true }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "保存来源" }).click();
   expect((await download).suggestedFilename()).toBe("browser-evidence.md");
@@ -487,7 +488,7 @@ test("a disconnected event stream refreshes stale approvals behind a newer docum
     buffer: Buffer.from("Independent document job"),
   });
   await expect(
-    page.getByText("approval-stream.md", { exact: true }),
+    page.getByRole("button", { name: /^approval-stream\.md\s/ }),
   ).toBeVisible();
   await expect(page.locator(".upload-status")).toContainText("已完成");
   const uploaded = await workspace(request);
