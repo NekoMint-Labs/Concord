@@ -227,23 +227,25 @@ export function ProjectExplorer({
           }}
         />
       </label>
-      {needle && <>
-      <nav className="explorer-filters" aria-label="浏览对象类型">
-        {categories.map((item) => (
-          <button
-            type="button"
-            key={item}
-            aria-pressed={category === item}
-            onClick={() => setCategory(item)}
-          >
-            {item}
-          </button>
-        ))}
-      </nav>
-      <p className="quiet-message" role="status">
-        {count} 个对象匹配「{query.trim()}」
-      </p>
-      </>}
+      {needle && (
+        <>
+          <nav className="explorer-filters" aria-label="浏览对象类型">
+            {categories.map((item) => (
+              <button
+                type="button"
+                key={item}
+                aria-pressed={category === item}
+                onClick={() => setCategory(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </nav>
+          <p className="quiet-message" role="status">
+            {count} 个对象匹配「{query.trim()}」
+          </p>
+        </>
+      )}
       {pending && <p role="status">正在读取项目记录…</p>}
       {(queries.some((result) => result.isError) || context.recordsError) && (
         <div role="alert">
@@ -261,35 +263,36 @@ export function ProjectExplorer({
           </button>
         </div>
       )}
-      {needle && (!count && !pending && !unavailable ? (
-        <div className="explorer-empty workspace-empty">
-          <h2>没有匹配的项目对象</h2>
-          <p>
-            搜索只包含当前项目已有对象的名称、编号和记录信息；试试其他关键词或类型。
-          </p>
-          <button
-            type="button"
-            className="text-button"
-            onClick={() => {
-              setQuery("");
-              setCategory("全部");
-            }}
-          >
-            清除搜索与筛选
-          </button>
-        </div>
-      ) : (
-        shown
-          .filter((group) => group.entries.length)
-          .map((group) => (
-            <section
-              className="explorer-group"
-              key={group.category}
-              aria-label={group.category}
+      {needle &&
+        (!count && !pending && !unavailable ? (
+          <div className="explorer-empty workspace-empty">
+            <h2>没有匹配的项目对象</h2>
+            <p>
+              搜索只包含当前项目已有对象的名称、编号和记录信息；试试其他关键词或类型。
+            </p>
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => {
+                setQuery("");
+                setCategory("全部");
+              }}
             >
-              <h2>
-                {group.category} <span>{group.entries.length}</span>
-              </h2>
+              清除搜索与筛选
+            </button>
+          </div>
+        ) : (
+          shown
+            .filter((group) => group.entries.length)
+            .map((group) => (
+              <section
+                className="explorer-group"
+                key={group.category}
+                aria-label={group.category}
+              >
+                <h2>
+                  {group.category} <span>{group.entries.length}</span>
+                </h2>
                 <ul>
                   {group.entries.map((entry) => (
                     <li
@@ -343,9 +346,9 @@ export function ProjectExplorer({
                     </li>
                   ))}
                 </ul>
-            </section>
-          ))
-      ))}
+              </section>
+            ))
+        ))}
     </section>
   );
 }

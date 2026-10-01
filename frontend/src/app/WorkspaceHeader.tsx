@@ -31,9 +31,12 @@ export function WorkspaceHeader({
   children?: ReactNode;
 }) {
   const project = data.state.project.id;
-  const contextPackage = modelElementId !== undefined
-    ? data.state.work_packages.find((item) => item.element_ids.includes(modelElementId))
-    : wp;
+  const contextPackage =
+    modelElementId !== undefined
+      ? data.state.work_packages.find((item) =>
+          item.element_ids.includes(modelElementId),
+        )
+      : wp;
   const sources = useQuery({
     queryKey: ["sources", project],
     queryFn: () => api.sourceStatuses(project),
@@ -82,13 +85,16 @@ export function WorkspaceHeader({
               <span>
                 {demoAreaName(
                   contextPackage.area_id,
-                  data.state.areas.find((area) => area.id === contextPackage.area_id)
-                    ?.name ?? contextPackage.area_id,
+                  data.state.areas.find(
+                    (area) => area.id === contextPackage.area_id,
+                  )?.name ?? contextPackage.area_id,
                 )}
               </span>
               <span className="crumb-sep">/</span>
               {tab === "coordination" ? (
-                <strong>{demoWorkPackageName(contextPackage.id, contextPackage.name)}</strong>
+                <strong>
+                  {demoWorkPackageName(contextPackage.id, contextPackage.name)}
+                </strong>
               ) : (
                 <button
                   type="button"

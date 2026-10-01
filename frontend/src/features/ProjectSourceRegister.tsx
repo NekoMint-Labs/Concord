@@ -42,38 +42,40 @@ export function ProjectSourceRegister({
 
   return (
     <section className="sources-object-lane" aria-label="项目资料">
-      {!!(statuses.length || baselines.length) && <section aria-label="当前基线" className="sources-baseline-line">
-        <span>
-          当前基线{" "}
-          <strong>{baseline ? `B${baseline.sequence}` : "尚未确认"}</strong>
-        </span>
-        <AppDisclosure label="基线记录与操作" className="sources-support">
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={
-              data.sources.isPending ||
-              data.sources.isError ||
-              data.baselines.isPending ||
-              data.baselines.isError ||
-              !latestBaselineEntries(statuses).length
-            }
-            onClick={() => {
-              data.acceptBaseline.reset();
-              setBaselineEntries(latestBaselineEntries(statuses));
-            }}
-          >
-            确认新基线
-          </Button>
-          {!!baselines.length && (
-            <BaselineHistory
-              baselines={baselines}
-              statuses={statuses}
-              revisions={data.revisionCatalog}
-            />
-          )}
-        </AppDisclosure>
-      </section>}
+      {!!(statuses.length || baselines.length) && (
+        <section aria-label="当前基线" className="sources-baseline-line">
+          <span>
+            当前基线{" "}
+            <strong>{baseline ? `B${baseline.sequence}` : "尚未确认"}</strong>
+          </span>
+          <AppDisclosure label="基线记录与操作" className="sources-support">
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={
+                data.sources.isPending ||
+                data.sources.isError ||
+                data.baselines.isPending ||
+                data.baselines.isError ||
+                !latestBaselineEntries(statuses).length
+              }
+              onClick={() => {
+                data.acceptBaseline.reset();
+                setBaselineEntries(latestBaselineEntries(statuses));
+              }}
+            >
+              确认新基线
+            </Button>
+            {!!baselines.length && (
+              <BaselineHistory
+                baselines={baselines}
+                statuses={statuses}
+                revisions={data.revisionCatalog}
+              />
+            )}
+          </AppDisclosure>
+        </section>
+      )}
       <header className="sources-register-heading">
         <h2>资料</h2>
         <AppMenu label="资料操作">

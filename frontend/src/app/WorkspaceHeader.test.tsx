@@ -137,10 +137,17 @@ it("uses the selected model object's relation, not the remembered work package, 
   const data = structuredClone(fixture.waiting) as unknown as Workspace;
   const remembered = data.state.work_packages[0];
   const linked = data.state.work_packages.find((item) => item.id === "WP-200")!;
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
   const node = (element: string) => (
     <QueryClientProvider client={client}>
-      <WorkspaceHeader data={data} wp={remembered} tab="bim" modelElementId={element} />
+      <WorkspaceHeader
+        data={data}
+        wp={remembered}
+        tab="bim"
+        modelElementId={element}
+      />
     </QueryClientProvider>
   );
   const view = render(node(linked.element_ids[0]));

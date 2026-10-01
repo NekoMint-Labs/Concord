@@ -170,9 +170,7 @@ it("opens the requested document and keeps the condensed source menu within the 
   const props = { initialDocumentId: "other-pdf" };
   const view = library(props);
   await waitFor(() => expect(chunks).toHaveBeenCalledWith("other-pdf"));
-  expect(
-    screen.getByRole("heading", { name: "details.pdf" }),
-  ).toBeVisible();
+  expect(screen.getByRole("heading", { name: "details.pdf" })).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "PDF" }));
   view.rerender(view.node({ ...props, condensed: true }));
   const menu = await screen.findByRole("menu");
@@ -238,7 +236,9 @@ it("keeps technical provenance behind disclosure instead of repeating it in the 
   vi.spyOn(api, "chunks").mockResolvedValue([]);
   const { container } = library();
   await screen.findByRole("heading", { name: "notes.md" });
-  expect(container.querySelector(".document-list")).not.toHaveTextContent("lightweight");
+  expect(container.querySelector(".document-list")).not.toHaveTextContent(
+    "lightweight",
+  );
   expect(screen.queryByText(document.content_hash)).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "来源详情" }));
   expect(screen.getByText("解析器：lightweight")).toBeVisible();

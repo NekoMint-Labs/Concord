@@ -297,7 +297,13 @@ function ProjectApplication({
             <WorkspaceHeader
               data={data}
               wp={wp}
-              modelElementId={tab === "bim" && !mappingMode ? localIfc ? "" : selectedElement : undefined}
+              modelElementId={
+                tab === "bim" && !mappingMode
+                  ? localIfc
+                    ? ""
+                    : selectedElement
+                  : undefined
+              }
               tab={tab}
               navCollapsed={!navOpen}
               onToggleNav={() => {

@@ -377,7 +377,7 @@ it("opens explicitly focused revision actions and authenticates/retries download
     .spyOn(globalThis, "fetch")
     .mockResolvedValueOnce(new Response(null, { status: 403 }))
     .mockResolvedValueOnce(new Response("original IFC"));
-  const createUrl = vi.fn(() => "blob:original-ifc");
+  const createUrl = vi.fn((_blob: Blob) => "blob:original-ifc");
   Object.defineProperty(URL, "createObjectURL", {
     configurable: true,
     value: createUrl,
@@ -443,7 +443,11 @@ it("opens explicitly focused revision actions and authenticates/retries download
     within(revision).getByRole("button", { name: "重试下载原文件" }),
   );
   await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(1));
-  expect(createUrl).toHaveBeenCalledWith(expect.any(Blob));
+  expect(createUrl).toHaveBeenCalledTimes(1);
+  const blob = createUrl.mock.calls[0][0];
+  expect(blob.size).toBe(12);
+  expect(blob.type).toBe("text/plain;charset=utf-8");
+  expect(await blob.text()).toBe("original IFC");
   await waitFor(() => expect(within(revision).queryByRole("alert")).toBeNull());
 });
 
@@ -582,7 +586,9 @@ it("leads with the latest comparison, truthful unlinked impact and one existing 
   expect(screen.queryByRole("button", { name: "添加版本" })).toBeNull();
   expect(within(summary).getByRole("heading")).toHaveTextContent("R1 → R2");
   expect(within(summary).getAllByText(/R1 → R2/)).toHaveLength(1);
-  expect(within(summary).getByRole("status")).toHaveTextContent("GlobalId continuity warning");
+  expect(within(summary).getByRole("status")).toHaveTextContent(
+    "GlobalId continuity warning",
+  );
   expect(await screen.findByText("GlobalId continuity warning")).toBeVisible();
   const review = within(summary).getByRole("button", { name: "调查此比较" });
   expect(review).toBeEnabled();

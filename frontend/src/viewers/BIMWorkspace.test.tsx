@@ -701,17 +701,29 @@ it("keeps a selected object's overview lean while retaining explicit empty tabs 
     hideSourceActions: true,
     revisionLabel: "R2",
     focusId: "unlinked-element",
-    snapshots: [{
-      revision_id: "r2",
-      global_id: "unlinked-element", name: "AHU-02", ifc_class: "IfcAirHandlingUnit",
-      storey: "L02", space: null, properties: { Rating: "100 kW" },
-    }],
+    snapshots: [
+      {
+        revision_id: "r2",
+        global_id: "unlinked-element",
+        name: "AHU-02",
+        ifc_class: "IfcAirHandlingUnit",
+        storey: "L02",
+        space: null,
+        properties: { Rating: "100 kW" },
+      },
+    ],
     onNavigate: vi.fn(),
     onWorkPackage: vi.fn(),
   });
-  const inspector = await screen.findByRole("complementary", { name: "构件详情" });
-  expect(await within(inspector).findByRole("heading", { name: "AHU-02" })).toBeVisible();
-  expect(within(inspector).queryByRole("heading", { name: /变更|问题/ })).toBeNull();
+  const inspector = await screen.findByRole("complementary", {
+    name: "构件详情",
+  });
+  expect(
+    await within(inspector).findByRole("heading", { name: "AHU-02" }),
+  ).toBeVisible();
+  expect(
+    within(inspector).queryByRole("heading", { name: /变更|问题/ }),
+  ).toBeNull();
   expect(within(inspector).queryByText("系统", { exact: true })).toBeNull();
   expect(within(inspector).queryByText("工作包", { exact: true })).toBeNull();
   expect(document.querySelector(".element-identity")).toBeNull();

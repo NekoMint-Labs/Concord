@@ -142,18 +142,18 @@ export function ProjectOverview({
       <div className="project-main">
         {sourcesRegister}
         {!!packages.length && (
-        <section className="project-ledger" aria-label="工作包状态">
-          <header className="project-ledger-head">
-            <div>
-              <h2>工作包</h2>
-              <span>{packages.length} 个</span>
-            </div>
-            <div>
-              <button type="button" onClick={() => onTab("work-packages")}>
-                查看全部 →
-              </button>
-            </div>
-          </header>
+          <section className="project-ledger" aria-label="工作包状态">
+            <header className="project-ledger-head">
+              <div>
+                <h2>工作包</h2>
+                <span>{packages.length} 个</span>
+              </div>
+              <div>
+                <button type="button" onClick={() => onTab("work-packages")}>
+                  查看全部 →
+                </button>
+              </div>
+            </header>
             <ul className="project-package-list">
               {packages.map((wp) => {
                 const status = readiness(wp.id);
@@ -195,15 +195,31 @@ export function ProjectOverview({
                 );
               })}
             </ul>
-        </section>
+          </section>
         )}
       </div>
-      {!packages.length && !models.length && !context.documents.length && !context.baselines.length && !workspace.events.length && (
-        <nav aria-label="项目内容" className="project-empty-record-links">
-          <button type="button" className="text-button" onClick={() => onTab("documents")}>文档 →</button>
-          <button type="button" className="text-button" onClick={() => onTab("history")}>历史 →</button>
-        </nav>
-      )}
+      {!packages.length &&
+        !models.length &&
+        !context.documents.length &&
+        !context.baselines.length &&
+        !workspace.events.length && (
+          <nav aria-label="项目内容" className="project-empty-record-links">
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => onTab("documents")}
+            >
+              文档 →
+            </button>
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => onTab("history")}
+            >
+              历史 →
+            </button>
+          </nav>
+        )}
     </div>
   );
 }

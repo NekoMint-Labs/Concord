@@ -383,7 +383,10 @@ it.each(["documents", "baselines", "sourceRevisions", "comparisons"] as const)(
     fireEvent.change(search, { target: { value: "" } });
     expect(screen.queryByRole("list")).toBeNull();
     await loaded();
-    expect(screen.getByRole("button", { name: "全部" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "全部" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(screen.getByText("Permit notes.md")).toBeVisible();
     expect(screen.getByText("Safety brief · R1")).toBeVisible();
     expect(screen.getByText("West tower HVAC · R9")).toBeVisible();

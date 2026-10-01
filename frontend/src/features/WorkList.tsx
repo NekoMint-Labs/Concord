@@ -111,9 +111,11 @@ export function WorkList({
         <span className="work-row-copy">
           <strong title={item.title}>{item.title}</strong>
           <small title={item.context}>{item.context}</small>
-          {label !== "最近完成" && <span className="work-row-reason" title={item.reason}>
-            {item.reason}
-          </span>}
+          {label !== "最近完成" && (
+            <span className="work-row-reason" title={item.reason}>
+              {item.reason}
+            </span>
+          )}
         </span>
         <span className="work-state">
           {item.state}

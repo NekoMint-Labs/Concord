@@ -171,18 +171,26 @@ export function SpatialInspectorDetails({
                 {/* 类别 is already the panel subtitle; repeating it here spends a
                       row of the most-read block on a value the reader has just
                       been shown. */}
-                {(item?.space || snapshot?.space) && <div>
-                  <dt>系统</dt>
-                  <dd>{item?.space ?? snapshot?.space}</dd>
-                </div>}
-                {(snapshot?.storey || item?.storey) && <div>
-                  <dt>楼层</dt>
-                  <dd>{snapshot?.storey ?? item?.storey}</dd>
-                </div>}
-                {workPackage && <div>
-                  <dt>工作包</dt>
-                  <dd>{demoWorkPackageName(workPackage.id, workPackage.name)}</dd>
-                </div>}
+                {(item?.space || snapshot?.space) && (
+                  <div>
+                    <dt>系统</dt>
+                    <dd>{item?.space ?? snapshot?.space}</dd>
+                  </div>
+                )}
+                {(snapshot?.storey || item?.storey) && (
+                  <div>
+                    <dt>楼层</dt>
+                    <dd>{snapshot?.storey ?? item?.storey}</dd>
+                  </div>
+                )}
+                {workPackage && (
+                  <div>
+                    <dt>工作包</dt>
+                    <dd>
+                      {demoWorkPackageName(workPackage.id, workPackage.name)}
+                    </dd>
+                  </div>
+                )}
                 <div>
                   <dt>模型</dt>
                   <dd>
@@ -192,7 +200,8 @@ export function SpatialInspectorDetails({
               </dl>
             </>
           )}
-          {((inspectorTab === "overview" && !!change) || inspectorTab === "changes") && (
+          {((inspectorTab === "overview" && !!change) ||
+            inspectorTab === "changes") && (
             <section className="element-section">
               <h3>
                 变更 <small>{change ? 1 : 0}</small>
@@ -212,7 +221,8 @@ export function SpatialInspectorDetails({
               )}
             </section>
           )}
-          {((inspectorTab === "overview" && linkedIssues.length > 0) || inspectorTab === "issues") && (
+          {((inspectorTab === "overview" && linkedIssues.length > 0) ||
+            inspectorTab === "issues") && (
             <section className="element-section">
               <h3>
                 问题 <small>{linkedIssues.length}</small>

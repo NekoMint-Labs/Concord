@@ -244,7 +244,6 @@ it("makes adding a project model the next step when there is no model, not check
   expect(onModel).not.toHaveBeenCalled();
 });
 
-
 it("opens the specific project document rather than just the document destination", async () => {
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
   const documents: DTO<"DocumentMetadata">[] = [

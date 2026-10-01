@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { FileText, Search, Upload } from "lucide-react";
 import { api, isDesktop, readSource, type AgentRun } from "../api/client";
 import { WorkspaceState } from "../components/WorkspaceState";
-import { AppDisclosure } from '../components/ui/AppDisclosure';
+import { AppDisclosure } from "../components/ui/AppDisclosure";
 import { Button } from "../components/ui/button";
 import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
 import { AppTooltip } from "../components/ui/AppTooltip";
@@ -93,7 +93,7 @@ export function Documents({
   const current =
     listed?.find((doc) => doc.id === selected)?.id ?? listed?.[0]?.id ?? "";
   const meta = listed?.find((doc) => doc.id === current);
-  const subject = query ? `搜索结果：${query}` : meta?.filename ?? "文档依据";
+  const subject = query ? `搜索结果：${query}` : (meta?.filename ?? "文档依据");
   const chunks = useQuery({
     queryKey: ["chunks", current],
     queryFn: () => api.chunks(current),
@@ -282,7 +282,11 @@ export function Documents({
                 </div>
                 {query && (
                   <AppDisclosure label="来源详情">
-                    <p>{documents.data?.find((doc) => doc.content_hash === chunk.source_hash)?.filename ?? "文档来源"}</p>
+                    <p>
+                      {documents.data?.find(
+                        (doc) => doc.content_hash === chunk.source_hash,
+                      )?.filename ?? "文档来源"}
+                    </p>
                     <p>解析器：{chunk.parser}</p>
                     <p className="mono">SHA {chunk.source_hash}</p>
                   </AppDisclosure>
@@ -392,38 +396,40 @@ export function Documents({
     >
       <div className="view-toolbar">
         <h2>文档</h2>
-        {!emptyWorkspace && <form
-          className="documents-search"
-          role="search"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setQuery(search.trim());
-          }}
-        >
-          <Search {...icon} />
-          <input
-            aria-label="搜索文档"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索文档与解析内容"
-          />
-          <Button type="submit" variant="secondary" size="sm">
-            搜索
-          </Button>
-          {query && (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setQuery("");
-                setSearch("");
-              }}
-            >
-              清除
+        {!emptyWorkspace && (
+          <form
+            className="documents-search"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setQuery(search.trim());
+            }}
+          >
+            <Search {...icon} />
+            <input
+              aria-label="搜索文档"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="搜索文档与解析内容"
+            />
+            <Button type="submit" variant="secondary" size="sm">
+              搜索
             </Button>
-          )}
-        </form>}
+            {query && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setQuery("");
+                  setSearch("");
+                }}
+              >
+                清除
+              </Button>
+            )}
+          </form>
+        )}
         <div className="view-toolbar-actions">
           {!emptyWorkspace && (
             <Button variant="secondary" size="sm" onClick={importDocument}>

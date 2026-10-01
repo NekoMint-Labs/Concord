@@ -54,7 +54,9 @@ export function WorkPeek({
         meta={
           <>
             <span className="work-peek-location">{location}</span>
-            <span className={`work-peek-state is-${selectedItem.state === "已阻塞" ? "blocked" : selectedItem.state === "可施工" || selectedItem.state === "已完成" ? "ready" : "neutral"}`}>
+            <span
+              className={`work-peek-state is-${selectedItem.state === "已阻塞" ? "blocked" : selectedItem.state === "可施工" || selectedItem.state === "已完成" ? "ready" : "neutral"}`}
+            >
               <i aria-hidden="true" />
               {selectedItem.state}
             </span>
@@ -95,7 +97,8 @@ export function WorkPeek({
                     <strong>{evidence.source_id}</strong>
                     <span>{evidence.fact}</span>
                     <span>
-                      {evidence.source_revision} · {evidence.location ?? "无位置"}
+                      {evidence.source_revision} ·{" "}
+                      {evidence.location ?? "无位置"}
                     </span>
                   </li>
                 ))}

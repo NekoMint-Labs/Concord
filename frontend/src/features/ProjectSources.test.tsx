@@ -158,7 +158,9 @@ it("groups the empty baseline explanation with one existing Open Project action"
   expect(
     screen.getByRole("heading", { name: "尚未确认项目基线" }),
   ).toBeVisible();
-  expect(screen.getByText("在项目核对资料版本后，人工确认基线。")).toBeVisible();
+  expect(
+    screen.getByText("在项目核对资料版本后，人工确认基线。"),
+  ).toBeVisible();
   expect(screen.getAllByRole("button")).toHaveLength(1);
   fireEvent.click(screen.getByRole("button", { name: "打开项目 →" }));
   expect(onProject).toHaveBeenCalledOnce();

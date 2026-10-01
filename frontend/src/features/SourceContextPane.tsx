@@ -274,7 +274,11 @@ export function SourceContextPane({
                     {comparison.summary.changed}
                   </p>
                   {comparison.summary.warnings.map((warning) => (
-                    <p role="status" className="continuity-warning" key={warning}>
+                    <p
+                      role="status"
+                      className="continuity-warning"
+                      key={warning}
+                    >
                       {warning}
                     </p>
                   ))}
