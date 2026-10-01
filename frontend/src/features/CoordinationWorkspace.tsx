@@ -55,6 +55,7 @@ export function CoordinationWorkspace({
   busy,
   onRecheck,
   onDetails,
+  onConstraint,
   onImpact,
   onModel,
   onIssues,
@@ -68,6 +69,7 @@ export function CoordinationWorkspace({
   busy: boolean;
   onRecheck: () => void;
   onDetails: (view: InspectorView) => void;
+  onConstraint?: (id: string) => void;
   onImpact: () => void;
   onModel?: () => void;
   onIssues?: () => void;
@@ -502,6 +504,9 @@ export function CoordinationWorkspace({
             <section className="package-tab-content">
               <h2>进度</h2>
               <p>此工作包尚未记录日期。</p>
+              <p>
+                这里显示已记录的前置关系与设计版本；施工日期请核对项目进度资料。
+              </p>
               <PropertyTable>
                 <PropertyRow
                   label="前置工作包"
@@ -531,7 +536,10 @@ export function CoordinationWorkspace({
                     className="package-issue"
                     key={issue.id}
                     type="button"
-                    onClick={() => onDetails("blocker")}
+                    onClick={() => {
+                      onConstraint?.(issue.id);
+                      onDetails("blocker");
+                    }}
                   >
                     <CircleAlert size={15} />
                     <span>
@@ -545,7 +553,11 @@ export function CoordinationWorkspace({
                   </button>
                 ))
               ) : (
-                <p>此工作包没有已记录的阻塞问题。</p>
+                <p>
+                  {workspace.analysis
+                    ? "此工作包没有已记录的阻塞问题。工程条件变化后，请返回概览重新检查；这不代替现场核验。"
+                    : "此工作包尚未检查，暂无问题记录。请返回概览重新检查施工条件。"}
+                </p>
               )}
             </section>
           )}

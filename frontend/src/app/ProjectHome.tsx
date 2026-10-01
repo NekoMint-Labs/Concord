@@ -20,12 +20,18 @@ export function ProjectHome({
   sourceId,
   onSourceSelected,
   sourceContext,
+  onDocument,
+  onSource,
+  onModel,
 }: {
   workspace: Workspace;
   sources: ProjectSourceStatus[];
   onTab: (tab: WorkspaceTab) => void;
   onPackage: (id: string) => void;
   selected?: string;
+  onDocument?: (id: string) => void;
+  onSource?: (id: string, revisionId?: string) => void;
+  onModel?: (sourceId: string, revisionId: string) => void;
   onStructure?: () => void;
   sourceId?: string;
   onSourceSelected?: (id: string) => void;
@@ -59,6 +65,7 @@ export function ProjectHome({
           onPackage={onPackage}
           selected={selected}
           onStructure={onStructure}
+          onSource={onSource}
           sourcesRegister={
             <ProjectSourceRegister
               project={project}
@@ -83,6 +90,9 @@ export function ProjectHome({
             context={context}
             onTab={onTab}
             onPackage={onPackage}
+            onDocument={onDocument}
+            onSource={onSource}
+            onModel={onModel}
           />
         )}
       </div>

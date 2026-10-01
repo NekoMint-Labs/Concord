@@ -119,9 +119,14 @@ it("shows a pending model as work without claiming a newer baseline", () => {
     ).getByRole("button", { name: "处理新版本" }),
   );
   expect(onModels).toHaveBeenCalledOnce();
-  expect(screen.getByRole("region", { name: "最近完成" })).toHaveTextContent(
-    "基于当前基线",
-  );
+  const completed = screen.getByRole("region", { name: "最近完成" });
+  expect(completed.querySelector(".work-row-reason")).toBeNull();
+  expect(within(completed).getByText("东翼风管安装")).toBeVisible();
+  const packageRow = within(completed).getByRole("button", { name: /东翼风管安装/ });
+  expect(packageRow.querySelector("small")).not.toHaveTextContent("东翼风管安装");
+  fireEvent.click(packageRow);
+  const packagePeek = screen.getByRole("complementary", { name: "所选工作事项" });
+  expect(within(packagePeek).getByRole("region", { name: "为什么需要处理" })).toHaveTextContent("基于当前基线");
 });
 
 it("selects a work item in place before taking its real action", async () => {
@@ -148,24 +153,14 @@ it("selects a work item in place before taking its real action", async () => {
   expect(row).toHaveAttribute("aria-pressed", "true");
   expect(
     screen.getByRole("complementary", { name: "所选工作事项" }),
-  ).toHaveTextContent("工作包");
+  ).toHaveTextContent("WP-200");
   expect(onPackage).not.toHaveBeenCalled();
   const peek = screen.getByRole("complementary", { name: "所选工作事项" });
-  expect(
-    within(peek).getByRole("region", { name: "关联工作包" }),
-  ).toHaveTextContent("WP-200");
-  expect(
-    within(peek).getByRole("region", { name: "项目状态" }),
-  ).toHaveTextContent("当前基线");
-  expect(
-    within(peek).getByRole("region", { name: "模型上下文" }),
-  ).toHaveTextContent("V16");
-  expect(
-    within(peek).getByRole("region", { name: "模型上下文" }),
-  ).toHaveTextContent("2 个关联构件");
-  expect(
-    within(peek).getByRole("region", { name: "关联工作包" }),
-  ).toHaveTextContent("L02 东翼 · 机电");
+  expect(within(peek).getByRole("region", { name: "当前判断" })).toHaveTextContent("已阻塞");
+  expect(within(peek).getAllByRole("button")).toHaveLength(2);
+  expect(within(peek).queryByRole("region", { name: "项目状态" })).toBeNull();
+  expect(within(peek).queryByRole("region", { name: "模型上下文" })).toBeNull();
+  expect(within(peek).getByRole("region", { name: "下一步" })).toHaveTextContent("处理");
   fireEvent.click(within(peek).getByRole("button", { name: "关闭详情" }));
   expect(
     screen.queryByRole("complementary", { name: "所选工作事项" }),
@@ -294,4 +289,38 @@ it("navigates displayed decisions while closed and dismisses without stealing ou
     screen.queryByRole("complementary", { name: "所选工作事项" }),
   ).toBeNull();
   expect(target).toHaveAttribute("aria-pressed", "true");
+});
+
+it("keeps a pending source Peek on its real comparison and at most one secondary destination", async () => {
+  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
+  const source = {
+    source: { id: "model", project_id: "harbor-east", name: "MEP", kind: "BIM" as const, created_at: "2026-01-01" },
+    latest_revision_id: "r2", accepted_revision_id: "r1", baseline_id: "b1", has_pending_revision: true,
+  };
+  vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
+  const comparison = {
+    id: "comparison", from_revision_id: "r1", to_revision_id: "r2",
+    summary: { warnings: ["continuity warning"] },
+  } as Awaited<ReturnType<typeof api.comparisons>>[number];
+  vi.spyOn(api, "comparisons").mockResolvedValue([comparison]);
+  vi.spyOn(api, "comparison").mockResolvedValue({
+    comparison, changes: [{ comparison_id: comparison.id, global_id: "wall-1", change_kind: "changed", changed_aspects: ["placement"] }], affected_work_packages: [],
+  } as Awaited<ReturnType<typeof api.comparison>>);
+  const onSource = vi.fn();
+  render(
+    <QueryClientProvider client={cache()}>
+      <WorkList workspace={workspace} sources={[source]} onPackage={vi.fn()} onModels={vi.fn()}
+        onRecheck={vi.fn()} onReport={vi.fn()} onProject={vi.fn()} onTab={vi.fn()} onSource={onSource} />
+    </QueryClientProvider>,
+  );
+  await waitFor(() => expect(api.comparison).toHaveBeenCalled());
+  const sourceRow = within(screen.getByRole("region", { name: "需要处理" })).getByRole("button", { name: /MEP 有新版本/ });
+  expect(sourceRow.querySelector("small")).not.toHaveTextContent("MEP");
+  fireEvent.click(sourceRow);
+  const peek = screen.getByRole("complementary", { name: "所选工作事项" });
+  expect(await within(peek).findByText("1 个构件变化 · 0 个受影响工作包")).toBeVisible();
+  expect(within(peek).getByRole("status")).toHaveTextContent("结果可能不完整");
+  expect(within(peek).getAllByRole("button")).toHaveLength(3);
+  fireEvent.click(within(peek).getByRole("button", { name: "在项目中查看版本 →" }));
+  expect(onSource).toHaveBeenCalledWith("model");
 });

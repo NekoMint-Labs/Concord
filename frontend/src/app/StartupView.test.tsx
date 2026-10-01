@@ -100,3 +100,33 @@ it("shows the connected no-project entry separately from a connection failure", 
   expect(onNewProject).toHaveBeenCalledOnce();
   expect(onOpenDemo).toHaveBeenCalledOnce();
 });
+
+it("offers another project when the selected workspace cannot load", () => {
+  const onOpenProject = vi.fn();
+  const onReconnect = vi.fn();
+  const view = render(
+    <StartupView
+      pending={false}
+      desktop
+      message="Project not found"
+      onOpenProject={onOpenProject}
+      onReconnect={onReconnect}
+      onToken={() => {}}
+    />,
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent("无法打开项目工作区。");
+  fireEvent.click(screen.getByRole("button", { name: "打开项目" }));
+  fireEvent.click(screen.getByRole("button", { name: "重新连接" }));
+  expect(onOpenProject).toHaveBeenCalledOnce();
+  expect(onReconnect).toHaveBeenCalledOnce();
+  view.rerender(
+    <StartupView
+      pending
+      desktop
+      onOpenProject={onOpenProject}
+      onReconnect={onReconnect}
+      onToken={() => {}}
+    />,
+  );
+  expect(screen.queryByRole("button", { name: "打开项目" })).toBeNull();
+});

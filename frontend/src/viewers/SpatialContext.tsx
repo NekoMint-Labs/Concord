@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { DTO, Workspace } from "../api/client";
 import {
@@ -11,7 +12,18 @@ type Change = DTO<"BimElementChange">;
 type Issue = DTO<"Constraint">;
 type Snapshot = DTO<"BimElementSnapshot">;
 
+function isRowSurface(event: MouseEvent<HTMLTableRowElement>) {
+  return (
+    !event.defaultPrevented &&
+    event.target instanceof Element &&
+    !event.target.closest(
+      'button, a, input, select, textarea, summary, [role="button"], [role="link"], [contenteditable]',
+    )
+  );
+}
+
 export function SpatialContext({
+  reduced = false,
   context,
   setContext,
   open,
@@ -26,11 +38,9 @@ export function SpatialContext({
   revisionLabel,
   onSelect,
   onIssue,
-  onWorkPackage,
-  workPackageId,
   onExpandInspector,
-  onNavigate,
 }: {
+  reduced?: boolean;
   context: "changes" | "issues";
   setContext: (value: "changes" | "issues") => void;
   open: boolean;
@@ -50,6 +60,7 @@ export function SpatialContext({
   onExpandInspector?: () => void;
   onNavigate?: (tab: "sources" | "documents" | "history") => void;
 }) {
+  if (reduced) return null;
   const packageFor = (id: string) =>
     workspace?.state.work_packages.find((wp) => wp.element_ids.includes(id));
   const description = (aspects: string[]) =>
@@ -71,6 +82,7 @@ export function SpatialContext({
         <div className="spatial-context-tabs">
           <button
             type="button"
+            disabled={reduced}
             className={context === "changes" ? "active" : ""}
             aria-pressed={context === "changes"}
             onClick={() => {
@@ -82,6 +94,7 @@ export function SpatialContext({
           </button>
           <button
             type="button"
+            disabled={reduced}
             className={context === "issues" ? "active" : ""}
             aria-pressed={context === "issues"}
             onClick={() => {
@@ -92,32 +105,8 @@ export function SpatialContext({
             相关问题 <small>{issues.length}</small>
           </button>
         </div>
-        {/* Links leave the model; they are a separate, quieter group from the in-place views. */}
-        <nav className="spatial-context-links" aria-label="相关页面">
-          <button
-            type="button"
-            disabled={!workPackageId || !onWorkPackage}
-            title={!workPackageId ? "当前构件没有关联工作包" : undefined}
-            onClick={() => workPackageId && onWorkPackage?.(workPackageId)}
-          >
-            工作包
-          </button>
-          {onNavigate && (
-            <>
-              <button type="button" onClick={() => onNavigate("sources")}>
-                模型版本
-              </button>
-              <button type="button" onClick={() => onNavigate("documents")}>
-                文档
-              </button>
-              <button type="button" onClick={() => onNavigate("history")}>
-                历史
-              </button>
-            </>
-          )}
-        </nav>
         <span>{revisionLabel}</span>
-        {onExpandInspector && (
+        {onExpandInspector && !reduced && (
           <button
             type="button"
             aria-label="展开检查器"
@@ -129,6 +118,7 @@ export function SpatialContext({
         )}
         <button
           type="button"
+          disabled={reduced}
           aria-label={open ? "收起上下文列表" : "展开上下文列表"}
           title={open ? "收起上下文列表" : "展开上下文列表"}
           aria-expanded={open}
@@ -155,6 +145,9 @@ export function SpatialContext({
                 <tr
                   key={entry.global_id}
                   className={activeId === entry.global_id ? "selected" : ""}
+                  onClick={(event) => {
+                    if (isRowSurface(event)) onSelect(entry.global_id);
+                  }}
                 >
                   <td>
                     <i className="dot blue" />
@@ -225,6 +218,9 @@ export function SpatialContext({
                 <tr
                   key={entry.id}
                   className={selectedIssue === entry.id ? "selected" : ""}
+                  onClick={(event) => {
+                    if (isRowSurface(event)) onIssue(entry);
+                  }}
                 >
                   <td>
                     <button
@@ -259,8 +255,8 @@ export function SpatialContext({
         {(context === "changes" ? !rows.length : !issues.length) && (
           <p className="context-empty">
             {context === "changes"
-              ? "当前上下文暂无模型变更。"
-              : "当前上下文暂无空间问题。"}
+              ? "当前列表没有可显示的模型变更。这里只展示已提供的变更记录，本地 IFC 预览不会自动生成版本比较。请到项目的模型版本中确认版本与比较结果，再返回查看。"
+              : "当前列表没有可显示的空间问题。这里只展示当前上下文中已提供的问题，不代表所有工作包均已就绪。请到工作包中查看约束与分析结果，并确认模型关联。"}
           </p>
         )}
       </div>

@@ -25,7 +25,7 @@ import { advancedTabs, type WorkspaceTab } from "./destinations";
  * for the browser/development host the demo runs on and `desktop` for the
  * packaged application, whose sidecar never seeds a demo. So a shipped
  * application does not carry fixture controls at all, and a development or
- * judging session still has them.
+ * judging session still has them for the `harbor-east` fixture only.
  *
  * That gate is positive, and only positive: the tools appear when the profile
  * has arrived and says `local`, and stay hidden while the query is in flight or
@@ -55,7 +55,7 @@ export function AdvancedMenu({
   onReset: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
-  const demo = profile?.profile === "local";
+  const demo = profile?.profile === "local" && project === "harbor-east";
   return (
     <>
       <AppMenu
@@ -116,7 +116,7 @@ export function AdvancedMenu({
         The dialog is a sibling of the menu rather than an item inside it, because
         a closed menu unmounts its content and would take the dialog with it.
       */}
-      {confirming && (
+      {confirming && demo && (
         <AppDialog
           open
           onOpenChange={(next) => {

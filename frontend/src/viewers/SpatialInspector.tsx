@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, MoreHorizontal } from "lucide-react";
 import type { DTO, Workspace } from "../api/client";
 import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
@@ -73,8 +73,32 @@ export function SpatialInspector({
   openChanges,
 }: SpatialInspectorProps) {
   const [technicalOpen, setTechnicalOpen] = useState(false);
+  const inspector = useRef<HTMLElement>(null);
+  const restoreFocus = useRef(false);
+  useEffect(() => {
+    if (inspectorOpen || !restoreFocus.current) return;
+    restoreFocus.current = false;
+    const workspace = inspector.current?.closest(".bim-workspace");
+    // Wait for the reopen control to render and the menu's return-focus to finish.
+    const frame = window.requestAnimationFrame(() => {
+      const buttons = workspace?.querySelectorAll<HTMLButtonElement>(
+        'button[aria-label="展开检查器"], button.mapping-inspector-toggle',
+      );
+      const reopen = Array.from(buttons ?? []).find(
+        (button) =>
+          button.isConnected &&
+          !button.disabled &&
+          !button.closest("[hidden], [inert]") &&
+          getComputedStyle(button).display !== "none" &&
+          getComputedStyle(button).visibility !== "hidden",
+      );
+      reopen?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [inspectorOpen]);
   return (
     <aside
+      ref={inspector}
       className="spatial-inspector"
       aria-label="构件详情"
       inert={!inspectorOpen}
@@ -98,7 +122,13 @@ export function SpatialInspector({
           trigger={<MoreHorizontal size={16} />}
           triggerClassName="spatial-inspector-menu"
         >
-          <AppMenuItem onSelect={() => inspectorPane.current?.collapse()}>
+          <AppMenuItem
+            onSelect={() => {
+              if (!inspectorPane.current) return;
+              restoreFocus.current = true;
+              inspectorPane.current.collapse();
+            }}
+          >
             收起检查器
           </AppMenuItem>
           <AppMenuItem onSelect={() => inspectorPane.current?.resize("320px")}>

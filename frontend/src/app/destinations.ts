@@ -6,6 +6,7 @@ export const advancedTabs = [
 
 export type WorkspaceTab =
   | "work"
+  | "browse"
   | "project"
   | "coordination"
   | "history"

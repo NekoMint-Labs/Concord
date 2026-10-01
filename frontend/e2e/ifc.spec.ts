@@ -161,12 +161,59 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     .setInputFiles(fixture);
   const viewer = page.getByLabel("IFC 模型查看器", { exact: true });
   await expect(viewer.locator("canvas")).toBeVisible();
-  // Every GUID the analysis reports as impacted has to be found in the real model,
-  // so the total is the analysis's own count and the matched count must be non-zero.
+  // Local files must not inherit project impact or package attribution. The
+  // imported project model is still required to match analysis GUIDs below.
   await expect(viewer.getByRole("status")).toContainText(
-    new RegExp(`[1-9]\\d*/${impacted.length} 个受影响构件 GUID`),
+    "0/0 个受影响构件 GUID",
   );
   expect(uploads).toEqual([]); // Merely opening a local file must never upload it.
+
+  // Native model actions dismiss on Escape and outside pointer interaction.
+  const modelMenu = page.locator(".spatial-source-actions");
+  await modelMenu.locator("summary").click();
+  await page.keyboard.press("Escape");
+  await expect(modelMenu).toHaveJSProperty("open", false);
+  await expect(modelMenu.locator("summary")).toBeFocused();
+  await modelMenu.locator("summary").click();
+  await viewer.click();
+  await expect(modelMenu).toHaveJSProperty("open", false);
+  // A loaded model keeps source actions behind its native Model disclosure.
+  await page
+    .getByRole("region", { name: "模型工作区" })
+    .locator("summary")
+    .click();
+  const upload = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/revisions") &&
+      !response.url().includes("/import"),
+  );
+  await page.getByRole("button", { name: "添加到项目", exact: true }).click();
+  expect((await upload).status()).toBe(201);
+  await expect(
+    page
+      .locator(".bim-workspace")
+      .getByRole("status")
+      .filter({ hasText: "处理完成" }),
+  ).toBeVisible();
+  expect(uploads).toHaveLength(1);
+  const catalog = await request.get(`${project}/sources`, { headers });
+  const importedModel = (await catalog.json()).find(
+    (item: { source: { kind: string } }) => item.source.kind === "BIM",
+  );
+  const content = await request.get(
+    `${project}/sources/${importedModel.source.id}/revisions/${importedModel.latest_revision_id}/content`,
+    { headers },
+  );
+  expect(content.status()).toBe(200);
+  expect(digest(await content.body())).toBe(digest(original));
+  const snapshot = await request.get(
+    `${project}/sources/${importedModel.source.id}/revisions/${importedModel.latest_revision_id}/bim-snapshot`,
+    { headers },
+  );
+  expect(snapshot.ok()).toBeTruthy();
+  expect((await snapshot.json()).elements.length).toBe(3);
+  // Inspector project tabs, menus and focus handoff belong to the imported model.
   const spatial = page.getByRole("region", { name: "模型工作区" });
   const pane = spatial.locator("#spatial-inspector-pane");
   const divider = spatial.getByRole("separator", { name: "调整构件详情宽度" });
@@ -204,9 +251,6 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   await expect
     .poll(async () => (await pane.boundingBox())!.width)
     .toBeGreaterThan(keyboardWidth - 5);
-  await page
-    .getByLabel("本地 IFC 文件", { exact: true })
-    .setInputFiles(fixture);
   await expect(viewer.getByRole("status")).toContainText("受影响构件 GUID");
 
   const options = spatial.getByRole("button", { name: "检查器选项" });
@@ -243,6 +287,9 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   await projection.getByRole("button", { name: "3D" }).click();
   await expect(viewer).toHaveAttribute("data-view-mode", "3d");
   const modelTools = viewer.getByLabel("模型工具");
+  await expect(
+    modelTools.getByRole("button", { name: "聚焦", exact: true }),
+  ).toBeEnabled();
   await modelTools.getByRole("button", { name: "聚焦", exact: true }).click();
   await expect(
     modelTools.getByRole("button", { name: "隔离", exact: true }),
@@ -264,42 +311,6 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   ).toBeEnabled();
   await expect(viewer.getByRole("alert")).toHaveCount(0);
 
-  // A loaded model keeps source actions behind its native Model disclosure.
-  await page
-    .getByRole("region", { name: "模型工作区" })
-    .locator("summary")
-    .click();
-  const upload = page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" &&
-      response.url().includes("/revisions") &&
-      !response.url().includes("/import"),
-  );
-  await page.getByRole("button", { name: "添加到项目", exact: true }).click();
-  expect((await upload).status()).toBe(201);
-  await expect(
-    page
-      .locator(".bim-workspace")
-      .getByRole("status")
-      .filter({ hasText: "处理完成" }),
-  ).toBeVisible();
-  expect(uploads).toHaveLength(1);
-  const catalog = await request.get(`${project}/sources`, { headers });
-  const importedModel = (await catalog.json()).find(
-    (item: { source: { kind: string } }) => item.source.kind === "BIM",
-  );
-  const content = await request.get(
-    `${project}/sources/${importedModel.source.id}/revisions/${importedModel.latest_revision_id}/content`,
-    { headers },
-  );
-  expect(content.status()).toBe(200);
-  expect(digest(await content.body())).toBe(digest(original));
-  const snapshot = await request.get(
-    `${project}/sources/${importedModel.source.id}/revisions/${importedModel.latest_revision_id}/bim-snapshot`,
-    { headers },
-  );
-  expect(snapshot.ok()).toBeTruthy();
-  expect((await snapshot.json()).elements.length).toBe(3);
   // The current model keeps structured impacted elements in 模型上下文
   // alongside the viewer rather than switching to a separate list view.
   const context = page.getByRole("region", { name: "模型上下文" });
@@ -307,7 +318,9 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   await expect(context.getByRole("row")).toHaveCount(impacted.length + 1);
   await expect(page.getByText(/项目模型 · R1/).first()).toBeVisible();
   await expect(viewer.getByRole("status")).toContainText(
-    /project-model\.ifc：已匹配 [1-9]\d*\/[1-9]\d* 个受影响构件 GUID/,
+    new RegExp(
+      `project-model\\.ifc：已匹配 [1-9]\\d*/${impacted.length} 个受影响构件 GUID`,
+    ),
   );
   await expect(
     spatial.getByRole("status").filter({ hasText: "本地预览" }),

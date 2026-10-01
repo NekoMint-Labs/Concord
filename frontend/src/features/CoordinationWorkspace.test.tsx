@@ -191,3 +191,28 @@ it("does not let a pending baseline hide an authoritative blocker or a fresh rec
   expect(screen.getByText("需要现场核验")).toBeVisible();
   expect(screen.queryByText("检查有效")).toBeNull();
 });
+
+it("selects the clicked constraint before opening blocker details", () => {
+  const workspace = completed();
+  const first = workspace.analysis!.constraints.find(
+    (item) => item.work_package_id === baseProps.selected && item.blocking,
+  )!;
+  workspace.analysis!.constraints = [
+    first,
+    { ...first, id: "second-constraint", description: "Second blocker" },
+  ];
+  const calls: string[] = [];
+  render(
+    <CoordinationWorkspace
+      workspace={workspace}
+      {...baseProps}
+      onConstraint={(id) => calls.push(id)}
+      onDetails={(view) => calls.push(view)}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "问题 2" }));
+  fireEvent.click(
+    screen.getAllByRole("button", { name: /项判断依据 · 查看问题/ })[1],
+  );
+  expect(calls).toEqual(["second-constraint", "blocker"]);
+});

@@ -67,6 +67,12 @@ function ProjectApplication({
   const [mappingContext, setMappingContext] = useState<BimMappingContext>();
   const [navOpen, setNavOpen] = useState(true);
   const navPanel = usePanelRef();
+  useEffect(() => {
+    if (!navOpen)
+      document
+        .querySelector<HTMLButtonElement>('.app-header [aria-label="展开侧栏"]')
+        ?.focus();
+  }, [navOpen]);
   const { workspace } = useWorkspace(project);
   const { perform, busy, error, setError } = useWorkspaceMutation();
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
@@ -134,6 +140,7 @@ function ProjectApplication({
       setMappingContext(undefined);
     }
     agent.clearScope();
+    setProjectSourceId("");
     setSelected(id);
     try {
       localStorage.setItem(`concord:package:${project}`, id);
@@ -225,16 +232,20 @@ function ProjectApplication({
 
   if (!data)
     return (
-      <StartupView
-        pending={workspace.isPending}
-        message={workspace.error?.message}
-        desktop={isDesktop}
-        onReconnect={() => void cache.invalidateQueries()}
-        onToken={(next) => {
-          setToken(next);
-          void cache.invalidateQueries();
-        }}
-      />
+      <>
+        {dialogs}
+        <StartupView
+          pending={workspace.isPending}
+          onOpenProject={() => setOpenProjectOpen(true)}
+          message={workspace.error?.message}
+          desktop={isDesktop}
+          onReconnect={() => void cache.invalidateQueries()}
+          onToken={(next) => {
+            setToken(next);
+            void cache.invalidateQueries();
+          }}
+        />
+      </>
     );
 
   return (
@@ -286,6 +297,7 @@ function ProjectApplication({
             <WorkspaceHeader
               data={data}
               wp={wp}
+              modelElementId={tab === "bim" && !mappingMode ? localIfc ? "" : selectedElement : undefined}
               tab={tab}
               navCollapsed={!navOpen}
               onToggleNav={() => {
@@ -309,6 +321,14 @@ function ProjectApplication({
                 <Button
                   variant="ghost"
                   size="sm"
+                  disabled={!!localIfcFile || !projectModels.length}
+                  title={
+                    localIfcFile
+                      ? "本地 IFC 仅用于预览；添加到项目并处理后才能关联"
+                      : !projectModels.length
+                        ? "请先添加并处理项目 IFC 模型"
+                        : undefined
+                  }
                   onClick={() => {
                     setMappingContext(undefined);
                     setMappingMode(true);
@@ -447,7 +467,10 @@ function ProjectApplication({
               }
               investigationError={agent.error}
               onRetryInvestigation={() => void agent.retryRun()}
-              onSourceContext={agent.sourceContext}
+              onSourceContext={(...args) => {
+                if (args[0]) agent.sourceContext(...args);
+                else agent.clearScope();
+              }}
               onBimContext={agent.bimContext}
               onAgentRun={agent.rememberRun}
               onInvestigateSource={(

@@ -32,6 +32,7 @@ export function Inspector({
   workspace,
   selected,
   selectedConstraint,
+  selectedEvidenceId,
   view,
   perform,
   onClose,
@@ -42,6 +43,7 @@ export function Inspector({
   busy?: boolean;
   selected: string;
   selectedConstraint: string;
+  selectedEvidenceId?: string;
   view: InspectorView;
   perform: (operation: () => Promise<unknown>) => Promise<void>;
   onClose: () => void;
@@ -51,9 +53,7 @@ export function Inspector({
   const [rejectionReason, setRejectionReason] = useState("");
   const [focusedConstraint, setFocusedConstraint] =
     useState(selectedConstraint);
-  const wp = workspace.state.work_packages.find(
-    (item) => item.id === selected,
-  )!;
+  const wp = workspace.state.work_packages.find((item) => item.id === selected);
   const constraints = (workspace.analysis?.constraints ?? []).filter(
     (item) => item.work_package_id === selected && item.blocking,
   );
@@ -87,7 +87,9 @@ export function Inspector({
   const activeConstraint =
     constraints.find((item) => item.id === focusedConstraint) ?? constraints[0];
   const evidence = (workspace.analysis?.evidence ?? []).filter((item) =>
-    activeConstraint?.evidence_ids.includes(item.id ?? ""),
+    selectedEvidenceId
+      ? item.id === selectedEvidenceId
+      : activeConstraint?.evidence_ids.includes(item.id ?? ""),
   );
   const { transition, variants } = useMotion();
 
@@ -115,8 +117,18 @@ export function Inspector({
         a pane instead of as another grey column with a line beside it.
       */}
       <DetailInspectorHeader
-        eyebrow="工作包"
-        title={demoWorkPackageName(wp.id, wp.name)}
+        eyebrow={
+          selectedEvidenceId && !evidence[0]?.work_package_id
+            ? "项目"
+            : "工作包"
+        }
+        title={
+          selectedEvidenceId && !evidence[0]?.work_package_id
+            ? "判断依据"
+            : wp
+              ? demoWorkPackageName(wp.id, wp.name)
+              : "项目判断依据"
+        }
         tabs={views.map((item) => ({
           ...item,
           count:
@@ -181,26 +193,28 @@ export function Inspector({
                   查看判断依据
                 </button>
               )}
-              <AppDisclosure
-                className="supplementary-details"
-                label="工作包属性"
-              >
-                <PropertyTable>
-                  <PropertyRow label="区域" value={wp.area_id} />
-                  <PropertyRow
-                    label="负责人"
-                    value={demoOwner(wp.id, wp.owner)}
-                  />
-                  <PropertyRow
-                    label="修订"
-                    value={`${wp.accepted_revision} / ${wp.design_revision}`}
-                  />
-                  <PropertyRow
-                    label="班组"
-                    value={`${wp.available_workers} / ${wp.required_workers}`}
-                  />
-                </PropertyTable>
-              </AppDisclosure>
+              {wp && (
+                <AppDisclosure
+                  className="supplementary-details"
+                  label="工作包属性"
+                >
+                  <PropertyTable>
+                    <PropertyRow label="区域" value={wp.area_id} />
+                    <PropertyRow
+                      label="负责人"
+                      value={demoOwner(wp.id, wp.owner)}
+                    />
+                    <PropertyRow
+                      label="修订"
+                      value={`${wp.accepted_revision} / ${wp.design_revision}`}
+                    />
+                    <PropertyRow
+                      label="班组"
+                      value={`${wp.available_workers} / ${wp.required_workers}`}
+                    />
+                  </PropertyTable>
+                </AppDisclosure>
+              )}
             </>
           )}
 
@@ -208,7 +222,7 @@ export function Inspector({
             <>
               {evidence.length === 0 ? (
                 <p className="quiet-message">
-                  当前阻塞原因没有可展示的支撑依据。
+                  判断依据来自工程检查；当前没有与此阻塞原因关联的依据。返回工作包核对资料并运行检查后再查看。
                 </p>
               ) : (
                 <ol className="evidence-list">

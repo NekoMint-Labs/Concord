@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { FileText, Search, Upload } from "lucide-react";
 import { api, isDesktop, readSource, type AgentRun } from "../api/client";
 import { WorkspaceState } from "../components/WorkspaceState";
+import { AppDisclosure } from '../components/ui/AppDisclosure';
 import { Button } from "../components/ui/button";
 import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
 import { AppTooltip } from "../components/ui/AppTooltip";
@@ -61,12 +62,14 @@ export function Documents({
   project,
   perform,
   condensed = false,
+  initialDocumentId = "",
 }: {
   project: string;
   perform: (fn: () => Promise<unknown>) => Promise<void>;
   condensed?: boolean;
+  initialDocumentId?: string;
 }) {
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(initialDocumentId);
   const [runId, setRunId] = useState("");
   const [search, setSearch] = useState("");
   const [fileType, setFileType] = useState<"all" | "text" | "pdf">("all");
@@ -79,6 +82,7 @@ export function Documents({
     queryFn: () => api.documents(project),
   });
   const count = documents.data?.length ?? 0;
+  const emptyWorkspace = documents.isSuccess && count === 0 && !query;
   const listed = documents.data?.filter(
     (doc) =>
       fileType === "all" ||
@@ -89,28 +93,7 @@ export function Documents({
   const current =
     listed?.find((doc) => doc.id === selected)?.id ?? listed?.[0]?.id ?? "";
   const meta = listed?.find((doc) => doc.id === current);
-  /*
-   * The subject. When the source list is a pane it also prints the filename, so
-   * the reading header pairs the filename with the parser rather than repeating
-   * it alone - two elements with identical text is also what makes a test's exact
-   * text query ambiguous.
-   *
-   * Condensed, there is no list row to collide with and the header has very
-   * little room, so it keeps the filename alone. The parser is not lost: it is
-   * the hint on each item of the 来源 menu, and each chunk's gutter states it as
-   * 解析. A header that repeats both of those is why the subject was once 47%
-   * clipped at 860px.
-   *
-   * When a query is active the query *is* the subject, because a search result
-   * can span sources.
-   */
-  const subject = query
-    ? `搜索结果：${query}`
-    : meta
-      ? condensed
-        ? meta.filename
-        : `${meta.filename} · 解析器：${meta.parser}`
-      : "文档依据";
+  const subject = query ? `搜索结果：${query}` : meta?.filename ?? "文档依据";
   const chunks = useQuery({
     queryKey: ["chunks", current],
     queryFn: () => api.chunks(current),
@@ -140,7 +123,15 @@ export function Documents({
       notify.error("文档导入失败", run.data.error ?? undefined);
     }
   }, [run.data?.id, run.data?.status, run.data?.error, project, cache]);
-  const visible = query ? results.data : chunks.data;
+  const readingQuery = query ? results : chunks;
+  const visible = readingQuery.data;
+  const readingError =
+    documents.error || ((query || current) && readingQuery.error);
+  const readingLoading = query
+    ? results.isFetching
+    : documents.isLoading || (!!current && chunks.isLoading);
+  const importDocument = () =>
+    isDesktop ? void perform(nativeImport) : input.current?.click();
   async function nativeImport() {
     const { invoke } = await import("@tauri-apps/api/core");
     const result = await invoke<AgentRun | { cancelled: true }>(
@@ -181,7 +172,7 @@ export function Documents({
               </>
             }
           >
-            {documents.data?.map((doc) => (
+            {listed?.map((doc) => (
               <AppMenuItem
                 key={doc.id}
                 active={doc.id === current}
@@ -189,11 +180,6 @@ export function Documents({
                   setSelected(doc.id);
                   setQuery("");
                 }}
-                hint={
-                  <>
-                    解析器：{doc.parser} · {doc.content_hash.slice(0, 8)}
-                  </>
-                }
               >
                 {doc.filename}
               </AppMenuItem>
@@ -203,50 +189,67 @@ export function Documents({
         <h3>
           <FileText size={14} /> {subject}
         </h3>
-        <span className="pane-header-actions">
-          {/*
-           * Condensed, the header carries one action and no provenance: the
-           * source hash already appears in each chunk's gutter as 来源, and the
-           * action cluster does not shrink, so every item it holds comes out of
-           * the subject's width.
-           */}
-          {meta && !condensed && (
-            <span className="mono">{meta.content_hash.slice(0, 8)}</span>
-          )}
-          {current && (
-            /*
-             * The action downloads the parsed source to this machine; it adds
-             * nothing to the project. The label is the product's own word for
-             * that and is left alone - the tooltip states the half of it the
-             * label cannot, which is the same local-versus-project distinction
-             * the BIM toolbar explains the same way.
-             */
+      </header>
+      <div className="pane-body">
+        {meta && !query && (
+          <AppDisclosure label="来源详情" className="document-source-details">
+            <p>解析器：{meta.parser}</p>
+            <p className="mono">SHA {meta.content_hash}</p>
             <AppTooltip label="保存来源文件到本机，不加入项目">
               <Button size="sm" variant="secondary" onClick={saveSource}>
                 保存来源
               </Button>
             </AppTooltip>
-          )}
-        </span>
-      </header>
-      <div className="pane-body">
-        {!current && !!documents.data?.length && (
-          <p className="quiet-message">请选择其他文件类型以预览项目文档。</p>
+          </AppDisclosure>
         )}
-        {(chunks.error || results.error || documents.error) && (
+        {!query && !current && !!documents.data?.length && (
+          <WorkspaceState
+            kind="empty"
+            compact
+            title="当前文件类型没有文档"
+            description="此筛选下没有项目文档。切换到全部文件以读取已有依据。"
+            action={
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setFileType("all")}
+              >
+                显示全部文件
+              </Button>
+            }
+          />
+        )}
+        {!!readingError && (
           <WorkspaceState
             kind="error"
             compact
             title="文档依据不可用"
-            description="请检查连接与能力状态后重试。"
+            description="未能读取文档或解析内容。请重试；如仍失败，可检查连接与能力状态。"
+            action={
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  if (documents.error) void documents.refetch();
+                  if ((query || current) && readingQuery.error)
+                    void readingQuery.refetch();
+                }}
+              >
+                重试
+              </Button>
+            }
           />
         )}
-        {(documents.isLoading || (!!current && chunks.isLoading)) && !query && (
+        {readingLoading && (
           <WorkspaceState
             kind="loading"
             compact
-            title="正在读取文档依据"
-            description="正在准备解析内容与来源信息。"
+            title={query ? "正在搜索文档依据" : "正在读取文档依据"}
+            description={
+              query
+                ? "正在查找匹配的解析内容，请稍候。"
+                : "正在准备解析内容与来源信息。"
+            }
           />
         )}
         {/*
@@ -277,19 +280,13 @@ export function Documents({
                     {documentLocation(chunk.location)}
                   </span>
                 </div>
-                <div className="chunk-fact">
-                  <span className="chunk-fact-label">来源</span>
-                  <span className="chunk-fact-value mono">
-                    {chunk.source_hash.slice(0, 8)}
-                  </span>
-                </div>
-                <div className="chunk-fact">
-                  {/* the chunk carries no source revision, so its parser is the
-                      only provenance value it exposes; labelling it "版本" would
-                      claim a fact the response does not have */}
-                  <span className="chunk-fact-label">解析器</span>
-                  <span className="chunk-fact-value">{chunk.parser}</span>
-                </div>
+                {query && (
+                  <AppDisclosure label="来源详情">
+                    <p>{documents.data?.find((doc) => doc.content_hash === chunk.source_hash)?.filename ?? "文档来源"}</p>
+                    <p>解析器：{chunk.parser}</p>
+                    <p className="mono">SHA {chunk.source_hash}</p>
+                  </AppDisclosure>
+                )}
               </div>
               <div className="chunk-body">
                 <pre>
@@ -298,18 +295,37 @@ export function Documents({
               </div>
             </article>
           ))}
-          {visible?.length === 0 && !documents.isLoading && (
-            <WorkspaceState
-              kind="empty"
-              compact
-              title={query ? "没有匹配的文档依据" : "当前文档没有解析内容"}
-              description={
-                query
-                  ? "调整关键词，或清除搜索返回当前文档。"
-                  : "重新导入文档后，解析内容会显示在这里。"
-              }
-            />
-          )}
+          {visible?.length === 0 &&
+            !readingLoading &&
+            !readingError &&
+            (query || current) && (
+              <WorkspaceState
+                kind="empty"
+                compact
+                title={query ? "没有匹配的文档依据" : "当前文档没有解析内容"}
+                description={
+                  query
+                    ? "调整关键词，或清除搜索返回当前文档。"
+                    : "重新导入文档后，解析内容会显示在这里。"
+                }
+                action={
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={
+                      query
+                        ? () => {
+                            setQuery("");
+                            setSearch("");
+                          }
+                        : importDocument
+                    }
+                  >
+                    {query ? "清除搜索" : "导入文档"}
+                  </Button>
+                }
+              />
+            )}
         </motion.div>
       </div>
     </Pane>
@@ -317,23 +333,9 @@ export function Documents({
   const sourceList = (
     <Pane
       className="document-list pane-stack"
-      defaultSize="40%"
+      defaultSize="320px"
       minSize="220px"
-      /*
-       * The source list's share has a ceiling: it is the local browser for the
-       * document being read, not the reading surface, so it may not grow to
-       * half the window however wide the window gets.
-       *
-       * The ceiling is stated in pixels, and it used to be a percentage (34%
-       * above 1150px, 200px below). A percentage ceiling is not a ceiling on
-       * this pane: it shrinks as the window narrows, so at 900px it was binding
-       * a source list the user had chosen to be 264px wide, and the split then
-       * carried the *clamped* width back to the wider window. 410px is the 34%
-       * of the 1440px window this layout is drawn at, expressed in the unit the
-       * ceiling is actually about (`Pane` keeps a pixel width across a resize -
-       * frontend/src/layout/PaneSplit.tsx). One number, no breakpoint.
-       */
-      maxSize="560px"
+      maxSize="340px"
     >
       <header className="pane-header">
         <span className="pane-header-label">项目文档</span>
@@ -368,16 +370,10 @@ export function Documents({
             }}
             key={doc.id}
           >
-            <FileText aria-hidden="true" size={18} />
             <span>
-              <strong>{doc.filename}</strong>
+              <strong className="object-identity">{doc.filename}</strong>
               <small>
-                {new Date(doc.created_at).toLocaleDateString("zh-CN")} ·
-                解析器：
-                {doc.parser}
-              </small>
-              <small className="mono">
-                SHA {doc.content_hash.slice(0, 12)}
+                {new Date(doc.created_at).toLocaleDateString("zh-CN")}
               </small>
             </span>
           </button>
@@ -387,27 +383,21 @@ export function Documents({
             当前项目没有{fileType === "pdf" ? "PDF" : "文本"}文件。
           </p>
         )}
-        {documents.data?.length === 0 && (
-          <WorkspaceState
-            kind="empty"
-            compact
-            title="尚未导入文档"
-            description="导入工程文档后，可在本机搜索并核对依据。"
-          />
-        )}
       </div>
     </Pane>
   );
   return (
-    <div className="documents-view">
+    <div
+      className={`documents-view${emptyWorkspace ? " documents-view-empty" : ""}`}
+    >
       <div className="view-toolbar">
         <h2>文档</h2>
-        <form
+        {!emptyWorkspace && <form
           className="documents-search"
           role="search"
           onSubmit={(event) => {
             event.preventDefault();
-            setQuery(search);
+            setQuery(search.trim());
           }}
         >
           <Search {...icon} />
@@ -433,17 +423,13 @@ export function Documents({
               清除
             </Button>
           )}
-        </form>
+        </form>}
         <div className="view-toolbar-actions">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() =>
-              isDesktop ? void perform(nativeImport) : input.current?.click()
-            }
-          >
-            <Upload {...icon} /> 导入文档
-          </Button>
+          {!emptyWorkspace && (
+            <Button variant="secondary" size="sm" onClick={importDocument}>
+              <Upload {...icon} /> 导入文档
+            </Button>
+          )}
           <input
             ref={input}
             type="file"
@@ -469,7 +455,25 @@ export function Documents({
           }。详情见「运行」。`}
         </div>
       )}
-      {condensed ? (
+      {emptyWorkspace ? (
+        <section
+          className="documents-empty-workspace"
+          aria-labelledby="documents-empty-title"
+        >
+          <div className="workspace-empty">
+            <span className="object-kind">项目文档</span>
+            <h2 id="documents-empty-title">尚未导入文档</h2>
+            <p>
+              项目还没有工程文档，因此没有可读取的依据。导入文档后，可在本机搜索并核对来源。
+            </p>
+            <div className="workspace-empty-actions">
+              <Button size="sm" onClick={importDocument}>
+                <Upload {...icon} /> 导入文档
+              </Button>
+            </div>
+          </div>
+        </section>
+      ) : condensed ? (
         <PaneSplit id="documents-condensed">{reading}</PaneSplit>
       ) : (
         <PaneSplit id="documents-library" persist>

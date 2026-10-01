@@ -16,6 +16,7 @@ vi.mock("../viewers/BIMWorkspace", () => ({
     issues,
     onIssueResolution,
     selectedIssueId,
+    onWorkPackage,
   }: {
     impacted: readonly string[];
     changes?: DTO<"BimElementChange">[];
@@ -24,6 +25,7 @@ vi.mock("../viewers/BIMWorkspace", () => ({
     issues?: DTO<"Constraint">[];
     onIssueResolution?: (id: string) => void;
     selectedIssueId?: string;
+    onWorkPackage?: (id: string) => void;
   }) => (
     <div>
       <div data-testid="model-selection">{impacted.join(",")}</div>
@@ -34,6 +36,9 @@ vi.mock("../viewers/BIMWorkspace", () => ({
         Select change
       </button>
       {toolbar}
+      <button type="button" onClick={() => onWorkPackage?.("WP-200")}>
+        Open linked work package
+      </button>
       <span>Issues {issues?.length ?? 0}</span>
       <output aria-label="Selected spatial issue">
         {selectedIssueId || issues?.[0]?.id}
@@ -114,12 +119,14 @@ it("selects a real comparison change and connects its linked work package to mod
     elements: [{ global_id: "gid-1", name: "AHU-01" }],
   } as DTO<"BimRevisionSnapshot">);
   const onInspect = vi.fn();
+  const onWorkPackage = vi.fn();
   wrap(
     <ChangeExplorer
       project="harbor-east"
       workspace={workspace}
       onModels={() => {}}
       onInspect={onInspect}
+      onWorkPackage={onWorkPackage}
       onInvestigate={() => {}}
     />,
   );
@@ -128,18 +135,24 @@ it("selects a real comparison change and connects its linked work package to mod
   fireEvent.click(screen.getByRole("button", { name: "Select change" }));
   fireEvent.click(await screen.findByRole("button", { name: "工作包 →" }));
   expect(onInspect).toHaveBeenCalledWith("WP-200", "s1", comparison, change);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Open linked work package" }),
+  );
+  expect(onWorkPackage).toHaveBeenCalledWith("WP-200");
 });
 
 it("lists only blocking constraints, preserving the inspection path", () => {
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
   vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
   const onResolve = vi.fn();
+  const onWorkPackage = vi.fn();
   const onSelectWorkPackage = vi.fn();
   wrap(
     <IssueExplorer
       project="harbor-east"
       workspace={workspace}
       onResolve={onResolve}
+      onWorkPackage={onWorkPackage}
       onSelectWorkPackage={onSelectWorkPackage}
     />,
   );
@@ -149,6 +162,10 @@ it("lists only blocking constraints, preserving the inspection path", () => {
   const issue = workspace.analysis!.constraints.find((item) => item.blocking)!;
   expect(onSelectWorkPackage).toHaveBeenCalledWith(issue.work_package_id);
   expect(onResolve).toHaveBeenCalledWith(issue.id);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Open linked work package" }),
+  );
+  expect(onWorkPackage).toHaveBeenCalledWith("WP-200");
 });
 
 it("preserves a non-first spatial issue when resolving its other work package", () => {

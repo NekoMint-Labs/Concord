@@ -41,6 +41,12 @@ export function useProjectContext(
     revisionsFor,
     revisionNo,
     pendingModels: models.filter((item) => item.has_pending_revision),
+    recordsError: baselines.error || documents.error,
+    recordsPending: baselines.isPending || documents.isPending,
+    retryRecords: () => {
+      if (baselines.isError) void baselines.refetch();
+      if (documents.isError) void documents.refetch();
+    },
   };
 }
 

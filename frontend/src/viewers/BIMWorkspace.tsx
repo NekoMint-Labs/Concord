@@ -11,7 +11,6 @@ import { Box, FolderOpen, PackageOpen } from "lucide-react";
 import { api, readSource, type DTO, type Workspace } from "../api/client";
 import { useBIMSource } from "./useBIMSource";
 import {
-  demoConstraintKind,
   demoConstraintText,
   demoElementName,
 } from "../ui/demo/demoPresentation";
@@ -19,11 +18,22 @@ import { notify } from "../components/ui/AppToaster";
 import { Pane, PaneDivider, PaneSplit, usePanelRef } from "../layout/PaneSplit";
 import { SpatialContext } from "./SpatialContext";
 import { SpatialInspector } from "./SpatialInspector";
+import { AppDisclosure } from "../components/ui/AppDisclosure";
+import { propertySections } from "./bimProperties";
 
 const IFCViewer = lazy(() => import("./IFCViewer"));
 type Change = DTO<"BimElementChange">;
 type Snapshot = DTO<"BimElementSnapshot">;
 type Issue = DTO<"Constraint">;
+const processingLabels = {
+  QUEUED: "等待处理",
+  RUNNING: "正在处理",
+  WAITING_APPROVAL: "等待审批",
+  COMPLETED: "处理完成",
+  FAILED: "处理失败",
+  CANCELLED: "已取消",
+  EXPIRED: "已过期",
+};
 
 export type MappingPresentation = {
   contextBar: ReactNode;
@@ -36,44 +46,48 @@ export type MappingPresentation = {
 /** The same spatial surface serves the current model, revision comparisons and issues. */
 export default function BIMWorkspace({
   project,
-  impacted,
+  impacted: projectImpacted,
   externalFile,
+  externalFileOrigin,
   localFile,
   onLocalFile,
   hideSourceActions = false,
   onViewerSelected,
   focusId,
   autoProjectModel = false,
-  workspace,
-  changes = [],
-  snapshots = [],
-  issues = [],
+  selectedSourceId,
+  selectedRevisionId,
+  workspace: projectWorkspace,
+  changes: projectChanges = [],
+  snapshots: suppliedSnapshots = [],
+  issues: projectIssues = [],
   revisionLabel,
   toolbar,
   onInvestigate,
   onModels,
-  onNavigate,
-  onWorkPackage,
-  mode = "model",
+  mode: projectMode = "model",
   onIssueResolution,
   selectedIssueId,
   onIssueSelected,
-  mapping,
+  mapping: projectMapping,
   sourceName,
   fromRevisionLabel,
   workPackage: explicitWorkPackage,
-  revisionScoped = false,
+  revisionScoped: suppliedRevisionScoped = false,
 }: {
   project: string;
   impacted: readonly string[];
   condensed?: boolean;
   externalFile?: File | null;
+  externalFileOrigin?: "local" | "project";
   localFile?: File | null;
   onLocalFile?: (file: File | null) => void;
   hideSourceActions?: boolean;
   onViewerSelected?: (id: string) => void;
   focusId?: string;
   autoProjectModel?: boolean;
+  selectedSourceId?: string;
+  selectedRevisionId?: string;
   workspace?: Workspace;
   changes?: Change[];
   snapshots?: Snapshot[];
@@ -102,6 +116,7 @@ export default function BIMWorkspace({
     selected,
     setSelected,
     file,
+    origin,
     setFile,
     error,
     notice,
@@ -109,40 +124,55 @@ export default function BIMWorkspace({
     imported,
     importSource,
     openImported,
+    retry,
     chooseFile,
   } = useBIMSource(project);
   const input = useRef<HTMLInputElement>(null);
+  const modelMenu = useRef<HTMLDetailsElement>(null);
   const inspectorPane = usePanelRef();
   useEffect(() => {
-    if (localFile && file !== localFile) setFile(localFile);
-  }, [file, localFile, setFile]);
+    const local =
+      localFile ?? (externalFileOrigin === "local" ? externalFile : null);
+    if (local && file !== local) {
+      setFile(local);
+      setSelected("");
+    }
+  }, [file, localFile, externalFile, externalFileOrigin, setFile, setSelected]);
   const sources = useQuery({
     queryKey: ["sources", project],
     queryFn: () => api.sourceStatuses(project),
-    enabled: autoProjectModel && externalFile === undefined,
+    enabled: externalFile === undefined || !hideSourceActions,
   });
   const projectModels =
     sources.data?.filter(
       (item) => item.source.kind === "BIM" && item.latest_revision_id,
     ) ?? [];
+  const targetSourceId =
+    selectedSourceId ??
+    (origin?.kind === "project" ? origin.sourceId : undefined);
   const source =
-    autoProjectModel && externalFile === undefined && projectModels.length === 1
-      ? projectModels[0]
+    externalFile === undefined
+      ? targetSourceId
+        ? projectModels.find((item) => item.source.id === targetSourceId)
+        : autoProjectModel && projectModels.length === 1
+          ? projectModels[0]
+          : undefined
       : undefined;
+  const projectRevisionId =
+    selectedRevisionId ??
+    (origin?.kind === "project" && origin.sourceId === source?.source.id
+      ? origin.revisionId
+      : source?.latest_revision_id);
   const sourceImport = useQuery({
     queryKey: [
       "revision-import",
       project,
       source?.source.id,
-      source?.latest_revision_id,
+      projectRevisionId,
     ],
     queryFn: () =>
-      api.revisionImport(
-        project,
-        source!.source.id,
-        source!.latest_revision_id!,
-      ),
-    enabled: !!source?.latest_revision_id,
+      api.revisionImport(project, source!.source.id, projectRevisionId!),
+    enabled: !!source && !!projectRevisionId,
     refetchInterval: (query) =>
       ["QUEUED", "RUNNING"].includes(query.state.data?.status ?? "")
         ? 1500
@@ -154,26 +184,74 @@ export default function BIMWorkspace({
     enabled: !!source,
   });
   const revision = useQuery({
-    queryKey: [
-      "model-content",
-      project,
-      source?.source.id,
-      source?.latest_revision_id,
-    ],
-    enabled: !!source?.latest_revision_id && autoProjectModel,
+    queryKey: ["model-content", project, source?.source.id, projectRevisionId],
+    enabled: !!source && !!projectRevisionId && autoProjectModel,
     retry: false,
     queryFn: async () =>
       new File(
         [
           await readSource(
-            `/api/projects/${encodeURIComponent(project)}/sources/${encodeURIComponent(source!.source.id)}/revisions/${encodeURIComponent(source!.latest_revision_id!)}/content`,
+            `/api/projects/${encodeURIComponent(project)}/sources/${encodeURIComponent(source!.source.id)}/revisions/${encodeURIComponent(projectRevisionId!)}/content`,
           ),
         ],
         "project-model.ifc",
       ),
   });
+  const hookFile =
+    origin?.kind === "project" &&
+    ((selectedSourceId && origin.sourceId !== selectedSourceId) ||
+      (selectedRevisionId && origin.revisionId !== selectedRevisionId))
+      ? null
+      : file;
   const viewFile =
-    externalFile === undefined ? (file ?? revision.data ?? null) : externalFile;
+    externalFile === undefined
+      ? (hookFile ?? revision.data ?? null)
+      : externalFile;
+  useEffect(() => {
+    if (!viewFile) return;
+    const dismiss = (event: PointerEvent) => {
+      const menu = modelMenu.current;
+      if (menu && event.target instanceof Node && !menu.contains(event.target))
+        menu.open = false;
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [viewFile]);
+  const hasViewFile = !!viewFile;
+  useEffect(() => {
+    if (!hasViewFile) inspectorPane.current?.collapse();
+    else if (inspectorPane.current?.isCollapsed())
+      inspectorPane.current.expand();
+  }, [hasViewFile, inspectorPane]);
+  const isLocal =
+    !!viewFile &&
+    (externalFile === undefined
+      ? origin?.kind === "local" && viewFile === file
+      : externalFileOrigin
+        ? externalFileOrigin === "local"
+        : viewFile === localFile);
+  const projectSnapshot = useQuery({
+    queryKey: ["bim-snapshot", project, source?.source.id, projectRevisionId],
+    queryFn: () =>
+      api.bimSnapshot(project, source!.source.id, projectRevisionId!),
+    enabled: !isLocal && !!source && !!projectRevisionId,
+    retry: false,
+  });
+  const revisionScoped = !isLocal && (suppliedRevisionScoped || !!source);
+  const snapshots = isLocal
+    ? []
+    : source
+      ? (projectSnapshot.data?.elements ?? [])
+      : suppliedSnapshots;
+  const historical =
+    !!source && projectRevisionId !== source.latest_revision_id;
+  // Current analysis is not evidence about a historical or local file.
+  const impacted = isLocal || historical ? [] : projectImpacted;
+  const changes = isLocal || historical ? [] : projectChanges;
+  const issues = isLocal || historical ? [] : projectIssues;
+  const workspace = isLocal || historical ? undefined : projectWorkspace;
+  const mode = isLocal ? "model" : projectMode;
+  const mapping = isLocal ? undefined : projectMapping;
   useEffect(() => {
     if (viewFile && !selected && focusId === undefined && impacted.length)
       setSelected(impacted[0]);
@@ -187,7 +265,7 @@ export default function BIMWorkspace({
   const selectedIssue = selectedIssueId ?? localIssue;
   const setSelectedIssue = (id: string) => {
     setLocalIssue(id);
-    onIssueSelected?.(id);
+    if (!isLocal) onIssueSelected?.(id);
   };
   const [propertyResult, setPropertyResult] = useState<{
     id: string;
@@ -195,11 +273,12 @@ export default function BIMWorkspace({
     properties: unknown;
   } | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
-  const activeId = focusId ?? selected;
+  const activeId = isLocal ? selected : (focusId ?? selected);
   const viewerProperties =
     propertyResult?.id === activeId &&
     propertyResult.file === viewFile &&
-    (!revisionScoped ||
+    (isLocal ||
+      !suppliedRevisionScoped ||
       snapshots.some((element) => element.global_id === activeId))
       ? propertyResult.properties
       : null;
@@ -214,9 +293,10 @@ export default function BIMWorkspace({
       : viewerName && typeof viewerName === "object" && "value" in viewerName
         ? String(viewerName.value)
         : "";
-  const item = revisionScoped
-    ? undefined
-    : elements.data?.find((element) => element.id === activeId);
+  const item =
+    isLocal || revisionScoped
+      ? undefined
+      : elements.data?.find((element) => element.id === activeId);
   const snapshot = snapshots.find((element) => element.global_id === activeId);
   const change =
     changes.find((entry) => entry.global_id === activeId) ??
@@ -263,7 +343,7 @@ export default function BIMWorkspace({
     setSelected(id);
     setPropertyResult(null);
     setSelectedIssue("");
-    onViewerSelected?.(id);
+    if (!isLocal) onViewerSelected?.(id);
   };
   const chooseIssue = (issue: Issue) => {
     setContext("issues");
@@ -290,9 +370,37 @@ export default function BIMWorkspace({
   }, [imported.data?.status, imported.data?.error]);
   const feedback =
     error ||
-    (!viewFile ? elements.error?.message : null) ||
     imported.error?.message ||
-    imported.data?.error;
+    imported.data?.error ||
+    sources.error?.message ||
+    (!isLocal &&
+      (revision.error?.message ||
+        projectSnapshot.error?.message ||
+        sourceImport.error?.message ||
+        modelRevisions.error?.message)) ||
+    (!viewFile && !source && sources.isSuccess
+      ? elements.error?.message
+      : null);
+  const opening = !!source && autoProjectModel && revision.isFetching;
+  const emptyTitle = revision.isError
+    ? "项目模型无法打开"
+    : sources.isError
+      ? "项目资料暂时不可用"
+      : opening
+        ? "正在打开项目模型"
+        : sources.isPending && sources.fetchStatus !== "idle"
+          ? "正在读取项目资料"
+          : projectModels.length
+            ? "选择项目模型"
+            : "当前项目还没有模型";
+  const importStatus = sourceImport.data?.status;
+  const statusLabel = sourceImport.isError
+    ? "处理状态读取失败"
+    : importStatus
+      ? processingLabels[importStatus]
+      : sourceImport.isPending
+        ? "正在读取处理状态"
+        : "尚未处理";
   const missingModel =
     !viewFile &&
     (feedback?.includes("CCA_IFC_PATH") ||
@@ -300,32 +408,48 @@ export default function BIMWorkspace({
   const issue = issues.find((entry) => entry.id === selectedIssue);
   const packageFor = (id: string) =>
     workspace?.state.work_packages.find((wp) => wp.element_ids.includes(id));
-  const workPackage =
-    explicitWorkPackage ??
-    packageFor(activeId) ??
-    workspace?.state.work_packages.find(
-      (wp) => wp.id === issue?.work_package_id,
-    );
-  const rows = changes.length
-    ? changes
-    : revisionScoped
-      ? []
-      : (elements.data ?? [])
-          .filter((element) => impacted.includes(element.id))
-          .map((element) => ({
-            global_id: element.id,
-            change_kind: "changed" as const,
-            changed_aspects: ["impact"],
-          }));
+  const workPackage = isLocal
+    ? undefined
+    : (explicitWorkPackage ??
+      packageFor(activeId) ??
+      workspace?.state.work_packages.find(
+        (wp) => wp.id === issue?.work_package_id,
+      ));
+  const rows = isLocal
+    ? []
+    : changes.length
+      ? changes
+      : source && !historical
+        ? snapshots
+            .filter((element) => impacted.includes(element.global_id))
+            .map((element) => ({
+              global_id: element.global_id,
+              change_kind: "changed" as const,
+              changed_aspects: ["impact"],
+            }))
+        : revisionScoped
+          ? []
+          : (elements.data ?? [])
+              .filter((element) => impacted.includes(element.id))
+              .map((element) => ({
+                global_id: element.id,
+                change_kind: "changed" as const,
+                changed_aspects: ["impact"],
+              }));
   return (
     <section
-      className={`bim-workspace spatial-workspace is-${mode}${mapping ? " is-mapping" : ""}${listOpen ? " is-list-open" : ""}`}
+      className={`bim-workspace spatial-workspace is-${mode}${mapping ? " is-mapping" : ""}${viewFile && listOpen ? " is-list-open" : ""}${!viewFile ? " is-empty" : ""}`}
       aria-label="模型工作区"
     >
       {mapping?.contextBar}
       <PaneSplit id="spatial-inspector" persist>
         <Pane id="spatial-main-pane" className="spatial-main" minSize="320px">
           <div className="spatial-stage">
+            {!viewFile && (
+              <header className="model-empty-heading">
+                <h1>模型</h1>
+              </header>
+            )}
             {viewFile ? (
               <Suspense
                 fallback={
@@ -357,19 +481,37 @@ export default function BIMWorkspace({
                 />
               </Suspense>
             ) : (
-              <div className="spatial-stage-empty">
-                <Box aria-hidden="true" />
-                <strong>打开模型以查看构件与上下文</strong>
+              <div className="spatial-stage-empty workspace-empty">
+                <h2 className="object-kind">
+                  <Box size={17} aria-hidden="true" /> 模型上下文
+                </h2>
+                <strong>{emptyTitle}</strong>
                 <span>
-                  {revision.isPending && source
-                    ? "正在打开项目模型…"
-                    : projectModels.length > 1
-                      ? "项目有多个模型。请到「模型版本」选择，再查看具体版本。"
-                      : "打开本地 IFC 预览，然后添加到项目。"}
+                  {sources.isError || revision.isError
+                    ? "项目模型暂时不可用。请重试读取资料或打开模型。"
+                    : sources.isPending && sources.fetchStatus !== "idle"
+                      ? "正在读取项目资料，请稍候。"
+                      : opening
+                        ? "正在读取所选 IFC 文件，请稍候。"
+                        : projectModels.length
+                          ? "到模型版本中选择资料与版本，查看构件和关联工作包。"
+                          : "项目模型是版本比较、基线与工作包关联的共同依据。先在项目资料中上传 IFC。"}
                 </span>
+                {onModels && (
+                  <button
+                    type="button"
+                    className="button button-primary button-sm model-primary-action"
+                    onClick={onModels}
+                  >
+                    {projectModels.length ? "选择项目模型 →" : "添加项目模型 →"}
+                  </button>
+                )}
+                <small>
+                  本地 IFC 仅作临时预览，不会自动加入项目或改变基线。
+                </small>
               </div>
             )}
-            {toolbar && (
+            {!isLocal && toolbar && (
               <div className="spatial-context-controls">{toolbar}</div>
             )}
             {mapping && !inspectorOpen && (
@@ -383,6 +525,15 @@ export default function BIMWorkspace({
             )}
             {!hideSourceActions && (
               <details
+                ref={modelMenu}
+                onKeyDown={(event) => {
+                  if (viewFile && event.key === "Escape") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.currentTarget.open = false;
+                    event.currentTarget.querySelector("summary")?.focus();
+                  }
+                }}
                 key={viewFile ? "loaded" : "empty"}
                 className={`spatial-source-actions${viewFile ? " is-loaded" : ""}`}
                 open={!viewFile}
@@ -419,16 +570,27 @@ export default function BIMWorkspace({
                   </button>
                   <button
                     type="button"
+                    className="model-open-project"
                     onClick={() => {
-                      void openImported().then((opened) => {
+                      void openImported(
+                        selectedSourceId ?? source?.source.id,
+                        selectedRevisionId ?? projectRevisionId ?? undefined,
+                      ).then((opened) => {
                         if (opened) onLocalFile?.(null);
                       });
                     }}
-                    disabled={busy}
+                    disabled={
+                      busy || (sources.isSuccess && !projectModels.length)
+                    }
+                    title={
+                      sources.isSuccess && !projectModels.length
+                        ? "请先添加项目模型"
+                        : undefined
+                    }
                   >
                     <PackageOpen size={14} /> 打开项目模型
                   </button>
-                  {file && (
+                  {isLocal && file && (
                     <button
                       type="button"
                       onClick={() => void importSource()}
@@ -437,7 +599,7 @@ export default function BIMWorkspace({
                       添加到项目
                     </button>
                   )}
-                  {file && (
+                  {isLocal && file && (
                     <button
                       type="button"
                       onClick={() => {
@@ -449,7 +611,7 @@ export default function BIMWorkspace({
                       关闭本地视图
                     </button>
                   )}
-                  {onModels && (
+                  {viewFile && onModels && (
                     <button type="button" onClick={onModels}>
                       模型版本 →
                     </button>
@@ -467,16 +629,68 @@ export default function BIMWorkspace({
                 role={missingModel ? "status" : "alert"}
               >
                 {feedback.includes("CCA_IFC_PATH")
-                  ? "还没有项目模型。打开本地 IFC 预览，再添加到项目。"
+                  ? "还没有项目模型。请在项目资料中添加 IFC；本地 IFC 仅用于临时预览。"
                   : feedback}
+                {error && retry && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      void retry().then((opened) => {
+                        if (opened) onLocalFile?.(null);
+                      })
+                    }
+                  >
+                    重试
+                  </button>
+                )}
+                {sources.isError && (
+                  <button type="button" onClick={() => void sources.refetch()}>
+                    重试读取项目资料
+                  </button>
+                )}
+                {!isLocal && revision.isError && (
+                  <button type="button" onClick={() => void revision.refetch()}>
+                    重试打开项目模型
+                  </button>
+                )}
+                {!isLocal && projectSnapshot.isError && (
+                  <button
+                    type="button"
+                    onClick={() => void projectSnapshot.refetch()}
+                  >
+                    重试读取构件属性
+                  </button>
+                )}
+                {!isLocal && sourceImport.isError && (
+                  <button
+                    type="button"
+                    onClick={() => void sourceImport.refetch()}
+                  >
+                    重试读取处理状态
+                  </button>
+                )}
+                {!isLocal && modelRevisions.isError && (
+                  <button
+                    type="button"
+                    onClick={() => void modelRevisions.refetch()}
+                  >
+                    重试读取模型版本
+                  </button>
+                )}
+                {imported.isError && (
+                  <button type="button" onClick={() => void imported.refetch()}>
+                    重试读取导入结果
+                  </button>
+                )}
               </div>
             )}
             {viewFile && (
               <div className="viewer-status spatial-feedback" role="status">
-                {localFile || (file && file.name !== "project-model.ifc")
-                  ? `本地预览 · ${(localFile ?? file)!.name} · ${imported.data?.status === "FAILED" ? "项目版本处理失败" : notice ? "项目版本正在处理" : "尚未添加到项目"}`
-                  : source?.latest_revision_id
-                    ? `${sourceImport.data?.status === "COMPLETED" ? "项目模型" : "项目文件预览"} · R${modelRevisions.data?.find((item) => item.id === source.latest_revision_id)?.sequence ?? "?"}${sourceImport.data?.status === "FAILED" ? " · 处理失败" : sourceImport.data?.status === "COMPLETED" ? "" : " · 尚未完成处理"}`
+                {isLocal
+                  ? `本地预览 · ${viewFile.name} · ${imported.data ? `项目版本${processingLabels[imported.data.status]}` : notice ? "项目版本正在处理" : "尚未添加到项目"}`
+                  : source && projectRevisionId
+                    ? `${importStatus === "COMPLETED" ? "项目模型" : "项目文件预览"} · R${modelRevisions.data?.find((item) => item.id === projectRevisionId)?.sequence ?? "?"}${importStatus === "COMPLETED" ? "" : ` · ${statusLabel}`}`
                     : "项目模型"}
               </div>
             )}
@@ -498,13 +712,25 @@ export default function BIMWorkspace({
               </div>
             )}
           </div>
-          {mapping ? (
+          {isLocal ? (
+            <p className="quiet-message">
+              本地预览仅显示文件属性，不关联项目变更、问题或工作包。
+              {!inspectorOpen && (
+                <button
+                  type="button"
+                  onClick={() => inspectorPane.current?.expand()}
+                >
+                  展开检查器
+                </button>
+              )}
+            </p>
+          ) : mapping ? (
             mapping.dock
-          ) : (
+          ) : viewFile ? (
             <SpatialContext
               context={context}
               setContext={setContext}
-              open={listOpen}
+              open={!!viewFile && listOpen}
               setOpen={setListOpen}
               rows={rows}
               issues={issues}
@@ -516,18 +742,20 @@ export default function BIMWorkspace({
               revisionLabel={revisionLabel}
               onSelect={select}
               onIssue={chooseIssue}
-              onWorkPackage={onWorkPackage}
-              onNavigate={onNavigate}
-              workPackageId={workPackage?.id}
               onExpandInspector={
                 inspectorOpen
                   ? undefined
                   : () => inspectorPane.current?.expand()
               }
             />
-          )}
+          ) : null}
         </Pane>
-        <PaneDivider label="调整构件详情宽度" disabled={!inspectorOpen} />
+        {/* Keep the library's separator mapping registered while collapsed;
+            native inert removes hidden controls from pointer and keyboard use. */}
+        <PaneDivider
+          label="调整构件详情宽度"
+          inert={!inspectorOpen || !viewFile}
+        />
         <Pane
           id="spatial-inspector-pane"
           panelRef={inspectorPane}
@@ -539,40 +767,84 @@ export default function BIMWorkspace({
           collapsedSize="0px"
           onResize={(size) => setInspectorOpen(size.inPixels > 0)}
         >
-          <SpatialInspector
-            mode={mode}
-            issue={issue}
-            title={title}
-            classification={classification}
-            inspectorTab={inspectorTab}
-            setInspectorTab={setInspectorTab}
-            activeId={activeId}
-            change={change}
-            linkedIssues={linkedIssues}
-            item={item}
-            snapshot={snapshot}
-            geometryAvailable={
-              mapping ? mapping.allowedIds.includes(activeId) : undefined
-            }
-            workPackage={workPackage}
-            revisionLabel={revisionLabel}
-            sourceName={sourceName ?? source?.source.name}
-            fromRevisionLabel={fromRevisionLabel}
-            viewFile={viewFile}
-            viewerProperties={viewerProperties}
-            elements={revisionScoped ? undefined : elements.data}
-            workspace={workspace}
-            inspectorOpen={inspectorOpen}
-            inspectorPane={inspectorPane}
-            select={select}
-            chooseIssue={chooseIssue}
-            onIssueResolution={onIssueResolution}
-            onInvestigate={onInvestigate}
-            openChanges={() => {
-              setContext("changes");
-              setListOpen(true);
-            }}
-          />
+          {!viewFile ? null : isLocal ? (
+            <aside
+              className="spatial-inspector"
+              aria-label="构件详情"
+              inert={!inspectorOpen}
+            >
+              <header className="spatial-inspector-head">
+                <Box size={18} />
+                <div>
+                  <h2>{title}</h2>
+                  <span>{classification}</span>
+                </div>
+              </header>
+              <div className="spatial-inspector-body">
+                <p className="quiet-message">本地 IFC 文件属性 · 未关联项目</p>
+                {!activeId ? (
+                  <p>双击模型构件查看文件属性。</p>
+                ) : (
+                  <AppDisclosure label="技术详情">
+                    <dl className="element-facts">
+                      <div>
+                        <dt>GlobalId</dt>
+                        <dd>{activeId}</dd>
+                      </div>
+                    </dl>
+                    {propertySections(viewerProperties).map((section, i) => (
+                      <div className="technical-properties" key={i}>
+                        <strong>{section.title ?? "其他属性"}</strong>
+                        <dl>
+                          {section.fields.map((field, j) => (
+                            <div key={j}>
+                              <dt>{field.label}</dt>
+                              <dd>{field.value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
+                    ))}
+                  </AppDisclosure>
+                )}
+              </div>
+            </aside>
+          ) : (
+            <SpatialInspector
+              mode={mode}
+              issue={issue}
+              title={title}
+              classification={classification}
+              inspectorTab={inspectorTab}
+              setInspectorTab={setInspectorTab}
+              activeId={activeId}
+              change={change}
+              linkedIssues={linkedIssues}
+              item={item}
+              snapshot={snapshot}
+              geometryAvailable={
+                mapping ? mapping.allowedIds.includes(activeId) : undefined
+              }
+              workPackage={workPackage}
+              revisionLabel={revisionLabel}
+              sourceName={sourceName ?? source?.source.name}
+              fromRevisionLabel={fromRevisionLabel}
+              viewFile={viewFile}
+              viewerProperties={viewerProperties}
+              elements={revisionScoped ? undefined : elements.data}
+              workspace={workspace}
+              inspectorOpen={inspectorOpen}
+              inspectorPane={inspectorPane}
+              select={select}
+              chooseIssue={chooseIssue}
+              onIssueResolution={onIssueResolution}
+              onInvestigate={onInvestigate}
+              openChanges={() => {
+                setContext("changes");
+                setListOpen(true);
+              }}
+            />
+          )}
         </Pane>
       </PaneSplit>
     </section>

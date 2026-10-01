@@ -1,13 +1,28 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, readSource } from "../api/client";
+
+export type BIMFileOrigin =
+  { kind: "local" } | { kind: "project"; sourceId: string; revisionId: string };
 
 /** Local viewing, explicit project import, and generation-fenced source reopening. */
 export function useBIMSource(project: string) {
   const cache = useQueryClient();
   const [selected, setSelected] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [opened, setOpened] = useState<{
+    file: File;
+    origin: BIMFileOrigin;
+  } | null>(null);
+  const file = opened?.file ?? null;
+  const origin = opened?.origin ?? null;
+  const setFile = useCallback((file: File | null) => {
+    setOpened(file ? { file, origin: { kind: "local" } } : null);
+  }, []);
   const [error, setError] = useState("");
+  const [errorAction, setErrorAction] = useState<"open" | "import" | null>(
+    null,
+  );
+  const lastOpen = useRef<{ sourceId?: string; revisionId?: string }>({});
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [runId, setRunId] = useState("");
@@ -17,6 +32,8 @@ export function useBIMSource(project: string) {
     setFile(null);
     setSelected("");
     setError("");
+    setErrorAction(null);
+    lastOpen.current = {};
     setNotice("");
     setRunId("");
     setBusy(false);
@@ -37,15 +54,17 @@ export function useBIMSource(project: string) {
   useEffect(() => {
     if (imported.data?.status === "COMPLETED") {
       void cache.invalidateQueries({ queryKey: ["bim", project] });
+      void cache.invalidateQueries({ queryKey: ["bim-snapshot", project] });
       void cache.invalidateQueries({ queryKey: ["workspace", project] });
       void cache.invalidateQueries({ queryKey: ["sources", project] });
     }
   }, [imported.data?.status, cache, project]);
 
   async function importSource() {
-    if (!file || active.current) return;
+    if (!file || origin?.kind !== "local" || active.current) return;
     active.current = true;
     setBusy(true);
+    setErrorAction("import");
     setError("");
     setNotice("");
     const current = epoch.current;
@@ -94,36 +113,62 @@ export function useBIMSource(project: string) {
       }
     }
   }
-  async function openImported(): Promise<boolean> {
+  async function openImported(
+    sourceId?: string,
+    revisionId?: string,
+  ): Promise<boolean> {
     if (active.current) return false;
     active.current = true;
+    lastOpen.current = { sourceId, revisionId };
+    setErrorAction("open");
     setBusy(true);
     setError("");
     setNotice("");
     const current = epoch.current;
     try {
-      const source = (await api.sourceStatuses(project)).find(
+      const models = (await api.sourceStatuses(project)).filter(
         (item) => item.source.kind === "BIM" && item.latest_revision_id,
       );
+      if (current !== epoch.current) return false;
+      if (!sourceId && models.length > 1) {
+        setError("项目有多个模型。请在模型版本中选择具体资料与版本。");
+        return false;
+      }
+      const source = sourceId
+        ? models.find((item) => item.source.id === sourceId)
+        : models[0];
       if (!source) {
         setError(
           file
             ? `当前显示的是本地预览 · ${file.name}，尚未添加到项目。`
-            : "还没有项目模型。请先打开本地 IFC，再添加到项目。",
+            : "还没有项目模型。请到项目资料中添加 IFC；本地 IFC 仅用于临时预览。",
         );
         return false;
       }
       const blob = await readSource(
-        `/api/projects/${encodeURIComponent(project)}/sources/${encodeURIComponent(source.source.id)}/revisions/${encodeURIComponent(source.latest_revision_id!)}/content`,
+        `/api/projects/${encodeURIComponent(project)}/sources/${encodeURIComponent(source.source.id)}/revisions/${encodeURIComponent(revisionId ?? source.latest_revision_id!)}/content`,
       );
       if (current === epoch.current) {
-        setFile(new File([blob], "project-model.ifc"));
+        setOpened({
+          file: new File([blob], "project-model.ifc"),
+          origin: {
+            kind: "project",
+            sourceId: source.source.id,
+            revisionId: revisionId ?? source.latest_revision_id!,
+          },
+        });
+        setSelected("");
+        setRunId("");
         return true;
       }
       return false;
-    } catch {
+    } catch (cause) {
       if (current === epoch.current)
-        setError("项目模型暂时无法打开，请检查模型版本后重试。");
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "项目模型暂时无法打开，请检查模型版本后重试。",
+        );
       return false;
     } finally {
       if (current === epoch.current) {
@@ -133,6 +178,7 @@ export function useBIMSource(project: string) {
     }
   }
   function chooseFile(chosen: File | undefined) {
+    setErrorAction(null);
     setError("");
     setNotice("");
     setSelected("");
@@ -151,6 +197,7 @@ export function useBIMSource(project: string) {
     selected,
     setSelected,
     file,
+    origin,
     setFile,
     error,
     notice,
@@ -158,6 +205,13 @@ export function useBIMSource(project: string) {
     imported,
     importSource,
     openImported,
+    retry:
+      errorAction === "open"
+        ? () =>
+            openImported(lastOpen.current.sourceId, lastOpen.current.revisionId)
+        : errorAction === "import"
+          ? importSource
+          : undefined,
     chooseFile,
   };
 }

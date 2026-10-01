@@ -2,6 +2,8 @@ import { useState } from "react";
 import type { AgentRun, DTO } from "../api/client";
 import { AppDialog } from "../components/ui/AppDialog";
 import { Button } from "../components/ui/button";
+import { AppDisclosure } from "../components/ui/AppDisclosure";
+import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
 import { AddSourcesDialog } from "./CreateSourceDialog";
 import { BaselineHistory, baselineEntryLabel } from "./BaselineHistory";
 import {
@@ -37,44 +39,47 @@ export function ProjectSourceRegister({
   const nextSequence =
     Math.max(0, ...baselines.map((item) => item.sequence)) + 1;
   const missing = statuses.filter((item) => !item.latest_revision_id);
-  const pending = statuses.filter((item) => item.has_pending_revision).length;
 
   return (
     <section className="sources-object-lane" aria-label="项目资料">
-      <header className="sources-register-heading">
-        <div>
-          <h2>资料</h2>
-          <span>
-            {statuses.length} 个 · {pending} 个待确认
-          </span>
-        </div>
-        <Button size="sm" variant="secondary" onClick={() => setAddOpen(true)}>
-          + 添加资料
-        </Button>
-      </header>
-      <div className="sources-baseline-line">
+      {!!(statuses.length || baselines.length) && <section aria-label="当前基线" className="sources-baseline-line">
         <span>
           当前基线{" "}
           <strong>{baseline ? `B${baseline.sequence}` : "尚未确认"}</strong>
         </span>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={
-            data.sources.isPending ||
-            data.sources.isError ||
-            data.baselines.isPending ||
-            data.baselines.isError ||
-            !latestBaselineEntries(statuses).length
-          }
-          onClick={() => {
-            data.acceptBaseline.reset();
-            setBaselineEntries(latestBaselineEntries(statuses));
-          }}
-        >
-          确认新基线
-        </Button>
-      </div>
+        <AppDisclosure label="基线记录与操作" className="sources-support">
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={
+              data.sources.isPending ||
+              data.sources.isError ||
+              data.baselines.isPending ||
+              data.baselines.isError ||
+              !latestBaselineEntries(statuses).length
+            }
+            onClick={() => {
+              data.acceptBaseline.reset();
+              setBaselineEntries(latestBaselineEntries(statuses));
+            }}
+          >
+            确认新基线
+          </Button>
+          {!!baselines.length && (
+            <BaselineHistory
+              baselines={baselines}
+              statuses={statuses}
+              revisions={data.revisionCatalog}
+            />
+          )}
+        </AppDisclosure>
+      </section>}
+      <header className="sources-register-heading">
+        <h2>资料</h2>
+        <AppMenu label="资料操作">
+          <AppMenuItem onSelect={() => setAddOpen(true)}>添加资料</AppMenuItem>
+        </AppMenu>
+      </header>
       {data.sources.isPending && (
         <p role="status" className="quiet-message">
           正在读取资料…
@@ -121,9 +126,9 @@ export function ProjectSourceRegister({
                 aria-pressed={sourceId === item.source.id}
                 onClick={() => onSelectSource(item.source.id)}
               >
-                <span className="sources-register-name">
+                <span className="sources-register-name object-identity">
                   <strong>{item.source.name}</strong>
-                  <small>
+                  <small className="object-kind">
                     {item.source.kind === "BIM" ? "IFC 模型" : "工程文档"}
                   </small>
                 </span>
@@ -145,19 +150,28 @@ export function ProjectSourceRegister({
                     )}
                   </span>
                 </span>
-                <span className="sources-register-status">
-                  <span>
-                    {item.latest_revision_id
-                      ? processingLabel(state)
-                      : "尚未上传"}
-                  </span>
-                  <small>
-                    {item.has_pending_revision
-                      ? "待确认 · 基线未变"
-                      : item.accepted_revision_id
-                        ? "已纳入基线"
+                <span
+                  className={`sources-register-status${item.has_pending_revision ? " is-pending" : ""}`}
+                >
+                  {(!item.latest_revision_id ||
+                    state?.run?.status !== "COMPLETED" ||
+                    error) && (
+                    <span>
+                      {item.latest_revision_id
+                        ? processingLabel(state)
+                        : "尚未上传"}
+                    </span>
+                  )}
+                  {(item.has_pending_revision ||
+                    !item.accepted_revision_id) && (
+                    <small>
+                      {item.has_pending_revision
+                        ? item.accepted_revision_id
+                          ? "有新版本待检查 · 基线未变"
+                          : "首次版本待确认"
                         : "尚未确认基线"}
-                  </small>
+                    </small>
+                  )}
                 </span>
               </button>
               {(error || retryable) && (
@@ -202,20 +216,10 @@ export function ProjectSourceRegister({
         })}
       </ul>
       {!data.sources.isPending && !data.sources.isError && !statuses.length && (
-        <p className="quiet-message sources-register-empty">
+        <p className="quiet-message sources-register-empty workspace-empty">
           还没有资料。添加 IFC
           或当前服务支持的工程文档；每份资料单独保留版本与原文件。
         </p>
-      )}
-      {!!baselines.length && (
-        <details className="sources-history">
-          <summary>基线历史 · {baselines.length}</summary>
-          <BaselineHistory
-            baselines={baselines}
-            statuses={statuses}
-            revisions={data.revisionCatalog}
-          />
-        </details>
       )}
       <AddSourcesDialog
         open={addOpen}

@@ -491,3 +491,62 @@
     gap: 10px;
   }
 }
+
+.application-shell .project-state > h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.application-shell .project-state-reason {
+  margin: 0 0 8px;
+  max-width: 700px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.application-shell button.project-revision {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.application-shell button.project-revision:hover {
+  background: var(--hover);
+}
+.application-shell button.project-revision:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.application-shell .project-workspace > .sources-context-pane {
+  min-height: 0;
+  overflow: auto;
+}
+
+/* An empty project has no sidebar inventory. */
+.application-shell .project-workspace:not(:has(> aside)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.application-shell .project-support > .disclosure-body {
+  overflow: visible;
+}
+.application-shell .project-support .disclosure-inner {
+  display: grid;
+  gap: 20px;
+}
+
+.application-shell .project-empty-record-links {
+  display: flex;
+  gap: 20px;
+  margin-top: 24px;
+  border: 0;
+  font-size: 12.5px;
+}
+.application-shell .project-empty-record-links button {
+  width: auto;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+}

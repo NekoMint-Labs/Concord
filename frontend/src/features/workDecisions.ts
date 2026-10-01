@@ -108,7 +108,7 @@ export function buildWorkDecisions(
       key: source.source.source.id,
       title: `${source.source.source.name} 有新版本`,
       reason: "当前基线未变；先核对模型变化及受影响范围。",
-      context: `${source.source.source.name} · ${sourcePair(source)}${affected.length ? ` · 影响 ${affected.length} 个工作包` : ""}`,
+      context: `${sourcePair(source)}${affected.length ? ` · 影响 ${affected.length} 个工作包` : ""}`,
       state: "待审核",
       action: "处理新版本",
       open: sourceOpen(source, actions, actions.onModels),
@@ -164,7 +164,7 @@ export function buildWorkDecisions(
       proposal.generation === owner.generation &&
       owner.status === "WAITING_APPROVAL";
     const area = workspace.state.areas.find((item) => item.id === wp.area_id);
-    const context = `${demoAreaName(wp.area_id, area?.name ?? wp.area_id)} · ${demoWorkPackageName(wp.id, wp.name)} · ${demoDiscipline(wp.discipline)}`;
+    const context = `${demoAreaName(wp.area_id, area?.name ?? wp.area_id)} · ${demoDiscipline(wp.discipline)}`;
     const wpSource = sourceContexts.find((item) =>
       item.comparison?.affected_work_packages.some(
         (affected) => affected.work_package_id === wp.id,
@@ -259,7 +259,7 @@ export function buildWorkDecisions(
     } else if (readiness.status === "READY") {
       completed.push(
         row(
-          `${demoWorkPackageName(wp.id, wp.name)} 可施工`,
+          demoWorkPackageName(wp.id, wp.name),
           sources.some((source) => source.has_pending_revision)
             ? "基于当前基线的判断；新版本仍待审核。"
             : "当前检查没有未解决的阻塞条件。",

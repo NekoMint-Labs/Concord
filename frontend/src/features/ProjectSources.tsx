@@ -20,6 +20,8 @@ export type ProjectSourcesProps = Omit<SourceContextPaneProps, "sourceId"> & {
   onRecheck?: () => void;
   onWorkPackage?: () => void;
   onChanges?: () => void;
+  focusBaselineId?: string;
+  onProject?: () => void;
 };
 
 /** Compatibility surface. ProjectHome can compose the same register and context exports. */
@@ -42,18 +44,27 @@ export function ProjectSources(props: ProjectSourcesProps) {
   if (historyOnly)
     return (
       <section className="sources-history-workspace" aria-label="资料历史">
-        <h1>历史</h1>
-        <p className="quiet-message">
-          已确认的完整资料基线及版本；历史基线不会被新版本覆盖。
-        </p>
+        <header className="history-heading">
+          <h1>历史</h1>
+        </header>
+        {data.baselines.isPending && <p role="status">正在读取基线历史…</p>}
         {data.baselines.error && (
-          <p role="alert">{data.baselines.error.message}</p>
+          <div role="alert">
+            <p>{data.baselines.error.message}</p>
+            <button type="button" onClick={() => void data.baselines.refetch()}>
+              重试读取历史
+            </button>
+          </div>
         )}
-        <BaselineHistory
-          baselines={data.baselines.data ?? []}
-          statuses={data.sources.data ?? []}
-          revisions={data.revisionCatalog}
-        />
+        {data.baselines.isSuccess && (
+          <BaselineHistory
+            focusBaselineId={props.focusBaselineId}
+            onProject={props.onProject}
+            baselines={data.baselines.data ?? []}
+            statuses={data.sources.data ?? []}
+            revisions={data.revisionCatalog}
+          />
+        )}
       </section>
     );
 

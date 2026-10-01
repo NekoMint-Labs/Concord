@@ -1,18 +1,28 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  api,
+  readSource,
+  type Baseline,
+  type ProjectSourceRevision,
+  type ProjectSourceStatus,
   type AgentRun,
   type DTO,
   type InvestigationReport,
   type WorkPackage,
 } from "../api/client";
-import { statusLabel } from "../ui/labels";
+import { shortDate, statusLabel } from "../ui/labels";
+import { AppDisclosure } from "../components/ui/AppDisclosure";
 import { demoInvestigationText } from "../ui/demo/demoPresentation";
 import { Button } from "../components/ui/button";
 import { AddSourcesDialog } from "./CreateSourceDialog";
 import type { BimMappingContext } from "./BimMappingWorkspace";
 import { RevisionImpact } from "./RevisionImpact";
-import { sourceRevisionLabel, useProjectSources } from "./useProjectSources";
-import { SourceRevisionHistory } from "./BaselineHistory";
+import {
+  revisionState,
+  sourceRevisionLabel,
+  useProjectSources,
+} from "./useProjectSources";
 import { processingLabel, useSourceProcessing } from "./useSourceProcessing";
 
 export type SourceInvestigationState = {
@@ -26,6 +36,9 @@ export type SourceInvestigationState = {
 export type SourceContextPaneProps = {
   project: string;
   sourceId: string;
+  focusRevisionId?: string;
+  focusComparisonId?: string;
+  onOpenModel?: (sourceId: string, revisionId: string) => void;
   workPackages?: WorkPackage[];
   report?: InvestigationReport | null;
   investigation?: SourceInvestigationState;
@@ -54,6 +67,9 @@ export type SourceContextPaneProps = {
 export function SourceContextPane({
   project,
   sourceId,
+  focusRevisionId,
+  focusComparisonId,
+  onOpenModel,
   workPackages = [],
   report,
   investigation,
@@ -79,14 +95,20 @@ export function SourceContextPane({
   const [compareBase, setCompareBase] = useState<"first" | "accepted">(
     "accepted",
   );
+  const focusedComparison = data.comparisons.data?.find(
+    (item) => item.id === focusComparisonId,
+  );
   const fromRevisionId =
-    compareBase === "first" ? firstRevisionId : current?.accepted_revision_id;
+    focusedComparison?.from_revision_id ??
+    (compareBase === "first" ? firstRevisionId : current?.accepted_revision_id);
   const latest = revisions.find(
-    (item) => item.id === current?.latest_revision_id,
+    (item) =>
+      item.id ===
+      (focusedComparison?.to_revision_id ?? current?.latest_revision_id),
   );
   const from = revisions.find((item) => item.id === fromRevisionId);
-  const latestProcessing = latest
-    ? processing.states.get(latest.id)
+  const latestProcessing = current?.latest_revision_id
+    ? processing.states.get(current.latest_revision_id)
     : undefined;
   const [addOpen, setAddOpen] = useState(false);
   const label = (id?: string | null) =>
@@ -108,18 +130,77 @@ export function SourceContextPane({
   };
   const canCompare = (id?: string | null) =>
     !!id &&
-    latestProcessing?.run?.status === "COMPLETED" &&
+    !!latest &&
+    processing.states.get(latest.id)?.run?.status === "COMPLETED" &&
     processing.states.get(id)?.run?.status === "COMPLETED";
+  const comparisonRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!current) return;
+    const revisionId =
+      focusRevisionId ??
+      focusedComparison?.to_revision_id ??
+      current.latest_revision_id ??
+      undefined;
+    onContext?.(
+      sourceId,
+      revisionId,
+      label(revisionId),
+      focusedComparison?.from_revision_id ??
+        current.accepted_revision_id ??
+        undefined,
+    );
+    if (focusedComparison)
+      comparisonRef.current?.scrollIntoView?.({ block: "nearest" });
+    // Selection, not polling or callback identity, owns the agent scope.
+  }, [
+    sourceId,
+    focusRevisionId,
+    focusComparisonId,
+    current?.latest_revision_id,
+    focusedComparison?.id,
+  ]);
   const matchingComparisons = (data.comparisons.data ?? []).filter(
     (comparison) =>
       comparison.from_revision_id === fromRevisionId &&
       comparison.to_revision_id === latest?.id,
   );
 
+  const comparison = matchingComparisons.at(-1);
+  const comparisonDetail = useQuery({
+    queryKey: ["comparison", project, sourceId, comparison?.id ?? ""],
+    queryFn: () => api.comparison(project, sourceId, comparison!.id),
+    enabled: !!comparison,
+  });
+  const [historyOpen, setHistoryOpen] = useState(!!focusRevisionId);
+  useEffect(() => {
+    if (focusRevisionId) setHistoryOpen(true);
+  }, [focusRevisionId]);
+
+  const revisionHistory = current && (
+    <SourceDetailRevisionHistory
+      project={project}
+      current={current}
+      revisions={revisions}
+      baselines={baselines}
+      loading={data.revisions.isPending}
+      processing={processing}
+      onInvestigate={onInvestigate}
+      onOpenModel={onOpenModel}
+      focusRevisionId={focusRevisionId}
+    />
+  );
+
   return (
     <aside className="sources-context-pane" aria-label="资料上下文">
       <header className="sources-context-heading">
-        <h2>{current?.source.name ?? "资料"}</h2>
+        <div className="object-identity">
+          {current && (
+            <span className="object-kind">
+              {current.source.kind === "BIM" ? "IFC 模型" : "工程文档"}
+            </span>
+          )}
+          <h2>{current?.source.name ?? "资料"}</h2>
+        </div>
         {onClose && (
           <Button size="sm" variant="ghost" onClick={onClose}>
             关闭
@@ -146,7 +227,9 @@ export function SourceContextPane({
         </div>
       )}
       {!current && !data.sources.isPending && (
-        <p className="quiet-message">选择一份资料，查看版本和原文件。</p>
+        <p className="quiet-message workspace-empty">
+          选择一份资料，查看版本和原文件。
+        </p>
       )}
       {current && (
         <>
@@ -156,79 +239,125 @@ export function SourceContextPane({
           >
             <dl>
               <dt>最新版本</dt>
-              <dd>{label(current.latest_revision_id)}</dd>
+              <dd className="mono">
+                {label(current.latest_revision_id)}
+                {current.has_pending_revision && (
+                  <small className="is-pending"> · 待确认</small>
+                )}
+              </dd>
               <dt>当前基线{baseline ? ` B${baseline.sequence}` : ""}</dt>
-              <dd>{label(current.accepted_revision_id)}</dd>
+              <dd className="mono">{label(current.accepted_revision_id)}</dd>
             </dl>
-            <p className="quiet-message">
-              {current.has_pending_revision
-                ? "有待确认版本；当前基线保持不变。"
-                : current.accepted_revision_id
-                  ? "最新版本已纳入当前基线。"
-                  : "尚未确认基线。"}
-            </p>
-            {latest && <p role="status">{processingLabel(latestProcessing)}</p>}
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setAddOpen(true)}
-            >
-              添加版本
-            </Button>
+            {latest &&
+              (latestProcessing?.run?.status !== "COMPLETED" ||
+                latestProcessing.error ||
+                latestProcessing.readError) && (
+                <p role="status">{processingLabel(latestProcessing)}</p>
+              )}
           </section>
-          <SourceRevisionHistory
-            project={project}
-            current={current}
-            revisions={revisions}
-            baselines={baselines}
-            loading={data.revisions.isPending}
-            processing={processing}
-            onContext={onContext}
-            onInvestigate={onInvestigate}
-          />
           {current.source.kind === "BIM" && latest && (
             <section
-              className="sources-context-comparison"
+              ref={comparisonRef}
+              className={`sources-context-comparison${focusedComparison ? " is-focused" : ""}`}
               aria-label="基线与最新版本比较"
             >
-              <h3>基线 → 最新</h3>
-              <div className="sources-context-actions">
+              <h3>
+                {focusedComparison
+                  ? `版本比较 · ${label(fromRevisionId)} → ${label(latest.id)}`
+                  : `最新比较 · ${label(fromRevisionId)} → ${label(latest.id)}`}
+              </h3>
+              {comparison && (
+                <>
+                  <p className="sources-comparison-summary">
+                    新增 {comparison.summary.added} · 删除{" "}
+                    {comparison.summary.deleted} · 变更{" "}
+                    {comparison.summary.changed}
+                  </p>
+                  {comparison.summary.warnings.map((warning) => (
+                    <p role="status" className="continuity-warning" key={warning}>
+                      {warning}
+                    </p>
+                  ))}
+                  {comparisonDetail.data ? (
+                    <p className="quiet-message">
+                      受影响工作包{" "}
+                      {comparisonDetail.data.affected_work_packages.length} 个
+                      {comparisonDetail.data.affected_work_packages.length ===
+                        0 &&
+                      comparison.summary.added +
+                        comparison.summary.deleted +
+                        comparison.summary.changed >
+                        0
+                        ? " · 有构件变化，暂未关联工作包"
+                        : ""}
+                    </p>
+                  ) : comparisonDetail.error ? (
+                    <p role="alert" className="sources-error">
+                      {comparisonDetail.error.message}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void comparisonDetail.refetch()}
+                      >
+                        重试读取影响
+                      </Button>
+                    </p>
+                  ) : (
+                    <p role="status" className="quiet-message">
+                      正在读取工作包影响…
+                    </p>
+                  )}
+                  {onInvestigate && (
+                    <Button
+                      size="sm"
+                      disabled={!comparisonDetail.data}
+                      onClick={() =>
+                        onInvestigate(
+                          sourceId,
+                          comparison.to_revision_id,
+                          comparison.from_revision_id,
+                          comparisonDetail.data?.changes.map(
+                            (change) => change.global_id,
+                          ),
+                          label(comparison.to_revision_id),
+                          label(comparison.from_revision_id),
+                        )
+                      }
+                    >
+                      调查此比较
+                    </Button>
+                  )}
+                </>
+              )}
+              {!comparison && from && from.id !== latest.id && (
                 <Button
                   size="sm"
-                  variant={compareBase === "first" ? "secondary" : "ghost"}
-                  disabled={
-                    !canCompare(firstRevisionId) || data.compare.isPending
+                  disabled={!canCompare(from.id) || data.compare.isPending}
+                  onClick={() =>
+                    data.compare.mutate({
+                      from_revision_id: from.id,
+                      to_revision_id: latest.id,
+                    })
                   }
-                  onClick={() => compareToLatest("first", firstRevisionId)}
                 >
-                  B1 → {label(latest.id)}
+                  {data.compare.isPending ? "正在比较…" : "查看变化"}
                 </Button>
-                {baseline && baseline.sequence !== 1 && (
-                  <Button
-                    size="sm"
-                    variant={compareBase === "accepted" ? "secondary" : "ghost"}
-                    disabled={
-                      !canCompare(current.accepted_revision_id) ||
-                      data.compare.isPending
-                    }
-                    onClick={() =>
-                      compareToLatest("accepted", current.accepted_revision_id)
-                    }
-                  >
-                    B{baseline.sequence} → {label(latest.id)}
-                  </Button>
-                )}
-              </div>
+              )}
               {data.comparisons.error && (
                 <p role="alert" className="sources-error">
                   {data.comparisons.error.message}
                   <Button
-                    variant="ghost"
                     size="sm"
+                    variant="ghost"
                     onClick={() => void data.comparisons.refetch()}
                   >
                     重试读取比较
                   </Button>
+                </p>
+              )}
+              {data.compare.error && (
+                <p role="alert" className="sources-error">
+                  {data.compare.error.message}
                 </p>
               )}
               {!fromRevisionId ? (
@@ -237,15 +366,44 @@ export function SourceContextPane({
                 </p>
               ) : fromRevisionId === latest.id ? (
                 <p className="quiet-message">所选基线与最新版本相同。</p>
-              ) : (
-                from && (
+              ) : null}
+              <AppDisclosure label="比较详情与操作" className="sources-support">
+                {!focusedComparison && (
+                  <div className="sources-context-actions">
+                    <Button
+                      size="sm"
+                      variant={compareBase === "first" ? "secondary" : "ghost"}
+                      disabled={
+                        !canCompare(firstRevisionId) || data.compare.isPending
+                      }
+                      onClick={() => compareToLatest("first", firstRevisionId)}
+                    >
+                      B1 → {label(latest.id)}
+                    </Button>
+                    {baseline && baseline.sequence !== 1 && (
+                      <Button
+                        size="sm"
+                        variant={
+                          compareBase === "accepted" ? "secondary" : "ghost"
+                        }
+                        disabled={
+                          !canCompare(current.accepted_revision_id) ||
+                          data.compare.isPending
+                        }
+                        onClick={() =>
+                          compareToLatest(
+                            "accepted",
+                            current.accepted_revision_id,
+                          )
+                        }
+                      >
+                        B{baseline.sequence} → {label(latest.id)}
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {from && from.id !== latest.id && (
                   <>
-                    <p className="quiet-message">
-                      {compareBase === "first"
-                        ? "B1"
-                        : `B${baseline?.sequence}`}{" "}
-                      · {label(fromRevisionId)} → 最新 {label(latest.id)}
-                    </p>
                     {onContext && onInvestigate && onInspectImpact ? (
                       <RevisionImpact
                         key={`${sourceId}:${fromRevisionId}:${latest.id}`}
@@ -312,11 +470,6 @@ export function SourceContextPane({
                       ))
                     )}
                     {data.compare.error && (
-                      <p role="alert" className="sources-error">
-                        {data.compare.error.message}
-                      </p>
-                    )}
-                    {data.compare.error && (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -332,10 +485,25 @@ export function SourceContextPane({
                       </Button>
                     )}
                   </>
-                )
-              )}
+                )}
+              </AppDisclosure>
             </section>
           )}
+          <AppDisclosure
+            label="版本历史与操作"
+            className="sources-support"
+            open={historyOpen}
+            onOpenChange={setHistoryOpen}
+          >
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setAddOpen(true)}
+            >
+              添加版本
+            </Button>
+            {revisionHistory}
+          </AppDisclosure>
           {current.source.kind !== "BIM" && revisions.length > 1 && (
             <p className="quiet-message">
               文档原文件与版本已保留；当前服务不提供文档版本差异比较。
@@ -431,5 +599,231 @@ export function SourceContextPane({
         </>
       )}
     </aside>
+  );
+}
+
+/** Source-detail presentation; baseline history keeps its own shared surface. */
+function SourceDetailRevisionHistory({
+  project,
+  current,
+  revisions,
+  baselines,
+  loading,
+  processing,
+  onInvestigate,
+  onOpenModel,
+  focusRevisionId,
+}: {
+  project: string;
+  current: ProjectSourceStatus;
+  revisions: readonly ProjectSourceRevision[];
+  baselines: readonly Baseline[];
+  loading: boolean;
+  processing: ReturnType<typeof useSourceProcessing>;
+  onInvestigate?: SourceContextPaneProps["onInvestigate"];
+  onOpenModel?: SourceContextPaneProps["onOpenModel"];
+  focusRevisionId?: string;
+}) {
+  const sourceId = current.source.id;
+  const focusedRevision = useRef<HTMLElement>(null);
+  useEffect(() => {
+    focusedRevision.current?.scrollIntoView?.({ block: "nearest" });
+  }, [focusRevisionId, revisions.length]);
+  const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>(
+    {},
+  );
+  const download = useMutation({
+    mutationFn: async (revision: ProjectSourceRevision) => {
+      const blob = await readSource(
+        `/api/projects/${encodeURIComponent(project)}/sources/${encodeURIComponent(sourceId)}/revisions/${encodeURIComponent(revision.id)}/content`,
+      );
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = revision.original_filename;
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+    onMutate: (revision) =>
+      setDownloadErrors((errors) => ({ ...errors, [revision.id]: "" })),
+    onError: (error, revision) =>
+      setDownloadErrors((errors) => ({
+        ...errors,
+        [revision.id]: error.message,
+      })),
+  });
+  return (
+    <section className="sources-context-history" aria-label="资料版本历史">
+      <h3>版本历史</h3>
+      {loading && <p role="status">正在读取版本…</p>}
+      {[...revisions]
+        .sort((a, b) => b.sequence - a.sequence)
+        .map((revision) => {
+          const state = processing.states.get(revision.id);
+          const error = state?.error || state?.readError || state?.run?.error;
+          const revisionBaselines = baselines.filter((entry) =>
+            entry.entries.some(
+              (item) =>
+                item.source_id === sourceId && item.revision_id === revision.id,
+            ),
+          );
+          const retryable =
+            state &&
+            !state.loading &&
+            !state.readError &&
+            !state.starting &&
+            (!!state.error ||
+              !state.run ||
+              ["FAILED", "CANCELLED", "EXPIRED"].includes(state.run.status));
+          const meaning = revisionState(current, revision.id);
+          return (
+            <article
+              ref={
+                focusRevisionId === revision.id ? focusedRevision : undefined
+              }
+              className={`sources-context-revision${focusRevisionId === revision.id ? " is-focused" : ""}`}
+              key={revision.id}
+            >
+              <header>
+                <strong className="mono">R{revision.sequence}</strong>
+                <span
+                  className={meaning === "latest" ? "is-pending" : undefined}
+                >
+                  {meaning === "latest-accepted"
+                    ? "最新 · 当前基线"
+                    : meaning === "latest"
+                      ? "最新 · 待确认"
+                      : meaning === "accepted"
+                        ? "当前基线"
+                        : "历史版本"}
+                </span>
+              </header>
+              <p className="sources-original-filename">
+                {revision.original_filename}
+              </p>
+              <div className="sources-revision-metadata">
+                {!!revisionBaselines.length && (
+                  <span className="mono">
+                    {revisionBaselines
+                      .map((item) => `B${item.sequence}`)
+                      .join(" · ")}
+                  </span>
+                )}
+                {revision.external_label && (
+                  <span>外部版本标记：{revision.external_label}</span>
+                )}
+                <span>{Math.ceil(revision.size_bytes / 1024)} KiB</span>
+                <time
+                  dateTime={revision.imported_at}
+                  title={new Date(revision.imported_at).toLocaleString("zh-CN")}
+                >
+                  {shortDate(revision.imported_at)}
+                </time>
+              </div>
+              {(state?.run?.status !== "COMPLETED" || error) && (
+                <p role="status" className="sources-revision-availability">
+                  {processingLabel(state)}
+                </p>
+              )}
+              {error && (
+                <p role="alert" className="sources-error">
+                  {error}
+                </p>
+              )}
+              <div className="sources-context-actions">
+                {state?.readError && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void processing.refetch(revision.id)}
+                  >
+                    重新读取处理状态
+                  </Button>
+                )}
+                {retryable && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      processing.retry.mutate({
+                        source: sourceId,
+                        revision: revision.id,
+                      })
+                    }
+                  >
+                    {state.error || state.run ? "重试处理" : "开始处理"}
+                  </Button>
+                )}
+                {current.source.kind === "BIM" &&
+                  state?.run?.status === "COMPLETED" &&
+                  onOpenModel && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => onOpenModel(sourceId, revision.id)}
+                    >
+                      查看模型
+                    </Button>
+                  )}
+                {state?.run?.status === "COMPLETED" && onInvestigate && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      onInvestigate(
+                        sourceId,
+                        revision.id,
+                        undefined,
+                        undefined,
+                        `R${revision.sequence}`,
+                      )
+                    }
+                  >
+                    调查此版本
+                  </Button>
+                )}
+              </div>
+              <AppDisclosure
+                label="原文件与处理记录"
+                className="sources-revision-support"
+              >
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={download.isPending}
+                  onClick={() => download.mutate(revision)}
+                >
+                  {download.isPending && download.variables?.id === revision.id
+                    ? "正在下载…"
+                    : downloadErrors[revision.id]
+                      ? "重试下载原文件"
+                      : "下载原文件"}
+                </Button>
+                {state?.run && (
+                  <div className="sources-processing-log">
+                    <span>处理记录</span>
+                    <code>{state.run.id}</code>
+                    <p>
+                      {state.run.status} ·{" "}
+                      {new Date(state.run.updated_at).toLocaleString("zh-CN")}
+                    </p>
+                    {state.run.error && <p>{state.run.error}</p>}
+                  </div>
+                )}
+              </AppDisclosure>
+              {downloadErrors[revision.id] && (
+                <p role="alert" className="sources-error">
+                  {downloadErrors[revision.id]}
+                </p>
+              )}
+            </article>
+          );
+        })}
+      {!loading && !revisions.length && (
+        <p className="quiet-message workspace-empty">
+          资料已登记但尚未上传原文件；使用「添加版本」上传，版本与原文件会保留在这里。
+        </p>
+      )}
+    </section>
   );
 }

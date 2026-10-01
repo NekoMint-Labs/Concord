@@ -39,12 +39,13 @@ vi.mock("../components/ui/AppMenu", () => ({
 function menu(
   profile: DTO<"ProfileResponse"> | undefined,
   onTab: (tab: WorkspaceTab) => void = () => {},
+  project = "harbor-east",
 ) {
   return (
     <AdvancedMenu
       tab="coordination"
       onTab={onTab}
-      project="harbor-east"
+      project={project}
       busy={false}
       profile={profile}
       createEvent={() => {}}
@@ -102,4 +103,13 @@ it("shows the demo tools only when the profile positively reports local", () => 
   // A profile request that failed leaves no answer at all, which is not `local`.
   view.rerender(menu(undefined));
   expect(screen.queryByText("演示工具")).not.toBeInTheDocument();
+});
+
+it("hides fixture actions for a real project even in the local profile", () => {
+  const view = render(menu(answer("local"), undefined, "real-project"));
+  expect(screen.queryByText("演示工具")).not.toBeInTheDocument();
+  expect(screen.queryByText("图纸 V16 → V17")).not.toBeInTheDocument();
+  expect(screen.queryByText("重置演示")).not.toBeInTheDocument();
+  view.rerender(menu(answer("local")));
+  expect(screen.getByText("演示工具")).toBeVisible();
 });

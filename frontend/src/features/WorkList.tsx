@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
+import { Button } from "../components/ui/button";
 import type {
   AgentRun,
   InvestigationReport,
   ProjectSourceStatus,
   Workspace,
 } from "../api/client";
-import { useProjectContext } from "../app/useProjectContext";
 import type { WorkspaceTab } from "../app/destinations";
 import { buildWorkDecisions, type WorkDecision } from "./workDecisions";
 import { useWorkSelection } from "./useWorkSelection";
@@ -23,7 +23,6 @@ export function WorkList({
   onRecheck,
   onReport,
   onProject,
-  onTab,
   onInvestigate,
   onSource,
   run,
@@ -50,7 +49,6 @@ export function WorkList({
 }) {
   const [showAllDone, setShowAllDone] = useState(false);
   const [query, setQuery] = useState("");
-  const context = useProjectContext(workspace.state.project.id, sources);
   const sourceContexts = useWorkSourceContext(
     workspace.state.project.id,
     sources,
@@ -113,9 +111,9 @@ export function WorkList({
         <span className="work-row-copy">
           <strong title={item.title}>{item.title}</strong>
           <small title={item.context}>{item.context}</small>
-          <span className="work-row-reason" title={item.reason}>
+          {label !== "最近完成" && <span className="work-row-reason" title={item.reason}>
             {item.reason}
-          </span>
+          </span>}
         </span>
         <span className="work-state">
           {item.state}
@@ -140,7 +138,11 @@ export function WorkList({
             <p>
               {needs.length
                 ? `${needs.length} 项需要你决定 · 共 ${total} 项`
-                : `当前没有需要立即处理的事项 · 共 ${total} 项`}
+                : waiting.length
+                  ? `${waiting.length} 项等待检查或处理 · 共 ${total} 项`
+                  : total
+                    ? `当前事项已处理 · 共 ${total} 项`
+                    : "工作事项来自项目资料、工作包与施工检查"}
             </p>
             <label className="work-search">
               <Search size={15} />
@@ -158,6 +160,19 @@ export function WorkList({
             </label>
           </header>
           <div className="work-queue-scroll">
+            {!total && (
+              <div className="work-empty workspace-empty">
+                <h2>还没有工作事项</h2>
+                <p>
+                  当前项目尚无资料版本或工作包可供检查。先到项目添加资料与工作包，真实的待处理事项会显示在这里。
+                </p>
+                <div className="workspace-empty-actions">
+                  <Button size="sm" onClick={onProject}>
+                    打开项目 →
+                  </Button>
+                </div>
+              </div>
+            )}
             {groups.map(({ label, visible, collapsed, shown }) => {
               if (!visible.length && !query) return null;
               return (
@@ -194,15 +209,10 @@ export function WorkList({
           <WorkPeek
             selectedItem={selectedItem}
             workspace={workspace}
-            context={context}
             peekRef={selection.peekRef}
             onClose={selection.close}
-            onPackage={onPackage}
             onModels={onModels}
             onSource={onSource}
-            onInvestigate={onInvestigate}
-            onProject={onProject}
-            onTab={onTab}
           />
         )}
       </div>

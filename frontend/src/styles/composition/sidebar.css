@@ -283,8 +283,12 @@
   width: 19px;
   height: 19px;
 }
-.application-shell .sidebar-browse button:hover,
-.application-shell .sidebar-browse button.active {
+.application-shell .sidebar-browse button:hover {
   background: var(--hover);
   color: var(--accent);
+}
+.application-shell .sidebar-browse button.active {
+  background: var(--concord-nav-selection);
+  color: var(--concord-nav-active);
+  font-weight: 600;
 }

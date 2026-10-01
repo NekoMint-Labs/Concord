@@ -1,4 +1,14 @@
-import { lazy, Suspense, type ReactNode, type ComponentProps } from "react";
+import {
+  lazy,
+  Suspense,
+  useState,
+  type ReactNode,
+  type ComponentProps,
+} from "react";
+import {
+  ProjectExplorer,
+  type ExplorerTarget,
+} from "../features/ProjectExplorer";
 import { proposalRejected } from "../features/proposalState";
 import { scopeFor } from "../features/agentContext";
 import { Plus } from "lucide-react";
@@ -176,10 +186,38 @@ export function WorkspaceViews({
    * is reached as a menu instead of as a third column
    * (frontend/src/layout/paneBudget.ts).
    */
+  const [explorerTarget, setExplorerTarget] = useState<ExplorerTarget | null>(
+    null,
+  );
+  const [modelTarget, setModelTarget] = useState<{
+    sourceId: string;
+    revisionId: string;
+  } | null>(null);
+  const openModel = (sourceId: string, revisionId: string) => {
+    setModelTarget({ sourceId, revisionId });
+    onProjectSourceSelected?.(sourceId);
+    onLocalIfcFile?.(null);
+    onElementSelected("");
+    onTab("bim");
+  };
+  const openSource = (target: Extract<ExplorerTarget, { kind: "source" }>) => {
+    setExplorerTarget(target);
+    onProjectSourceSelected?.(target.id);
+    onTab("project");
+  };
+  const openDocument = (id: string) => {
+    setExplorerTarget({ kind: "document", id });
+    onTab("documents");
+  };
   const width = usePaneWidth();
   const condensed = condensedFor(width, detailsOpen);
   const stackedInspector = detailsOpen && width <= 1120;
+  const selectConstraint = (id: string) => {
+    setExplorerTarget(null);
+    onConstraint(id);
+  };
   const openWorkPackage = (id: string) => {
+    setExplorerTarget(null);
     onSelected(id);
     onTab("coordination");
   };
@@ -233,10 +271,7 @@ export function WorkspaceViews({
                     sources={modelSources}
                     report={report}
                     run={run}
-                    onSource={(sourceId) => {
-                      onProjectSourceSelected?.(sourceId);
-                      onTab("project");
-                    }}
+                    onSource={(id) => openSource({ kind: "source", id })}
                     onInvestigate={
                       onInvestigateWork ??
                       ((context) => {
@@ -262,6 +297,37 @@ export function WorkspaceViews({
                     onTab={onTab}
                   />
                 )}
+                {tab === "browse" && (
+                  <ProjectExplorer
+                    workspace={data}
+                    sources={modelSources}
+                    onTab={onTab}
+                    onOpen={(target) => {
+                      if (target.kind === "source") openSource(target);
+                      else if (target.kind === "package")
+                        openWorkPackage(target.id);
+                      else if (target.kind === "document")
+                        openDocument(target.id);
+                      else if (target.kind === "baseline") onTab("history");
+                      else {
+                        const evidence = data.analysis?.evidence.find(
+                          (item) => item.id === target.id,
+                        );
+                        const constraint = data.analysis?.constraints.find(
+                          (item) => item.evidence_ids.includes(target.id),
+                        );
+                        const packageId =
+                          evidence?.work_package_id ??
+                          constraint?.work_package_id;
+                        if (packageId) openWorkPackage(packageId);
+                        else onTab("project");
+                        onInspectorView("evidence");
+                        onDetailsOpen(true);
+                      }
+                      setExplorerTarget(target);
+                    }}
+                  />
+                )}
                 {tab === "project" && (
                   <ProjectHome
                     workspace={data}
@@ -270,10 +336,29 @@ export function WorkspaceViews({
                     onStructure={onStructure}
                     onTab={onTab}
                     onPackage={openWorkPackage}
+                    onDocument={openDocument}
+                    onSource={(id, revisionId) =>
+                      openSource({ kind: "source", id, revisionId })
+                    }
+                    onModel={openModel}
                     sourceId={projectSourceId}
-                    onSourceSelected={onProjectSourceSelected}
+                    onSourceSelected={(id) => {
+                      setExplorerTarget(null);
+                      onProjectSourceSelected?.(id);
+                    }}
                     sourceContext={{
                       onRun: onAgentRun,
+                      focusRevisionId:
+                        explorerTarget?.kind === "source" &&
+                        explorerTarget.id === projectSourceId
+                          ? explorerTarget.revisionId
+                          : undefined,
+                      focusComparisonId:
+                        explorerTarget?.kind === "source" &&
+                        explorerTarget.id === projectSourceId
+                          ? explorerTarget.comparisonId
+                          : undefined,
+                      onOpenModel: openModel,
                       onContext: onSourceContext,
                       onInvestigate: onInvestigateSource,
                       onInspectImpact,
@@ -351,7 +436,9 @@ export function WorkspaceViews({
                       busy={busy}
                       pendingModel={!!modelSource?.has_pending_revision}
                       onRecheck={onRecheck}
+                      onConstraint={selectConstraint}
                       onDetails={(view) => {
+                        setExplorerTarget(null);
                         onInspectorView(view);
                         onDetailsOpen(true);
                       }}
@@ -429,6 +516,7 @@ export function WorkspaceViews({
                   <ChangeExplorer
                     project={project}
                     workspace={data}
+                    onWorkPackage={openWorkPackage}
                     initialElement={selectedElement}
                     onElementSelected={onElementSelected}
                     localFile={localIfcFile}
@@ -464,16 +552,30 @@ export function WorkspaceViews({
                     workspace={data}
                     selectedElement={selectedElement}
                     selectedIssue={selectedSpatialIssue}
+                    onWorkPackage={openWorkPackage}
                     onElementSelected={onElementSelected}
                     onIssueSelected={onSpatialIssueSelected}
                     localFile={localIfcFile}
                     onLocalFile={onLocalIfcFile}
-                    onResolve={onConstraint}
-                    onSelectWorkPackage={onSelected}
+                    onResolve={selectConstraint}
+                    onSelectWorkPackage={(id) => {
+                      setExplorerTarget(null);
+                      onSelected(id);
+                    }}
                   />
                 )}
                 {tab === "documents" && (
                   <Documents
+                    key={
+                      explorerTarget?.kind === "document"
+                        ? explorerTarget.id
+                        : "documents"
+                    }
+                    initialDocumentId={
+                      explorerTarget?.kind === "document"
+                        ? explorerTarget.id
+                        : undefined
+                    }
                     project={project}
                     perform={perform}
                     condensed={condensed}
@@ -484,6 +586,13 @@ export function WorkspaceViews({
                   <ProjectSources
                     project={project}
                     historyOnly={tab === "history"}
+                    focusBaselineId={
+                      explorerTarget?.kind === "baseline"
+                        ? explorerTarget.id
+                        : undefined
+                    }
+                    onProject={() => onTab("project")}
+                    onOpenModel={openModel}
                     workPackages={data.state.work_packages}
                     report={report}
                     onContext={onSourceContext}
@@ -531,6 +640,9 @@ export function WorkspaceViews({
                 )}
                 {tab === "bim" && !mappingMode && (
                   <BIMWorkspace
+                    key={`${modelTarget?.sourceId ?? ""}:${modelTarget?.revisionId ?? ""}`}
+                    selectedSourceId={modelTarget?.sourceId}
+                    selectedRevisionId={modelTarget?.revisionId}
                     project={project}
                     impacted={data.analysis?.impact.element_ids ?? []}
                     focusId={selectedElement || undefined}
@@ -538,11 +650,14 @@ export function WorkspaceViews({
                     selectedIssueId={selectedSpatialIssue}
                     onIssueSelected={onSpatialIssueSelected}
                     onInvestigate={
-                      modelSource?.latest_revision_id
+                      !localIfcFile &&
+                      (modelTarget?.revisionId ||
+                        modelSource?.latest_revision_id)
                         ? (id) =>
                             onInvestigateBim(
-                              modelSource.source.id,
-                              modelSource.latest_revision_id!,
+                              modelTarget?.sourceId ?? modelSource!.source.id,
+                              modelTarget?.revisionId ??
+                                modelSource!.latest_revision_id!,
                               [id],
                             )
                         : undefined
@@ -610,6 +725,11 @@ export function WorkspaceViews({
                   workspace={data}
                   selected={selected}
                   selectedConstraint={selectedConstraint}
+                  selectedEvidenceId={
+                    explorerTarget?.kind === "evidence"
+                      ? explorerTarget.id
+                      : undefined
+                  }
                   view={inspectorView}
                   perform={perform}
                   onClose={() => onDetailsOpen(false)}

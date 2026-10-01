@@ -6,6 +6,9 @@
 .application-shell .bim-workspace.is-list-open .spatial-main {
   grid-template-rows: minmax(260px, 1fr) clamp(180px, 26vh, 232px);
 }
+.application-shell .bim-workspace.is-empty .spatial-main {
+  grid-template-rows: minmax(260px, 1fr);
+}
 
 /* The SDK's own mark does not belong inside the working canvas. */
 .application-shell .bim-stage [data-thatopen-logo] {
@@ -149,30 +152,6 @@
 }
 .application-shell .spatial-context-tabs button.active::after {
   bottom: -1px;
-}
-.application-shell .spatial-context-links {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 16px;
-  padding-left: 12px;
-  border-left: 1px solid var(--line-soft);
-}
-.application-shell .spatial-context-links button {
-  height: 24px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 4px;
-  background: none;
-  color: var(--muted);
-  font-size: 12px;
-}
-.application-shell .spatial-context-links button:hover:not(:disabled) {
-  background: var(--hover);
-  color: var(--ink);
-}
-.application-shell .spatial-context-links button:disabled {
-  color: var(--concord-disabled-tab);
 }
 .application-shell .spatial-context-header > span {
   color: var(--muted);
@@ -666,4 +645,177 @@
 .application-shell .spatial-workspace.is-model .viewer-issue-label,
 .application-shell .spatial-workspace.is-model .model-hint {
   font-size: 12px;
+}
+
+/* Empty canvases explain the project path, not a toolbar over nothing. */
+.application-shell .bim-workspace.is-model .spatial-stage-empty {
+  position: absolute;
+  inset: 128px 40px auto;
+  width: min(540px, calc(100% - 80px));
+  height: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 14px;
+  max-width: 540px;
+  margin: 0;
+  padding: 0;
+  line-height: 1.7;
+}
+.application-shell .spatial-stage-empty strong {
+  font-size: 18px;
+  color: var(--ink);
+}
+.application-shell .spatial-stage-empty span {
+  font-size: 14px;
+}
+.application-shell .spatial-stage-empty small {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.application-shell .model-primary-action {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--on-primary);
+  background: var(--accent);
+  font-size: 13px;
+}
+.application-shell .model-empty-inspector {
+  height: 100%;
+  overflow: auto;
+  padding: 20px;
+  background: var(--surface-list);
+  line-height: 1.7;
+  font-size: 13px;
+}
+.application-shell .model-empty-inspector h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.application-shell .model-empty-inspector header {
+  margin-bottom: 24px;
+}
+.application-shell .model-empty-inspector header p {
+  margin: 4px 0;
+  color: var(--muted);
+}
+.application-shell .model-empty-inspector .quiet-message {
+  margin-top: 24px;
+}
+.application-shell .spatial-source-actions:not(.is-loaded) > div {
+  flex-wrap: wrap;
+}
+.application-shell .spatial-source-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* Keep dock controls reachable when the stage is narrower than the header. */
+.application-shell .spatial-context-header {
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.application-shell .spatial-context-header > * {
+  flex-shrink: 0;
+}
+
+/* Without a file the canvas and Inspector share one reduced working context. */
+.application-shell .bim-workspace.is-empty .spatial-inspector-pane,
+.application-shell .bim-workspace.is-empty .pane-divider {
+  visibility: hidden;
+}
+.application-shell .bim-workspace.is-empty .spatial-stage {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: var(--surface-workspace);
+}
+.application-shell .model-empty-heading {
+  padding: 24px 32px 18px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.application-shell .model-empty-heading h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+.application-shell .bim-workspace.is-empty .spatial-stage-empty {
+  position: static;
+  flex: none;
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: min(620px, calc(100% - 64px));
+  height: auto;
+  margin: clamp(48px, 12vh, 104px) 32px 0;
+  padding: 8px 0 8px 28px;
+  border-left: 1px solid var(--line);
+  text-align: left;
+}
+.application-shell .bim-workspace.is-empty .spatial-stage-empty .object-kind {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.application-shell .bim-workspace.is-empty .spatial-stage-empty strong {
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 600;
+}
+.application-shell .bim-workspace.is-empty .spatial-stage-empty > span {
+  max-width: 56ch;
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+.application-shell .bim-workspace.is-empty .model-primary-action {
+  margin: 16px 0 8px;
+  font-size: 13px;
+}
+.application-shell .bim-workspace.is-empty .spatial-stage-empty small {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.application-shell .bim-workspace.is-empty .spatial-source-actions {
+  position: static;
+  flex: none;
+  align-self: flex-start;
+  margin: 12px 0 24px 60px;
+  transform: none;
+}
+.application-shell .bim-workspace.is-empty .spatial-source-actions > div {
+  position: static;
+  justify-content: flex-start;
+  border: 0;
+  background: transparent;
+}
+.application-shell .bim-workspace.is-empty .spatial-source-actions button {
+  height: 30px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+.application-shell .bim-workspace.is-empty .model-open-project:disabled {
+  display: none;
+}
+.application-shell
+  .bim-workspace.is-empty
+  .spatial-context-tabs
+  button:disabled {
+  color: var(--muted);
+}
+.application-shell .bim-workspace.is-empty .spatial-context-tabs button::after,
+.application-shell .bim-workspace.is-empty .spatial-context-tabs small,
+.application-shell
+  .bim-workspace.is-empty
+  .spatial-context-header
+  > button:disabled {
+  display: none;
 }

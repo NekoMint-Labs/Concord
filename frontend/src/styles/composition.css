@@ -9,5 +9,10 @@
 @import "./composition/pages.css";
 @import "./composition/work.css";
 @import "./composition/project.css";
+@import "./composition/source-detail.css";
+@import "./composition/explorer.css";
 @import "./composition/model.css";
+@import "./composition/documents.css";
+@import "./composition/objects.css";
+@import "./composition/history.css";
 @import "./composition/responsive.css";

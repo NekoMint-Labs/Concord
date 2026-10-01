@@ -177,91 +177,59 @@ it("keeps project actions and switching discoverable in the project switcher", a
   expect(onProject).toHaveBeenCalledWith("campus-west");
 });
 
-it("labels work-package creation as an explicit sidebar action", () => {
-  const onStructure = vi.fn();
+it("opens Browse as a first-level destination without a hidden package or model tree", () => {
+  const onTab = vi.fn();
+  const onSelect = vi.fn();
   render(
     <ProjectSidebar
       data={data}
       project="harbor-east"
       projects={projects}
       selected="WP-200"
-      onCollapse={() => {}}
-      onProject={() => {}}
-      onStructure={onStructure}
-      onSelect={() => {}}
+      onCollapse={vi.fn()}
+      onProject={vi.fn()}
+      onSelect={onSelect}
+      onTab={onTab}
     />,
   );
 
-  fireEvent.click(screen.getByRole("button", { name: "浏览工作包与模型" }));
-  fireEvent.change(screen.getByPlaceholderText("搜索工作包"), {
-    target: { value: "风管" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "新建工作包" }));
-  expect(onStructure).toHaveBeenCalledOnce();
+  const browse = screen.getByRole("button", { name: "浏览" });
+  expect(browse).not.toHaveAttribute("aria-current");
+  expect(browse).not.toHaveAttribute("aria-expanded");
+  fireEvent.click(browse);
+  expect(onTab).toHaveBeenCalledExactlyOnceWith("browse");
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(screen.queryByRole("searchbox", { hidden: true })).toBeNull();
+  expect(
+    screen.queryByRole("navigation", { name: "工作包", hidden: true }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("navigation", { name: "项目模型", hidden: true }),
+  ).toBeNull();
+  expect(screen.queryByText("东翼风管安装")).toBeNull();
 });
 
-it("returns browser dismissal and activation focus to Browse, but preserves outside pointer focus", () => {
-  const onSelect = vi.fn();
-  const onTab = vi.fn();
+it("marks Browse as the active destination instead of a disclosure", () => {
   render(
-    <>
-      <input aria-label="Outside search" />
-      <ProjectSidebar
-        data={data}
-        project="harbor-east"
-        projects={projects}
-        selected="WP-200"
-        onCollapse={vi.fn()}
-        onProject={vi.fn()}
-        onSelect={onSelect}
-        onTab={onTab}
-        sources={[
-          {
-            source: {
-              id: "model-1",
-              project_id: "harbor-east",
-              name: "MEP model",
-              kind: "BIM",
-              created_at: "2026-01-01T00:00:00Z",
-            },
-            latest_revision_id: "r1",
-            accepted_revision_id: "r1",
-            baseline_id: "b1",
-            has_pending_revision: false,
-          },
-        ]}
-      />
-    </>,
+    <ProjectSidebar
+      data={data}
+      project="harbor-east"
+      projects={projects}
+      selected="WP-200"
+      tab="browse"
+      onCollapse={vi.fn()}
+      onProject={vi.fn()}
+      onSelect={vi.fn()}
+    />,
   );
-  const browse = screen.getByRole("button", { name: "浏览工作包与模型" });
-  fireEvent.click(browse);
-  const search = screen.getByRole("searchbox", { name: "搜索工作包" });
-  search.focus();
-  fireEvent.keyDown(search, { key: "Escape" });
-  expect(browse).toHaveAttribute("aria-expanded", "false");
-  expect(browse).toHaveFocus();
-  expect(screen.queryByRole("navigation", { name: "工作包" })).toBeNull();
-  fireEvent.click(browse);
-  const packageButton = within(
-    screen.getByRole("navigation", { name: "工作包" }),
-  ).getByRole("button", { name: /东翼风管安装/ });
-  packageButton.focus();
-  fireEvent.click(packageButton);
-  expect(onSelect).toHaveBeenCalledWith("WP-200");
-  expect(browse).toHaveFocus();
-  expect(browse).toHaveAttribute("aria-expanded", "false");
-  fireEvent.click(browse);
-  const model = within(
-    screen.getByRole("navigation", { name: "项目模型" }),
-  ).getByRole("button", { name: /MEP model/ });
-  model.focus();
-  fireEvent.click(model);
-  expect(onTab).toHaveBeenCalledWith("bim");
-  expect(browse).toHaveFocus();
-  fireEvent.click(browse);
-  const outside = screen.getByRole("textbox", { name: "Outside search" });
-  outside.focus();
-  fireEvent.pointerDown(outside);
-  expect(browse).toHaveAttribute("aria-expanded", "false");
-  expect(outside).toHaveFocus();
+
+  expect(screen.getByRole("button", { name: "浏览" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  for (const name of ["工作", "模型", "项目"]) {
+    expect(screen.getByRole("button", { name })).not.toHaveAttribute(
+      "aria-current",
+    );
+  }
 });

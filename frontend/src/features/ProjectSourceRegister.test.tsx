@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   api,
+  requestHeaders,
   type AgentRun,
   type Baseline,
   type ProjectSourceRevision,
@@ -124,6 +125,8 @@ it("selects a logical source and confirms the complete version set without a REA
   fireEvent.click(row);
   expect(select).toHaveBeenCalledWith("model");
   expect(await screen.findByText("Invalid IFC header")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "确认新基线" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "基线记录与操作" }));
   fireEvent.click(screen.getByRole("button", { name: "确认新基线" }));
   const dialog = screen.getByRole("dialog", { name: "确认基线 B2" });
   expect(within(dialog).getByText("East model：R2")).toBeVisible();
@@ -169,6 +172,9 @@ it("compares B1 directly with current, not just adjacent revisions", async () =>
       onInspectImpact={vi.fn()}
     />,
   );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "比较详情与操作" }),
+  );
   const action = await screen.findByRole("button", { name: "B1 → R3" });
   await waitFor(() => expect(action).toBeEnabled());
   fireEvent.click(action);
@@ -178,6 +184,8 @@ it("compares B1 directly with current, not just adjacent revisions", async () =>
       to_revision_id: "r3",
     }),
   );
+  expect(screen.queryByText("original.ifc")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "版本历史与操作" }));
   expect(screen.getByText("original.ifc")).toBeVisible();
   expect(screen.getByRole("button", { name: "添加版本" })).toBeVisible();
 });
@@ -338,6 +346,11 @@ it("hands affected work-package changes to the parent's model context", async ()
       onInspectImpact={inspect}
     />,
   );
+  expect(await screen.findByText("受影响工作包 1 个")).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: /关联工作包.*1 个变更构件/ }),
+  ).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "比较详情与操作" }));
   fireEvent.click(
     await screen.findByRole("button", { name: /关联工作包.*1 个变更构件/ }),
   );
@@ -350,4 +363,243 @@ it("hands affected work-package changes to the parent's model context", async ()
     highlightIds: ["element-1"],
     changes,
   });
+});
+
+it("opens explicitly focused revision actions and authenticates/retries downloads inside their disclosure", async () => {
+  vi.mocked(api.revisionImport).mockResolvedValue({
+    ...run,
+    status: "COMPLETED",
+    error: null,
+  });
+  const openModel = vi.fn();
+  const investigate = vi.fn();
+  const fetchSource = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(new Response(null, { status: 403 }))
+    .mockResolvedValueOnce(new Response("original IFC"));
+  const createUrl = vi.fn(() => "blob:original-ifc");
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: createUrl,
+  });
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: vi.fn(),
+  });
+  const anchorClick = vi
+    .spyOn(HTMLAnchorElement.prototype, "click")
+    .mockImplementation(() => {});
+  mount(
+    <SourceContextPane
+      project="project"
+      sourceId="model"
+      focusRevisionId="r1"
+      onOpenModel={openModel}
+      onInvestigate={investigate}
+    />,
+  );
+  const filename = await screen.findByText("original.ifc");
+  const revision = filename.closest("article")!;
+  expect(revision).toHaveClass("is-focused");
+  expect(within(revision).getByText("R1")).toBeVisible();
+  expect(within(revision).getByText("B1")).toBeVisible();
+  expect(revision.querySelector("time")).toHaveAttribute(
+    "datetime",
+    r1.imported_at,
+  );
+  await waitFor(() =>
+    expect(
+      within(revision).getByRole("button", { name: "查看模型" }),
+    ).toBeVisible(),
+  );
+  fireEvent.click(within(revision).getByRole("button", { name: "查看模型" }));
+  expect(openModel).toHaveBeenCalledWith("model", "r1");
+  fireEvent.click(within(revision).getByRole("button", { name: "调查此版本" }));
+  expect(investigate).toHaveBeenCalledWith(
+    "model",
+    "r1",
+    undefined,
+    undefined,
+    "R1",
+  );
+  expect(
+    within(revision).queryByRole("button", { name: "下载原文件" }),
+  ).toBeNull();
+  const disclosure = within(revision).getByRole("button", {
+    name: "原文件与处理记录",
+  });
+  expect(disclosure).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(disclosure);
+  expect(await within(revision).findByText("parse-run")).toBeVisible();
+  fireEvent.click(within(revision).getByRole("button", { name: "下载原文件" }));
+  expect(await within(revision).findByRole("alert")).toHaveTextContent(
+    "来源文件不可用",
+  );
+  expect(fetchSource).toHaveBeenCalledWith(
+    "/api/projects/project/sources/model/revisions/r1/content",
+    { headers: requestHeaders() },
+  );
+  fireEvent.click(
+    within(revision).getByRole("button", { name: "重试下载原文件" }),
+  );
+  await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(1));
+  expect(createUrl).toHaveBeenCalledWith(expect.any(Blob));
+  await waitFor(() => expect(within(revision).queryByRole("alert")).toBeNull());
+});
+
+it("retains the exact selected comparison when a newer revision exists", async () => {
+  const r3 = { ...r2, id: "r3", sequence: 3 };
+  vi.mocked(api.sourceStatuses).mockResolvedValue([
+    { ...status, latest_revision_id: "r3" },
+  ]);
+  vi.mocked(api.sourceRevisions).mockResolvedValue([r1, r2, r3]);
+  vi.mocked(api.revisionImport).mockResolvedValue({
+    ...run,
+    status: "COMPLETED",
+    error: null,
+  });
+  vi.mocked(api.comparisons).mockResolvedValue([
+    {
+      id: "saved-comparison",
+      engine: "test",
+      engine_version: "1",
+      status: "COMPLETED",
+      raw_result_key: "result",
+      project_id: "project",
+      source_id: "model",
+      from_revision_id: "r1",
+      to_revision_id: "r2",
+      created_at: r1.imported_at,
+      evidence_ids: [],
+      summary: {
+        added: 1,
+        deleted: 0,
+        changed: 0,
+        from_elements: 1,
+        to_elements: 2,
+        common_global_ids: 1,
+        global_id_continuity: 1,
+        warnings: [],
+        compare_seconds: 0.1,
+      },
+    },
+  ]);
+  vi.spyOn(api, "comparison").mockImplementation(async () => ({
+    comparison: (await api.comparisons("project", "model"))[0],
+    changes: [],
+    affected_work_packages: [],
+  }));
+  const context = vi.fn();
+  mount(
+    <SourceContextPane
+      project="project"
+      sourceId="model"
+      focusComparisonId="saved-comparison"
+      onContext={context}
+    />,
+  );
+  const comparison = await screen.findByRole("region", {
+    name: "基线与最新版本比较",
+  });
+  expect(
+    await within(comparison).findByRole("heading", {
+      name: "版本比较 · R1 → R2",
+    }),
+  ).toBeVisible();
+  expect(comparison).toHaveClass("is-focused");
+  expect(within(comparison).getByText(/新增 1/)).toBeVisible();
+  await waitFor(() =>
+    expect(context).toHaveBeenLastCalledWith("model", "r2", "R2", "r1"),
+  );
+  expect(
+    within(comparison).queryByRole("button", { name: "B1 → R3" }),
+  ).toBeNull();
+});
+
+it("leads with the latest comparison, truthful unlinked impact and one existing investigation action", async () => {
+  vi.mocked(api.revisionImport).mockResolvedValue({
+    ...run,
+    status: "COMPLETED",
+    error: null,
+  });
+  const comparison = {
+    id: "latest-comparison",
+    engine: "test",
+    engine_version: "1",
+    status: "COMPLETED" as const,
+    raw_result_key: "result",
+    project_id: "project",
+    source_id: "model",
+    from_revision_id: "r1",
+    to_revision_id: "r2",
+    created_at: r2.imported_at,
+    evidence_ids: [],
+    summary: {
+      added: 61,
+      deleted: 4,
+      changed: 5,
+      from_elements: 10,
+      to_elements: 67,
+      common_global_ids: 6,
+      global_id_continuity: 0.6,
+      warnings: ["GlobalId continuity warning"],
+      compare_seconds: 0.1,
+    },
+  };
+  vi.mocked(api.comparisons).mockResolvedValue([comparison]);
+  vi.spyOn(api, "comparison").mockResolvedValue({
+    comparison,
+    changes: [],
+    affected_work_packages: [],
+  });
+  const investigate = vi.fn();
+  const openModel = vi.fn();
+  mount(
+    <SourceContextPane
+      project="project"
+      sourceId="model"
+      onContext={vi.fn()}
+      onInvestigate={investigate}
+      onInspectImpact={vi.fn()}
+      onOpenModel={openModel}
+    />,
+  );
+  const identity = await screen.findByRole("region", { name: "当前资料版本" });
+  expect(identity).toHaveTextContent("最新版本R2 · 待确认");
+  expect(identity).toHaveTextContent("当前基线 B1R1");
+  const summary = screen.getByRole("region", { name: "基线与最新版本比较" });
+  expect(
+    await within(summary).findByText(/新增 61 · 删除 4 · 变更 5/),
+  ).toBeVisible();
+  expect(
+    await within(summary).findByText(
+      /受影响工作包 0 个 · 有构件变化，暂未关联工作包/,
+    ),
+  ).toBeVisible();
+  expect(screen.queryByText("没有影响")).toBeNull();
+  expect(screen.queryByText("可用 · 处理完成")).toBeNull();
+  expect(screen.queryByText("original.ifc")).toBeNull();
+  expect(screen.queryByRole("button", { name: "添加版本" })).toBeNull();
+  expect(within(summary).getByRole("heading")).toHaveTextContent("R1 → R2");
+  expect(within(summary).getAllByText(/R1 → R2/)).toHaveLength(1);
+  expect(within(summary).getByRole("status")).toHaveTextContent("GlobalId continuity warning");
+  expect(await screen.findByText("GlobalId continuity warning")).toBeVisible();
+  const review = within(summary).getByRole("button", { name: "调查此比较" });
+  expect(review).toBeEnabled();
+  fireEvent.click(review);
+  expect(investigate).toHaveBeenCalledExactlyOnceWith(
+    "model",
+    "r2",
+    "r1",
+    [],
+    "R2",
+    "R1",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "版本历史与操作" }));
+  expect(await screen.findByText("original.ifc")).toBeVisible();
+  const latestRevision = screen.getByText("renamed.ifc").closest("article")!;
+  fireEvent.click(
+    within(latestRevision).getByRole("button", { name: "查看模型" }),
+  );
+  expect(openModel).toHaveBeenCalledExactlyOnceWith("model", "r2");
 });

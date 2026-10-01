@@ -10,6 +10,7 @@ export function ChangeExplorer({
   workspace,
   localFile,
   onLocalFile,
+  onWorkPackage,
   onModels,
   onInspect,
   onInvestigate,
@@ -22,6 +23,7 @@ export function ChangeExplorer({
   onElementSelected?: (id: string) => void;
   localFile?: File | null;
   onLocalFile?: (file: File | null) => void;
+  onWorkPackage?: (id: string) => void;
   onModels: () => void;
   onInspect: (
     workPackageId: string,
@@ -180,6 +182,7 @@ export function ChangeExplorer({
           externalFile={comparison ? file : (localFile ?? undefined)}
           localFile={localFile}
           onLocalFile={onLocalFile}
+          onWorkPackage={onWorkPackage}
           autoProjectModel={!comparison}
           hideSourceActions={!!comparison}
           onViewerSelected={(id) => {

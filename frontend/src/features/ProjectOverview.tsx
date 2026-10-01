@@ -6,11 +6,11 @@ import type { WorkspaceTab } from "../app/destinations";
 import {
   demoAreaName,
   demoDiscipline,
-  demoProjectDescription,
   demoProjectName,
   demoWorkPackageName,
 } from "../ui/demo/demoPresentation";
-import { shortDate, statusLabel, statusTone } from "../ui/labels";
+import { statusLabel, statusTone } from "../ui/labels";
+import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
 
 /** Current project state, package inventory, and its revision history. */
 export function ProjectOverview({
@@ -29,9 +29,10 @@ export function ProjectOverview({
   selected?: string;
   onStructure?: () => void;
   sourcesRegister?: ReactNode;
+  onSource?: (id: string, revisionId?: string) => void;
 }) {
   const project = workspace.state.project;
-  const { baseline, documents, models, revisionsFor, pendingModels } = context;
+  const { baseline, models, pendingModels } = context;
   const packages = workspace.state.work_packages;
   const bindings = useQueries({
     queries: models.map((item) => ({
@@ -73,72 +74,74 @@ export function ProjectOverview({
             ? `${ready} / ${packages.length} 工作包可施工`
             : `${ready} / ${packages.length} 个工作包可施工`;
 
+  const nextLabel = !packages.length
+    ? "添加工作包"
+    : pendingModels.length
+      ? "核对待审核模型"
+      : !models.length
+        ? "添加项目模型"
+        : workspace.stale || !workspace.analysis
+          ? "检查当前施工条件"
+          : blocked
+            ? "处理受阻工作包"
+            : !baseline
+              ? "确认资料基线"
+              : "查看工作事项";
+  const stateReason = pendingModels.length
+    ? `有 ${pendingModels.length} 份模型的新版本尚未确认；施工判断仍依据当前基线，不代表新版本已经可施工。`
+    : !packages.length
+      ? "当前缺少工程检查范围，尚不能判断施工条件。"
+      : !models.length
+        ? "尚未上传项目 IFC；本地预览不会成为项目工程依据。"
+        : workspace.stale
+          ? "工程事实已更新，现有施工判断需要重新检查。"
+          : !workspace.analysis
+            ? "尚未运行施工检查，当前没有可施工结论。"
+            : blocked
+              ? "检查发现未解决的施工条件；请核对工作包的阻塞原因与依据。"
+              : !baseline
+                ? "已有项目资料，但尚未人工确认资料版本集合。"
+                : "当前资料版本已确认，施工检查没有未解决的阻塞条件。";
   return (
     <div className="project-primary">
       <header className="project-overview-head">
         <div>
           <h1>{demoProjectName(project.id, project.name)}</h1>
-          <p>
-            {demoProjectDescription(project.id, project.description) ||
-              "项目协调工作区"}
-          </p>
         </div>
-        <button type="button" onClick={() => onTab("settings")}>
-          项目设置
-        </button>
+        <AppMenu label="项目操作">
+          {onStructure && (
+            <AppMenuItem onSelect={onStructure}>添加工作包</AppMenuItem>
+          )}
+          <AppMenuItem onSelect={() => onTab("settings")}>项目设置</AppMenuItem>
+        </AppMenu>
       </header>
       <section className="project-state" aria-label="当前状态">
-        <div className="project-state-flow">
-          <div className="project-state-baseline">
-            <span>当前基线 ·</span>
-            <strong>{baseline ? `B${baseline.sequence}` : "尚未确认"}</strong>
-            {baseline && <small>{shortDate(baseline.created_at)} 已确认</small>}
-          </div>
-          <div className="project-state-readiness">
-            <span>施工判断 ·</span>
-            <strong
-              className={blocked || workspace.stale ? "is-attention" : ""}
-            >
-              {readinessText}
-            </strong>
-          </div>
-        </div>
+        <h2>{pendingModels.length ? "有新版本待检查" : readinessText}</h2>
+        <p className="project-state-reason">{stateReason}</p>
         <div className="project-state-footer">
           <p>
-            {pendingModels.length ||
-            (packages.length && (workspace.stale || !workspace.analysis)) ||
-            blocked ||
-            !baseline ? (
-              <>
-                <span>下一步</span> ·{" "}
-                {pendingModels.length
-                  ? "核对待审核模型"
-                  : packages.length && (workspace.stale || !workspace.analysis)
-                    ? "检查当前施工条件"
-                    : blocked
-                      ? "处理受阻工作包"
-                      : !models.length
-                        ? "添加项目模型"
-                        : "确认当前基线"}
-              </>
-            ) : (
-              "当前没有待处理的模型或受阻工作包"
-            )}
+            <span>下一步</span> ·{" "}
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => {
+                if (!packages.length && onStructure) onStructure();
+                else
+                  onTab(
+                    pendingModels.length || !models.length || !baseline
+                      ? "sources"
+                      : "work",
+                  );
+              }}
+            >
+              {nextLabel} →
+            </button>
           </p>
-          <span>
-            {[
-              `工作包 ${packages.length}`,
-              `模型 ${models.length}`,
-              pendingModels.length ? `待审核 ${pendingModels.length}` : "",
-              `项目文件 ${documents.length}`,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </span>
         </div>
       </section>
       <div className="project-main">
         {sourcesRegister}
+        {!!packages.length && (
         <section className="project-ledger" aria-label="工作包状态">
           <header className="project-ledger-head">
             <div>
@@ -146,17 +149,11 @@ export function ProjectOverview({
               <span>{packages.length} 个</span>
             </div>
             <div>
-              {onStructure && (
-                <button type="button" onClick={onStructure}>
-                  + 添加工作包
-                </button>
-              )}
               <button type="button" onClick={() => onTab("work-packages")}>
                 查看全部 →
               </button>
             </div>
           </header>
-          {packages.length ? (
             <ul className="project-package-list">
               {packages.map((wp) => {
                 const status = readiness(wp.id);
@@ -198,59 +195,15 @@ export function ProjectOverview({
                 );
               })}
             </ul>
-          ) : (
-            <p className="quiet-message">还没有工作包。</p>
-          )}
         </section>
-        {/* The lifecycle the state band summarises: every revision the project
-              holds, newest first, and which of them the baseline was cut from.
-              The band answers "what is current"; this answers "how it got
-              there", which is the record a coordinator is asked for. */}
-        {!!models.length && (
-          <section aria-label="版本记录">
-            <h2>
-              版本记录
-              <button type="button" onClick={() => onTab("sources")}>
-                管理 →
-              </button>
-            </h2>
-            <div className="project-revisions">
-              {models.map((item, index) => {
-                const revisions = [...revisionsFor(index)].sort(
-                  (a, b) => b.sequence - a.sequence,
-                );
-                return revisions.map((revision) => {
-                  const isLatest = revision.id === item.latest_revision_id;
-                  const isBaseline = revision.id === item.accepted_revision_id;
-                  return (
-                    <div className="project-revision" key={revision.id}>
-                      <span className="mono">R{revision.sequence}</span>
-                      <span className="project-revision-name">
-                        {item.source.name}
-                      </span>
-                      <span
-                        className={`package-status is-${isBaseline ? "ready" : isLatest && item.has_pending_revision ? "waiting" : "neutral"}`}
-                      >
-                        <i aria-hidden="true" />
-                        {isBaseline
-                          ? "已纳入基线"
-                          : isLatest && item.has_pending_revision
-                            ? "待审核"
-                            : isLatest
-                              ? "最新版本"
-                              : "历史版本"}
-                      </span>
-                      <time dateTime={revision.imported_at}>
-                        {shortDate(revision.imported_at)}
-                      </time>
-                    </div>
-                  );
-                });
-              })}
-            </div>
-          </section>
         )}
       </div>
+      {!packages.length && !models.length && !context.documents.length && !context.baselines.length && !workspace.events.length && (
+        <nav aria-label="项目内容" className="project-empty-record-links">
+          <button type="button" className="text-button" onClick={() => onTab("documents")}>文档 →</button>
+          <button type="button" className="text-button" onClick={() => onTab("history")}>历史 →</button>
+        </nav>
+      )}
     </div>
   );
 }

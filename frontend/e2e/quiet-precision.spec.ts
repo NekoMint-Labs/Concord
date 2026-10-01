@@ -94,11 +94,9 @@ test("work list, transient Peek and project object lanes across four widths", as
           exact: true,
         });
         await expect(nextAction).toBeVisible();
-        const projectAction = peek.getByRole("button", {
-          name: "打开项目工作区 →",
-        });
-        await projectAction.scrollIntoViewIfNeeded();
-        await expect(projectAction).toBeVisible();
+        await expect(peek.getByRole("region", { name: "当前判断" })).toBeVisible();
+        await expect(peek.getByRole("region", { name: "项目状态" })).toHaveCount(0);
+        await expect(peek.getByRole("button")).toHaveCount(2);
         await peek.locator(".work-peek-scroll").evaluate((element) => {
           element.scrollTop = 0;
         });
@@ -135,9 +133,8 @@ test("work list, transient Peek and project object lanes across four widths", as
     }
   }
   const project = page.getByRole("region", { name: "项目管理" });
-  await expect(project.getByRole("region", { name: "当前状态" })).toContainText(
-    "尚未确认",
-  );
+  await expect(project.getByRole("region", { name: "模型与版本" })).toHaveCount(0);
+  await expect(project.getByRole("region", { name: "版本记录" })).toHaveCount(0);
   await expect(project.getByRole("region", { name: "当前状态" })).toContainText(
     "3 / 3 工作包可施工",
   );
@@ -151,10 +148,8 @@ test("work list, transient Peek and project object lanes across four widths", as
   await nav.getByRole("button", { name: "工作", exact: true }).click();
   await page.locator(".work-row").first().click();
   const detail = page.getByRole("complementary", { name: "所选工作事项" });
-  await expect(
-    detail.getByRole("region", { name: "关联工作包" }),
-  ).toBeVisible();
-  await expect(detail.getByRole("region", { name: "项目状态" })).toBeVisible();
+  await expect(detail.getByRole("region", { name: "当前判断" })).toBeVisible();
+  await expect(detail.getByRole("region", { name: "项目状态" })).toHaveCount(0);
   await detail.getByRole("button", { name: "关闭详情" }).focus();
   await page.keyboard.press("Shift+Tab");
   expect(
@@ -163,7 +158,7 @@ test("work list, transient Peek and project object lanes across four widths", as
     ),
   ).toBe(false);
   await expect(detail).toBeVisible();
-  await detail.getByRole("button", { name: "打开项目工作区 →" }).focus();
+  await detail.getByRole("button", { name: "查看详情", exact: true }).focus();
   await page.keyboard.press("Tab");
   expect(
     await detail.evaluate((element) =>
@@ -181,19 +176,17 @@ test("work list, transient Peek and project object lanes across four widths", as
   await expect(page.locator(".work-row")).toHaveCount(1);
   await search.clear();
   await expect(detail).toHaveCount(0);
-  const browse = page.getByRole("button", { name: "浏览工作包与模型" });
+  const browse = page.getByRole("button", { name: "浏览", exact: true });
   await browse.click();
-  const packages = page.getByRole("navigation", { name: "工作包" });
-  await expect(packages).toBeVisible();
-  await page.getByRole("searchbox", { name: "搜索工作包" }).focus();
-  await page.keyboard.press("Escape");
-  await expect(browse).toHaveAttribute("aria-expanded", "false");
-  await expect(browse).toBeFocused();
-  await browse.click();
-  await packages.getByRole("button", { name: /东翼风管安装/ }).focus();
+  await expect(browse).toHaveAttribute("aria-current", "page");
+  const explorer = page.getByRole("region", { name: "Project Explorer" });
+  await expect(explorer).toBeVisible();
+  await explorer
+    .getByRole("searchbox", { name: "搜索项目对象" })
+    .fill("东翼风管");
+  await explorer.getByRole("button", { name: /东翼风管安装/ }).focus();
   await page.keyboard.press("Enter");
-  await expect(browse).toHaveAttribute("aria-expanded", "false");
-  await expect(browse).toBeFocused();
+  await expect(page.getByRole("region", { name: "工作" })).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "当前位置" }),
   ).toContainText("东翼风管安装");
@@ -218,7 +211,7 @@ test("real IFC fills the model canvas without changing project state", async ({
     page.getByRole("button", { name: "打开本地 IFC", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("打开模型以查看构件与上下文", { exact: true }),
+    page.getByText("当前项目还没有模型", { exact: true }),
   ).toBeVisible();
   await page.screenshot({
     path: resolve(screenshots, "model-1440x900.png"),
@@ -244,11 +237,13 @@ test("real IFC fills the model canvas without changing project state", async ({
     });
   }
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByRole("button", { name: "展开上下文列表" }).click();
+  await expect(page.getByText("本地 IFC 文件属性 · 未关联项目")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "收起上下文列表" }),
-  ).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByText("当前上下文暂无模型变更。")).toBeVisible();
+    page.getByRole("button", { name: "展开上下文列表" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("本地预览仅显示文件属性，不关联项目变更、问题或工作包。"),
+  ).toBeVisible();
   await page.screenshot({
     path: resolve(screenshots, "model-ifc-dock-1440x900.png"),
     animations: "disabled",

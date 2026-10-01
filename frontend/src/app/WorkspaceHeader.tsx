@@ -14,6 +14,7 @@ import type { WorkspaceTab } from "./destinations";
 export function WorkspaceHeader({
   data,
   wp,
+  modelElementId,
   tab,
   navCollapsed = false,
   onToggleNav,
@@ -22,6 +23,7 @@ export function WorkspaceHeader({
 }: {
   data: Workspace;
   wp?: WorkPackage;
+  modelElementId?: string;
   tab?: WorkspaceTab;
   navCollapsed?: boolean;
   onToggleNav?: () => void;
@@ -29,6 +31,9 @@ export function WorkspaceHeader({
   children?: ReactNode;
 }) {
   const project = data.state.project.id;
+  const contextPackage = modelElementId !== undefined
+    ? data.state.work_packages.find((item) => item.element_ids.includes(modelElementId))
+    : wp;
   const sources = useQuery({
     queryKey: ["sources", project],
     queryFn: () => api.sourceStatuses(project),
@@ -68,26 +73,28 @@ export function WorkspaceHeader({
           </AppTooltip>
         )}
         <nav className="breadcrumb" aria-label="当前位置">
-          <span>{demoProjectName(project, data.state.project.name)}</span>
-          {wp && (tab === "coordination" || tab === "bim") && (
+          <button type="button" onClick={() => onNavigate?.("project")}>
+            {demoProjectName(project, data.state.project.name)}
+          </button>
+          {contextPackage && (tab === "coordination" || tab === "bim") && (
             <>
               <span className="crumb-sep">/</span>
               <span>
                 {demoAreaName(
-                  wp.area_id,
-                  data.state.areas.find((area) => area.id === wp.area_id)
-                    ?.name ?? wp.area_id,
+                  contextPackage.area_id,
+                  data.state.areas.find((area) => area.id === contextPackage.area_id)
+                    ?.name ?? contextPackage.area_id,
                 )}
               </span>
               <span className="crumb-sep">/</span>
               {tab === "coordination" ? (
-                <strong>{demoWorkPackageName(wp.id, wp.name)}</strong>
+                <strong>{demoWorkPackageName(contextPackage.id, contextPackage.name)}</strong>
               ) : (
                 <button
                   type="button"
                   onClick={() => onNavigate?.("coordination")}
                 >
-                  {demoWorkPackageName(wp.id, wp.name)}
+                  {demoWorkPackageName(contextPackage.id, contextPackage.name)}
                 </button>
               )}
             </>
@@ -98,6 +105,7 @@ export function WorkspaceHeader({
                 (
                   {
                     work: "工作",
+                    browse: "浏览",
                     project: "项目",
                     coordination: "工作包详情",
                     history: "历史",
@@ -120,7 +128,7 @@ export function WorkspaceHeader({
         {(tab === "bim" || tab === "sources" || tab === "history") &&
           (models.length > 1 ? (
             <div className="header-versions">
-              <span>多个项目模型 · 请在模型与版本中选择</span>
+              <span>多个项目模型</span>
             </div>
           ) : (
             latest && (

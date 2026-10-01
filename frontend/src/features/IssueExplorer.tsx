@@ -9,6 +9,7 @@ export function IssueExplorer({
   workspace,
   localFile,
   onLocalFile,
+  onWorkPackage,
   onResolve,
   onSelectWorkPackage,
   selectedElement,
@@ -20,6 +21,7 @@ export function IssueExplorer({
   workspace: Workspace;
   localFile?: File | null;
   onLocalFile?: (file: File | null) => void;
+  onWorkPackage?: (id: string) => void;
   onResolve?: (id: string) => void;
   onSelectWorkPackage?: (id: string) => void;
   selectedElement?: string;
@@ -90,6 +92,7 @@ export function IssueExplorer({
           externalFile={file ?? localFile ?? undefined}
           localFile={localFile}
           onLocalFile={onLocalFile}
+          onWorkPackage={onWorkPackage}
           autoProjectModel
           hideSourceActions={!!file}
         />

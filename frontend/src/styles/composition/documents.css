@@ -1,0 +1,79 @@
+/* Documents owns one empty plane, or a compact source list beside evidence. */
+.application-shell .documents-empty-workspace {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-6) var(--page-inset);
+  background: var(--surface-workspace);
+}
+.application-shell .documents-view-empty .view-toolbar-actions {
+  display: none;
+}
+
+.application-shell .document-list .pane-body {
+  padding: 0 var(--space-2) var(--space-5);
+}
+.application-shell .document-list .pane-body > button {
+  margin: 0;
+  padding: var(--space-3) var(--space-2);
+  border-radius: 0;
+  min-height: 0;
+}
+.application-shell .document-list .pane-body > button strong {
+  font-size: var(--fs-action);
+  line-height: 1.5;
+}
+.application-shell .document-list .pane-body > button small {
+  margin-top: var(--space-1);
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+.application-shell .document-list .pane-body > button .object-kind {
+  color: var(--muted-2);
+}
+
+.application-shell .document-content .pane-body {
+  --evidence-gutter: 140px;
+  padding: var(--space-5) var(--space-6) var(--space-6);
+}
+.application-shell .document-chunk.evidence-sheet {
+  max-width: var(--reading-measure);
+  padding: var(--space-4) 0 var(--space-5);
+  margin: 0;
+  border-radius: 0;
+}
+.application-shell .document-chunk.evidence-sheet:last-child {
+  border-bottom: 0;
+}
+.application-shell .document-chunk pre {
+  font-size: var(--fs-body);
+  line-height: 1.7;
+}
+.application-shell .document-chunk .chunk-fact-label,
+.application-shell .document-chunk .chunk-fact-value {
+  font-size: var(--fs-label);
+  color: var(--muted-2);
+}
+.application-shell .document-chunk .chunk-gutter {
+  gap: var(--space-2);
+}
+.application-shell .document-content > .pane-header h3 {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+@container (max-width: 600px) {
+  .application-shell .document-content .pane-body {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+  .application-shell .document-chunk .chunk-body {
+    padding-left: 0;
+  }
+}
+
+.application-shell .document-content .disclosure-inner {
+  overflow-wrap: anywhere;
+}
+.application-shell .document-source-details {
+  margin-bottom: 8px;
+}

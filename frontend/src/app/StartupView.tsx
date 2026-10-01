@@ -26,6 +26,7 @@ export function StartupView({
   demoAvailable = true,
   demoError,
   onNewProject,
+  onOpenProject,
   onOpenDemo,
   onReconnect,
   onToken,
@@ -37,6 +38,7 @@ export function StartupView({
   demoAvailable?: boolean;
   demoError?: string;
   onNewProject?: () => void;
+  onOpenProject?: () => void;
   onOpenDemo?: () => void;
   onReconnect: () => void;
   onToken: (token: string) => void;
@@ -53,23 +55,43 @@ export function StartupView({
         <>
           <p>打开一个项目开始工作。</p>
           <div className="startup-actions">
-            <Button onClick={onNewProject}>新建项目</Button>
-            <Button
-              variant="secondary"
-              disabled={!demoAvailable}
-              onClick={onOpenDemo}
-            >
-              {demoAvailable ? "打开示例项目" : "正在准备示例项目…"}
-            </Button>
+            {onNewProject && <Button onClick={onNewProject}>新建项目</Button>}
+            {onOpenProject && (
+              <Button variant="secondary" onClick={onOpenProject}>
+                打开项目
+              </Button>
+            )}
+            {onOpenDemo && (
+              <Button
+                variant="secondary"
+                disabled={!demoAvailable}
+                onClick={onOpenDemo}
+              >
+                {demoAvailable ? "打开示例项目" : "正在准备示例项目…"}
+              </Button>
+            )}
           </div>
           {demoError && <p role="alert">{demoError}</p>}
         </>
       ) : (
         <>
-          <p role="alert">无法连接 Concord 本地服务。</p>
-          <p>本地服务未能启动。请重新连接；如问题持续，可查看诊断信息。</p>
+          <p role="alert">
+            {onOpenProject
+              ? "无法打开项目工作区。"
+              : "无法连接 Concord 本地服务。"}
+          </p>
+          <p>
+            {onOpenProject
+              ? "项目工作区未能加载。请重新连接，或打开其他项目；如问题持续，可查看诊断信息。"
+              : "本地服务未能启动。请重新连接；如问题持续，可查看诊断信息。"}
+          </p>
           <div className="startup-actions">
             <Button onClick={onReconnect}>重新连接</Button>
+            {onOpenProject && (
+              <Button variant="secondary" onClick={onOpenProject}>
+                打开项目
+              </Button>
+            )}
             <Button
               variant="secondary"
               aria-expanded={diagnostics}

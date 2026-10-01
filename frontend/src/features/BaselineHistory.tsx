@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { readSource } from "../api/client";
 import { Button } from "../components/ui/button";
@@ -29,42 +29,82 @@ export function BaselineHistory({
   baselines,
   statuses,
   revisions,
+  focusBaselineId,
+  onProject,
 }: {
+  focusBaselineId?: string;
+  onProject?: () => void;
   baselines: readonly Baseline[];
   statuses: readonly ProjectSourceStatus[];
   revisions: readonly ProjectSourceRevision[];
 }) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const register = useRef<HTMLElement>(null);
+  useEffect(() => {
+    register.current
+      ?.querySelector(".baseline-entry.is-focused")
+      ?.scrollIntoView?.({ block: "nearest" });
+  }, [focusBaselineId, baselines.length]);
   return (
-    <section className="baseline-register">
-      <header>
-        <h3>基线历史</h3>
-        <span className="count">{baselines.length}</span>
-      </header>
+    <section ref={register} className="baseline-register">
       <div className="baseline-list">
         {baselines.map((baseline) => (
-          <AppDisclosure
+          <article
             key={baseline.id}
-            className="baseline-entry"
-            label={`B${baseline.sequence} · ${baseline.entries.length} 个资料版本 · ${new Date(baseline.created_at).toLocaleString("zh-CN")}`}
+            className={`baseline-entry${baseline.id === focusBaselineId ? " is-focused" : ""}`}
           >
-            <p className="quiet-message">
-              {baseline.name} · 确认人 {baseline.accepted_by}
-              {baseline.sequence ===
-              Math.max(...baselines.map((item) => item.sequence))
-                ? " · 当前基线"
-                : " · 保留的历史基线"}
+            <header className="baseline-identity">
+              <div>
+                <span className="object-kind">基线</span>
+                <strong className="object-identity">
+                  B{baseline.sequence}
+                </strong>
+              </div>
+              <span className="baseline-state">
+                {baseline.sequence ===
+                Math.max(...baselines.map((item) => item.sequence))
+                  ? "当前基线"
+                  : "保留的历史基线"}
+              </span>
+            </header>
+            {baseline.name !== `B${baseline.sequence}` && (
+              <p className="baseline-name">{baseline.name}</p>
+            )}
+            <p className="baseline-metadata">
+              <time dateTime={baseline.created_at}>
+                {new Date(baseline.created_at).toLocaleString("zh-CN")}
+              </time>
+              <span>确认人 {baseline.accepted_by}</span>
             </p>
-            <div className="baseline-entries">
-              {baseline.entries.map((entry) => (
-                <code key={`${entry.source_id}:${entry.revision_id}`}>
-                  {baselineEntryLabel(entry, statuses, revisions)}
-                </code>
-              ))}
-            </div>
-          </AppDisclosure>
+            <AppDisclosure
+              className="baseline-versions"
+              open={expanded[baseline.id] ?? focusBaselineId === baseline.id}
+              onOpenChange={(open) =>
+                setExpanded((current) => ({ ...current, [baseline.id]: open }))
+              }
+              label={`B${baseline.sequence} · ${baseline.entries.length} 个资料版本`}
+            >
+              <div className="baseline-entries">
+                {baseline.entries.map((entry) => (
+                  <code key={`${entry.source_id}:${entry.revision_id}`}>
+                    {baselineEntryLabel(entry, statuses, revisions)}
+                  </code>
+                ))}
+              </div>
+            </AppDisclosure>
+          </article>
         ))}
         {!baselines.length && (
-          <p className="quiet-message">尚未确认项目基线。</p>
+          <div className="workspace-empty baseline-empty">
+            <span className="object-kind">基线</span>
+            <h2>尚未确认项目基线</h2>
+            <p>在项目核对资料版本后，人工确认基线。</p>
+            {onProject && (
+              <div className="workspace-empty-actions">
+                <Button onClick={onProject}>打开项目 →</Button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </section>
@@ -79,8 +119,9 @@ export function SourceRevisionHistory({
   baselines,
   loading,
   processing,
-  onContext,
   onInvestigate,
+  onOpenModel,
+  focusRevisionId,
 }: {
   project: string;
   current: ProjectSourceStatus;
@@ -90,8 +131,14 @@ export function SourceRevisionHistory({
   processing: ReturnType<typeof useSourceProcessing>;
   onContext?: SourceContextPaneProps["onContext"];
   onInvestigate?: SourceContextPaneProps["onInvestigate"];
+  onOpenModel?: SourceContextPaneProps["onOpenModel"];
+  focusRevisionId?: string;
 }) {
   const sourceId = current.source.id;
+  const focusedRevision = useRef<HTMLElement>(null);
+  useEffect(() => {
+    focusedRevision.current?.scrollIntoView?.({ block: "nearest" });
+  }, [focusRevisionId, revisions.length]);
   const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>(
     {},
   );
@@ -140,7 +187,13 @@ export function SourceRevisionHistory({
               ["FAILED", "CANCELLED", "EXPIRED"].includes(state.run.status));
           const meaning = revisionState(current, revision.id);
           return (
-            <article className="sources-context-revision" key={revision.id}>
+            <article
+              ref={
+                focusRevisionId === revision.id ? focusedRevision : undefined
+              }
+              className={`sources-context-revision${focusRevisionId === revision.id ? " is-focused" : ""}`}
+              key={revision.id}
+            >
               <header>
                 <strong className="mono">
                   R{revision.sequence}
@@ -225,17 +278,11 @@ export function SourceRevisionHistory({
                 )}
                 {current.source.kind === "BIM" &&
                   state?.run?.status === "COMPLETED" &&
-                  onContext && (
+                  onOpenModel && (
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() =>
-                        onContext(
-                          sourceId,
-                          revision.id,
-                          `R${revision.sequence}`,
-                        )
-                      }
+                      onClick={() => onOpenModel(sourceId, revision.id)}
                     >
                       查看模型
                     </Button>
@@ -267,7 +314,9 @@ export function SourceRevisionHistory({
           );
         })}
       {!loading && !revisions.length && (
-        <p className="quiet-message">尚未上传版本。</p>
+        <p className="quiet-message">
+          资料已登记但尚未上传原文件；使用「添加版本」上传，版本与原文件会保留在这里。
+        </p>
       )}
     </section>
   );

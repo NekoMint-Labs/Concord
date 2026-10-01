@@ -44,7 +44,6 @@ export function SpatialInspectorDetails({
   mode,
   issue,
   title,
-  classification,
   inspectorTab,
   activeId,
   change,
@@ -168,30 +167,22 @@ export function SpatialInspectorDetails({
                     : "；当前版本无构件属性。"}
                 </p>
               )}
-              <div className="element-identity">
-                <Box size={44} strokeWidth={1} />
-                <span>{classification}</span>
-              </div>
               <dl className="element-facts">
                 {/* 类别 is already the panel subtitle; repeating it here spends a
                       row of the most-read block on a value the reader has just
                       been shown. */}
-                <div>
+                {(item?.space || snapshot?.space) && <div>
                   <dt>系统</dt>
-                  <dd>{item?.space ?? snapshot?.space ?? "—"}</dd>
-                </div>
-                <div>
+                  <dd>{item?.space ?? snapshot?.space}</dd>
+                </div>}
+                {(snapshot?.storey || item?.storey) && <div>
                   <dt>楼层</dt>
-                  <dd>{snapshot?.storey ?? item?.storey ?? "—"}</dd>
-                </div>
-                <div>
+                  <dd>{snapshot?.storey ?? item?.storey}</dd>
+                </div>}
+                {workPackage && <div>
                   <dt>工作包</dt>
-                  <dd>
-                    {workPackage
-                      ? demoWorkPackageName(workPackage.id, workPackage.name)
-                      : "—"}
-                  </dd>
-                </div>
+                  <dd>{demoWorkPackageName(workPackage.id, workPackage.name)}</dd>
+                </div>}
                 <div>
                   <dt>模型</dt>
                   <dd>
@@ -201,7 +192,7 @@ export function SpatialInspectorDetails({
               </dl>
             </>
           )}
-          {(inspectorTab === "overview" || inspectorTab === "changes") && (
+          {((inspectorTab === "overview" && !!change) || inspectorTab === "changes") && (
             <section className="element-section">
               <h3>
                 变更 <small>{change ? 1 : 0}</small>
@@ -221,7 +212,7 @@ export function SpatialInspectorDetails({
               )}
             </section>
           )}
-          {(inspectorTab === "overview" || inspectorTab === "issues") && (
+          {((inspectorTab === "overview" && linkedIssues.length > 0) || inspectorTab === "issues") && (
             <section className="element-section">
               <h3>
                 问题 <small>{linkedIssues.length}</small>

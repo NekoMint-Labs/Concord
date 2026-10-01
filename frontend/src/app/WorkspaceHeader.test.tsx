@@ -9,7 +9,7 @@ import { useProjectContext } from "./useProjectContext";
 afterEach(() => vi.restoreAllMocks());
 import { WorkspaceHeader } from "./WorkspaceHeader";
 
-it("carries project and location context without repeating the work package", () => {
+it("navigates the project breadcrumb while keeping the area read-only", () => {
   const data = structuredClone(fixture.waiting) as unknown as Workspace;
   const wp = data.state.work_packages.find((item) => item.id === "WP-200")!;
   const onNavigate = vi.fn();
@@ -23,17 +23,20 @@ it("carries project and location context without repeating the work package", ()
     </QueryClientProvider>,
   );
 
-  expect(screen.getByText("A 栋项目")).toBeVisible();
-  expect(
-    screen.queryByRole("button", { name: "A 栋项目" }),
-  ).not.toBeInTheDocument();
+  const project = screen.getByRole("button", { name: "A 栋项目" });
+  expect(project).toBeVisible();
+  project.focus();
+  expect(project).toHaveFocus();
+  fireEvent.click(project);
+  expect(onNavigate).toHaveBeenLastCalledWith("project");
   expect(screen.getByText("东翼风管安装")).toBeVisible();
   expect(screen.getByText("L02 东翼")).toBeVisible();
   expect(
     screen.queryByRole("button", { name: "L02 东翼" }),
   ).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "东翼风管安装" }));
-  expect(onNavigate).toHaveBeenCalledWith("coordination");
+  expect(onNavigate).toHaveBeenLastCalledWith("coordination");
+  expect(onNavigate).toHaveBeenCalledTimes(2);
   expect(screen.getByText("模型")).toBeVisible();
   expect(screen.queryByText("WP-200")).not.toBeInTheDocument();
 
@@ -128,4 +131,26 @@ it("updates mounted header and project context revisions after source upload wit
   );
   expect(header.getByText("新版本待审核")).toBeVisible();
   expect(upload).toHaveBeenCalledWith(project, "model", file, "Revision 2");
+});
+
+it("uses the selected model object's relation, not the remembered work package, in breadcrumbs", () => {
+  const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  const remembered = data.state.work_packages[0];
+  const linked = data.state.work_packages.find((item) => item.id === "WP-200")!;
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const node = (element: string) => (
+    <QueryClientProvider client={client}>
+      <WorkspaceHeader data={data} wp={remembered} tab="bim" modelElementId={element} />
+    </QueryClientProvider>
+  );
+  const view = render(node(linked.element_ids[0]));
+  const breadcrumb = screen.getByRole("navigation", { name: "当前位置" });
+  expect(breadcrumb).toHaveTextContent("东翼风管安装");
+  expect(breadcrumb).not.toHaveTextContent("结构交接");
+  for (const element of ["unlinked-element", ""]) {
+    view.rerender(node(element));
+    expect(breadcrumb).not.toHaveTextContent("东翼风管安装");
+    expect(breadcrumb).not.toHaveTextContent("结构交接");
+    expect(breadcrumb).toHaveTextContent("模型");
+  }
 });
