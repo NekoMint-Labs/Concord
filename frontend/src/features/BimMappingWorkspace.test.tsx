@@ -517,3 +517,113 @@ it("resets selection across source, revision and project changes and never enabl
   expect(screen.queryByRole("button", { name: /确认关联/ })).toBeNull();
   cache.clear();
 });
+
+it("keeps more than 200 visible candidates out of Agent scope until explicitly selected", async () => {
+  const { cache, props } = mappingView();
+  await screen.findByText("Mapping geometry");
+  const manyElements = Array.from({ length: 201 }, (_, i) => ({
+    ...elements[0],
+    global_id: `wall-${i}`,
+    name: `Wall ${i}`,
+  }));
+  act(() =>
+    cache.setQueryData(["bim-snapshot", "project", "source-1", "r1"], {
+      project_id: "project",
+      source_id: "source-1",
+      revision_id: "r1",
+      ifc_schema: "IFC4",
+      imported_at: "2026-01-01",
+      import_seconds: 0,
+      elements: manyElements,
+    }),
+  );
+  await screen.findByText("201 个候选构件 · 已选 0");
+  expect(props.onContext).toHaveBeenLastCalledWith(
+    "source-1",
+    "r1",
+    [],
+    undefined,
+    undefined,
+    undefined,
+  );
+  const investigate = screen.getByRole("button", { name: "调查当前选择" });
+  expect(investigate).toBeDisabled();
+  fireEvent.click(screen.getByRole("checkbox", { name: "关联 Wall 0" }));
+  expect(props.onContext).toHaveBeenLastCalledWith(
+    "source-1",
+    "r1",
+    ["wall-0"],
+    undefined,
+    undefined,
+    undefined,
+  );
+  fireEvent.click(investigate);
+  expect(props.onInvestigate).toHaveBeenLastCalledWith(
+    "source-1",
+    "r1",
+    ["wall-0"],
+    undefined,
+  );
+  props.onInvestigate.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "选择全部" }));
+  expect(viewer.props!.mapping!.selectedIds).toHaveLength(201);
+  expect(props.onContext.mock.calls.at(-1)?.[2]).toHaveLength(201);
+  expect(investigate).toBeDisabled();
+  expect(screen.getByText(/最多.*200.*构件/)).toBeVisible();
+  fireEvent.click(investigate);
+  expect(props.onInvestigate).not.toHaveBeenCalled();
+  // The full binding selection is retained. Removing one element permits the exact 200.
+  fireEvent.click(screen.getByRole("checkbox", { name: "关联 Wall 200" }));
+  expect(investigate).toBeEnabled();
+  fireEvent.click(investigate);
+  expect(props.onInvestigate.mock.calls.at(-1)?.[2]).toEqual(
+    manyElements.slice(0, 200).map((item) => item.global_id),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "清除选择" }));
+  expect(props.onContext).toHaveBeenLastCalledWith(
+    "source-1",
+    "r1",
+    [],
+    undefined,
+    undefined,
+    undefined,
+  );
+  expect(investigate).toBeDisabled();
+  cache.clear();
+});
+
+it("preserves the defined inspection impact scope and blocks oversized investigation without truncation", async () => {
+  const { cache, props, rerender } = mappingView();
+  await screen.findByText("Mapping geometry");
+  const highlightIds = Array.from({ length: 201 }, (_, i) => `impacted-${i}`);
+  rerender(
+    <QueryClientProvider client={cache}>
+      <BimMappingWorkspace
+        {...props}
+        initial={{
+          intent: "inspect",
+          sourceId: "source-1",
+          fromRevisionId: "r0",
+          revisionId: "r1",
+          highlightIds,
+        }}
+      />
+    </QueryClientProvider>,
+  );
+  await waitFor(() =>
+    expect(props.onContext).toHaveBeenLastCalledWith(
+      "source-1",
+      "r1",
+      highlightIds,
+      "r0",
+      "r1",
+      "r0",
+    ),
+  );
+  const investigate = screen.getByRole("button", { name: "调查当前选择" });
+  expect(investigate).toBeDisabled();
+  expect(screen.getByText(/最多.*200.*构件/)).toBeVisible();
+  fireEvent.click(investigate);
+  expect(props.onInvestigate).not.toHaveBeenCalled();
+  cache.clear();
+});

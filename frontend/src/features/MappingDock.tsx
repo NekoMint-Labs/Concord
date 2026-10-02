@@ -3,6 +3,10 @@ import type { DTO, InvestigationReport } from "../api/client";
 import { Button } from "../components/ui/button";
 import { AppSelect } from "../components/ui/AppSelect";
 import { demoInvestigationText } from "../ui/demo/demoPresentation";
+import {
+  AGENT_ELEMENT_LIMIT_MESSAGE,
+  MAX_AGENT_ELEMENTS,
+} from "./agentContext";
 
 export type MappingFilters = {
   storey: string;
@@ -155,13 +159,21 @@ export function MappingDock({
         <Button
           size="sm"
           variant="ghost"
-          disabled={!sourceId || !revisionId || !intentIds.length}
+          disabled={
+            !sourceId ||
+            !revisionId ||
+            !intentIds.length ||
+            intentIds.length > MAX_AGENT_ELEMENTS
+          }
           onClick={() =>
             onInvestigate(sourceId, revisionId, intentIds, fromRevisionId)
           }
         >
           调查当前选择
         </Button>
+        {intentIds.length > MAX_AGENT_ELEMENTS && (
+          <p role="alert">{AGENT_ELEMENT_LIMIT_MESSAGE}</p>
+        )}
       </div>
       <div className="mapping-dock-body">
         {investigationProgress}

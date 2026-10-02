@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { api, type DTO } from "../api/client";
 import { ConcordAgent, type ConcordContext } from "./ConcordAgent";
@@ -241,4 +247,206 @@ it("uses the shared investigation launcher and the typed instruction", async () 
     ),
   );
   expect(investigate).not.toHaveBeenCalled();
+});
+
+const askResponse: DTO<"AgentResponse"> = {
+  answer: { summary: "Answer for R2", evidence_ids: [], limitations: [] },
+  scope: {
+    source_id: "source-1",
+    from_revision_id: "r1",
+    to_revision_id: "r2",
+    work_package_ids: ["WP-27"],
+    area_ids: [],
+    element_ids: ["gid-1"],
+  },
+  evidence: [],
+  tools: [],
+  persisted: false,
+};
+
+function askView() {
+  vi.spyOn(api, "agentSettings").mockResolvedValue({ initiative: "suggest" });
+  vi.spyOn(api, "agentNotices").mockResolvedValue([]);
+  const cache = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const content = (next = context, project = "project") => (
+    <QueryClientProvider client={cache}>
+      <ConcordAgent project={project} context={next} onRun={vi.fn()} />
+    </QueryClientProvider>
+  );
+  const result = render(content());
+  const submit = () => {
+    fireEvent.change(screen.getByPlaceholderText(/当前为什么不能施工/), {
+      target: { value: "Explain this context" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "询问" }));
+  };
+  return { ...result, content, submit, cache };
+}
+
+it.each([
+  ["project", context, "other-project"],
+  ["source", { ...context, sourceId: "source-2" }, "project"],
+  ["baseline", { ...context, fromRevisionId: "r0" }, "project"],
+  ["revision", { ...context, revisionId: "r3" }, "project"],
+  ["work package", { ...context, workPackageId: "WP-28" }, "project"],
+  ["selection", { ...context, elementIds: ["gid-2"] }, "project"],
+])(
+  "hides a completed Ask answer when the %s changes",
+  async (_field, next, project) => {
+    vi.spyOn(api, "askAgent").mockResolvedValue(askResponse);
+    const { submit, rerender, content, cache } = askView();
+    submit();
+    expect(await screen.findByText("Answer for R2")).toBeVisible();
+    rerender(content(next, project));
+    expect(screen.queryByText("Answer for R2")).toBeNull();
+    rerender(content());
+    expect(screen.queryByText("Answer for R2")).toBeNull();
+    cache.clear();
+  },
+);
+
+it("fences a late Ask response after leaving its submitted context", async () => {
+  let finish!: (response: DTO<"AgentResponse">) => void;
+  const ask = vi.spyOn(api, "askAgent").mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const { submit, rerender, content, cache } = askView();
+  submit();
+  await waitFor(() => expect(ask).toHaveBeenCalledOnce());
+  expect(ask.mock.calls[0][1].scope?.to_revision_id).toBe("r2");
+  rerender(content({ ...context, revisionId: "r3" }));
+  await act(async () => finish(askResponse));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "询问" })).toBeEnabled(),
+  );
+  expect(screen.queryByText("Answer for R2")).toBeNull();
+  rerender(content());
+  expect(screen.queryByText("Answer for R2")).toBeNull();
+  submit();
+  await waitFor(() => expect(ask).toHaveBeenCalledTimes(2));
+  await act(async () => finish(askResponse));
+  expect(await screen.findByText("Answer for R2")).toBeVisible();
+  cache.clear();
+});
+
+it("keeps Ask answers for equivalent engineering scope despite label and element-order changes", async () => {
+  vi.spyOn(api, "askAgent").mockResolvedValue(askResponse);
+  const { submit, rerender, content, cache } = askView();
+  rerender(content({ ...context, elementIds: ["gid-1", "gid-2"] }));
+  submit();
+  expect(await screen.findByText("Answer for R2")).toBeVisible();
+  rerender(
+    content({
+      ...context,
+      sourceName: "Renamed model",
+      revisionLabel: "New label",
+      elementIds: ["gid-2", "gid-1"],
+    }),
+  );
+  expect(screen.getByText("Answer for R2")).toBeVisible();
+  cache.clear();
+});
+
+it("does not send oversized explicit selections to Ask or Investigate", async () => {
+  const ask = vi.spyOn(api, "askAgent");
+  const investigate = vi.spyOn(api, "investigate");
+  const { submit, rerender, content, cache } = askView();
+  rerender(
+    content({
+      ...context,
+      elementIds: Array.from({ length: 201 }, (_, i) => `gid-${i}`),
+    }),
+  );
+  submit();
+  expect(screen.getByRole("button", { name: "询问" })).toBeDisabled();
+  const investigation = screen.getByRole("button", { name: "保存为工程调查" });
+  expect(investigation).toBeDisabled();
+  fireEvent.click(investigation);
+  await act(async () => {});
+  expect(ask).not.toHaveBeenCalled();
+  expect(investigate).not.toHaveBeenCalled();
+  expect(screen.getByText(/最多.*200.*构件/)).toBeVisible();
+  cache.clear();
+});
+
+it("rejects a late response even when the user returns to its original scope before resolution", async () => {
+  let finish!: (response: DTO<"AgentResponse">) => void;
+  const ask = vi.spyOn(api, "askAgent").mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const { submit, rerender, content, cache } = askView();
+  submit();
+  await waitFor(() => expect(ask).toHaveBeenCalledOnce());
+  rerender(content({ ...context, revisionId: "r3" }));
+  rerender(content());
+  await act(async () => finish(askResponse));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "询问" })).toBeEnabled(),
+  );
+  expect(screen.queryByText("Answer for R2")).toBeNull();
+  cache.clear();
+});
+
+it.each(["before", "after"])(
+  "does not display an Ask failure that resolves %s leaving its context",
+  async (timing) => {
+    let reject!: (error: Error) => void;
+    const ask = vi.spyOn(api, "askAgent").mockImplementation(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail;
+        }),
+    );
+    const { submit, rerender, content, cache } = askView();
+    submit();
+    await waitFor(() => expect(ask).toHaveBeenCalledOnce());
+    if (timing === "after") rerender(content({ ...context, revisionId: "r3" }));
+    await act(async () => reject(new Error("Ask failed in R2")));
+    if (timing === "before") {
+      expect(await screen.findByText("暂时无法回答，请重试。")).toBeVisible();
+      rerender(content({ ...context, revisionId: "r3" }));
+    } else {
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "询问" })).toBeEnabled(),
+      );
+    }
+    expect(screen.queryByText("暂时无法回答，请重试。")).toBeNull();
+    cache.clear();
+  },
+);
+
+it("allows Ask in the new context while the previous request is pending and preserves the new answer", async () => {
+  let finishA!: (response: DTO<"AgentResponse">) => void;
+  const ask = vi
+    .spyOn(api, "askAgent")
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishA = resolve;
+        }),
+    )
+    .mockResolvedValueOnce({
+      ...askResponse,
+      answer: { ...askResponse.answer, summary: "Answer for R3" },
+    });
+  const { submit, rerender, content, cache } = askView();
+  submit();
+  await waitFor(() => expect(ask).toHaveBeenCalledOnce());
+  rerender(content({ ...context, revisionId: "r3" }));
+  expect(screen.getByRole("button", { name: "询问" })).toBeEnabled();
+  submit();
+  expect(await screen.findByText("Answer for R3")).toBeVisible();
+  await act(async () => finishA(askResponse));
+  expect(screen.getByText("Answer for R3")).toBeVisible();
+  expect(screen.queryByText("Answer for R2")).toBeNull();
+  expect(ask.mock.calls[1][1].scope?.to_revision_id).toBe("r3");
+  cache.clear();
 });

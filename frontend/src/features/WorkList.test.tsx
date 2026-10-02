@@ -321,6 +321,8 @@ it("keeps a pending source Peek on its real comparison and at most one secondary
   vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
   const comparison = {
     id: "comparison",
+    project_id: "harbor-east",
+    source_id: "model",
     from_revision_id: "r1",
     to_revision_id: "r2",
     summary: { warnings: ["continuity warning"] },
@@ -354,7 +356,13 @@ it("keeps a pending source Peek on its real comparison and at most one secondary
       />
     </QueryClientProvider>,
   );
-  await waitFor(() => expect(api.comparison).toHaveBeenCalled());
+  await waitFor(() =>
+    expect(api.comparison).toHaveBeenCalledWith(
+      "harbor-east",
+      "model",
+      "comparison",
+    ),
+  );
   const sourceRow = within(
     screen.getByRole("region", { name: "需要处理" }),
   ).getByRole("button", { name: /MEP 有新版本/ });

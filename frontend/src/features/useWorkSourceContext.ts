@@ -28,9 +28,21 @@ export function useWorkSourceContext(
       queryFn: () => api.comparisons(project, source.source.id),
     })),
   });
+  const matchingComparisons = models.map((source, index) =>
+    source.accepted_revision_id &&
+    source.accepted_revision_id !== source.latest_revision_id
+      ? comparisonQueries[index]?.data?.find(
+          (comparison) =>
+            comparison.project_id === project &&
+            comparison.source_id === source.source.id &&
+            comparison.from_revision_id === source.accepted_revision_id &&
+            comparison.to_revision_id === source.latest_revision_id,
+        )
+      : undefined,
+  );
   const detailQueries = useQueries({
     queries: models.map((source, index) => {
-      const comparison = comparisonQueries[index]?.data?.at(-1);
+      const comparison = matchingComparisons[index];
       return {
         queryKey: ["comparison", project, source.source.id, comparison?.id],
         queryFn: () =>
@@ -39,10 +51,21 @@ export function useWorkSourceContext(
       };
     }),
   });
-  return models.map((source, index): WorkSourceContext => ({
-    source,
-    revisions: revisionQueries[index]?.data ?? [],
-    comparisons: comparisonQueries[index]?.data ?? [],
-    comparison: detailQueries[index]?.data,
-  }));
+  return models.map((source, index): WorkSourceContext => {
+    const detail = detailQueries[index]?.data;
+    const valid =
+      !!matchingComparisons[index] &&
+      !!detail &&
+      detail.comparison.id === matchingComparisons[index]?.id &&
+      detail.comparison.project_id === project &&
+      detail.comparison.source_id === source.source.id &&
+      detail.comparison.from_revision_id === source.accepted_revision_id &&
+      detail.comparison.to_revision_id === source.latest_revision_id;
+    return {
+      source,
+      revisions: revisionQueries[index]?.data ?? [],
+      comparisons: comparisonQueries[index]?.data ?? [],
+      comparison: valid ? detail : undefined,
+    };
+  });
 }

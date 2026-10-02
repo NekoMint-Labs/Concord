@@ -5,7 +5,13 @@ export type AgentContext = Omit<Partial<ConcordContext>, "workPackageId"> & {
   workPackageId?: string | null;
 };
 
+// Mirrors backend AgentScope.element_ids; mapping bindings have a separate limit.
+export const MAX_AGENT_ELEMENTS = 200;
+export const AGENT_ELEMENT_LIMIT_MESSAGE = `Concord 每次最多检查 ${MAX_AGENT_ELEMENTS} 个构件，请缩小选择范围。`;
+
 export function scopeFor(context: AgentContext): DTO<"AgentScope-Input"> {
+  if ((context.elementIds?.length ?? 0) > MAX_AGENT_ELEMENTS)
+    throw new Error(AGENT_ELEMENT_LIMIT_MESSAGE);
   return {
     source_id: context.sourceId,
     from_revision_id: context.fromRevisionId,

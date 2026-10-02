@@ -307,11 +307,7 @@ function MappingSession({
   useEffect(() => {
     if (comparisonScope) setActiveId(initial?.highlightIds?.[0] ?? "");
   }, [comparisonScope, initial?.highlightIds]);
-  const intentIds = inspectionMode
-    ? inspectionIds
-    : validSelected.length
-      ? validSelected
-      : candidateIds;
+  const intentIds = inspectionMode ? inspectionIds : validSelected;
   const existing = (bindings.data ?? []).filter(
     (item) =>
       item.binding.project_id === project &&

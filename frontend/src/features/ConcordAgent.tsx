@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScanSearch } from "lucide-react";
 import {
@@ -8,7 +8,12 @@ import {
   type InvestigationReport,
 } from "../api/client";
 import { useRunStream } from "../api/stream";
-import { reportMatchesRun, scopeFor } from "./agentContext";
+import {
+  AGENT_ELEMENT_LIMIT_MESSAGE,
+  MAX_AGENT_ELEMENTS,
+  reportMatchesRun,
+  scopeFor,
+} from "./agentContext";
 import { PropertyRow, PropertyTable } from "../components/PropertyTable";
 import { Status } from "../components/Status";
 import { AppPopover, AppPopoverClose } from "../components/ui/AppPopover";
@@ -53,7 +58,25 @@ export function ConcordAgent({
 }) {
   const cache = useQueryClient();
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<DTO<"AgentResponse"> | null>(null);
+  const contextKey = JSON.stringify([
+    project,
+    context.sourceId,
+    context.fromRevisionId,
+    context.revisionId,
+    context.workPackageId,
+    [...new Set(context.elementIds)].sort(),
+  ]);
+  // A fresh token also fences A → B → A, not just different revision IDs.
+  const askContext = useRef({ key: contextKey });
+  if (askContext.current.key !== contextKey)
+    askContext.current = { key: contextKey };
+  const [answerState, setAnswer] = useState<{
+    identity: typeof askContext.current;
+    response: DTO<"AgentResponse">;
+  } | null>(null);
+  const answer =
+    answerState?.identity === askContext.current ? answerState.response : null;
+  const scopeTooLarge = context.elementIds.length > MAX_AGENT_ELEMENTS;
   const validRun = currentRun?.project_id === project ? currentRun : null;
   const validReport = reportMatchesRun(report, validRun) ? report : null;
   const investigation = useMemo(
@@ -99,13 +122,24 @@ export function ConcordAgent({
     },
   });
   const ask = useMutation({
-    mutationFn: () =>
-      api.askAgent(project, {
-        instruction: question.trim(),
-        scope: scopeFor(context),
+    mutationFn: (submitted: {
+      identity: typeof askContext.current;
+      project: string;
+      context: ConcordContext;
+      instruction: string;
+    }) =>
+      api.askAgent(submitted.project, {
+        instruction: submitted.instruction,
+        scope: scopeFor(submitted.context),
       }),
-    onSuccess: setAnswer,
+    onSuccess: (response, submitted) => {
+      if (submitted.identity === askContext.current)
+        setAnswer({ identity: submitted.identity, response });
+    },
   });
+  const askIsCurrent = ask.variables?.identity === askContext.current;
+  const askPending = askIsCurrent && ask.isPending;
+  const askError = askIsCurrent ? ask.error : null;
   const investigate = useMutation({
     mutationFn: async (instruction: string) => {
       const next = onInvestigate
@@ -189,7 +223,13 @@ export function ConcordAgent({
           className="agent-ask"
           onSubmit={(event) => {
             event.preventDefault();
-            if (question.trim()) ask.mutate();
+            if (question.trim() && !scopeTooLarge && !askPending)
+              ask.mutate({
+                identity: askContext.current,
+                project,
+                context: { ...context, elementIds: [...context.elementIds] },
+                instruction: question.trim(),
+              });
           }}
         >
           <label className="section-label" htmlFor="context-question">
@@ -206,12 +246,14 @@ export function ConcordAgent({
             <Button
               type="submit"
               size="sm"
-              disabled={!question.trim() || ask.isPending}
+              disabled={!question.trim() || askPending || scopeTooLarge}
             >
-              {ask.isPending ? "查询中" : "询问"}
+              {askPending ? "查询中" : "询问"}
             </Button>
           </div>
         </form>
+
+        {scopeTooLarge && <p role="alert">{AGENT_ELEMENT_LIMIT_MESSAGE}</p>}
 
         {answer && (
           <section className="agent-answer">
@@ -230,7 +272,7 @@ export function ConcordAgent({
           </div>
           <Button
             size="sm"
-            disabled={investigate.isPending}
+            disabled={investigate.isPending || scopeTooLarge}
             onClick={() => investigate.mutate(submittedInstruction)}
           >
             {investigate.isPending
@@ -314,7 +356,7 @@ export function ConcordAgent({
           </section>
         )}
 
-        {(ask.error ||
+        {(askError ||
           investigate.error ||
           retry.error ||
           configure.error ||
@@ -322,7 +364,7 @@ export function ConcordAgent({
           <p className="alert" role="alert">
             {retry.error || investigate.error
               ? "调查无法启动或恢复，请重试。"
-              : ask.error
+              : askError
                 ? "暂时无法回答，请重试。"
                 : stream.error
                   ? "调查进度暂时不可用。"

@@ -94,14 +94,42 @@ export function useSourceProcessing(
       startSourceImport(cache, project, source, revision, true),
     onSuccess: (run) => onRun?.(run),
   });
-  const completed = queries
-    .filter((query) => query.data?.status === "COMPLETED")
-    .map((query) => `${query.data!.id}:${query.data!.generation}`)
-    .join(",");
-  const observed = useRef("");
+  const completedRuns = queries.flatMap((query, index) =>
+    query.data?.status === "COMPLETED"
+      ? [
+          {
+            source: revisions[index].source_id,
+            revision: revisions[index].id,
+            run: query.data.id,
+            generation: query.data.generation,
+            category: query.data.category,
+          },
+        ]
+      : [],
+  );
+  const completed = JSON.stringify(completedRuns);
+  const observed = useRef(new Set<string>());
   useEffect(() => {
-    if (!completed || `${project}:${completed}` === observed.current) return;
-    observed.current = `${project}:${completed}`;
+    let changed = false;
+    for (const imported of JSON.parse(completed) as typeof completedRuns) {
+      const identity = JSON.stringify([project, imported]);
+      if (observed.current.has(identity)) continue;
+      observed.current.add(identity);
+      changed = true;
+      if (imported.category === "bim_import") {
+        for (const key of ["bim-snapshot", "bim-bindings"]) {
+          const filter = {
+            queryKey: [key, project, imported.source, imported.revision],
+            exact: true,
+          };
+          // Invalidation alone reuses a pending initial read, even if it predates import.
+          void cache
+            .cancelQueries(filter)
+            .then(() => cache.invalidateQueries(filter));
+        }
+      }
+    }
+    if (!changed) return;
     void cache.invalidateQueries({ queryKey: ["workspace", project] });
     void cache.invalidateQueries({ queryKey: ["documents", project] });
     void cache.invalidateQueries({ queryKey: ["bim", project] });
