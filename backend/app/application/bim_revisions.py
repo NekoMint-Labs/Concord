@@ -132,6 +132,7 @@ class BimRevisionService:
                     provider=f"{comparison.engine}/{comparison.engine_version}",
                     source_id=source_id,
                     source_revision=new_revision.sha256,
+                    source_revision_id=new_revision.id,
                     observed_at=utcnow(),
                     work_package_id=work_package_id,
                     element_ids=tuple(sorted(change.global_id for change in package_changes)),
@@ -148,6 +149,7 @@ class BimRevisionService:
                     provider=f"{comparison.engine}/{comparison.engine_version}",
                     source_id=source_id,
                     source_revision=new_revision.sha256,
+                    source_revision_id=new_revision.id,
                     observed_at=utcnow(),
                     element_ids=tuple(sorted(changed_ids)),
                     fact=(

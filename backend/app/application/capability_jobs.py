@@ -204,6 +204,7 @@ class CapabilityJobService:
                             provider=chunk.parser,
                             source_id=job.request.source_id or published.metadata.id,
                             source_revision=chunk.source_hash,
+                            source_revision_id=job.request.source_revision_id,
                             observed_at=utcnow(),
                             work_package_id=None,
                             page=chunk.page,

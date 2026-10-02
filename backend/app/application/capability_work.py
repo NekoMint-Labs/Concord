@@ -123,6 +123,7 @@ def prepare_capability_work(
                 provider="ifcopenshell",
                 source_id=request.source_id or request.object_key,
                 source_revision=request.content_hash,
+                source_revision_id=request.source_revision_id,
                 observed_at=utcnow(),
                 work_package_id=None,
                 fact=(

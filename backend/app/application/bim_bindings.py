@@ -68,6 +68,7 @@ class BimBindingService:
                     provider="human-confirmed-bim-binding",
                     source_id=source_id,
                     source_revision=revision.sha256,
+                    source_revision_id=revision.id,
                     observed_at=utcnow(),
                     work_package_id=work_package_id,
                     element_ids=(global_id,),

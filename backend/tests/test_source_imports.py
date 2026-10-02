@@ -28,6 +28,7 @@ def test_document_import_reuses_original_and_exposes_scoped_citable_text(service
         assert repo.state(identity).version == before + 1
         assert repo.source_revision(identity, source.id, revision.id) == revision
         assert all(e.source_id == source.id for e in repo.evidence(identity))
+        assert all(e.source_revision_id == revision.id for e in repo.evidence(identity))
     report = services.investigations.ask(
         identity,
         AgentRequest(instruction="Explain this document", scope=AgentScope(source_id=source.id)),
@@ -64,6 +65,7 @@ def test_real_ifc_revision_import_and_baseline_remain_independent(services, admi
         assert index.elements[0]["id"] == element_id
         assert repo.latest_baseline(identity) == baseline
         assert repo.source_revision(identity, source.id, r1.id) == r1
+        assert {e.source_revision_id for e in repo.evidence(identity)} == {r1.id, r2.id}
 
 
 def test_source_identity_and_corrupt_original_are_rejected(services, admin):

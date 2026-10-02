@@ -132,12 +132,6 @@ class SQLCoordinationRepository(
             )
             if revision.sha256 != item.source_revision:
                 raise Conflict("Evidence source hash does not match its engineering revision")
-        else:
-            revision = self.source_revision_by_hash(
-                snapshot.project_id, item.source_id, item.source_revision
-            )
-            if revision:
-                item = item.model_copy(update={"source_revision_id": revision.id})
         self.session.add(
             EvidenceRow(
                 id=item.id,
