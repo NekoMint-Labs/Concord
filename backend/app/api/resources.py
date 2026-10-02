@@ -85,7 +85,7 @@ async def import_document(
     import asyncio
 
     require(user, "ingest")
-    content = await read_upload(file, svc.settings.max_upload_bytes)
+    content = await read_upload(file, svc.settings.upload_limit(file.filename or ""))
     run = await asyncio.to_thread(
         svc.jobs.upload, project_id, file.filename or "unnamed.txt", content, "document_parse", user
     )

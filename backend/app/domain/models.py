@@ -6,6 +6,8 @@ from uuid import uuid4
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
+from app.domain.engineering_refs import FindingDependency, ViewerTarget
+
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
@@ -100,6 +102,15 @@ class Evidence(Model):
     location: str | None = None
     fact: str
     quality: Literal["structured", "extracted", "inferred"] = "structured"
+    source_revision_id: str | None = None
+    viewer_target: ViewerTarget | None = None
+
+
+class Impact(Model):
+    work_package_ids: tuple[str, ...]
+    area_ids: tuple[str, ...]
+    element_ids: tuple[str, ...]
+    disciplines: tuple[str, ...]
 
 
 class Finding(Model):
@@ -112,6 +123,17 @@ class Finding(Model):
     confidence: float = Field(default=1, ge=0, le=1)
     limitations: tuple[str, ...] = ()
     created_at: AwareDatetime = Field(default_factory=utcnow)
+    project_id: str | None = None
+    impact: Impact | None = None
+    title: str = ""
+    what_changed: str = ""
+    why_it_matters: str = ""
+    change_ids: tuple[str, ...] = ()
+    dependencies: tuple[FindingDependency, ...] = ()
+    suggested_discipline: str | None = None
+    suggested_action: str | None = None
+    state: Literal["PROPOSED", "CONFIRMED", "DISMISSED", "CLOSED"] = "PROPOSED"
+    updated_at: AwareDatetime = Field(default_factory=utcnow)
 
 
 ConstraintKind = Literal[
@@ -128,13 +150,6 @@ class Constraint(Model):
     evidence_ids: tuple[str, ...]
     resource_id: str | None = None
     blocking: bool = True
-
-
-class Impact(Model):
-    work_package_ids: tuple[str, ...]
-    area_ids: tuple[str, ...]
-    element_ids: tuple[str, ...]
-    disciplines: tuple[str, ...]
 
 
 class Readiness(Model):

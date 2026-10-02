@@ -132,3 +132,16 @@ The regression suites cover worker fencing, cancellation/resume generations, sta
 publication rejection, approval/idempotency behavior, SSE replay, document publication
 rollback, and isolated fixture/schema tooling. They are valuable local evidence, but
 do not replace applicable CI or platform-native qualification.
+
+## Issue #18 engineering coordination
+
+Focused platform verification:
+
+```sh
+uv run --frozen --no-sync pytest -q backend/tests/test_engineering_coordination.py backend/tests/test_engineering_reliability.py backend/tests/integration/test_engineering_dbos.py
+```
+
+These checks cover normalized publication, persisted dependencies, explicit closure,
+cache/provenance isolation, cancellation/resume and real DBOS process-to-process outbox
+recovery. They use deterministic engineering fixtures, not qualified detection algorithms.
+See `docs/ENGINEERING_COORDINATION.md` for the shared contract and integration boundary.

@@ -58,7 +58,9 @@ def test_concurrent_uploads_keep_contiguous_immutable_history(
         assert services.sources.content(project_id, source_id, revision.id, admin)[1]
 
 
-def test_failed_publication_rolls_back_metadata_state_and_staged_file(services, admin, monkeypatch):
+def test_failed_publication_rolls_back_metadata_without_deleting_shared_bytes(
+    services, admin, monkeypatch
+):
     project_id, source_id = make_source(services, admin)
     with services.factory.open() as repo:
         original_state = repo.state(project_id)
@@ -74,9 +76,10 @@ def test_failed_publication_rolls_back_metadata_state_and_staged_file(services, 
         assert repo.source_revisions(project_id, source_id) == []
         assert repo.state(project_id) == original_state
         assert repo.audits(project_id) == original_audits
-    assert not [
+    objects = [
         p for p in (services.settings.data_dir / "files/project-sources").rglob("*") if p.is_file()
     ]
+    assert len(objects) == 1 and objects[0].read_bytes() == b"content"
 
 
 def test_upload_and_baseline_fence_existing_snapshots(services, admin):
@@ -215,7 +218,7 @@ def test_upgrade_existing_database_preserves_project_and_snapshot(tmp_path):
         with engine.connect() as connection:
             assert (
                 connection.execute(text("select version_num from alembic_version")).scalar_one()
-                == "0007"
+                == "0008"
             )
             assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
         with engine.begin() as connection:
@@ -228,7 +231,7 @@ def test_upgrade_existing_database_preserves_project_and_snapshot(tmp_path):
         with engine.connect() as connection:
             assert (
                 connection.execute(text("select version_num from alembic_version")).scalar_one()
-                == "0007"
+                == "0008"
             )
             assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
     finally:

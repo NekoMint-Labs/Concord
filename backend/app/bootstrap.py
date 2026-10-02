@@ -26,14 +26,19 @@ from app.application.bim_bindings import BimBindingService
 from app.application.bim_revisions import BimRevisionService
 from app.application.capability_jobs import CapabilityJobService
 from app.application.coordination import CoordinationService
+from app.application.derived_artifacts import DerivedArtifacts
+from app.application.engineering_findings import FindingService
+from app.application.engineering_publication import EngineeringPublisher
 from app.application.investigations import InvestigationService
 from app.application.project_sources import ProjectSourceService
 from app.application.projects import ProjectService
+from app.application.rechecks import ReCheckService
 from app.application.source_imports import SourceImportService
 from app.application.workflow import WorkflowCoordinator
 from app.bootstrap_capabilities import build_capability_jobs
 from app.domain.actions import Principal
 from app.domain.errors import DomainError
+from app.ports.engineering import EngineeringCapability
 from app.ports.services import DurableRuntime
 from app.settings import Settings
 
@@ -61,6 +66,10 @@ class Services:
     source_imports: SourceImportService
     bim_bindings: BimBindingService
     bim_revisions: BimRevisionService
+    findings: FindingService
+    engineering: EngineeringPublisher
+    rechecks: ReCheckService
+    artifacts: DerivedArtifacts
 
     resources: ExitStack
 
@@ -68,7 +77,9 @@ class Services:
         self.resources.close()
 
 
-def build_services(settings: Settings) -> Services:
+def build_services(
+    settings: Settings, *, engineering_capabilities: tuple[EngineeringCapability, ...] = ()
+) -> Services:
     with ExitStack() as resources:
         settings.data_dir.mkdir(parents=True, exist_ok=True)
         engine = make_engine(settings.database_url)
@@ -139,6 +150,12 @@ def build_services(settings: Settings) -> Services:
         analysis.investigations = investigations
         jobs = build_capability_jobs(settings, factory, runtime_name, storage, documents, resources)
         workflow.capabilities = jobs
+        artifacts = DerivedArtifacts(storage)
+        rechecks = ReCheckService(factory, artifacts, runtime_name)
+        rechecks.capabilities = {
+            capability.name: capability for capability in engineering_capabilities
+        }
+        workflow.rechecks = rechecks
         observed_workflow = ObservedWorkflow(workflow, telemetry)
         if settings.diagnostic_runtime:
             from app.adapters.runtime_diagnostic import DiagnosticRuntime
@@ -164,6 +181,7 @@ def build_services(settings: Settings) -> Services:
                 factory=factory,
             )
         resources.callback(runtime.close)
+        rechecks.runtime = runtime
         agent_control = AgentControlService(factory, runtime, runtime_name)
         result = Services(
             settings,
@@ -180,15 +198,26 @@ def build_services(settings: Settings) -> Services:
             storage,
             telemetry,
             ProjectService(factory),
-            ProjectSourceService(factory, storage, settings.max_upload_bytes, agent_control),
+            ProjectSourceService(
+                factory,
+                storage,
+                settings.max_upload_bytes,
+                agent_control,
+                settings.upload_format_limits,
+            ),
             BaselineService(factory),
             agent_control,
             investigations,
             SourceImportService(factory, jobs, runtime),
             BimBindingService(factory),
             BimRevisionService(factory, storage, _build_ifc_comparison()),
+            FindingService(factory),
+            EngineeringPublisher(factory),
+            rechecks,
+            artifacts,
             resources,
         )
+        result.sources.rechecks = rechecks
         if settings.seed_demo:
             coordination.seed(demo_state(), Principal(id="bootstrap", role="admin"))
             if not documents.documents("harbor-east"):

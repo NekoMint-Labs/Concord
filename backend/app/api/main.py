@@ -15,6 +15,7 @@ from app.api import (
     baselines,
     bim_revisions,
     capability_jobs,
+    engineering,
     project_lifecycle,
     project_sources,
     projects,
@@ -44,6 +45,7 @@ def create_app(settings: Settings | None = None, service_override=None) -> FastA
 
     app = FastAPI(title="Construction Coordination Agent", version="0.1.0", lifespan=lifespan)
     app.include_router(agent.router)
+    app.include_router(engineering.router)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

@@ -100,7 +100,7 @@ async def upload_revision(
     svc=Depends(services),
 ):
     require(user, "ingest")
-    content = await read_upload(file, svc.settings.max_upload_bytes)
+    content = await read_upload(file, svc.settings.upload_limit(file.filename or ""))
     try:
         result = await asyncio.to_thread(
             svc.sources.upload,

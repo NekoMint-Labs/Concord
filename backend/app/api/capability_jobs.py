@@ -65,7 +65,7 @@ async def import_ifc(
     require(user, "ingest")
     if not (file.filename or "").lower().endswith(".ifc"):
         raise DomainError("BIM import accepts IFC files only")
-    content = await read_upload(file, svc.settings.max_upload_bytes)
+    content = await read_upload(file, svc.settings.upload_limit(file.filename or ""))
     run = await asyncio.to_thread(
         svc.jobs.upload, project_id, file.filename, content, "bim_import", user
     )

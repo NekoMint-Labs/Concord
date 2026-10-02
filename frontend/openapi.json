@@ -336,6 +336,545 @@
         }
       }
     },
+    "/api/projects/{project_id}/engineering/changes": {
+      "get": {
+        "tags": [
+          "engineering"
+        ],
+        "summary": "Changes",
+        "operationId": "changes_api_projects__project_id__engineering_changes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "revision_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Revision Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Change"
+                  },
+                  "title": "Response Changes Api Projects  Project Id  Engineering Changes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/engineering/evidence/{evidence_id}": {
+      "get": {
+        "tags": [
+          "engineering"
+        ],
+        "summary": "Evidence",
+        "operationId": "evidence_api_projects__project_id__engineering_evidence__evidence_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Evidence"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/engineering/findings": {
+      "get": {
+        "tags": [
+          "engineering"
+        ],
+        "summary": "Findings",
+        "operationId": "findings_api_projects__project_id__engineering_findings_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Finding"
+                  },
+                  "title": "Response Findings Api Projects  Project Id  Engineering Findings Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "engineering"
+        ],
+        "summary": "Propose",
+        "operationId": "propose_api_projects__project_id__engineering_findings_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FindingDraft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Finding"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/engineering/findings/{finding_id}": {
+      "get": {
+        "tags": [
+          "engineering"
+        ],
+        "summary": "Finding",
+        "operationId": "finding_api_projects__project_id__engineering_findings__finding_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Finding"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/engineering/findings/{finding_id}/decisions": {
+      "post": {
+        "tags": [
+          "engineering"
+        ],
+        "summary": "Decide",
+        "operationId": "decide_api_projects__project_id__engineering_findings__finding_id__decisions_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FindingDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Finding"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/engineering/findings/{finding_id}/coordination": {
+      "get": {
+        "tags": [
+          "engineering"
+        ],
+        "summary": "Coordination",
+        "operationId": "coordination_api_projects__project_id__engineering_findings__finding_id__coordination_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Coordination"
+                  },
+                  "title": "Response Coordination Api Projects  Project Id  Engineering Findings  Finding Id  Coordination Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/engineering/findings/{finding_id}/rechecks": {
+      "get": {
+        "tags": [
+          "engineering"
+        ],
+        "summary": "Rechecks",
+        "operationId": "rechecks_api_projects__project_id__engineering_findings__finding_id__rechecks_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReCheck"
+                  },
+                  "title": "Response Rechecks Api Projects  Project Id  Engineering Findings  Finding Id  Rechecks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "engineering"
+        ],
+        "summary": "Request Recheck",
+        "operationId": "request_recheck_api_projects__project_id__engineering_findings__finding_id__rechecks_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Finding Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReCheckRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReCheck"
+                  },
+                  "title": "Response Request Recheck Api Projects  Project Id  Engineering Findings  Finding Id  Rechecks Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -3753,6 +4292,7 @@
             "enum": [
               "coordination",
               "investigation",
+              "engineering_recheck",
               "document_parse",
               "bim_import",
               "optimization",
@@ -4701,6 +5241,68 @@
         ],
         "title": "BimRevisionSnapshot"
       },
+      "BimTarget": {
+        "properties": {
+          "source_revision_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source Revision Id"
+          },
+          "kind": {
+            "type": "string",
+            "const": "bim",
+            "title": "Kind",
+            "default": "bim"
+          },
+          "global_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Global Ids",
+            "default": []
+          },
+          "viewpoint": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 6,
+                "minItems": 6
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewpoint"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_revision_id"
+        ],
+        "title": "BimTarget"
+      },
       "BindingInput": {
         "properties": {
           "work_package_id": {
@@ -4797,6 +5399,76 @@
           "file"
         ],
         "title": "Body_vision_api_projects__project_id__vision_post"
+      },
+      "CadTarget": {
+        "properties": {
+          "source_revision_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source Revision Id"
+          },
+          "kind": {
+            "type": "string",
+            "const": "cad",
+            "title": "Kind",
+            "default": "cad"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "layer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layer"
+          },
+          "view_bounds": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 4,
+                "minItems": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "View Bounds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_revision_id"
+        ],
+        "title": "CadTarget"
       },
       "Capability": {
         "properties": {
@@ -4977,6 +5649,127 @@
         ],
         "title": "CapabilityResponse"
       },
+      "Change": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "from_revision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Revision Id"
+          },
+          "to_revision_id": {
+            "type": "string",
+            "title": "To Revision Id"
+          },
+          "subject": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/DrawingTarget"
+              },
+              {
+                "$ref": "#/components/schemas/CadTarget"
+              },
+              {
+                "$ref": "#/components/schemas/BimTarget"
+              },
+              {
+                "$ref": "#/components/schemas/DocumentTarget"
+              }
+            ],
+            "title": "Subject",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "bim": "#/components/schemas/BimTarget",
+                "cad": "#/components/schemas/CadTarget",
+                "document": "#/components/schemas/DocumentTarget",
+                "drawing": "#/components/schemas/DrawingTarget"
+              }
+            }
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Kind"
+          },
+          "aspects": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aspects",
+            "default": []
+          },
+          "detector": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Detector"
+          },
+          "detector_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detector Version"
+          },
+          "raw_artifact_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Artifact Key"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "source_id",
+          "from_revision_id",
+          "to_revision_id",
+          "subject",
+          "kind",
+          "aspects",
+          "detector",
+          "detector_version",
+          "raw_artifact_key",
+          "created_at"
+        ],
+        "title": "Change"
+      },
       "CompareBimRevisions": {
         "properties": {
           "from_revision_id": {
@@ -5156,6 +5949,71 @@
           "blocking"
         ],
         "title": "Constraint"
+      },
+      "Coordination": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "finding_id": {
+            "type": "string",
+            "title": "Finding Id"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "CONFIRMED",
+              "DISMISSED",
+              "CLOSED",
+              "EDITED"
+            ],
+            "title": "Decision"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Note",
+            "default": ""
+          },
+          "recheck_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recheck Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "finding_id",
+          "actor",
+          "decision",
+          "note",
+          "recheck_id",
+          "created_at"
+        ],
+        "title": "Coordination"
       },
       "CreateArea": {
         "properties": {
@@ -5535,6 +6393,112 @@
           "created_at"
         ],
         "title": "DocumentMetadata"
+      },
+      "DocumentTarget": {
+        "properties": {
+          "source_revision_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source Revision Id"
+          },
+          "kind": {
+            "type": "string",
+            "const": "document",
+            "title": "Kind",
+            "default": "document"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "structural_path": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Structural Path",
+            "default": []
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_revision_id"
+        ],
+        "title": "DocumentTarget"
+      },
+      "DrawingTarget": {
+        "properties": {
+          "source_revision_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source Revision Id"
+          },
+          "kind": {
+            "type": "string",
+            "const": "drawing",
+            "title": "Kind",
+            "default": "drawing"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page"
+          },
+          "normalized_bbox": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 4,
+                "minItems": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Bbox"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_revision_id",
+          "page"
+        ],
+        "title": "DrawingTarget"
       },
       "Effect": {
         "properties": {
@@ -5963,6 +6927,50 @@
             ],
             "title": "Quality",
             "default": "structured"
+          },
+          "source_revision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Revision Id"
+          },
+          "viewer_target": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/DrawingTarget"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CadTarget"
+                  },
+                  {
+                    "$ref": "#/components/schemas/BimTarget"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DocumentTarget"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "bim": "#/components/schemas/BimTarget",
+                    "cad": "#/components/schemas/CadTarget",
+                    "document": "#/components/schemas/DocumentTarget",
+                    "drawing": "#/components/schemas/DrawingTarget"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewer Target"
           }
         },
         "additionalProperties": false,
@@ -5979,7 +6987,9 @@
           "page",
           "location",
           "fact",
-          "quality"
+          "quality",
+          "source_revision_id",
+          "viewer_target"
         ],
         "title": "Evidence"
       },
@@ -6055,6 +7065,96 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "impact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Impact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "what_changed": {
+            "type": "string",
+            "title": "What Changed",
+            "default": ""
+          },
+          "why_it_matters": {
+            "type": "string",
+            "title": "Why It Matters",
+            "default": ""
+          },
+          "change_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Change Ids",
+            "default": []
+          },
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/FindingDependency"
+            },
+            "type": "array",
+            "title": "Dependencies",
+            "default": []
+          },
+          "suggested_discipline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Discipline"
+          },
+          "suggested_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Action"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "PROPOSED",
+              "CONFIRMED",
+              "DISMISSED",
+              "CLOSED"
+            ],
+            "title": "State",
+            "default": "PROPOSED"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
           }
         },
         "additionalProperties": false,
@@ -6068,9 +7168,251 @@
           "reasoning_summary",
           "confidence",
           "limitations",
-          "created_at"
+          "created_at",
+          "project_id",
+          "impact",
+          "title",
+          "what_changed",
+          "why_it_matters",
+          "change_ids",
+          "dependencies",
+          "suggested_discipline",
+          "suggested_action",
+          "state",
+          "updated_at"
         ],
         "title": "Finding"
+      },
+      "FindingDecision": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "CONFIRMED",
+              "DISMISSED",
+              "CLOSED",
+              "EDITED"
+            ],
+            "title": "Decision"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Note",
+            "default": ""
+          },
+          "recheck_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recheck Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 240,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "suggested_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "title": "FindingDecision"
+      },
+      "FindingDependency": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source Id"
+          },
+          "source_revision_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source Revision Id"
+          },
+          "capability": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Capability"
+          },
+          "expected_condition": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Expected Condition"
+          },
+          "target": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/DrawingTarget"
+              },
+              {
+                "$ref": "#/components/schemas/CadTarget"
+              },
+              {
+                "$ref": "#/components/schemas/BimTarget"
+              },
+              {
+                "$ref": "#/components/schemas/DocumentTarget"
+              }
+            ],
+            "title": "Target",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "bim": "#/components/schemas/BimTarget",
+                "cad": "#/components/schemas/CadTarget",
+                "document": "#/components/schemas/DocumentTarget",
+                "drawing": "#/components/schemas/DrawingTarget"
+              }
+            }
+          },
+          "work_package_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Work Package Ids",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_id",
+          "source_revision_id",
+          "capability",
+          "expected_condition",
+          "target"
+        ],
+        "title": "FindingDependency"
+      },
+      "FindingDraft": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "what_changed": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "What Changed"
+          },
+          "why_it_matters": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Why It Matters"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Evidence Ids"
+          },
+          "change_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "title": "Change Ids",
+            "default": []
+          },
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/FindingDependency"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Dependencies"
+          },
+          "impact": {
+            "$ref": "#/components/schemas/Impact"
+          },
+          "suggested_discipline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Discipline"
+          },
+          "suggested_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Action"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "default": 1
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "what_changed",
+          "why_it_matters",
+          "evidence_ids",
+          "dependencies",
+          "impact"
+        ],
+        "title": "FindingDraft"
       },
       "HTTPValidationError": {
         "properties": {
@@ -6680,6 +8022,128 @@
           "sources"
         ],
         "title": "ProjectState"
+      },
+      "ReCheck": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "finding_id": {
+            "type": "string",
+            "title": "Finding Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "source_revision_id": {
+            "type": "string",
+            "title": "Source Revision Id"
+          },
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/FindingDependency"
+            },
+            "type": "array",
+            "title": "Dependencies"
+          },
+          "finding_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Finding Updated At"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id",
+            "default": "revision"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "RESOLVED",
+                  "STILL_OPEN",
+                  "CHANGED",
+                  "NEEDS_REVIEW"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids",
+            "default": []
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "default": ""
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "finding_id",
+          "source_id",
+          "source_revision_id",
+          "dependencies",
+          "finding_updated_at",
+          "request_id",
+          "outcome",
+          "evidence_ids",
+          "explanation",
+          "created_at",
+          "completed_at"
+        ],
+        "title": "ReCheck"
+      },
+      "ReCheckRequest": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Operation Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operation_id"
+        ],
+        "title": "ReCheckRequest"
       },
       "Readiness": {
         "properties": {

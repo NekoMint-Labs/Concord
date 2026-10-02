@@ -26,7 +26,9 @@
           "name": "Structure handover",
           "area_id": "L02-E",
           "discipline": "Structure",
-          "element_ids": ["2EG_GvBOnHSANjPr7CHowU"],
+          "element_ids": [
+            "2EG_GvBOnHSANjPr7CHowU"
+          ],
           "predecessors": [],
           "complete": true,
           "design_revision": "V16",
@@ -45,15 +47,24 @@
           "name": "East-wing duct installation",
           "area_id": "L02-E",
           "discipline": "Mechanical",
-          "element_ids": ["2CU_Px_b9MJe1kH$vDvU8G", "2EG_GvBOnHSANjPr7CHowU"],
-          "predecessors": ["WP-100"],
+          "element_ids": [
+            "2CU_Px_b9MJe1kH$vDvU8G",
+            "2EG_GvBOnHSANjPr7CHowU"
+          ],
+          "predecessors": [
+            "WP-100"
+          ],
           "complete": false,
           "design_revision": "V16",
           "accepted_revision": "V16",
           "required_workers": 4,
           "available_workers": 4,
-          "required_qualifications": ["duct-install"],
-          "qualifications": ["duct-install"],
+          "required_qualifications": [
+            "duct-install"
+          ],
+          "qualifications": [
+            "duct-install"
+          ],
           "materials": {
             "duct-section": true
           },
@@ -68,15 +79,21 @@
           "name": "Level 03 electrical rough-in",
           "area_id": "L03-E",
           "discipline": "Electrical",
-          "element_ids": ["1xhjFnj$HKePcWkxtV734X"],
+          "element_ids": [
+            "1xhjFnj$HKePcWkxtV734X"
+          ],
           "predecessors": [],
           "complete": false,
           "design_revision": "V16",
           "accepted_revision": "V16",
           "required_workers": 3,
           "available_workers": 3,
-          "required_qualifications": ["electrician"],
-          "qualifications": ["electrician"],
+          "required_qualifications": [
+            "electrician"
+          ],
+          "qualifications": [
+            "electrician"
+          ],
           "materials": {
             "cable-tray": true
           },
@@ -91,131 +108,160 @@
         {
           "source": "drawing",
           "revision": "r1",
-          "observed_at": "2026-09-08T05:49:37.271255Z"
+          "observed_at": "2026-10-02T07:00:37.284693Z"
         },
         {
           "source": "bim",
           "revision": "r1",
-          "observed_at": "2026-09-08T05:49:37.271265Z"
+          "observed_at": "2026-10-02T07:00:37.284711Z"
         },
         {
           "source": "schedule",
           "revision": "r1",
-          "observed_at": "2026-09-08T05:49:37.271270Z"
+          "observed_at": "2026-10-02T07:00:37.284719Z"
         },
         {
           "source": "workforce",
           "revision": "r1",
-          "observed_at": "2026-09-08T05:49:37.271273Z"
+          "observed_at": "2026-10-02T07:00:37.284727Z"
         },
         {
           "source": "material",
           "revision": "r1",
-          "observed_at": "2026-09-08T05:49:37.271274Z"
+          "observed_at": "2026-10-02T07:00:37.284733Z"
         },
         {
           "source": "equipment",
           "revision": "r1",
-          "observed_at": "2026-09-08T05:49:37.271276Z"
+          "observed_at": "2026-10-02T07:00:37.284740Z"
         },
         {
           "source": "inspection",
           "revision": "r2",
-          "observed_at": "2026-09-08T05:49:37.354201Z"
+          "observed_at": "2026-10-02T07:00:37.815481Z"
         }
       ]
     },
     "analysis": {
-      "id": "439452c3-4015-4b2f-8eb3-11e5a39eaaed",
-      "run_id": "4d9dc92d-5e4f-4282-8d1c-c3ecf064f1b8",
+      "id": "7596c0e6-e5ee-42fc-afe2-71995716d166",
+      "run_id": "639e7965-d0f1-4323-9bff-1e466afcf222",
       "snapshot": {
-        "id": "d6006aa8-1185-4fcf-9f9b-7fbf5c88ac10",
+        "id": "75d0b061-72a7-4fd3-ae57-da30f4e856f0",
         "project_id": "harbor-east",
         "version": 2,
         "sources": [
           {
             "source": "drawing",
             "revision": "r1",
-            "observed_at": "2026-09-08T05:49:37.271255Z"
+            "observed_at": "2026-10-02T07:00:37.284693Z"
           },
           {
             "source": "bim",
             "revision": "r1",
-            "observed_at": "2026-09-08T05:49:37.271265Z"
+            "observed_at": "2026-10-02T07:00:37.284711Z"
           },
           {
             "source": "schedule",
             "revision": "r1",
-            "observed_at": "2026-09-08T05:49:37.271270Z"
+            "observed_at": "2026-10-02T07:00:37.284719Z"
           },
           {
             "source": "workforce",
             "revision": "r1",
-            "observed_at": "2026-09-08T05:49:37.271273Z"
+            "observed_at": "2026-10-02T07:00:37.284727Z"
           },
           {
             "source": "material",
             "revision": "r1",
-            "observed_at": "2026-09-08T05:49:37.271274Z"
+            "observed_at": "2026-10-02T07:00:37.284733Z"
           },
           {
             "source": "equipment",
             "revision": "r1",
-            "observed_at": "2026-09-08T05:49:37.271276Z"
+            "observed_at": "2026-10-02T07:00:37.284740Z"
           },
           {
             "source": "inspection",
             "revision": "r2",
-            "observed_at": "2026-09-08T05:49:37.354201Z"
+            "observed_at": "2026-10-02T07:00:37.815481Z"
           }
         ],
-        "captured_at": "2026-09-08T05:49:37.361609Z"
+        "captured_at": "2026-10-02T07:00:37.856933Z"
       },
       "impact": {
-        "work_package_ids": ["WP-200"],
-        "area_ids": ["L02-E"],
-        "element_ids": ["2CU_Px_b9MJe1kH$vDvU8G", "2EG_GvBOnHSANjPr7CHowU"],
-        "disciplines": ["Mechanical"]
+        "work_package_ids": [
+          "WP-200"
+        ],
+        "area_ids": [
+          "L02-E"
+        ],
+        "element_ids": [
+          "2CU_Px_b9MJe1kH$vDvU8G",
+          "2EG_GvBOnHSANjPr7CHowU"
+        ],
+        "disciplines": [
+          "Mechanical"
+        ]
       },
       "evidence": [
         {
-          "id": "10dce1b9-0886-4ee9-9fa6-21c13bb486b5",
-          "snapshot_id": "d6006aa8-1185-4fcf-9f9b-7fbf5c88ac10",
+          "id": "2e2ad208-23c3-426d-872c-9de0a6ffadfe",
+          "snapshot_id": "75d0b061-72a7-4fd3-ae57-da30f4e856f0",
           "provider": "structured-inspection",
           "source_id": "inspection/WP-200",
           "source_revision": "r2",
-          "observed_at": "2026-09-08T05:49:37.354201Z",
+          "observed_at": "2026-10-02T07:00:37.815481Z",
           "work_package_id": "WP-200",
-          "element_ids": ["2CU_Px_b9MJe1kH$vDvU8G", "2EG_GvBOnHSANjPr7CHowU"],
+          "element_ids": [
+            "2CU_Px_b9MJe1kH$vDvU8G",
+            "2EG_GvBOnHSANjPr7CHowU"
+          ],
           "page": null,
           "location": "L02-E",
           "fact": "Inspection acceptance has not passed.",
-          "quality": "structured"
+          "quality": "structured",
+          "source_revision_id": null,
+          "viewer_target": null
         }
       ],
       "findings": [
         {
-          "id": "f38763b9-6a7f-48fc-8dfd-a2f95c44ad38",
-          "snapshot_id": "d6006aa8-1185-4fcf-9f9b-7fbf5c88ac10",
+          "id": "18ca1e43-3506-43ec-a55e-c8e2884786c8",
+          "snapshot_id": "75d0b061-72a7-4fd3-ae57-da30f4e856f0",
           "work_package_id": "WP-200",
           "conclusion": "Inspection acceptance has not passed.",
-          "evidence_ids": ["10dce1b9-0886-4ee9-9fa6-21c13bb486b5"],
+          "evidence_ids": [
+            "2e2ad208-23c3-426d-872c-9de0a6ffadfe"
+          ],
           "reasoning_summary": "Deterministic inspection rule compared recorded project facts.",
           "confidence": 1.0,
           "limitations": [
             "Synthetic provider state; not a final safety judgment."
           ],
-          "created_at": "2026-09-08T05:49:37.363100Z"
+          "created_at": "2026-10-02T07:00:37.863056Z",
+          "project_id": null,
+          "impact": null,
+          "title": "",
+          "what_changed": "",
+          "why_it_matters": "",
+          "change_ids": [],
+          "dependencies": [],
+          "suggested_discipline": null,
+          "suggested_action": null,
+          "state": "PROPOSED",
+          "updated_at": "2026-10-02T07:00:37.863066Z"
         }
       ],
       "constraints": [
         {
-          "id": "d7f21b82-538d-47b5-817c-be0a23782599",
-          "snapshot_id": "d6006aa8-1185-4fcf-9f9b-7fbf5c88ac10",
+          "id": "eb1be3c8-9381-471b-a450-5e5ac8e8c1aa",
+          "snapshot_id": "75d0b061-72a7-4fd3-ae57-da30f4e856f0",
           "work_package_id": "WP-200",
           "kind": "inspection",
           "description": "Inspection acceptance has not passed.",
-          "evidence_ids": ["10dce1b9-0886-4ee9-9fa6-21c13bb486b5"],
+          "evidence_ids": [
+            "2e2ad208-23c3-426d-872c-9de0a6ffadfe"
+          ],
           "resource_id": null,
           "blocking": true
         }
@@ -225,72 +271,76 @@
           "work_package_id": "WP-100",
           "status": "READY",
           "constraint_ids": [],
-          "snapshot_id": "d6006aa8-1185-4fcf-9f9b-7fbf5c88ac10"
+          "snapshot_id": "75d0b061-72a7-4fd3-ae57-da30f4e856f0"
         },
         {
           "work_package_id": "WP-200",
           "status": "BLOCKED",
-          "constraint_ids": ["d7f21b82-538d-47b5-817c-be0a23782599"],
-          "snapshot_id": "d6006aa8-1185-4fcf-9f9b-7fbf5c88ac10"
+          "constraint_ids": [
+            "eb1be3c8-9381-471b-a450-5e5ac8e8c1aa"
+          ],
+          "snapshot_id": "75d0b061-72a7-4fd3-ae57-da30f4e856f0"
         },
         {
           "work_package_id": "WP-300",
           "status": "READY",
           "constraint_ids": [],
-          "snapshot_id": "d6006aa8-1185-4fcf-9f9b-7fbf5c88ac10"
+          "snapshot_id": "75d0b061-72a7-4fd3-ae57-da30f4e856f0"
         }
       ],
       "reasoning_summary": "Checked 3 work packages against snapshot version 2. Found 1 recorded constraint facts affecting 1 work packages.",
       "reasoning_mode": "offline",
-      "created_at": "2026-09-08T05:49:37.363158Z"
+      "created_at": "2026-10-02T07:00:37.863233Z"
     },
     "run": {
-      "id": "4d9dc92d-5e4f-4282-8d1c-c3ecf064f1b8",
+      "id": "639e7965-d0f1-4323-9bff-1e466afcf222",
       "project_id": "harbor-east",
-      "event_id": "c06ab442-0a98-42c2-ac4e-942bed1d0cd8",
+      "event_id": "d27becc2-3632-4558-82dc-a55e920b5c18",
       "status": "WAITING_APPROVAL",
       "runtime": "diagnostic-NON-DURABLE",
       "runtime_execution_id": null,
       "generation": 0,
       "runtime_generation": 0,
       "category": "coordination",
-      "analysis_id": "439452c3-4015-4b2f-8eb3-11e5a39eaaed",
+      "analysis_id": "7596c0e6-e5ee-42fc-afe2-71995716d166",
       "error": null,
-      "created_at": "2026-09-08T05:49:37.357763Z",
-      "updated_at": "2026-09-08T05:49:37.366153Z"
+      "created_at": "2026-10-02T07:00:37.819486Z",
+      "updated_at": "2026-10-02T07:00:37.871558Z"
     },
     "analysis_run": {
-      "id": "4d9dc92d-5e4f-4282-8d1c-c3ecf064f1b8",
+      "id": "639e7965-d0f1-4323-9bff-1e466afcf222",
       "project_id": "harbor-east",
-      "event_id": "c06ab442-0a98-42c2-ac4e-942bed1d0cd8",
+      "event_id": "d27becc2-3632-4558-82dc-a55e920b5c18",
       "status": "WAITING_APPROVAL",
       "runtime": "diagnostic-NON-DURABLE",
       "runtime_execution_id": null,
       "generation": 0,
       "runtime_generation": 0,
       "category": "coordination",
-      "analysis_id": "439452c3-4015-4b2f-8eb3-11e5a39eaaed",
+      "analysis_id": "7596c0e6-e5ee-42fc-afe2-71995716d166",
       "error": null,
-      "created_at": "2026-09-08T05:49:37.357763Z",
-      "updated_at": "2026-09-08T05:49:37.366153Z"
+      "created_at": "2026-10-02T07:00:37.819486Z",
+      "updated_at": "2026-10-02T07:00:37.871558Z"
     },
     "proposals": [
       {
-        "id": "b41a6806-ff56-4213-ace3-df11eb640efa",
-        "operation_id": "6364215f-75e1-4d37-acf6-6c814eaba4d0",
+        "id": "33f6463f-8f1f-4488-821d-b4ec1d42385a",
+        "operation_id": "bacbddb0-5fc5-43bb-9e9c-de3306db80a6",
         "project_id": "harbor-east",
-        "run_id": "4d9dc92d-5e4f-4282-8d1c-c3ecf064f1b8",
+        "run_id": "639e7965-d0f1-4323-9bff-1e466afcf222",
         "generation": 0,
-        "snapshot_id": "d6006aa8-1185-4fcf-9f9b-7fbf5c88ac10",
+        "snapshot_id": "75d0b061-72a7-4fd3-ae57-da30f4e856f0",
         "snapshot_version": 2,
         "work_package_id": "WP-200",
         "title": "Coordinate East-wing duct installation",
         "risk": 4,
         "resolution": {
-          "id": "6ab43b8a-5dad-45f9-a99e-1e825ce4bef7",
+          "id": "b456229e-d110-433d-8432-3b047596e2fd",
           "title": "Coordinate East-wing duct installation",
           "explanation": "Obtain the listed confirmations from responsible owners, then refresh and re-check. Demo execution simulates confirmations; it does not perform site work or certify safety.",
-          "constraint_ids": ["d7f21b82-538d-47b5-817c-be0a23782599"],
+          "constraint_ids": [
+            "eb1be3c8-9381-471b-a450-5e5ac8e8c1aa"
+          ],
           "effects": [
             {
               "kind": "record_inspection",
@@ -301,15 +351,17 @@
           ],
           "resolver": "simple"
         },
-        "evidence_ids": ["10dce1b9-0886-4ee9-9fa6-21c13bb486b5"],
+        "evidence_ids": [
+          "2e2ad208-23c3-426d-872c-9de0a6ffadfe"
+        ],
         "execution_mode": "simulated",
-        "created_at": "2026-09-08T05:49:37.364740Z"
+        "created_at": "2026-10-02T07:00:37.867657Z"
       }
     ],
     "approvals": [],
     "events": [
       {
-        "id": "c06ab442-0a98-42c2-ac4e-942bed1d0cd8",
+        "id": "d27becc2-3632-4558-82dc-a55e920b5c18",
         "project_id": "harbor-east",
         "kind": "inspection",
         "work_package_id": "WP-200",
@@ -326,74 +378,74 @@
           "available": null,
           "inspection_passed": false
         },
-        "observed_at": "2026-09-08T05:49:37.351222Z"
+        "observed_at": "2026-10-02T07:00:37.807236Z"
       }
     ],
     "audit": [
       {
-        "id": "52e3444e-9ca3-4db9-bd6d-b3e589884c0a",
+        "id": "727bd477-b068-4e12-9d2a-6b5ed95a61c3",
         "project_id": "harbor-east",
         "action": "ANALYSIS_RECHECK",
         "actor": "coordination-core",
-        "run_id": "4d9dc92d-5e4f-4282-8d1c-c3ecf064f1b8",
-        "snapshot_id": "d6006aa8-1185-4fcf-9f9b-7fbf5c88ac10",
+        "run_id": "639e7965-d0f1-4323-9bff-1e466afcf222",
+        "snapshot_id": "75d0b061-72a7-4fd3-ae57-da30f4e856f0",
         "operation_id": null,
         "detail": {
           "blockers": 1,
           "mode": "offline"
         },
-        "created_at": "2026-09-08T05:49:37.366904Z"
+        "created_at": "2026-10-02T07:00:37.873913Z"
       },
       {
-        "id": "6360eb94-f9b2-4f64-bf7c-abe11d797cec",
+        "id": "8efed140-33b6-40cb-8ff3-d0af94c22ef6",
         "project_id": "harbor-east",
         "action": "EVENT_INGESTED",
         "actor": "local-admin",
-        "run_id": "4d9dc92d-5e4f-4282-8d1c-c3ecf064f1b8",
+        "run_id": "639e7965-d0f1-4323-9bff-1e466afcf222",
         "snapshot_id": null,
         "operation_id": null,
         "detail": {
-          "event_id": "c06ab442-0a98-42c2-ac4e-942bed1d0cd8",
+          "event_id": "d27becc2-3632-4558-82dc-a55e920b5c18",
           "kind": "inspection",
           "version": 2
         },
-        "created_at": "2026-09-08T05:49:37.359228Z"
+        "created_at": "2026-10-02T07:00:37.823286Z"
       },
       {
-        "id": "0f387a3e-db91-48fe-95f1-ea61611841c8",
+        "id": "97d423be-0432-4d1f-9a22-c6f81d08d711",
         "project_id": "harbor-east",
         "action": "ANALYSIS_RECHECK",
         "actor": "coordination-core",
-        "run_id": "c048bf53-14a6-4660-8736-0fc06ffae76f",
-        "snapshot_id": "c6275a10-a6a2-4dcf-8e5e-3ef8a543caf0",
+        "run_id": "4acd27e8-2091-4e16-86eb-b6a6273f1111",
+        "snapshot_id": "430f3256-95c9-4141-8bc9-70019c2058ad",
         "operation_id": null,
         "detail": {
           "blockers": 0,
           "mode": "offline"
         },
-        "created_at": "2026-09-08T05:49:37.301049Z"
+        "created_at": "2026-10-02T07:00:37.603020Z"
       },
       {
-        "id": "2c1af54f-14a2-44a1-be4c-17a4642e39eb",
+        "id": "db702f05-9546-4c27-b5f7-2dfce3a80562",
         "project_id": "harbor-east",
         "action": "PROJECT_SEEDED",
         "actor": "bootstrap",
-        "run_id": "c048bf53-14a6-4660-8736-0fc06ffae76f",
+        "run_id": "4acd27e8-2091-4e16-86eb-b6a6273f1111",
         "snapshot_id": null,
         "operation_id": null,
         "detail": {},
-        "created_at": "2026-09-08T05:49:37.281167Z"
+        "created_at": "2026-10-02T07:00:37.523710Z"
       }
     ],
     "stale": false
   },
   "approval": {
-    "id": "cedf56ae-2b7a-4e38-8d30-a871e5e4e7b5",
-    "proposal_id": "b41a6806-ff56-4213-ace3-df11eb640efa",
+    "id": "9dc54748-0383-4a65-ba91-60bc5ea6b0fc",
+    "proposal_id": "33f6463f-8f1f-4488-821d-b4ec1d42385a",
     "principal_id": "local-admin",
     "principal_role": "admin",
     "level": "strong",
     "confirmation": "APPROVE R4",
-    "created_at": "2026-09-08T05:49:37.396709Z"
+    "created_at": "2026-10-02T07:00:38.034648Z"
   }
 }

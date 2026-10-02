@@ -1,5 +1,10 @@
 # A1 shared lifecycle contract
 
+For the subsequent #18 Change/Finding/Coordination/ReCheck APIs and content-addressed
+storage/upload policy, see [Engineering coordination](docs/ENGINEERING_COORDINATION.md).
+The historical A1-only behavior below describes its original milestone; the #18
+contract adds revision-triggered ReChecks for confirmed dependent Findings.
+
 First integration slice of [Issue #9](https://github.com/NekoMint-Labs/Concord/issues/9),
 based on merged PR #8. This supplies the shared project/source/revision/baseline
 identities for #10 and #11. It does not close #9.

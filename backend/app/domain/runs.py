@@ -24,6 +24,7 @@ class AgentRun(Model):
     category: Literal[
         "coordination",
         "investigation",
+        "engineering_recheck",
         "document_parse",
         "bim_import",
         "optimization",

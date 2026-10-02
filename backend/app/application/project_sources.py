@@ -1,10 +1,12 @@
 """Append-only source originals. Parsing is a separate durable capability responsibility."""
 
 import hashlib
+from pathlib import PurePath
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.application.agent_control import AgentControlService
+    from app.application.rechecks import ReCheckService
 
 from app.application.projects import record_lifecycle_change
 from app.domain.actions import Principal
@@ -77,9 +79,12 @@ class ProjectSourceService:
         storage: FileStore,
         max_upload_bytes: int,
         agent_control: "AgentControlService | None" = None,
+        format_limits: dict[str, int] | None = None,
     ):
         self.factory, self.storage, self.max_upload_bytes = factory, storage, max_upload_bytes
         self.agent_control = agent_control
+        self.rechecks: ReCheckService | None = None
+        self.format_limits = format_limits or {"*": max_upload_bytes}
 
     def create(
         self, project_id: str, request: CreateProjectSource, principal: Principal
@@ -106,7 +111,11 @@ class ProjectSourceService:
         external_label: str | None = None,
     ) -> RevisionUploadResult:
         require(principal, "ingest")
-        if not content or len(content) > self.max_upload_bytes:
+        limit = min(
+            self.max_upload_bytes,
+            self.format_limits.get(PurePath(filename).suffix.lower(), self.format_limits["*"]),
+        )
+        if not content or len(content) > limit:
             raise DomainError("Upload must be nonempty and within the configured size limit")
         digest = hashlib.sha256(content).hexdigest()
         # Validate metadata before writing any bytes or returning a duplicate.
@@ -125,22 +134,22 @@ class ProjectSourceService:
             repo.project_source(project_id, source_id)
             duplicate = repo.source_revision_by_hash(project_id, source_id, digest)
         if duplicate:
+            if self.rechecks:
+                self.rechecks.dispatch(project_id)
             if self.agent_control:
                 self.agent_control.dispatch(project_id)
             return RevisionUploadResult(revision=duplicate, duplicate=True)
-        key = f"project-sources/{revision.id}/{digest}"
+        key = f"project-sources/{digest}"
         revision = revision.model_copy(update={"storage_key": key})
-        committed = False
-        try:
-            # Object I/O stays outside the project transaction. Each attempt owns its key.
-            self.storage.put(key, content)
-            result = self._publish(revision, principal)
-            committed = not result.duplicate
-        finally:
-            if not committed:
-                self.storage.delete(key)
+        # Immutable content-addressed objects may be shared by multiple sources.
+        # Never delete a shared object on a losing/failed metadata transaction.
+        # Unreferenced objects are safe; garbage collection is a separate operation.
+        self.storage.put(key, content)
+        result = self._publish(revision, principal)
         if self.agent_control:
             self.agent_control.dispatch(project_id)
+        if self.rechecks:
+            self.rechecks.dispatch(project_id)
         return result
 
     def _publish(
@@ -172,6 +181,8 @@ class ProjectSourceService:
             )
             if self.agent_control:
                 self.agent_control.record_revision(repo, revision, principal)
+            if self.rechecks:
+                self.rechecks.record_revision(repo, revision, principal)
         return RevisionUploadResult(revision=revision, duplicate=False)
 
     def content(

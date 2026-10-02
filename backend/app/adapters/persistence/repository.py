@@ -4,6 +4,7 @@ from app.adapters.persistence.action_records import ActionRecords
 from app.adapters.persistence.agent_records import AgentRecords
 from app.adapters.persistence.baseline_records import BaselineRecords
 from app.adapters.persistence.bim_revision_records import BimRevisionRecords
+from app.adapters.persistence.engineering_records import EngineeringRecords
 from app.adapters.persistence.run_records import RunRecords
 from app.adapters.persistence.source_import_records import SourceImportRecords
 from app.adapters.persistence.source_records import SourceRecords
@@ -15,6 +16,7 @@ from app.adapters.persistence.tables import (
     ProjectRow,
     SnapshotRow,
 )
+from app.domain.errors import Conflict
 from app.domain.events import ProjectEvent
 from app.domain.jobs import BIMIndex
 from app.domain.models import Analysis, Evidence, ProjectSnapshot, ProjectState
@@ -30,6 +32,7 @@ class SQLCoordinationRepository(
     AgentRecords,
     SourceImportRecords,
     BimRevisionRecords,
+    EngineeringRecords,
 ):
     """Project facts and evidence plus the unchanged, single-session repository contract."""
 
@@ -122,6 +125,19 @@ class SQLCoordinationRepository(
         return BIMIndex.model_validate(row.payload) if row else None
 
     def save_evidence(self, item: Evidence) -> None:
+        snapshot = self.snapshot(item.snapshot_id)
+        if item.source_revision_id:
+            revision = self.source_revision(
+                snapshot.project_id, item.source_id, item.source_revision_id
+            )
+            if revision.sha256 != item.source_revision:
+                raise Conflict("Evidence source hash does not match its engineering revision")
+        else:
+            revision = self.source_revision_by_hash(
+                snapshot.project_id, item.source_id, item.source_revision
+            )
+            if revision:
+                item = item.model_copy(update={"source_revision_id": revision.id})
         self.session.add(
             EvidenceRow(
                 id=item.id,

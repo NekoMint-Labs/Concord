@@ -61,10 +61,30 @@ class Settings(BaseSettings):
     temporal_address: str = "127.0.0.1:7233"
     temporal_namespace: str = "default"
     temporal_task_queue: str = "cca-coordination"
-    max_upload_bytes: int = Field(default=25 * 1024 * 1024, ge=1)
+    max_upload_bytes: int = Field(default=512 * 1024 * 1024, ge=1)
+    upload_format_limits: dict[str, int] = Field(
+        default_factory=lambda: {
+            ".ifc": 512 * 1024 * 1024,
+            ".dxf": 256 * 1024 * 1024,
+            ".pdf": 128 * 1024 * 1024,
+            "*": 25 * 1024 * 1024,
+        }
+    )
+
+    def upload_limit(self, filename: str) -> int:
+        return min(
+            self.max_upload_bytes,
+            self.upload_format_limits.get(
+                Path(filename).suffix.lower(), self.upload_format_limits["*"]
+            ),
+        )
 
     @model_validator(mode="after")
     def validate_profile(self) -> Self:
+        if "*" not in self.upload_format_limits or any(
+            not isinstance(v, int) or v <= 0 for v in self.upload_format_limits.values()
+        ):
+            raise ValueError("Upload limits need a positive fallback and positive format limits")
         self.data_dir = self.data_dir.resolve()
         if not self.database_url:
             self.database_url = f"sqlite:///{self.data_dir / 'app.db'}"

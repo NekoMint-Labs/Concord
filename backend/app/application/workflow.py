@@ -8,6 +8,7 @@ from app.application.coordination import CoordinationService
 
 if TYPE_CHECKING:
     from app.application.capability_jobs import CapabilityJobService
+    from app.application.rechecks import ReCheckService
 
 
 from app.domain.actions import Principal
@@ -28,6 +29,7 @@ class WorkflowCoordinator:
         self.factory, self.analysis = factory, analysis
         self.coordination, self.actions = coordination, actions
         self.capabilities: CapabilityJobService | None = None
+        self.rechecks: ReCheckService | None = None
 
     def begin(self, run_id: str, *, generation: int | None = None) -> str:
         with self.factory.open() as repo:
@@ -49,6 +51,10 @@ class WorkflowCoordinator:
                 # Keep the exact proposal/approval identity when authoritative facts match.
                 return run.status
         try:
+            if run.category == "engineering_recheck":
+                if self.rechecks is None:
+                    raise PermissionDenied("ReCheck worker is not initialized")
+                return self.rechecks.process(run_id, generation=run.generation)
             if run.category not in {"coordination", "investigation"}:
                 if self.capabilities is None:
                     raise PermissionDenied("Capability worker is not initialized")
