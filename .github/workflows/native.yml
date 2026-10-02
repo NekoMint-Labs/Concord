@@ -87,6 +87,7 @@ jobs:
             desktop/src-tauri/target/release/bundle/
             artifacts/native-sidecar.json
             artifacts/native-agent.json
+            artifacts/native-engineering.json
             artifacts/native-webview.json
             artifacts/native-webdriver.log
             artifacts/native-webview-failure.png
