@@ -51,7 +51,9 @@ try:
             finding = repo.findings(project.id)[0]
             check = repo.rechecks(project.id, finding.id)[0]
             run = repo.run(check.id)
-        if run.status == 'COMPLETED':
+        # SQLite may observe the worker commit between these separate reads.
+        # Wait for both records before asserting the published outcome.
+        if run.status == 'COMPLETED' and check.outcome is not None:
             break
         time.sleep(0.05)
     assert run.runtime == 'dbos' and run.status == 'COMPLETED', run
