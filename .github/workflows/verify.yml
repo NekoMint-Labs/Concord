@@ -152,11 +152,21 @@ jobs:
         with:
           python-version: '3.12'
       - run: uv sync --frozen --group dev --extra storage --extra server
+      - name: Check out pinned official MinIO source (upstream distributes source only)
+        uses: actions/checkout@v7
+        with:
+          repository: minio/minio
+          # RELEASE.2025-10-15T17-29-55Z
+          ref: 9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a
+          path: .verification-work/minio-source
+          persist-credentials: false
+      - name: Build the real S3 fixture without the unavailable MinIO registry image
+        run: docker build --file scripts/ci/minio.Dockerfile --tag cca-minio-ci:local .verification-work/minio-source
       - name: Ephemeral loopback-only S3 compatibility fixture (not a production deployment)
         run: |
           docker run --detach --name cca-minio --publish 127.0.0.1:19000:9000 \
             --env MINIO_ROOT_USER=cca-local-test --env MINIO_ROOT_PASSWORD=cca-local-test-secret \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+            cca-minio-ci:local server /data --address :9000 --console-address :9001
           for attempt in $(seq 1 40); do
             if curl --fail --silent http://127.0.0.1:19000/minio/health/live; then exit 0; fi
             sleep 1
@@ -170,6 +180,11 @@ jobs:
         run: |
           uv run --frozen --no-sync pytest -q backend/tests/integration/test_storage_services.py --junitxml=artifacts/storage.xml
           uv run --frozen --no-sync python scripts/assert_junit.py artifacts/storage.xml
+      - name: Preserve storage-service diagnostics
+        if: always()
+        run: |
+          mkdir -p artifacts
+          docker logs cca-minio > artifacts/minio.log 2>&1 || true
       - name: Remove only this job's object-storage container
         if: always()
         run: docker rm --force cca-minio || true
@@ -177,7 +192,9 @@ jobs:
         if: always()
         with:
           name: storage-results
-          path: artifacts/*.xml
+          path: |
+            artifacts/*.xml
+            artifacts/minio.log
           retention-days: 14
 
   sdk-runtimes:
