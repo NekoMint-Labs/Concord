@@ -1,19 +1,40 @@
-"""Local, bounded Docling parsing. No URLs or remote document uploads are accepted."""
+"""Local, bounded Docling parsing with opt-in, pre-provisioned Chinese RapidOCR."""
 
+import csv
 import hashlib
 import io
 import zipfile
 from pathlib import Path, PurePosixPath
 from threading import Lock
 
+from app.adapters.document_normalization import normalize_conversion, normalize_document
 from app.domain.errors import CapabilityUnavailable, DomainError, ProviderError
-from app.domain.models import new_id
 from app.ports.providers import DocumentChunk
+
+__all__ = [
+    "DoclingDocumentParser",
+    "normalize_conversion",
+    "normalize_document",
+    "validate_office_archive",
+]
+
+IMAGE_FORMATS = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
 
 
 class DoclingDocumentParser:
-    def __init__(self, max_bytes: int = 25 * 1024 * 1024, max_pages: int = 150, *, converter=None):
+    def __init__(
+        self,
+        max_bytes: int = 25 * 1024 * 1024,
+        max_pages: int = 150,
+        *,
+        converter=None,
+        ocr: bool = False,
+        ocr_model_directory: Path | None = None,
+    ):
+        if max_bytes < 1 or max_pages < 1:
+            raise ValueError("Document limits must be positive")
         self.max_bytes, self.max_pages = max_bytes, max_pages
+        self.ocr, self.ocr_model_directory = ocr, ocr_model_directory
         self._converter = converter
         self._conversion_lock = Lock()
 
@@ -22,43 +43,76 @@ class DoclingDocumentParser:
             try:
                 from docling.datamodel.base_models import InputFormat
                 from docling.datamodel.pipeline_options import PdfPipelineOptions
-                from docling.document_converter import DocumentConverter, PdfFormatOption
+                from docling.document_converter import (
+                    DocumentConverter,
+                    ImageFormatOption,
+                    PdfFormatOption,
+                )
             except ImportError as exc:
                 raise CapabilityUnavailable("Install the documents extra for Docling") from exc
-            options = PdfPipelineOptions(do_ocr=False, do_table_structure=True)
+            options = PdfPipelineOptions(do_ocr=self.ocr, do_table_structure=True)
             options.enable_remote_services = False
+            if self.ocr:
+                options.ocr_options = self._ocr_options()
+                options.artifacts_path = self.ocr_model_directory
             self._converter = DocumentConverter(
                 allowed_formats=[
                     InputFormat.PDF,
                     InputFormat.DOCX,
                     InputFormat.PPTX,
+                    InputFormat.XLSX,
+                    InputFormat.CSV,
                     InputFormat.HTML,
                     InputFormat.MD,
+                    *([InputFormat.IMAGE] if self.ocr else []),
                 ],
-                format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)},
+                format_options={
+                    InputFormat.PDF: PdfFormatOption(pipeline_options=options),
+                    InputFormat.IMAGE: ImageFormatOption(pipeline_options=options),
+                },
             )
         return self._converter
+
+    def _ocr_options(self):
+        try:
+            import onnxruntime  # noqa: F401
+            from docling.datamodel.pipeline_options import RapidOcrOptions
+        except ImportError as exc:
+            raise CapabilityUnavailable("Local RapidOCR requires the ONNX Runtime pack") from exc
+        folder = self.ocr_model_directory
+        if folder is None or not folder.is_dir():
+            raise CapabilityUnavailable(
+                "Prefetch local Docling/RapidOCR model artifacts before OCR"
+            )
+        ocr_files = tuple((folder / "RapidOcr").glob("*.onnx"))
+        if len(ocr_files) < 3 or not all(path.stat().st_size for path in ocr_files):
+            raise CapabilityUnavailable("Local RapidOCR ONNX artifacts are incomplete")
+        return RapidOcrOptions(lang=["ch"], backend="onnxruntime")
 
     def parse(self, content: bytes, filename: str) -> list[DocumentChunk]:
         if len(content) > self.max_bytes or not content:
             raise DomainError("Document is empty or exceeds size limit")
         suffix = Path(filename).suffix.lower()
-        if suffix in {".txt", ".csv", ".log"}:
-            # Selecting the advanced parser must not disable the existing text formats.
+        if suffix in {".txt", ".log"} or (suffix == ".csv" and not _has_csv_structure(content)):
             from app.adapters.documents_light import LightweightDocumentParser
 
             return LightweightDocumentParser().parse(content, filename)
-        if suffix not in {".pdf", ".docx", ".pptx", ".html", ".md"}:
+        if suffix in IMAGE_FORMATS and not self.ocr:
+            raise CapabilityUnavailable(
+                "Image ingestion requires explicit local RapidOCR processing"
+            )
+        if (
+            suffix
+            not in {".pdf", ".docx", ".pptx", ".xlsx", ".csv", ".html", ".md"} | IMAGE_FORMATS
+        ):
             raise DomainError("Docling parser does not accept this file format")
-        if suffix in {".docx", ".pptx"}:
+        if suffix in {".docx", ".pptx", ".xlsx"}:
             validate_office_archive(content)
         try:
             from docling.datamodel.base_models import DocumentStream
         except ImportError as exc:
             raise CapabilityUnavailable("Docling document streams are unavailable") from exc
         try:
-            # The lazily initialized converter owns reusable model/pipeline state.
-            # Do not initialize or drive it concurrently from durable worker threads.
             with self._conversion_lock:
                 result = self._get_converter().convert(
                     DocumentStream(name=Path(filename).name, stream=io.BytesIO(content)),
@@ -71,52 +125,15 @@ class DoclingDocumentParser:
             raise ProviderError(
                 "Local Docling conversion failed; no project state was changed"
             ) from exc
-        return normalize_conversion(result, hashlib.sha256(content).hexdigest())
+        return normalize_conversion(result, hashlib.sha256(content).hexdigest(), ocr=self.ocr)
 
 
-def normalize_conversion(result, source_hash: str) -> list[DocumentChunk]:
-    status = getattr(result, "status", None)
-    if getattr(status, "value", status) != "success":
-        # A partial conversion cannot silently become complete evidence. Keep the
-        # original import and failed job for inspection/retry; do not publish chunks.
-        raise ProviderError(
-            "Docling conversion did not fully succeed; partial output was not published"
-        )
-    return normalize_document(result.document, source_hash)
-
-
-def normalize_document(document, source_hash: str) -> list[DocumentChunk]:
-    """Normalize actual Docling items; page numbers are never invented for Office/HTML."""
-    chunks = []
-    for item, _depth in document.iterate_items():
-        value = getattr(item, "text", None)
-        if not value and hasattr(item, "export_to_markdown"):
-            value = item.export_to_markdown(doc=document)
-        if not isinstance(value, str) or not value.strip():
-            continue
-        provenance = getattr(item, "prov", None) or []
-        pages = sorted({p.page_no for p in provenance if getattr(p, "page_no", None) is not None})
-        location = str(getattr(item, "self_ref", "document"))
-        if len(pages) > 1:
-            location += "; pages=" + ",".join(map(str, pages))
-        for offset in range(0, len(value), 2400):
-            chunks.append(
-                DocumentChunk(
-                    id=new_id(),
-                    text=value[offset : offset + 2400],
-                    page=pages[0] if pages else None,
-                    location=f"{location}; offset={offset}",
-                    source_hash=source_hash,
-                    parser="docling-local-no-ocr",
-                )
-            )
-            if len(chunks) > 5000:
-                raise DomainError("Document exceeded the normalized chunk limit")
-    if not chunks:
-        raise DomainError(
-            "No text could be extracted; OCR is disabled and scanned pages need explicit processing"
-        )
-    return chunks
+def _has_csv_structure(content: bytes) -> bool:
+    try:
+        rows = csv.reader(io.StringIO(content.decode("utf-8-sig")))
+        return any(len(row) > 1 for _, row in zip(range(32), rows, strict=False))
+    except (UnicodeError, csv.Error) as exc:
+        raise DomainError("CSV import requires readable UTF-8 CSV") from exc
 
 
 def validate_office_archive(

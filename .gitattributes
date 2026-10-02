@@ -1,0 +1,9 @@
+# Golden source hashes must identify the same bytes on Windows and Linux.
+fixtures/coordination-project/R*/** -text
+# PDF offsets and generated DXF records are binary fixture data for Git review.
+fixtures/coordination-project/R*/*.pdf binary
+fixtures/coordination-project/R*/*.dxf binary
+# These SDK-generated text sources use CRLF as part of the fixture bytes.
+fixtures/coordination-project/R*/*.ifc whitespace=cr-at-eol
+fixtures/coordination-project/R*/*.ids whitespace=cr-at-eol
+fixtures/coordination-project/R*/*.csv whitespace=cr-at-eol

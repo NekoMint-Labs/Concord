@@ -1,0 +1,26 @@
+{
+  "synthetic": true,
+  "global_ids": {
+    "beam": "3M0KwyPFrBT9KwklhqZa8W",
+    "duct": "0wJm_7P3jD4uBWYGw9xyVx"
+  },
+  "sha256": {
+    "R1/architectural-drawing.pdf": "7023f024afe196418b6f7e8205f0f3698a7e5b0169a7f1e4494b77049d6b1103",
+    "R1/coordination-log.csv": "a57fdae7b7d0ea46a4eeefffd016af9cf88207f0f5127537267daa1112e1b2db",
+    "R1/coordination-log.xlsx": "2d00d6cc17504be96565468e15838d3731d8a31cbbcbe8a351a209540c64cba7",
+    "R1/mep-drawing.pdf": "65717e83bf4237ee0e6ce08524be8c0d8e42c9d4020c775d2dff50c53750b278",
+    "R1/mep.ifc": "e1d8528d70c5bb3819b7b7012a59e76e574a1912a4205b984ab189f918cd640d",
+    "R1/requirements.ids": "94462c74a7ff3ebd278c546465cde9f25e56aae4b64d8d3718eab3e3c74cec65",
+    "R1/specification.pdf": "a542fe4b5a792239cfc80ee61573cfb221fbc4da3aa8ad1b9b7746c6a467fe69",
+    "R1/structural-drawing.dxf": "d2624534e5c67e5694d019b65ec8d9162899c85478fbfba4ec8d40c66359ae1c",
+    "R1/structural-drawing.pdf": "2592c689bfa656fca2f7123d66427d33c745e1ee2df5f74c3f7b2a90c316ee40",
+    "R1/structure.ifc": "365ad896359fc90afb15c6bfa79ecf0a74d3ed9fe7ebbdcad75839247aeb563c",
+    "R2/design-change-023-scan.png": "3bbbcf2ea1feb7d1a3ffd0c3b8cb4252b4e85fd67e9cb1666fdf16aca7b150a6",
+    "R2/design-change-023.docx": "f4f552c13e822893de636dc9658e746bf1543106dac7967c1322b3b0a006c4ab",
+    "R2/structural-drawing.dxf": "4de02090069f6efb797a33c73920248a7205e9bfeb31e090bf37a590d171d41b",
+    "R2/structural-drawing.pdf": "846e87c9878cb91274373b6c48f2f2b4496a9a784351e55985a345dced141a9c",
+    "R2/structure.ifc": "891acd8b37b0d8b3e9a71822af622a6f9901978ad078aa6b700847243742f097",
+    "R3/mep-drawing.pdf": "56f2417b71c226f4c524ee88ccdbc948489a0e769de61284ce6ea416972214c2",
+    "R3/mep.ifc": "d354982e3cb1b7616b35ce7e68f6911e2c502f1f40e1584248db7cc440ac7241"
+  }
+}
