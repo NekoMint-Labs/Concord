@@ -73,15 +73,16 @@ class EngineeringRecords(SessionRecords):
         return [Finding.model_validate(r.payload) for r in self.session.scalars(query)]
 
     def dependent_findings(self, project_id: str, source_id: str) -> list[Finding]:
-        query = (
-            select(FindingRow)
-            .join(DependencyRow)
-            .where(
-                DependencyRow.project_id == project_id,
-                DependencyRow.source_id == source_id,
-                FindingRow.state == "CONFIRMED",
-            )
-            .distinct()
+        matching_ids = select(DependencyRow.finding_id).where(
+            DependencyRow.project_id == project_id,
+            DependencyRow.source_id == source_id,
+        )
+        # Membership deduplicates dependencies without comparing JSON payloads,
+        # which PostgreSQL's JSON type does not support for SELECT DISTINCT.
+        query = select(FindingRow).where(
+            FindingRow.project_id == project_id,
+            FindingRow.id.in_(matching_ids),
+            FindingRow.state == "CONFIRMED",
         )
         return [Finding.model_validate(r.payload) for r in self.session.scalars(query)]
 

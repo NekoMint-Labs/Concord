@@ -173,6 +173,33 @@ def test_real_postgres_scoped_document_search_before_limit(postgres_services):
     assert svc.documents.search(other, "needle", source_hashes=(revision.sha256,)) == []
 
 
+def test_real_postgres_dependent_findings_deduplicate_and_isolate(postgres_services):
+    from app.domain.actions import Principal
+    from app.domain.engineering import FindingDecision
+    from test_engineering_coordination import setup_finding
+
+    svc = postgres_services
+    admin = Principal(id="postgres-dependencies-admin", role="admin")
+    project, source, _, first, _, draft = setup_finding(svc, admin)
+    second_dependency = draft.dependencies[0].model_copy(
+        update={"capability": "fixture-second-check"}
+    )
+    second = svc.findings.create(
+        project.id,
+        draft.model_copy(update={"dependencies": (*draft.dependencies, second_dependency)}),
+        admin,
+    )
+    svc.findings.decide(project.id, second.id, FindingDecision(decision="CONFIRMED"), admin)
+    proposed = svc.findings.create(project.id, draft, admin)
+    with svc.factory.open() as repo:
+        selected = repo.dependent_findings(project.id, source.id)
+        assert len(selected) == 2
+        assert {item.id for item in selected} == {first.id, second.id}
+        assert proposed.id not in {item.id for item in selected}
+        assert repo.dependent_findings("another-project", source.id) == []
+        assert repo.dependent_findings(project.id, "another-source") == []
+
+
 def test_real_postgres_concurrent_approval_and_receipt(postgres_services):
     from concurrent.futures import ThreadPoolExecutor
 
