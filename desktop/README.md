@@ -122,3 +122,22 @@ signed, notarized, or distributable release.
 
 See [STATUS.md](../STATUS.md) and [VERIFICATION.md](../VERIFICATION.md) for the current
 verification boundary.
+
+## Revision-aware engineering verification (#18)
+
+Native file reads use per-format bounds: IFC 512 MiB, PDF 128 MiB and the existing
+document formats 25 MiB. The backend remains authoritative and may apply a smaller
+configured limit. The native picker, main-window restriction, loopback connection,
+per-launch token and redirect prohibition remain in force.
+
+After building the sidecar, run:
+
+```sh
+python scripts/engineering_lifecycle_smoke.py --sidecar artifacts/sidecar/cca-sidecar.exe --output artifacts/native-engineering.json
+```
+
+This exercises real HTTP/DBOS, imported document Evidence with authoritative revision
+IDs, persisted Finding dependencies, automatic ReCheck, crash/restart and rejection of
+closure without a registered engineering detector. It does not qualify detector logic
+or Tauri WebView interaction. The native workflow also retains its existing WebView
+and IFC checks. This companion change depends on the #18 shared backend contract.

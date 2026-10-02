@@ -45,6 +45,7 @@ jobs:
           if [ "$RUNNER_OS" = "Windows" ]; then SIDECAR="${SIDECAR}.exe"; fi
           uv run --frozen --no-sync python scripts/http_smoke.py --runtime dbos --profile desktop --sidecar "$SIDECAR" --crash-restart --output artifacts/native-sidecar.json
           uv run --frozen --no-sync python scripts/agent_lifecycle_smoke.py --sidecar "$SIDECAR" --output artifacts/native-agent.json
+          uv run --frozen --no-sync python scripts/engineering_lifecycle_smoke.py --sidecar "$SIDECAR" --output artifacts/native-engineering.json
       - name: Install the native WebDriver intermediary
         if: runner.os != 'macOS'
         run: cargo install tauri-driver --locked --version '^2.0'

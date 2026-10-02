@@ -30,17 +30,18 @@ pub async fn import_document(app: AppHandle, window: WebviewWindow, state: State
     let path = selected.into_path().map_err(|_| "Only local files can be imported")?;
     let file = tokio::fs::File::open(&path).await.map_err(|e| e.to_string())?;
     let metadata = file.metadata().await.map_err(|e| e.to_string())?;
-    if !metadata.is_file() || metadata.len() > 25 * 1024 * 1024 {
-        return Err("Select a regular file no larger than 25 MiB".into());
-    }
     let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    let limit = crate::import_policy::import_limit(&extension);
+    if !metadata.is_file() || metadata.len() > limit {
+        return Err(format!("Select a regular file no larger than {} MiB for this format", limit / (1024 * 1024)));
+    }
     if !["txt", "md", "csv", "log", "pdf", "docx", "pptx", "html", "ifc"].contains(&extension.as_str()) {
         return Err("File type is not allowed".into());
     }
     let name = path.file_name().and_then(|s| s.to_str()).ok_or("Invalid filename")?.to_string();
     let mut data = Vec::new();
-    file.take(25 * 1024 * 1024 + 1).read_to_end(&mut data).await.map_err(|e| e.to_string())?;
-    if data.len() > 25 * 1024 * 1024 { return Err("File changed and exceeds the size limit".into()); }
+    file.take(limit + 1).read_to_end(&mut data).await.map_err(|e| e.to_string())?;
+    if data.len() as u64 > limit { return Err("File changed and exceeds the size limit".into()); }
     let connection = backend::ready(state.inner()).await?;
     let target = if extension == "ifc" { "bim/import" } else { "documents" };
     let form = reqwest::multipart::Form::new().part("file", reqwest::multipart::Part::bytes(data).file_name(name));

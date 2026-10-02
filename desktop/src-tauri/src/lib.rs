@@ -2,6 +2,7 @@ mod backend;
 mod endpoint;
 mod commands;
 mod data_dir;
+mod import_policy;
 
 use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use tauri::Manager;
