@@ -151,6 +151,50 @@ describe("native donor snapshot comparison", () => {
     expect(next.cacheHit).toBe(false);
     expect(next.snapshots).toHaveLength(6);
   });
+  it("invalidates preparation when the cache is cleared between batches", async () => {
+    const many = db(
+      Array.from({ length: 300 }, (_, index) => entity(String(index))),
+    );
+    const signal = new AbortController().signal;
+    await expect(
+      prepareCadSnapshots(many, hash, {}, signal, async () =>
+        clearCadSnapshots(),
+      ),
+    ).rejects.toThrow("CAD snapshot preparation invalidated");
+    const next = await prepareCadSnapshots(before, hash, {}, signal);
+    expect(next.cacheHit).toBe(false);
+    expect(next.snapshots).toHaveLength(6);
+  });
+  it("keeps fresh cached results when an invalidated preparation resumes", async () => {
+    const many = db(
+      Array.from({ length: 300 }, (_, index) => entity(String(index))),
+    );
+    const signal = new AbortController().signal;
+    let resume!: () => void;
+    let notifyPaused!: () => void;
+    const paused = new Promise<void>((resolve) => {
+      notifyPaused = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const stale = prepareCadSnapshots(many, hash, {}, signal, () => {
+      notifyPaused();
+      return gate;
+    });
+    const rejection = expect(stale).rejects.toThrow(
+      "CAD snapshot preparation invalidated",
+    );
+    await paused;
+    clearCadSnapshots();
+    const fresh = await prepareCadSnapshots(before, hash, {}, signal);
+    expect(fresh.cacheHit).toBe(false);
+    resume();
+    await rejection;
+    const warm = await prepareCadSnapshots(db([]), hash, {}, signal);
+    expect(warm.cacheHit).toBe(true);
+    expect(warm.snapshots).toBe(fresh.snapshots);
+  });
   it("bounds traversal even when all entities are excluded", async () => {
     const hidden = entity("h", { dxfTypeName: "HATCH" });
     await expect(

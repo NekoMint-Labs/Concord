@@ -1,6 +1,6 @@
 # Issue #17 engineering capability status
 
-This branch contains Developer C's independent backend and viewer prework for Issue #17. The complete Issue is **not implemented**. None of the new adapters is wired into the product API, runtime, or source publication path.
+This branch contains Developer C's independent backend and viewer prework for Issue #17. The prework is published in Draft PR #21 on `feat/17-engineering-capabilities`. The complete Issue is **not implemented**. None of the new adapters is wired into the product API, runtime, or source publication path.
 
 ## Implemented and locally qualified
 
@@ -250,8 +250,8 @@ format check; those passes are not a claim that the whole formatting gate passes
   diagnostics recorded geometry/tree hits and zero spatial-tree builds. These
   measurements do not qualify large-model throughput or one-total-cold-parse.
 
-All engineering results remain isolated prework. Issue #17 is not complete and
-this branch has not been uploaded or submitted as a PR.
+All engineering results remain isolated prework. Issue #17 is not complete;
+Draft PR #21 records the work for review.
 
 Additional document surface evidence: real Docling XLSX exposes 22 addressable
 cells across Coordination and Requirements sheets; real DOCX exposes the beam
@@ -290,10 +290,10 @@ The final 13-element IFC sample opened in 697.6 ms cold and 238.4 ms warm.
 These are sample timings only; the cold double-parse and large-model acceptance
 gaps remain as documented above.
 
-Full Issue #17 remains unfinished: A's contract/runtime PR #19 is still open,
-canonical publication/cache/job/recheck integration is unavailable, and the
+Full Issue #17 remains unfinished: A's contract/runtime seam is not integrated
+on this branch, canonical publication/cache/job/recheck is unavailable, and the
 previously listed connector, cold-parse and packaging/license work remains.
-No feature branch changes have been pushed and no Issue #17 PR has been opened.
+The prework is tracked in Draft PR #21.
 
 ### October 3 Drawing artifact cache continuation
 
@@ -327,7 +327,7 @@ No proprietary native reader or invented host export API is introduced.
 
 Canonical A-owned publication/cache/jobs/recheck and B-owned product composition
 remain pending. CAD/IFC cold source reuse and real native host connector work
-remain acceptance items. No changes have been uploaded.
+remain acceptance items. The published prework does not close Issue #17.
 
 Final Drawing cache continuation checks: 144 frontend unit tests and all 21
 combined real browser scenarios passed. Frontend typecheck, product build,
@@ -374,8 +374,9 @@ The fragment importer still owns internal geometry/property passes. Removing
 Concord's extra spatial-tree parse does not prove one total syntax parse across
 those importer passes. CAD display/compare source reuse, large-model/native
 qualification, real host connectors and A's canonical integration remain open.
-PR #19 is still open at head `3c16dd98af8aed63da93c2fc3994f6ab00354228`.
-No Issue #17 changes have been pushed and no PR has been opened.
+The reviewed PR #19 head was `3c16dd98af8aed63da93c2fc3994f6ab00354228`;
+its current review/merge state is not established by this qualification.
+These adapter qualifications are included in Draft PR #21.
 
 Final combined verification: 144 root frontend unit tests and all 22 real
 browser scenarios passed (12 Drawing/PDF, two CAD, two Docling Office, six
@@ -417,7 +418,39 @@ The local CAD navigation target now carries an optional bounded native `layer` h
 Selections report the loaded entity layer, and navigation rejects a target whose layer
 no longer matches the loaded revision. This is an adapter-local bridge for the future
 canonical `ViewerTarget.layer` field; it does not introduce a second persisted contract.
-PR #19 is still open; the Issue is not ready for upload as complete.
+Canonical integration still depends on A's contract/runtime seam. Issue #17
+is not ready to be marked complete.
 
 
 Connector boundary continuation on October 3, 2026: the staging adapter now exposes deterministic host capability descriptors and rejects unknown hosts before extension policy evaluation. Twenty connector tests and nineteen resource-limit tests passed with a repository-local temporary directory; Ruff and changed-file Pyright passed after formatting.
+
+
+### October 3 CAD cache invalidation continuation
+
+Clearing the viewer-local CAD snapshot cache now invalidates any preparation
+started before the clear. Old work rejects after yielding and before cache
+publication, so completed old work cannot repopulate a cleared cache or replace
+newer cached results. Abort signals remain authoritative and the donor comparison
+algorithm, cache keys, limits and source/output contracts are unchanged.
+
+Two regression tests first reproduced stale cache repopulation and replacement
+of a fresh cached result. Both pass with the generation guard. All 39 CAD
+snapshot/worker tests and 12 host boundary tests passed using the locked frontend
+Vitest 3.2.7 runtime. The existing isolated Vitest 4.1.4/V8 qualification harness
+measured 100% statements, branches, functions and lines for cadSnapshots and
+cadCompareClient; this is scoped coverage, not repository-wide coverage.
+All 145 root frontend unit tests also passed.
+
+All four real CAD browser scenarios passed, including native layer navigation
+and rejection of a mismatched layer, Golden comparison, cooperative preparation,
+and failure cleanup. Golden cold preparation/diff measured 1.1/1.0 ms;
+warm reuse measured 0/0.2 ms. The 1,028-snapshot sample yielded eight times,
+with 106.4 ms preparation and 2.1 ms diff. Independent CAD and product frontend
+typechecks/builds passed. The root frontend lint command still reports formatting
+issues in 88 unchanged files; no formatting sweep is included in this change.
+
+No dependency manifest, lockfile, shared API/domain, workflow or B-owned
+composition file is changed. Frontend dependencies were restored offline with
+pnpm 10.17.1 and the existing frozen lockfile. GitHub API review metadata could
+not be refreshed because its TLS certificate did not match api.github.com.
+The review/merge state must be rechecked before shared integration proceeds.

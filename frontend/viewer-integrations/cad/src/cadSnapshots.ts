@@ -11,6 +11,7 @@ export const CAD_SNAPSHOT_LIMIT = 32 * 1024 * 1024;
 const ENTITY_LIMIT = 100000;
 const cache = new Map<string, { snapshots: EntitySnapshot[]; bytes: number }>();
 let cacheBytes = 0;
+let cacheGeneration = 0;
 
 /** Freeze donor settings before any asynchronous preparation or dispatch. */
 export function snapshotCadOptions(
@@ -60,6 +61,7 @@ export function cadSnapshotKey(hash: string, options: AcApDiffCompareOptions) {
   return `${CAD_ENGINE}:${hash.toLowerCase()}:${JSON.stringify(acapResolveSnapshotOptions(options))}`;
 }
 export function clearCadSnapshots() {
+  ++cacheGeneration;
   cache.clear();
   cacheBytes = 0;
 }
@@ -75,6 +77,12 @@ export async function prepareCadSnapshots(
 ) {
   const settings = snapshotCadOptions(options);
   signal.throwIfAborted();
+  const generation = cacheGeneration;
+  const assertCurrent = () => {
+    signal.throwIfAborted();
+    if (generation !== cacheGeneration)
+      throw new Error("CAD snapshot preparation invalidated");
+  };
   const key = cadSnapshotKey(sourceHash, settings);
   const existing = cache.get(key);
   if (existing) {
@@ -107,11 +115,12 @@ export async function prepareCadSnapshots(
     if (visited % 128 === 0 || performance.now() - sliceStarted >= 4) {
       ++yields;
       await yieldControl();
-      signal.throwIfAborted();
+      assertCurrent();
       sliceStarted = performance.now();
     }
   }
-  signal.throwIfAborted();
+  // A cleared viewer lifetime must not be repopulated by an older preparation.
+  assertCurrent();
   const raced = cache.get(key);
   if (raced) {
     cache.delete(key);
