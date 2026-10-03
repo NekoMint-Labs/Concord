@@ -230,6 +230,7 @@ export function useConcordAgent({
       revisionLabel?: string,
       fromRevisionId?: string,
       fromRevisionLabel?: string,
+      elementIds: string[] = [],
     ) => {
       setScope({
         sourceId,
@@ -241,7 +242,7 @@ export function useConcordAgent({
         fromRevisionId,
         fromRevisionLabel,
         workPackageId: null,
-        elementIds: [],
+        elementIds,
       });
     },
     [sources],

@@ -434,6 +434,14 @@ function ProjectApplication({
                 setTab("bim");
               }}
               onInvestigateWork={(context) => {
+                agent.sourceContext(
+                  context.sourceId,
+                  context.revisionId,
+                  context.revisionLabel,
+                  context.fromRevisionId,
+                  context.fromRevisionLabel,
+                  context.elementIds,
+                );
                 setInspectorView("investigation");
                 setDetailsOpen(true);
                 void agent.startInvestigation("调查此资料版本与比较影响", {
