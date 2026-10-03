@@ -4,7 +4,9 @@ import type {
   CadComparison,
   CadNavigation,
   CadController,
+  CadTarget,
 } from "./cadTypes";
+import { toCadNavigation, toCadTarget } from "./cadContract";
 import {
   snapshotCadSources,
   verifyCadSource,
@@ -21,9 +23,9 @@ export default function CadSurface({
 }: {
   before: CadSource;
   after?: CadSource;
-  target?: CadNavigation;
+  target?: CadTarget;
   onComparison?: (result: CadComparison) => void;
-  onSelection?: (reference: CadNavigation) => void;
+  onSelection?: (reference: CadTarget) => void;
   onReady?: (controller: CadController) => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
@@ -77,27 +79,22 @@ export default function CadSurface({
       element.src = "about:blank";
     };
     const client: CadController = {
-      navigate: (target) => {
-        if (!live || !opened)
-          return Promise.reject(new Error("CAD viewer is not ready"));
-        try {
-          validateCadTarget(target);
-        } catch (error) {
-          return Promise.reject(error);
-        }
+      navigate: async (target) => {
+        if (!live || !opened) throw new Error("CAD viewer is not ready");
+        if (!sources) throw new Error("CAD sources are not loaded");
+        const localTarget = toCadNavigation(target, sources);
         if (pending.size >= 16)
-          return Promise.reject(
-            new Error("Too many pending CAD navigation requests"),
-          );
+          throw new Error("Too many pending CAD navigation requests");
         const id = crypto.randomUUID();
-        return new Promise((resolve, reject) => {
+        const result = await new Promise<CadNavigation>((resolve, reject) => {
           const timeout = setTimeout(() => {
             pending.delete(id);
             reject(new Error("CAD entity navigation timed out"));
           }, 15000);
           pending.set(id, { resolve, reject, timer: timeout });
-          send({ type: "navigate", requestId: id, target });
+          send({ type: "navigate", requestId: id, target: localTarget });
         });
+        return toCadTarget(result, sources);
       },
     };
     const receive = (event: MessageEvent) => {
@@ -132,7 +129,14 @@ export default function CadSurface({
         return;
       }
       if (message.type === "selected" && opened) {
-        callbacks.current.onSelection?.(message.target);
+        try {
+          if (!sources) throw new Error("CAD sources are not loaded");
+          callbacks.current.onSelection?.(toCadTarget(message.target, sources));
+        } catch (failure) {
+          setError(
+            String(failure instanceof Error ? failure.message : failure),
+          );
+        }
         return;
       }
       const request = pending.get(message.requestId);

@@ -1,4 +1,7 @@
+import type { components } from "../../api/schema";
 import type { DrawingSource } from "../drawing/pdfDiffTypes";
+
+export type CadTarget = components["schemas"]["CadTarget"];
 export type CadSource = DrawingSource & { name: string };
 export interface CadChangeCandidate {
   kind: "added" | "deleted" | "modified";
@@ -17,7 +20,7 @@ export interface CadComparison {
   warnings: string[];
 }
 
-/** Local navigation until A's canonical ViewerTarget seam lands. */
+/** Viewer-local navigation payload; sourceHash never crosses the canonical contract. */
 export interface CadViewBounds {
   minX: number;
   minY: number;
@@ -36,5 +39,5 @@ export interface CadNavigation {
 }
 
 export interface CadController {
-  navigate(target: CadNavigation): Promise<CadNavigation>;
+  navigate(target: CadTarget): Promise<CadTarget>;
 }

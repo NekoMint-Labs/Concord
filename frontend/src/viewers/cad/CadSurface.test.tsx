@@ -2,7 +2,7 @@ import { webcrypto } from "node:crypto";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import CadSurface from "./CadSurface";
-import type { CadNavigation, CadSource } from "./cadTypes";
+import type { CadNavigation, CadSource, CadTarget } from "./cadTypes";
 
 vi.mock("./cadValidation", async (load) => ({
   ...(await load<typeof import("./cadValidation")>()),
@@ -15,10 +15,10 @@ const source: CadSource = {
   revisionId: "revision-one",
   sourceHash: "a".repeat(64),
 };
-const target = (entityId: string): CadNavigation => ({
-  sourceRevisionId: source.revisionId,
-  sourceHash: source.sourceHash,
-  entityId,
+const target = (entityId: string): CadTarget => ({
+  kind: "cad",
+  source_revision_id: source.revisionId,
+  entity_id: entityId,
   layer: "STRUCTURE",
 });
 
@@ -87,11 +87,16 @@ it("keeps the latest target's successful navigation when the initial request fai
   view.rerender(<CadSurface before={source} target={second} />);
   await waitFor(() => expect(native.requests()).toHaveLength(2));
   const [oldRequest, currentRequest] = native.requests();
-  expect(currentRequest.target).toEqual(second);
+  expect(currentRequest.target).toEqual({
+    sourceRevisionId: source.revisionId,
+    sourceHash: source.sourceHash,
+    entityId: "32",
+    layer: "STRUCTURE",
+  });
   await native.receive({
     type: "navigated",
     requestId: currentRequest.requestId,
-    target: second,
+    target: currentRequest.target,
   });
   await native.receive({
     type: "error",
@@ -121,7 +126,7 @@ it("reports the current navigation failure and clears it only after a current su
   await native.receive({
     type: "navigated",
     requestId: native.requests()[1].requestId,
-    target: second,
+    target: native.requests()[1].target,
   });
   expect(screen.queryByRole("alert")).toBeNull();
 });
@@ -166,10 +171,10 @@ it("rejects the old session's pending navigation when the source changes", async
 
 it("navigates only the latest optional-layer target once the viewer becomes ready", async () => {
   const initial = target("31");
-  const latest = {
-    sourceRevisionId: source.revisionId,
-    sourceHash: source.sourceHash,
-    entityId: "32",
+  const latest: CadTarget = {
+    kind: "cad",
+    source_revision_id: source.revisionId,
+    entity_id: "32",
   };
   const view = render(<CadSurface before={source} target={initial} />);
   const native = await bridge(view);
@@ -177,11 +182,15 @@ it("navigates only the latest optional-layer target once the viewer becomes read
   expect(native.requests()).toHaveLength(0);
   await native.opened();
   await waitFor(() => expect(native.requests()).toHaveLength(1));
-  expect(native.requests()[0].target).toEqual(latest);
+  expect(native.requests()[0].target).toEqual({
+    sourceRevisionId: source.revisionId,
+    sourceHash: source.sourceHash,
+    entityId: "32",
+  });
   await native.receive({
     type: "navigated",
     requestId: native.requests()[0].requestId,
-    target: latest,
+    target: native.requests()[0].target,
   });
   expect(screen.queryByRole("alert")).toBeNull();
 });

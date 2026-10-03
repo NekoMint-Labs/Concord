@@ -488,7 +488,21 @@ CAD typecheck/build, changed-source Prettier and whitespace checks passed. Point
 extents are boundary-tested; this run does not qualify every native entity type,
 large production drawings, packaged native hosts or the complete Issue.
 
-PR #19 was still open at inspection. After it merges, rebase this branch onto
-latest main, consume the formal contracts, report any field/interface mismatch,
-and record integration and full acceptance results in PR #21. The current
-prework remains Draft and Issue #17 remains incomplete.
+### October 3 formal CAD ViewerTarget integration after #19 and #20
+
+PRs #19 and #20 have merged into `main`; this branch now includes both. The CAD
+surface consumes the generated `CadTarget` schema and converts the formal
+`source_revision_id`, `entity_id`, optional `layer` and optional `view_bounds`
+to the viewer-local navigation message. The local source hash is used only for
+integrity validation and is never emitted in the canonical target. Missing
+revisions/entities and hash mismatches fail explicitly. Nullable optional hints
+are treated as absent, matching the confirmed contract. This adapter integration
+does not connect B's product composition or complete Issue #17.
+
+Validation on this continuation: all 375 root frontend tests passed, including
+30 CAD viewer/boundary tests; changed-source Prettier and scoped CAD runtime
+typecheck passed. The full frontend typecheck was attempted but is blocked by the
+reused local dependency tree missing `pdfjs-dist`; TypeScript reported only those
+two unresolved imports. No package manifest or lockfile was changed. PR #21
+remains Draft and Issue #17 remains incomplete pending the remaining integration
+and acceptance work.
