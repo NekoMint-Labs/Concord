@@ -1,5 +1,7 @@
+from typing import cast
+
 import pytest
-from app.adapters.aec_connectors import AECConnectorBoundary
+from app.adapters.aec_connectors import AECConnectorBoundary, ConnectorCapability, ConnectorHost
 from app.domain.errors import CapabilityUnavailable, DomainError
 
 
@@ -75,3 +77,34 @@ def test_connector_staging_checks_limits_before_hashing():
         boundary.stage(b"ifc", host="revit", external_id="x" * 513, filename="model.ifc")
     with pytest.raises(DomainError, match="filename"):
         boundary.stage(b"ifc", host="revit", external_id="r1", filename="x" * 256 + ".ifc")
+
+
+def test_connector_capabilities_are_explicit_and_stable():
+    capabilities = AECConnectorBoundary().describe()
+    assert all(isinstance(capability, ConnectorCapability) for capability in capabilities)
+    assert [capability.host for capability in capabilities] == ["revit", "autocad", "navisworks"]
+    assert capabilities[0].status == "staging_only"
+    assert capabilities[0].accepted_extensions == (".ifc",)
+    assert capabilities[1].accepted_extensions == (".dxf", ".pdf")
+    assert capabilities[2].status == "unavailable"
+    assert capabilities[2].accepted_extensions == ()
+    assert all(
+        "native" in capability.reason.lower() or capability.host == "navisworks"
+        for capability in capabilities
+    )
+
+
+def test_unknown_host_is_rejected_before_native_extension_policy():
+    with pytest.raises(DomainError, match="Unsupported AEC connector host"):
+        AECConnectorBoundary().stage(
+            b"native", host=cast(ConnectorHost, "unsupported"),
+            external_id="x",
+            filename="model.rvt"
+        )
+
+
+def test_control_character_del_is_rejected():
+    with pytest.raises(DomainError, match="filename"):
+        AECConnectorBoundary().stage(
+            b"ifc", host="revit", external_id="r1", filename="model\x7f.ifc"
+        )

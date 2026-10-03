@@ -167,7 +167,7 @@ screenshots/test reports are ignored and must not be committed.
 
 Chinese OCR is opt-in, local and lazy through Docling's RapidOCR/ONNX backend. Prefetch and parser use the same Docling artifact root and `RapidOcr/` layout. OCR chunks retain parser origin and the measured donor page confidence where available. Real Golden PNG and a PDF generated from the scanned image both pass Chinese recognition with network connections blocked after model setup. The Golden two-page specification and the existing HTML/PDF qualification also pass offline. Configuration tests are kept separate from these real-engine tests.
 
-`AECConnectorBoundary` only validates and hashes staged Revit/AutoCAD exported bytes. It does not implement a Revit, AutoCAD or Navisworks host connector, authenticate a host, enforce persistence, or prove that a native application exports the accepted artifact. The `requires_project_source_revision` marker is an integration requirement, not enforcement. Native RVT/DWG/NWD/NWC inputs are rejected. Navisworks has no accepted staging format: its IFC conversion path was not qualified, so it now reports an explicit unavailable state. Staging bounds byte size, external identifiers and filenames before hashing. Mature host integration and the upload/publication enforcement path remain to be delivered.
+`AECConnectorBoundary` only validates and hashes staged Revit/AutoCAD exported bytes. It does not implement a Revit, AutoCAD or Navisworks host connector, authenticate a host, enforce persistence, or prove that a native application exports the accepted artifact. The `requires_project_source_revision` marker is an integration requirement, not enforcement. Native RVT/DWG/NWD/NWC inputs are rejected. Navisworks has no accepted staging format: its IFC conversion path was not qualified, so it now reports an explicit unavailable state. Staging bounds byte size, external identifiers and filenames before hashing. The boundary now exposes a stable host capability description: Revit is IFC staging-only, AutoCAD is DXF/PDF staging-only, and Navisworks is explicitly unavailable. Mature host integration and the upload/publication enforcement path remain to be delivered.
 
 ## Integration dependencies and next work
 
@@ -414,3 +414,6 @@ full-repository Pyright/formatting and native/license limitations remain.
 CAD full-document reload, font fidelity, nested block/layout comparison, native
 host connectors, canonical publication and shared persisted caches remain.
 PR #19 is still open; the Issue is not ready for upload as complete.
+
+
+Connector boundary continuation on October 3, 2026: the staging adapter now exposes deterministic host capability descriptors and rejects unknown hosts before extension policy evaluation. Twenty connector tests and nineteen resource-limit tests passed with a repository-local temporary directory; Ruff and changed-file Pyright passed after formatting.

@@ -13,6 +13,17 @@ from app.domain.errors import CapabilityUnavailable, DomainError
 from app.domain.models import Model
 
 ConnectorHost = Literal["revit", "autocad", "navisworks"]
+ConnectorStatus = Literal["staging_only", "unavailable"]
+
+
+class ConnectorCapability(Model):
+    """Explicit host boundary state; this does not claim a native connector."""
+
+    host: ConnectorHost
+    status: ConnectorStatus
+    source_kind: Literal["BIM", "DRAWING"]
+    accepted_extensions: tuple[str, ...]
+    reason: str
 
 
 class ConnectorArtifact(Model):
@@ -47,6 +58,35 @@ class AECConnectorBoundary:
             raise ValueError("AEC connector byte limit must be positive")
         self.max_bytes = max_bytes
 
+    def describe(self) -> tuple[ConnectorCapability, ...]:
+        """Return a stable, UI-safe description of the qualified staging boundary."""
+        return (
+            ConnectorCapability(
+                host="revit",
+                status="staging_only",
+                source_kind="BIM",
+                accepted_extensions=(".ifc",),
+                reason="Accepts a host-exported IFC artifact; native RVT connector is unavailable",
+            ),
+            ConnectorCapability(
+                host="autocad",
+                status="staging_only",
+                source_kind="DRAWING",
+                accepted_extensions=(".dxf", ".pdf"),
+                reason=(
+                    "Accepts a host-exported DXF or PDF artifact; native DWG "
+                    "connector is unavailable"
+                ),
+            ),
+            ConnectorCapability(
+                host="navisworks",
+                status="unavailable",
+                source_kind="BIM",
+                accepted_extensions=(),
+                reason="No Navisworks export or native conversion path has been qualified",
+            ),
+        )
+
     def stage(
         self,
         content: bytes,
@@ -60,13 +100,15 @@ class AECConnectorBoundary:
             raise DomainError("AEC connector output must be non-empty bytes within the size limit")
         if not isinstance(external_id, str) or not external_id.strip() or len(external_id) > 512:
             raise DomainError("AEC connector output requires an external identifier")
+        if host not in self._source_kind:
+            raise DomainError(f"Unsupported AEC connector host: {host}")
         if (
             not isinstance(filename, str)
             or not filename
             or len(filename) > 255
             or Path(filename).name != filename
             or any(char in filename for char in "/\\:")
-            or any(ord(char) < 32 for char in filename)
+            or any(ord(char) < 32 or ord(char) == 127 for char in filename)
         ):
             raise DomainError("AEC connector output filename is invalid")
         suffix = Path(filename).suffix.lower()
@@ -74,8 +116,6 @@ class AECConnectorBoundary:
             raise CapabilityUnavailable(
                 f"{host} connector must export an approved artifact before Concord upload"
             )
-        if host not in self._source_kind:
-            raise DomainError(f"Unsupported AEC connector host: {host}")
         if host == "navisworks":
             raise CapabilityUnavailable(
                 "Navisworks requires a qualified native host conversion path; "
