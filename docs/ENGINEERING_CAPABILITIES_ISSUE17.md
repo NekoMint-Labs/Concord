@@ -418,8 +418,13 @@ The local CAD navigation target now carries an optional bounded native `layer` h
 Selections report the loaded entity layer, and navigation rejects a target whose layer
 no longer matches the loaded revision. This is an adapter-local bridge for the future
 canonical `ViewerTarget.layer` field; it does not introduce a second persisted contract.
-Canonical integration still depends on A's contract/runtime seam. Issue #17
-is not ready to be marked complete.
+The local target also accepts an optional model-space `viewBounds` hint and validates
+its ordering and finite numeric values. Native entity extents remain authoritative for
+selection and zoom; the hint is preserved for the later canonical `view_bounds` mapping.
+On October 3, 2026, the team confirmed that `layer` is optional for CAD targets and
+that `Evidence.source_revision` must carry the source SHA-256 while
+`source_revision_id` remains the formal engineering revision identity. Persistent
+mapping waits for A's contract/runtime seam. Issue #17 is not ready to be marked complete.
 
 
 Connector boundary continuation on October 3, 2026: the staging adapter now exposes deterministic host capability descriptors and rejects unknown hosts before extension policy evaluation. Twenty connector tests and nineteen resource-limit tests passed with a repository-local temporary directory; Ruff and changed-file Pyright passed after formatting.

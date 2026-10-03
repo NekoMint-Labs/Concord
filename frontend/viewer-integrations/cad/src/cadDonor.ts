@@ -6,7 +6,7 @@ import {
 import { AcApDiffViewer } from "../vendor/AcApDiffViewer";
 import { disposeCadComparisons, registerCadDatabase } from "./cadCompareClient";
 import { AcDbEntity, AcGeBox2d } from "@mlightcad/data-model";
-import type { CadNavigation } from "./cadTypes";
+import type { CadNavigation, CadViewBounds } from "./cadTypes";
 import { validateCadTarget, verifyCadSource } from "./cadTypes";
 import type { CadSource } from "./cadTypes";
 import type { AcApDiffCompareResult } from "../vendor/compare";
@@ -17,6 +17,15 @@ const bindings = new Map<
 >();
 const disposers: (() => void)[] = [];
 const opening = new Map<string, CadSource>();
+
+function nativeViewBounds(entity: AcDbEntity): CadViewBounds | undefined {
+  const bounds = entity.geometricExtents;
+  if (bounds.isEmpty()) return undefined;
+  const min = bounds.min;
+  const max = bounds.max;
+  if (![min.x, min.y, max.x, max.y].every(Number.isFinite)) return undefined;
+  return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };
+}
 export async function openCadSources(
   container: HTMLElement,
   before: CadSource,
@@ -57,11 +66,13 @@ export async function openCadSources(
                 document.database.openObjectForRead<AcDbEntity>(entityId);
               if (!(entity instanceof AcDbEntity)) continue;
               const layer = String(entity.layer ?? "");
+              const viewBounds = nativeViewBounds(entity);
               onSelection({
                 sourceRevisionId: source.revisionId,
                 sourceHash: source.sourceHash,
                 entityId,
                 ...(layer ? { layer } : {}),
+                ...(viewBounds ? { viewBounds } : {}),
               });
             }
           };
@@ -140,16 +151,12 @@ export async function navigateCadEntity(
   const layer = String(entity.layer ?? "");
   if (target.layer !== undefined && target.layer !== layer)
     throw new Error("CAD entity layer does not match the requested target");
-  const bounds = entity.geometricExtents;
-  if (bounds.isEmpty()) throw new Error("CAD entity has no navigable geometry");
-  const min = bounds.min,
-    max = bounds.max;
-  if (![min.x, min.y, max.x, max.y].every(Number.isFinite))
-    throw new Error("CAD entity bounds are invalid");
+  const viewBounds = nativeViewBounds(entity);
+  if (!viewBounds) throw new Error("CAD entity has no navigable geometry");
   const view = AcApDocManager.instance.curView;
   const box = new AcGeBox2d();
-  box.expandByPoint({ x: min.x, y: min.y });
-  box.expandByPoint({ x: max.x, y: max.y });
+  box.expandByPoint({ x: viewBounds.minX, y: viewBounds.minY });
+  box.expandByPoint({ x: viewBounds.maxX, y: viewBounds.maxY });
   view.selectionSet.clear();
   view.selectionSet.add(entity.objectId);
   view.zoomTo(box, 1.5);
@@ -157,5 +164,6 @@ export async function navigateCadEntity(
     ...target,
     entityId: entity.objectId,
     ...(layer ? { layer } : {}),
+    viewBounds,
   };
 }

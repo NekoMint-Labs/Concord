@@ -1,6 +1,17 @@
 import { sha256 } from "../drawing/pdfDiffValidation";
 import type { CadNavigation, CadSource } from "./cadTypes";
 
+function validViewBounds(bounds: CadNavigation["viewBounds"]) {
+  return (
+    bounds !== undefined &&
+    [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY].every(
+      Number.isFinite,
+    ) &&
+    bounds.minX < bounds.maxX &&
+    bounds.minY < bounds.maxY
+  );
+}
+
 export function validateCadTarget(target: CadNavigation) {
   if (
     !target.sourceRevisionId ||
@@ -9,7 +20,8 @@ export function validateCadTarget(target: CadNavigation) {
     (target.layer !== undefined &&
       (!target.layer ||
         target.layer.length > 255 ||
-        /[\u0000-\u001f\u007f]/.test(target.layer)))
+        /[\u0000-\u001f\u007f]/.test(target.layer))) ||
+    (target.viewBounds !== undefined && !validViewBounds(target.viewBounds))
   )
     throw new Error("Invalid revision-bound CAD entity target");
 }

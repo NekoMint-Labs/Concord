@@ -10,4 +10,7 @@ export {
   verifyCadSource,
   validateCadTarget,
 } from "../../../src/viewers/cad/cadValidation";
-export type { CadNavigation } from "../../../src/viewers/cad/cadTypes";
+export type {
+  CadNavigation,
+  CadViewBounds,
+} from "../../../src/viewers/cad/cadTypes";

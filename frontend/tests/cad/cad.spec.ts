@@ -71,6 +71,7 @@ test("Golden DXF opens and compares with the mature donor", async ({
     sourceHash: changed.sourceHash,
     entityId: changed.entityId,
     layer: changed.layer,
+    viewBounds: changed.location,
   };
   const navigated = await page.evaluate(
     async (target) =>

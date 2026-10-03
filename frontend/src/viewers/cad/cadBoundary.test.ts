@@ -34,6 +34,8 @@ describe("native/CAD viewer boundary", () => {
       { layer: "" },
       { layer: "bad\u0000layer" },
       { layer: "x".repeat(256) },
+      { viewBounds: { minX: 1, minY: 0, maxX: 1, maxY: 2 } },
+      { viewBounds: { minX: 0, minY: 0, maxX: Number.NaN, maxY: 2 } },
     ])
       expect(() => validateCadTarget({ ...target, ...patch })).toThrow(
         "Invalid",
@@ -46,6 +48,7 @@ describe("native/CAD viewer boundary", () => {
         sourceHash: "a".repeat(64),
         entityId: "31",
         layer: "MEP",
+        viewBounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
       }),
     ).not.toThrow();
   });

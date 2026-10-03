@@ -18,12 +18,21 @@ export interface CadComparison {
 }
 
 /** Local navigation until A's canonical ViewerTarget seam lands. */
+export interface CadViewBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
 export interface CadNavigation {
   sourceRevisionId: string;
   sourceHash: string;
   entityId: string;
   /** Native layer name when the donor can provide it. */
   layer?: string;
+  /** Optional model-space viewport hint; native extents remain authoritative. */
+  viewBounds?: CadViewBounds;
 }
 
 export interface CadController {
