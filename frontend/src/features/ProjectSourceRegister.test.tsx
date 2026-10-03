@@ -447,7 +447,14 @@ it("opens explicitly focused revision actions and authenticates/retries download
   const blob = createUrl.mock.calls[0][0];
   expect(blob.size).toBe(12);
   expect(blob.type).toBe("text/plain;charset=utf-8");
-  expect(await blob.text()).toBe("original IFC");
+  // jsdom's Blob omits text(); verify downloaded bytes through the browser reader.
+  const downloadedText = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+  expect(downloadedText).toBe("original IFC");
   await waitFor(() => expect(within(revision).queryByRole("alert")).toBeNull());
 });
 

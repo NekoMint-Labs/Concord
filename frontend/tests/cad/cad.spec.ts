@@ -116,6 +116,29 @@ test("Golden DXF opens and compares with the mature donor", async ({
     }
   }, target);
   expect(stale).toContain("hash changed");
+
+  const wrongRevision = await page.evaluate(async (target) => {
+    try {
+      await (
+        window as unknown as { cadSession: CadController }
+      ).cadSession.navigate({
+        ...target,
+        sourceRevisionId: "unloaded-revision-with-same-bytes",
+      });
+      return "unexpected success";
+    } catch (error) {
+      return String(error);
+    }
+  }, target);
+  expect(wrongRevision).toContain("revision is not loaded");
+  const withoutLayer = await page.evaluate(async (target) => {
+    const { layer: _layer, ...optionalLayerTarget } = target;
+    return (
+      window as unknown as { cadSession: CadController }
+    ).cadSession.navigate(optionalLayerTarget);
+  }, target);
+  expect(withoutLayer).toEqual(target);
+
   expect(external).toEqual([]);
   expect(
     Array.from(workers).some((worker) =>

@@ -30,8 +30,7 @@ export default function CadSurface({
   const callbacks = useRef({ onComparison, onSelection, onReady });
   callbacks.current = { onComparison, onSelection, onReady };
   const navigation = useRef<CadController | undefined>(undefined);
-  const requested = useRef(target);
-  requested.current = target;
+  const [activeClient, setActiveClient] = useState<CadController>();
   const [status, setStatus] = useState("Loading CAD capability…");
   const [error, setError] = useState("");
   useEffect(() => {
@@ -60,6 +59,7 @@ export default function CadSurface({
       );
     const closeRequests = () => {
       navigation.current = undefined;
+      setActiveClient(undefined);
       for (const request of pending.values()) {
         clearTimeout(request.timer);
         request.reject(new Error("CAD viewer was closed"));
@@ -152,14 +152,11 @@ export default function CadSurface({
         clearTimeout(timer);
         opened = true;
         navigation.current = client;
+        setActiveClient(client);
         setStatus(
           `DXF opened: ${message.elementCount} entities. Review font and donor comparison limitations.`,
         );
         callbacks.current.onReady?.(client);
-        if (requested.current)
-          void client.navigate(requested.current).catch((failure) => {
-            if (live) setError(String(failure.message || failure));
-          });
       }
       if (message.type === "comparison")
         callbacks.current.onComparison?.(message.result);
@@ -209,20 +206,22 @@ export default function CadSurface({
     };
   }, [before, after]);
   useEffect(() => {
-    if (!target || !navigation.current) return;
+    if (!target || !activeClient || navigation.current !== activeClient) return;
     let live = true;
-    void navigation.current
+    // Initial and subsequent targets share the same request/lifetime fence.
+    const current = () => live && navigation.current === activeClient;
+    void activeClient
       .navigate(target)
       .then(() => {
-        if (live) setError("");
+        if (current()) setError("");
       })
       .catch((failure) => {
-        if (live) setError(String(failure.message || failure));
+        if (current()) setError(String(failure.message || failure));
       });
     return () => {
       live = false;
     };
-  }, [target]);
+  }, [target, activeClient, before, after]);
   return (
     <section aria-label="CAD viewer">
       <p role={error ? "alert" : "status"}>{error || status}</p>
