@@ -365,92 +365,116 @@ it("hands affected work-package changes to the parent's model context", async ()
   });
 });
 
-it("opens explicitly focused revision actions and authenticates/retries downloads inside their disclosure", async () => {
-  vi.mocked(api.revisionImport).mockResolvedValue({
-    ...run,
-    status: "COMPLETED",
-    error: null,
-  });
-  const openModel = vi.fn();
-  const investigate = vi.fn();
-  const fetchSource = vi
-    .spyOn(globalThis, "fetch")
-    .mockResolvedValueOnce(new Response(null, { status: 403 }))
-    .mockResolvedValueOnce(new Response("original IFC"));
-  const createUrl = vi.fn((_blob: Blob) => "blob:original-ifc");
-  Object.defineProperty(URL, "createObjectURL", {
-    configurable: true,
-    value: createUrl,
-  });
-  Object.defineProperty(URL, "revokeObjectURL", {
-    configurable: true,
-    value: vi.fn(),
-  });
-  const anchorClick = vi
-    .spyOn(HTMLAnchorElement.prototype, "click")
-    .mockImplementation(() => {});
-  mount(
-    <SourceContextPane
-      project="project"
-      sourceId="model"
-      focusRevisionId="r1"
-      onOpenModel={openModel}
-      onInvestigate={investigate}
-    />,
-  );
-  const filename = await screen.findByText("original.ifc");
-  const revision = filename.closest("article")!;
-  expect(revision).toHaveClass("is-focused");
-  expect(within(revision).getByText("R1")).toBeVisible();
-  expect(within(revision).getByText("B1")).toBeVisible();
-  expect(revision.querySelector("time")).toHaveAttribute(
-    "datetime",
-    r1.imported_at,
-  );
-  await waitFor(() =>
+it.each(["Response", "DOM"] as const)(
+  "opens focused revision actions and authenticates/retries downloads with a %s Blob",
+  async (blobKind) => {
+    vi.mocked(api.revisionImport).mockResolvedValue({
+      ...run,
+      status: "COMPLETED",
+      error: null,
+    });
+    const openModel = vi.fn();
+    const investigate = vi.fn();
+    const response = new Response("original IFC");
+    if (blobKind === "DOM") {
+      vi.spyOn(response, "blob").mockResolvedValue(
+        new Blob(["original IFC"], { type: "text/plain;charset=utf-8" }),
+      );
+    }
+    const fetchSource = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 403 }))
+      .mockResolvedValueOnce(response);
+    const createUrl = vi.fn((_blob: Blob) => "blob:original-ifc");
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: createUrl,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    const anchorClick = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+    mount(
+      <SourceContextPane
+        project="project"
+        sourceId="model"
+        focusRevisionId="r1"
+        onOpenModel={openModel}
+        onInvestigate={investigate}
+      />,
+    );
+    const filename = await screen.findByText("original.ifc");
+    const revision = filename.closest("article")!;
+    expect(revision).toHaveClass("is-focused");
+    expect(within(revision).getByText("R1")).toBeVisible();
+    expect(within(revision).getByText("B1")).toBeVisible();
+    expect(revision.querySelector("time")).toHaveAttribute(
+      "datetime",
+      r1.imported_at,
+    );
+    await waitFor(() =>
+      expect(
+        within(revision).getByRole("button", { name: "查看模型" }),
+      ).toBeVisible(),
+    );
+    fireEvent.click(within(revision).getByRole("button", { name: "查看模型" }));
+    expect(openModel).toHaveBeenCalledWith("model", "r1");
+    fireEvent.click(
+      within(revision).getByRole("button", { name: "调查此版本" }),
+    );
+    expect(investigate).toHaveBeenCalledWith(
+      "model",
+      "r1",
+      undefined,
+      undefined,
+      "R1",
+    );
     expect(
-      within(revision).getByRole("button", { name: "查看模型" }),
-    ).toBeVisible(),
-  );
-  fireEvent.click(within(revision).getByRole("button", { name: "查看模型" }));
-  expect(openModel).toHaveBeenCalledWith("model", "r1");
-  fireEvent.click(within(revision).getByRole("button", { name: "调查此版本" }));
-  expect(investigate).toHaveBeenCalledWith(
-    "model",
-    "r1",
-    undefined,
-    undefined,
-    "R1",
-  );
-  expect(
-    within(revision).queryByRole("button", { name: "下载原文件" }),
-  ).toBeNull();
-  const disclosure = within(revision).getByRole("button", {
-    name: "原文件与处理记录",
-  });
-  expect(disclosure).toHaveAttribute("aria-expanded", "false");
-  fireEvent.click(disclosure);
-  expect(await within(revision).findByText("parse-run")).toBeVisible();
-  fireEvent.click(within(revision).getByRole("button", { name: "下载原文件" }));
-  expect(await within(revision).findByRole("alert")).toHaveTextContent(
-    "来源文件不可用",
-  );
-  expect(fetchSource).toHaveBeenCalledWith(
-    "/api/projects/project/sources/model/revisions/r1/content",
-    { headers: requestHeaders() },
-  );
-  fireEvent.click(
-    within(revision).getByRole("button", { name: "重试下载原文件" }),
-  );
-  await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(1));
-  expect(createUrl).toHaveBeenCalledTimes(1);
-  const blob = createUrl.mock.calls[0][0];
-  expect(blob.size).toBe(12);
-  expect(blob.type).toBe("text/plain;charset=utf-8");
-  // jsdom exposes the generated Blob metadata but no portable byte reader here.
-  expect(blob).toBeInstanceOf(Blob);
-  await waitFor(() => expect(within(revision).queryByRole("alert")).toBeNull());
-});
+      within(revision).queryByRole("button", { name: "下载原文件" }),
+    ).toBeNull();
+    const disclosure = within(revision).getByRole("button", {
+      name: "原文件与处理记录",
+    });
+    expect(disclosure).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(disclosure);
+    expect(await within(revision).findByText("parse-run")).toBeVisible();
+    fireEvent.click(
+      within(revision).getByRole("button", { name: "下载原文件" }),
+    );
+    expect(await within(revision).findByRole("alert")).toHaveTextContent(
+      "来源文件不可用",
+    );
+    expect(fetchSource).toHaveBeenCalledWith(
+      "/api/projects/project/sources/model/revisions/r1/content",
+      { headers: requestHeaders() },
+    );
+    fireEvent.click(
+      within(revision).getByRole("button", { name: "重试下载原文件" }),
+    );
+    await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(1));
+    expect(createUrl).toHaveBeenCalledTimes(1);
+    const blob = createUrl.mock.calls[0][0];
+    expect(blob.size).toBe(12);
+    expect(blob.type).toBe("text/plain;charset=utf-8");
+    // Node Response and jsdom expose different Blob constructors/read APIs.
+    const content =
+      typeof blob.text === "function"
+        ? await blob.text()
+        : await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(reader.error);
+            reader.readAsText(blob);
+          });
+    expect(content).toBe("original IFC");
+    await waitFor(() =>
+      expect(within(revision).queryByRole("alert")).toBeNull(),
+    );
+  },
+);
 
 it("retains the exact selected comparison when a newer revision exists", async () => {
   const r3 = { ...r2, id: "r3", sequence: 3 };
