@@ -88,6 +88,8 @@ export interface AcApDiffViewerEvents {
   failed?: (side: AcApDiffViewerSide, fileName: string) => void
   /** Fired after two drawings are compared. */
   compared?: (result: AcApDiffCompareResult) => void
+  /** Reports failed live comparisons to the Concord host instead of retaining success. */
+  comparisonFailed?: (error: Error) => void
 }
 
 /** Construction options for {@link AcApDiffViewer}. */
@@ -1487,13 +1489,22 @@ export class AcApDiffViewer {
       this.syncToolbarButtons()
       return
     }
-    const result = await compareCadDatabases(left.database, right.database, {
+    let result: AcApDiffCompareResult
+    try {
+      result = await compareCadDatabases(left.database, right.database, {
       compareProps: this.sessionSysVars.compareprops,
       compareHatch: this.sessionSysVars.comparehatch,
       compareText: this.sessionSysVars.comparetext,
       compareTolerance: this.sessionSysVars.comparetolerance,
       compareRcMargin: this.sessionSysVars.comparercmargin
-    })
+      })
+    } catch (error) {
+      if (this.disposed || seq !== this.compareSeq) return
+      this.compareResult = undefined
+      this.navIndex = -1
+      this.options.events?.comparisonFailed?.(error instanceof Error ? error : new Error(String(error)))
+      return
+    }
     if (this.disposed || seq !== this.compareSeq) return
     this.compareResult = result
     this.navIndex = -1

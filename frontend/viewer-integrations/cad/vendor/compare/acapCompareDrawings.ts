@@ -132,9 +132,7 @@ const HATCH_DXF_TYPES = new Set(['HATCH'])
 const TEXT_DXF_TYPES = new Set(['TEXT', 'MTEXT', 'ATTRIB', 'ATTDEF'])
 
 /** Cached geometry/property snapshot for one model-space entity. */
-interface EntitySnapshot {
-  /** Source entity used to build this snapshot. */
-  entity: AcDbEntity
+export interface EntitySnapshot {
   /** DWG/DXF handle. */
   objectId: string
   /** DXF type name. */
@@ -537,31 +535,44 @@ function isTextDxfType(dxfType: string): boolean {
  * @param includeHatch - When false, hatch objects are omitted.
  * @param includeText - When false, text objects are omitted.
  */
-function collectModelSpace(
-  db: AcDbDatabase,
-  tol: number,
-  compareProps: number,
-  includeHatch: boolean,
-  includeText: boolean
-): EntitySnapshot[] {
+export function acapSnapshotEntity(
+  entity: AcDbEntity,
+  options: AcApDiffCompareOptions = {}
+): EntitySnapshot | undefined {
+  const { compareProps, includeHatch, includeText, tol } = acapResolveSnapshotOptions(options)
+  const objectId = String(entity.objectId ?? '')
+  if (!objectId) return undefined
+  const dxfType = String(entity.dxfTypeName ?? entity.type ?? 'UNKNOWN')
+  if (!includeHatch && isHatchDxfType(dxfType)) return undefined
+  if (!includeText && isTextDxfType(dxfType)) return undefined
+  return {
+    objectId,
+    dxfType,
+    layer: String(entity.layer ?? '0'),
+    fingerprint: entityFingerprint(entity, tol),
+    propKey: entityPropKey(entity, compareProps),
+    extents: readExtents(entity),
+    fields: collectEntityFields(entity, tol)
+  }
+}
+
+/** Effective donor settings shared by synchronous and worker snapshot paths. */
+export function acapResolveSnapshotOptions(options: AcApDiffCompareOptions = {}) {
+  const compareProps = options.compareProps ?? ACAP_COMPAREPROPS_DEFAULT
+  const includeHatch = (options.compareHatch ?? ACAP_COMPAREHATCH_DEFAULT) !== 0
+  const includeText = (options.compareText ?? ACAP_COMPARETEXT_DEFAULT) !== 0
+  const compareTolerance = options.compareTolerance ?? ACAP_COMPARETOLERANCE_DEFAULT
+  const tol = options.tolerance != null && options.tolerance > 0
+    ? options.tolerance
+    : acapToleranceFromCompareTolerance(compareTolerance)
+  return { compareProps, includeHatch, includeText, tol }
+}
+
+function collectModelSpace(db: AcDbDatabase, options: AcApDiffCompareOptions): EntitySnapshot[] {
   const out: EntitySnapshot[] = []
-  const modelSpace = db.tables.blockTable.modelSpace
-  for (const entity of modelSpace.newIterator()) {
-    const objectId = String(entity.objectId ?? '')
-    if (!objectId) continue
-    const dxfType = String(entity.dxfTypeName ?? entity.type ?? 'UNKNOWN')
-    if (!includeHatch && isHatchDxfType(dxfType)) continue
-    if (!includeText && isTextDxfType(dxfType)) continue
-    out.push({
-      entity,
-      objectId,
-      dxfType,
-      layer: String(entity.layer ?? '0'),
-      fingerprint: entityFingerprint(entity, tol),
-      propKey: entityPropKey(entity, compareProps),
-      extents: readExtents(entity),
-      fields: collectEntityFields(entity, tol)
-    })
+  for (const entity of db.tables.blockTable.modelSpace.newIterator()) {
+    const snapshot = acapSnapshotEntity(entity, options)
+    if (snapshot) out.push(snapshot)
   }
   return out
 }
@@ -661,23 +672,19 @@ export function acapCompareDrawings(
   rightDb: AcDbDatabase,
   options: AcApDiffCompareOptions = {}
 ): AcApDiffCompareResult {
-  const compareProps = options.compareProps ?? ACAP_COMPAREPROPS_DEFAULT
-  const includeHatch =
-    (options.compareHatch ?? ACAP_COMPAREHATCH_DEFAULT) !== 0
-  const includeText = (options.compareText ?? ACAP_COMPARETEXT_DEFAULT) !== 0
-  const compareTolerance =
-    options.compareTolerance ?? ACAP_COMPARETOLERANCE_DEFAULT
-  const compareRcMargin =
-    options.compareRcMargin ?? ACAP_COMPARERCMARGIN_DEFAULT
-  const tol =
-    options.tolerance != null && options.tolerance > 0
-      ? options.tolerance
-      : acapToleranceFromCompareTolerance(compareTolerance)
+  return acapCompareSnapshots(
+    collectModelSpace(leftDb, options), collectModelSpace(rightDb, options), options
+  )
+}
 
-  const collect = (db: AcDbDatabase) =>
-    collectModelSpace(db, tol, compareProps, includeHatch, includeText)
-  const left = collect(leftDb)
-  const right = collect(rightDb)
+/** Donor matching/classification over transferable snapshots, without source parsing. */
+export function acapCompareSnapshots(
+  left: EntitySnapshot[],
+  right: EntitySnapshot[],
+  options: AcApDiffCompareOptions = {}
+): AcApDiffCompareResult {
+  const { compareProps } = acapResolveSnapshotOptions(options)
+  const compareRcMargin = options.compareRcMargin ?? ACAP_COMPARERCMARGIN_DEFAULT
 
   const rightById = new Map(right.map(s => [s.objectId, s]))
   const usedRight = new Set<string>()

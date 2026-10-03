@@ -185,8 +185,10 @@ The independent runtime does not replace Concord's existing Three/IFC versions.
 No LibreDWG or proprietary DWG converter is installed or registered.
 
 The original cad-diff-viewer source is kept under the isolated viewer's `vendor/`
-with its MIT license. Its only widget adaptations restrict DXF input and await
-an off-thread comparison. The donor compare algorithm remains unchanged.
+with its MIT license. Recorded patches restrict DXF input, route comparison
+through a worker, expose the donor snapshot/matching seam, and report live
+comparison failures. The donor matching/classification algorithm is preserved
+and qualified against the pinned source; Concord does not add a CAD renderer.
 
 ## IFC Viewer Online isolated build
 

@@ -46,8 +46,8 @@ The C-owned lazy surfaces now include:
   is not reconstructed. Existing generated API chunk types are consumed.
 - `CadSurface`: an independently built mlightcad 1.7.3 widget with its own
   locked Three 0.172.0 runtime. The original diff widget is vendored; its donor
-  compare module is unchanged and invoked in a worker using the real DXF SDK
-  parser. Only DXF is accepted; no DWG converter is installed/registered.
+  matching/classification logic is preserved through a recorded snapshot seam
+  and invoked in a worker over the native render database's derived data. Only DXF is accepted; no DWG converter is installed/registered.
   Model-space results are normalized to adapter-local, revision/hash-bound
   candidates. These are not persisted canonical Changes.
 
@@ -76,10 +76,16 @@ partial work is never inserted. Cache eviction/reload still requires preparation
 this is not A's persisted derived-artifact service and it does not share parsing
 with the separate PDF diff engine.
 
-The CAD worker reuses parsed databases during one viewer lifetime. It also parses
-its own copy independently of the donor's render database; this is not a claim
-of one total parse across rendering and comparison, nor cross-reopen cache
-qualification. Those CAD performance gaps remain acceptance work.
+CAD comparison now snapshots the native render databases and sends bounded,
+plain donor data to the worker. The worker receives no DXF bytes or native
+entities and performs no source read. Snapshot cache keys include source hash,
+effective geometry/property settings and the `concord-snapshots-v2` engine
+marker. Preparation yields between batches; cancellation and limits reject
+partial work. A 32 MiB/four-entry cache retains no database or GPU objects and
+is cleared at exit. Matching and classification remain the donor's algorithm.
+This removes the comparison-side second parse during an active viewer lifetime.
+Reopening still rebuilds native render databases; persistent derived cache and
+large-model qualification remain acceptance work.
 
 The donor CAD comparison is limited to top-level model space; nested block/layout
 contents and effective layer attributes are not fully compared. Its default
@@ -212,7 +218,7 @@ Local evidence collected on October 2, 2026:
 
 Representative Golden timings on this local machine: one-element IFC import 0.057–0.074 s, structural/MEP revision diff 0.047–0.116 s, targeted intersection 0.066–0.074 s. The first standalone Chinese PNG conversion, including cold model initialization, took 25.75 s and reported page OCR confidence 0.9382. These are measured sample timings, not throughput guarantees or warm-cache results. OCR retained imperfect punctuation in the source identifier line; extracted output is not structured engineering truth.
 
-The isolated frontend suite verifies real PDF, DXF and IFC engines. IFC fragment/tree cache hits and worker cleanup are measured; CAD parse reuse, persistent shared cache integration and full frontend/native/production qualification remain incomplete. No new engine result confirms a Finding, promotes a baseline, approves coordination, or resolves a re-check as business state.
+The isolated frontend suite verifies real PDF, DXF and IFC engines. IFC fragment/tree cache hits and worker cleanup are measured; cross-reopen CAD parse reuse, persistent shared cache integration and full frontend/native/production qualification remain incomplete. No new engine result confirms a Finding, promotes a baseline, approves coordination, or resolves a re-check as business state.
 
 Additional IFC evidence: five source/target boundary tests, real IFC stable
 selection/targeting, section/measurement activation, PNG capture, unavailable
@@ -379,3 +385,32 @@ passed. No dependencies were changed for this continuation. Final combined-run
 samples were IFC 1011.8 ms cold / 364.2 ms warm and Drawing 1415.1 ms cold /
 126.4 ms warm; parser/index diagnostic assertions passed. Previously recorded
 full-repository Pyright/formatting and native/license limitations remain.
+
+
+### October 3 CAD render-data reuse
+
+- Thirty-seven focused snapshot/worker lifecycle tests passed, including six
+  configurations compared against the installed unmodified donor algorithm.
+  Cooperative scheduling, concurrent preparation, byte/count overflow, LRU
+  eviction, immutable options, cancellation, worker failures and timeout are
+  covered. The two new adapter modules (`cadSnapshots`, `cadCompareClient`)
+  measured 100% statements/branches/functions/lines; this excludes the donor,
+  worker, host and repository-wide gates.
+- Four real CAD browser scenarios passed: Golden DXF comparison/navigation,
+  DWG rejection, 514 native entities per source and injected live-comparison
+  failure. Closing or capability failure releases the iframe and workers.
+- Golden cold snapshot preparation measured 0.8 ms plus 0.6 ms worker diff;
+  changing only the donor revision-cloud margin reused snapshots (0 ms
+  preparation / 0.1 ms diff). The 1,028-snapshot sample yielded eight times,
+  measured 98.8 ms preparation / 1.6 ms diff, and verified the changed native
+  entity handle. Comparison-side source parsing is zero by implementation:
+  the worker has no database reader or source-byte input. These samples do not
+  qualify large production drawings or cap the cost of a single complex entity.
+- Independent CAD typecheck/build, host frontend typecheck and changed-source
+  formatting passed. Recorded patches and pinned-source verification preserve
+  donor provenance. No manifest, dependency lock, shared contract, workflow,
+  B-owned composition file or native connector was changed in this continuation.
+
+CAD full-document reload, font fidelity, nested block/layout comparison, native
+host connectors, canonical publication and shared persisted caches remain.
+PR #19 is still open; the Issue is not ready for upload as complete.

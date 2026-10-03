@@ -23,6 +23,7 @@ export async function openCadSources(
   after: CadSource | undefined,
   onCompare: (result: AcApDiffCompareResult) => void,
   onSelection: (target: CadNavigation) => void,
+  onComparisonFailure: (error: Error) => void,
 ) {
   await verifyCadSource(before);
   if (after) {
@@ -66,6 +67,7 @@ export async function openCadSources(
           disposers.push(() => events.removeEventListener(selected));
         },
         compared: onCompare,
+        comparisonFailed: onComparisonFailure,
         failed: (_side, file) => {
           throw new Error(`DXF could not open: ${file}`);
         },

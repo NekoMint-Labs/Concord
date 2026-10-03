@@ -7,6 +7,10 @@ export {
 } from './acapCompareChangeSets'
 export {
   acapCompareDrawings,
+  acapCompareSnapshots,
+  acapResolveSnapshotOptions,
+  acapSnapshotEntity,
+  type EntitySnapshot,
   type AcApDiffChangeKind,
   type AcApDiffCompareOptions,
   type AcApDiffCompareResult,

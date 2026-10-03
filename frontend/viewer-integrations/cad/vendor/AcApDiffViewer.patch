@@ -1,0 +1,80 @@
+--- packages/cad-diff-viewer/src/AcApDiffViewer.ts
++++ vendor/AcApDiffViewer.ts
+@@ -1,3 +1,5 @@
++// Concord adaptation: DXF-only input and off-thread donor comparison. See README.md.
++import { compareCadDatabases } from "../src/cadCompareClient";
+ import {
+   ACAP_DEFAULT_COMPARE_COLORS,
+   type AcApCompareDisplayColors,
+@@ -42,7 +44,6 @@
+ } from './AcApDiffSettingsDialog'
+ import {
+   acapChangeSetCloudRole,
+-  acapCompareDrawings,
+   acapDefaultCompareSysVars,
+   type AcApDiffChangeKind,
+   type AcApDiffChangeSet,
+@@ -87,6 +88,8 @@
+   failed?: (side: AcApDiffViewerSide, fileName: string) => void
+   /** Fired after two drawings are compared. */
+   compared?: (result: AcApDiffCompareResult) => void
++  /** Reports failed live comparisons to the Concord host instead of retaining success. */
++  comparisonFailed?: (error: Error) => void
+ }
+ 
+ /** Construction options for {@link AcApDiffViewer}. */
+@@ -146,7 +149,7 @@
+ }
+ 
+ /** File-name pattern accepted by pane drop / file-picker open. */
+-const DRAWING_EXT = /\.(dwg|dxf)$/i
++const DRAWING_EXT = /\.dxf$/i
+ 
+ /** Markup comment used to find clouds created from compare change sets. */
+ const COMPARE_CLOUD_COMMENT = 'cad-diff-viewer:changeset'
+@@ -1065,7 +1068,7 @@
+     const fileInput = document.createElement('input')
+     fileInput.type = 'file'
+     fileInput.className = 'ml-diff-file-input'
+-    fileInput.accept = '.dwg,.dxf,application/acad,application/dxf'
++    fileInput.accept = '.dxf,application/dxf'
+     fileInput.tabIndex = -1
+     header.append(title, openButton, fileInput)
+ 
+@@ -1486,13 +1489,22 @@
+       this.syncToolbarButtons()
+       return
+     }
+-    const result = acapCompareDrawings(left.database, right.database, {
++    let result: AcApDiffCompareResult
++    try {
++      result = await compareCadDatabases(left.database, right.database, {
+       compareProps: this.sessionSysVars.compareprops,
+       compareHatch: this.sessionSysVars.comparehatch,
+       compareText: this.sessionSysVars.comparetext,
+       compareTolerance: this.sessionSysVars.comparetolerance,
+       compareRcMargin: this.sessionSysVars.comparercmargin
+-    })
++      })
++    } catch (error) {
++      if (this.disposed || seq !== this.compareSeq) return
++      this.compareResult = undefined
++      this.navIndex = -1
++      this.options.events?.comparisonFailed?.(error instanceof Error ? error : new Error(String(error)))
++      return
++    }
+     if (this.disposed || seq !== this.compareSeq) return
+     this.compareResult = result
+     this.navIndex = -1
+@@ -2147,9 +2159,9 @@
+     return view
+   }
+ 
+-  /** Turns off CAD entity pick, selection, and hover highlight on `view`. */
++  /** Concord enables native CAD entity pick, selection, and hover highlight on `view`. */
+   private disableEntitySelection(view: AcTrView2d) {
+-    view.entitySelectionEnabled = false
++    view.entitySelectionEnabled = true
+   }
+ 
+   /** True when both panes should share the same camera. */

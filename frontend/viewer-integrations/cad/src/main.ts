@@ -63,6 +63,16 @@ window.addEventListener("message", (event) => {
           });
         },
         (target) => send({ type: "selected", target }),
+        (error) => {
+          status.textContent = error.message;
+          status.hidden = false;
+          status.setAttribute("role", "alert");
+          send({
+            type: "error",
+            requestId: message.requestId,
+            message: error.message,
+          });
+        },
       );
       status.textContent =
         "DXF opened. Fonts must be supplied locally; missing glyphs require review.";
