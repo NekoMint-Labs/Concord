@@ -13,6 +13,7 @@ import fixture from "../tests/fixtures/inspector.json";
 import type { ComponentProps } from "react";
 import type { WorkspaceViews } from "./app/WorkspaceViews";
 import { WorkList } from "./features/WorkList";
+import { SourceContextPane } from "./features/SourceContextPane";
 
 vi.mock("./app/WorkspaceViews", () => ({
   WorkspaceViews: (props: ComponentProps<typeof WorkspaceViews>) => (
@@ -57,6 +58,16 @@ vi.mock("./app/WorkspaceViews", () => ({
           onTab={props.onTab}
           report={props.report}
           run={props.run}
+        />
+      )}
+      <button onClick={() => props.onTab("bim")}>Open source comparison</button>
+      {props.tab === "bim" && (
+        <SourceContextPane
+          project={props.project}
+          sourceId="source-1"
+          focusComparisonId="comparison"
+          onContext={props.onSourceContext}
+          onInvestigate={props.onInvestigateSource}
         />
       )}
       <button
@@ -183,9 +194,13 @@ it("discards WP, source, element, mapping and inspector context when switching c
   expect(fresh).not.toHaveAttribute("data-source");
 });
 
-it.each([{ elementIds: [] }, { elementIds: ["changed-element"] }])(
-  "synchronizes the real Work Investigation entrypoint before associating its run (elements: $elementIds)",
-  async ({ elementIds }) => {
+it.each([
+  { entrypoint: "Work", elementIds: [] },
+  { entrypoint: "Work", elementIds: ["changed-element"] },
+  { entrypoint: "source comparison", elementIds: ["changed-element"] },
+])(
+  "synchronizes the real $entrypoint Investigation entrypoint before associating its run (elements: $elementIds)",
+  async ({ entrypoint, elementIds }) => {
     const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
     workspace.state.project = {
       ...workspace.state.project,
@@ -318,15 +333,30 @@ it.each([{ elementIds: [] }, { elementIds: ["changed-element"] }])(
         ]),
       ).toBeDefined();
     });
-    fireEvent.click(
-      await screen.findByRole("button", { name: /MEP model 有新版本/ }),
-    );
-    const peek = screen.getByRole("complementary", { name: "所选工作事项" });
-    expect(peek).toHaveTextContent("R1 → R2");
-    fireEvent.click(within(peek).getByRole("button", { name: "处理新版本" }));
+    if (entrypoint === "Work") {
+      fireEvent.click(
+        await screen.findByRole("button", { name: /MEP model 有新版本/ }),
+      );
+      const peek = screen.getByRole("complementary", { name: "所选工作事项" });
+      expect(peek).toHaveTextContent("R1 → R2");
+      fireEvent.click(within(peek).getByRole("button", { name: "处理新版本" }));
+    } else {
+      // BIM has a selected unrelated package; comparison Investigations stay source-scoped.
+      fireEvent.click(
+        screen.getByRole("button", { name: "Open source comparison" }),
+      );
+      const investigate = await screen.findByRole("button", {
+        name: "调查此比较",
+      });
+      await waitFor(() => expect(investigate).toBeEnabled());
+      fireEvent.click(investigate);
+    }
     await waitFor(() =>
       expect(api.investigate).toHaveBeenCalledWith("harbor-east", {
-        instruction: "调查此资料版本与比较影响",
+        instruction:
+          entrypoint === "Work"
+            ? "调查此资料版本与比较影响"
+            : "查看模型版本变化及影响",
         scope: {
           source_id: "source-1",
           from_revision_id: "r1",

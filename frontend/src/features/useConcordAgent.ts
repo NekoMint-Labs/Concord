@@ -179,7 +179,7 @@ export function useConcordAgent({
         });
         if (current()) return next;
       } catch (cause) {
-        if (current())
+        if (current() && (!identity || identity === contextIdentity.current))
           setError(cause instanceof Error ? cause.message : "调查启动失败");
       } finally {
         if (current()) setPending(false);

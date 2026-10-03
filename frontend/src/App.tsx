@@ -501,6 +501,7 @@ function ProjectApplication({
                   revisionLabel,
                   fromRevisionId,
                   fromRevisionLabel,
+                  elementIds,
                 );
                 setInspectorView("investigation");
                 setDetailsOpen(true);

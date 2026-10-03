@@ -527,3 +527,58 @@ it("a superseded launch cannot return a stale header acknowledgement after query
   expect(acknowledgement).toBeUndefined();
   expect(result.current.activeRun?.id).toBe("newer");
 });
+
+it.each(["unchanged", "R3", "R3 → R2"])(
+  "shows a launch failure only in its submitted context visit (after launch: %s)",
+  async (visit) => {
+    const { result, completed, report } = investigationView();
+    await waitFor(() =>
+      expect(result.current.investigation.data).toEqual(report),
+    );
+    let reject!: (cause: Error) => void;
+    vi.mocked(api.investigate).mockImplementation(
+      () =>
+        new Promise((_, fail) => {
+          reject = fail;
+        }),
+    );
+    let pending!: Promise<AgentRun | undefined>;
+    act(() => {
+      pending = result.current.startInvestigation("Check R2");
+    });
+    expect(result.current.pending).toBe(true);
+    if (visit !== "unchanged") {
+      act(() =>
+        result.current.bimContext(
+          "source",
+          "r3",
+          engineeringScope.elementIds,
+          "r1",
+        ),
+      );
+      if (visit === "R3 → R2")
+        act(() =>
+          result.current.bimContext(
+            "source",
+            "r2",
+            engineeringScope.elementIds,
+            "r1",
+          ),
+        );
+    }
+    await act(async () => {
+      reject(new Error("R2 launch failed"));
+      await pending;
+    });
+    expect(result.current.context.revisionId).toBe(
+      visit === "R3" ? "r3" : "r2",
+    );
+    expect(result.current.error).toBe(
+      visit === "unchanged" ? "R2 launch failed" : "",
+    );
+    expect(result.current.pending).toBe(false);
+    expect(result.current.contextualRun).toBeUndefined();
+    expect(result.current.currentRun.data?.id).toBe(completed.id);
+    expect(result.current.investigation.data).toEqual(report);
+  },
+);
