@@ -87,13 +87,13 @@ export async function openCadSources(
       },
     });
     // Prevent donor controls from switching the revision outside Concord's source adapter.
-    container.addEventListener(
-      "drop",
-      (event) => {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-      },
-      true,
+    const preventSourceDrop = (event: DragEvent) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+    container.addEventListener("drop", preventSourceDrop, true);
+    disposers.push(() =>
+      container.removeEventListener("drop", preventSourceDrop, true),
     );
     container
       .querySelectorAll('input[type="file"]')
@@ -149,7 +149,7 @@ export async function navigateCadEntity(
   if (!(entity instanceof AcDbEntity))
     throw new Error("CAD entity is absent from the requested source revision");
   const layer = String(entity.layer ?? "");
-  if (target.layer !== undefined && target.layer !== layer)
+  if (target.layer != null && target.layer !== layer)
     throw new Error("CAD entity layer does not match the requested target");
   const viewBounds = nativeViewBounds(entity);
   if (!viewBounds) throw new Error("CAD entity has no navigable geometry");

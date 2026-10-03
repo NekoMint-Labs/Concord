@@ -5,6 +5,7 @@ import {
   validateCadTarget,
 } from "../../../viewer-integrations/cad/src/cadTypes";
 import { snapshotCadSources } from "./cadValidation";
+import type { CadNavigation } from "./cadTypes";
 vi.stubGlobal("crypto", webcrypto);
 async function source(name = "review.dxf") {
   const data = new TextEncoder().encode(
@@ -34,12 +35,52 @@ describe("native/CAD viewer boundary", () => {
       { layer: "" },
       { layer: "bad\u0000layer" },
       { layer: "x".repeat(256) },
-      { viewBounds: { minX: 1, minY: 0, maxX: 1, maxY: 2 } },
+      { viewBounds: { minX: 2, minY: 0, maxX: 1, maxY: 2 } },
+      { viewBounds: { minX: 0, minY: 2, maxX: 1, maxY: 1 } },
+      { viewBounds: { minX: 0, minY: 0, maxX: Infinity, maxY: 2 } },
       { viewBounds: { minX: 0, minY: 0, maxX: Number.NaN, maxY: 2 } },
     ])
       expect(() => validateCadTarget({ ...target, ...patch })).toThrow(
         "Invalid",
       );
+  });
+  it.each([
+    { minX: 0, minY: 1, maxX: 10, maxY: 1 },
+    { minX: 2, minY: 0, maxX: 2, maxY: 10 },
+    { minX: 2, minY: 3, maxX: 2, maxY: 3 },
+  ])("accepts finite native line and point extents %j", (viewBounds) => {
+    expect(() =>
+      validateCadTarget({
+        sourceRevisionId: "R1",
+        sourceHash: "a".repeat(64),
+        entityId: "31",
+        viewBounds,
+      }),
+    ).not.toThrow();
+  });
+  it.each([
+    { layer: null },
+    { viewBounds: null },
+    { layer: null, viewBounds: null },
+  ])("accepts nullable optional CAD hints %j", (hints) => {
+    expect(() =>
+      validateCadTarget({
+        sourceRevisionId: "R1",
+        sourceHash: "a".repeat(64),
+        entityId: "31",
+        ...hints,
+      }),
+    ).not.toThrow();
+  });
+  it.each([42, {}, ["STRUCTURE"]])("rejects a non-string layer %j", (layer) => {
+    expect(() =>
+      validateCadTarget({
+        sourceRevisionId: "R1",
+        sourceHash: "a".repeat(64),
+        entityId: "31",
+        layer,
+      } as unknown as CadNavigation),
+    ).toThrow("Invalid revision-bound CAD entity target");
   });
   it("accepts a bounded native layer hint for ViewerTarget mapping", () => {
     expect(() =>

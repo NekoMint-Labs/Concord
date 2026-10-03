@@ -30,9 +30,9 @@ export interface CadNavigation {
   sourceHash: string;
   entityId: string;
   /** Native layer name when the donor can provide it. */
-  layer?: string;
+  layer?: string | null;
   /** Optional model-space viewport hint; native extents remain authoritative. */
-  viewBounds?: CadViewBounds;
+  viewBounds?: CadViewBounds | null;
 }
 
 export interface CadController {

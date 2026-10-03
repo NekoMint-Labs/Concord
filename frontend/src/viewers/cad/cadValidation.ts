@@ -1,14 +1,15 @@
 import { sha256 } from "../drawing/pdfDiffValidation";
 import type { CadNavigation, CadSource } from "./cadTypes";
 
+// Native LINE/POINT extents may have zero width or height.
 function validViewBounds(bounds: CadNavigation["viewBounds"]) {
   return (
-    bounds !== undefined &&
+    bounds != null &&
     [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY].every(
       Number.isFinite,
     ) &&
-    bounds.minX < bounds.maxX &&
-    bounds.minY < bounds.maxY
+    bounds.minX <= bounds.maxX &&
+    bounds.minY <= bounds.maxY
   );
 }
 
@@ -17,11 +18,12 @@ export function validateCadTarget(target: CadNavigation) {
     !target.sourceRevisionId ||
     !/^[a-f0-9]{64}$/.test(target.sourceHash) ||
     !/^[a-f0-9]{1,32}$/i.test(target.entityId) ||
-    (target.layer !== undefined &&
-      (!target.layer ||
+    (target.layer != null &&
+      (typeof target.layer !== "string" ||
+        !target.layer ||
         target.layer.length > 255 ||
         /[\u0000-\u001f\u007f]/.test(target.layer))) ||
-    (target.viewBounds !== undefined && !validViewBounds(target.viewBounds))
+    (target.viewBounds != null && !validViewBounds(target.viewBounds))
   )
     throw new Error("Invalid revision-bound CAD entity target");
 }

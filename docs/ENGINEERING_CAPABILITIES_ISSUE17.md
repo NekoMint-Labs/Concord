@@ -459,3 +459,36 @@ composition file is changed. Frontend dependencies were restored offline with
 pnpm 10.17.1 and the existing frozen lockfile. GitHub API review metadata could
 not be refreshed because its TLS certificate did not match api.github.com.
 The review/merge state must be rechecked before shared integration proceeds.
+
+
+### October 3 CAD navigation and cleanup continuation
+
+CAD navigation accepts finite, non-inverted native bounds, including zero-width
+or zero-height LINE extents and point extents. Nullable layer and viewport hints
+are treated as absent; non-string layers, inverted bounds and non-finite values
+still fail explicitly. The loaded revision/hash, native entity and layer remain
+authoritative. A supplied viewport hint cannot replace the entity's native zoom
+bounds. No canonical or persisted contract is introduced by this staging change.
+
+The revision drop guard is now removed during viewer disposal. Deterministic
+lifecycle tests reuse the same container across two lifetimes and cover cleanup
+after opening failure. Real Chromium qualification reopens native horizontal and
+vertical lines, verifies nullable hints and rejects stale/mismatched targets.
+The existing close/failure checks continue to verify worker release.
+
+The web job on `a365b59` failed because Node Response Blob and jsdom Blob have
+different constructors. The source-download test now reads through the available
+byte reader and checks exact original content, size and media type. Both native
+Response and DOM Blob cases exercise authenticated retry/download behavior.
+Only the test changed; B's product implementation is unchanged.
+
+Final local verification: 371 root frontend tests, 41 isolated CAD tests and all
+four real CAD browser scenarios passed. Host typecheck, product build, independent
+CAD typecheck/build, changed-source Prettier and whitespace checks passed. Point
+extents are boundary-tested; this run does not qualify every native entity type,
+large production drawings, packaged native hosts or the complete Issue.
+
+PR #19 was still open at inspection. After it merges, rebase this branch onto
+latest main, consume the formal contracts, report any field/interface mismatch,
+and record integration and full acceptance results in PR #21. The current
+prework remains Draft and Issue #17 remains incomplete.

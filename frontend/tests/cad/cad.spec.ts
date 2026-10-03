@@ -139,6 +139,25 @@ test("Golden DXF opens and compares with the mature donor", async ({
     ).cadSession.navigate(optionalLayerTarget);
   }, target);
   expect(withoutLayer).toEqual(target);
+  const nullHints = await page.evaluate(
+    async (target) =>
+      (window as unknown as { cadSession: CadController }).cadSession.navigate({
+        ...target,
+        layer: null,
+        viewBounds: null,
+      }),
+    target,
+  );
+  expect(nullHints).toEqual(target);
+  const unrelatedBounds = await page.evaluate(
+    async (target) =>
+      (window as unknown as { cadSession: CadController }).cadSession.navigate({
+        ...target,
+        viewBounds: { minX: -100, minY: -100, maxX: -90, maxY: -90 },
+      }),
+    target,
+  );
+  expect(unrelatedBounds).toEqual(target);
 
   expect(external).toEqual([]);
   expect(
@@ -228,7 +247,8 @@ test("native DXF snapshots yield between batches and preserve actual entity chan
       const handle = (4096 + index).toString(16).toUpperCase();
       const y = Math.floor(index / 32),
         x = index % 32;
-      const end = x + (changed && index === 511 ? 2 : 1);
+      const end = index === 510 ? x : x + (changed && index === 511 ? 2 : 1);
+      const endY = index === 510 ? y + 1 : y;
       return (
         [
           "  0",
@@ -252,7 +272,7 @@ test("native DXF snapshots yield between batches and preserve actual entity chan
           " 11",
           end,
           " 21",
-          y,
+          endY,
           " 31",
           0,
         ].join("\n") + "\n"
@@ -286,6 +306,32 @@ test("native DXF snapshots yield between batches and preserve actual entity chan
         change.entityId === "11FF" && change.kind === "modified",
     ),
   ).toBe(true);
+  const revision = result.changes.find((change: { sourceRevisionId: string }) =>
+    change.sourceRevisionId.startsWith("before:"),
+  );
+  for (const [entityId, viewBounds] of [
+    ["1000", { minX: 0, minY: 0, maxX: 1, maxY: 0 }],
+    ["11FE", { minX: 30, minY: 15, maxX: 30, maxY: 16 }],
+    ["11FF", { minX: 31, minY: 15, maxX: 32, maxY: 15 }],
+  ] as const) {
+    const target = {
+      sourceRevisionId: revision.sourceRevisionId,
+      sourceHash: revision.sourceHash,
+      entityId,
+      layer: "STRUCTURE",
+      viewBounds,
+    };
+    const reopened = await page.evaluate(async (target) => {
+      const session = (window as unknown as { cadSession: CadController })
+        .cadSession;
+      const selected = await session.navigate(target);
+      return session.navigate(selected);
+    }, target);
+    expect(reopened).toEqual(target);
+    await expect(page.getByTestId("cad-selection")).toHaveText(
+      JSON.stringify(target),
+    );
+  }
   const frame = page
     .frames()
     .find((frame) => frame.url().includes("/viewer/cad/"))!;
