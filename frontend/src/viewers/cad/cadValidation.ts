@@ -5,7 +5,11 @@ export function validateCadTarget(target: CadNavigation) {
   if (
     !target.sourceRevisionId ||
     !/^[a-f0-9]{64}$/.test(target.sourceHash) ||
-    !/^[a-f0-9]{1,32}$/i.test(target.entityId)
+    !/^[a-f0-9]{1,32}$/i.test(target.entityId) ||
+    (target.layer !== undefined &&
+      (!target.layer ||
+        target.layer.length > 255 ||
+        /[\u0000-\u001f\u007f]/.test(target.layer)))
   )
     throw new Error("Invalid revision-bound CAD entity target");
 }

@@ -70,6 +70,7 @@ test("Golden DXF opens and compares with the mature donor", async ({
     sourceRevisionId: changed.sourceRevisionId,
     sourceHash: changed.sourceHash,
     entityId: changed.entityId,
+    layer: changed.layer,
   };
   const navigated = await page.evaluate(
     async (target) =>
@@ -93,6 +94,17 @@ test("Golden DXF opens and compares with the mature donor", async ({
     }
   }, target);
   expect(invalid).toContain("absent");
+  const wrongLayer = await page.evaluate(async (target) => {
+    try {
+      await (
+        window as unknown as { cadSession: CadController }
+      ).cadSession.navigate({ ...target, layer: "__missing_layer__" });
+      return "unexpected success";
+    } catch (error) {
+      return String(error);
+    }
+  }, target);
+  expect(wrongLayer).toContain("layer");
   const stale = await page.evaluate(async (target) => {
     try {
       await (

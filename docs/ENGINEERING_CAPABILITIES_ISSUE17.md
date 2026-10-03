@@ -413,6 +413,10 @@ full-repository Pyright/formatting and native/license limitations remain.
 
 CAD full-document reload, font fidelity, nested block/layout comparison, native
 host connectors, canonical publication and shared persisted caches remain.
+The local CAD navigation target now carries an optional bounded native `layer` hint.
+Selections report the loaded entity layer, and navigation rejects a target whose layer
+no longer matches the loaded revision. This is an adapter-local bridge for the future
+canonical `ViewerTarget.layer` field; it does not introduce a second persisted contract.
 PR #19 is still open; the Issue is not ready for upload as complete.
 
 

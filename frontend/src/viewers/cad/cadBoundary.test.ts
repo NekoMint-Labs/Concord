@@ -31,10 +31,23 @@ describe("native/CAD viewer boundary", () => {
       { entityId: "" },
       { sourceHash: "bad" },
       { sourceRevisionId: "" },
+      { layer: "" },
+      { layer: "bad\u0000layer" },
+      { layer: "x".repeat(256) },
     ])
       expect(() => validateCadTarget({ ...target, ...patch })).toThrow(
         "Invalid",
       );
+  });
+  it("accepts a bounded native layer hint for ViewerTarget mapping", () => {
+    expect(() =>
+      validateCadTarget({
+        sourceRevisionId: "R1",
+        sourceHash: "a".repeat(64),
+        entityId: "31",
+        layer: "MEP",
+      }),
+    ).not.toThrow();
   });
   it("validates before copying and captures independent revision bytes", async () => {
     const original = await source();

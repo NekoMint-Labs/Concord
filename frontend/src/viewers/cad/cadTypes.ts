@@ -22,6 +22,8 @@ export interface CadNavigation {
   sourceRevisionId: string;
   sourceHash: string;
   entityId: string;
+  /** Native layer name when the donor can provide it. */
+  layer?: string;
 }
 
 export interface CadController {

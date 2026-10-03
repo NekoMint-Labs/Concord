@@ -56,10 +56,12 @@ export async function openCadSources(
               const entity =
                 document.database.openObjectForRead<AcDbEntity>(entityId);
               if (!(entity instanceof AcDbEntity)) continue;
+              const layer = String(entity.layer ?? "");
               onSelection({
                 sourceRevisionId: source.revisionId,
                 sourceHash: source.sourceHash,
                 entityId,
+                ...(layer ? { layer } : {}),
               });
             }
           };
@@ -135,6 +137,9 @@ export async function navigateCadEntity(
   );
   if (!(entity instanceof AcDbEntity))
     throw new Error("CAD entity is absent from the requested source revision");
+  const layer = String(entity.layer ?? "");
+  if (target.layer !== undefined && target.layer !== layer)
+    throw new Error("CAD entity layer does not match the requested target");
   const bounds = entity.geometricExtents;
   if (bounds.isEmpty()) throw new Error("CAD entity has no navigable geometry");
   const min = bounds.min,
@@ -148,5 +153,9 @@ export async function navigateCadEntity(
   view.selectionSet.clear();
   view.selectionSet.add(entity.objectId);
   view.zoomTo(box, 1.5);
-  return { ...target, entityId: entity.objectId };
+  return {
+    ...target,
+    entityId: entity.objectId,
+    ...(layer ? { layer } : {}),
+  };
 }
