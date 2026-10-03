@@ -8,6 +8,7 @@ import {
 } from "../api/client";
 import type { ConcordContext } from "./ConcordAgent";
 import {
+  engineeringContextKey,
   reportMatchesRun,
   runIsActive,
   scopeFor,
@@ -42,6 +43,7 @@ export function useConcordAgent({
   const [active, setActive] = useState<{
     run: AgentRun;
     context?: AgentContext;
+    identity?: { key: string };
   }>();
   useEffect(() => {
     setScope({ elementIds: [] });
@@ -49,6 +51,31 @@ export function useConcordAgent({
     setError("");
     setPending(false);
   }, [project]);
+
+  const context = useMemo<ConcordContext>(
+    () => ({
+      projectName,
+      ...scope,
+      elementIds: scope.elementIds ?? [],
+      workPackageId:
+        scope.workPackageId === null
+          ? undefined
+          : (scope.workPackageId ?? workPackageId),
+      workPackageName:
+        scope.workPackageId === null
+          ? undefined
+          : scope.workPackageId
+            ? workPackages.find((item) => item.id === scope.workPackageId)?.name
+            : workPackageName,
+    }),
+    [projectName, scope, workPackageId, workPackageName, workPackages],
+  );
+
+  // A new visit to the same engineering scope is not the old operation.
+  const contextKey = engineeringContextKey(project, context);
+  const contextIdentity = useRef({ key: contextKey });
+  if (contextIdentity.current.key !== contextKey)
+    contextIdentity.current = { key: contextKey };
 
   const history = useQuery({
     queryKey: ["runs", project],
@@ -116,7 +143,11 @@ export function useConcordAgent({
         return;
       // Externally launched imports/rechecks also supersede an in-flight investigation.
       fence.current.attempt++;
-      setActive({ run: next });
+      setActive((previous) =>
+        previous?.run.id === next.id
+          ? { ...previous, run: next }
+          : { run: next },
+      );
       setError("");
       setPending(false);
       void cache.invalidateQueries({ queryKey: ["runs", project] });
@@ -127,27 +158,12 @@ export function useConcordAgent({
     [project, cache],
   );
 
-  const context = useMemo<ConcordContext>(
-    () => ({
-      projectName,
-      ...scope,
-      elementIds: scope.elementIds ?? [],
-      workPackageId:
-        scope.workPackageId === null
-          ? undefined
-          : (scope.workPackageId ?? workPackageId),
-      workPackageName:
-        scope.workPackageId === null
-          ? undefined
-          : scope.workPackageId
-            ? workPackages.find((item) => item.id === scope.workPackageId)?.name
-            : workPackageName,
-    }),
-    [projectName, scope, workPackageId, workPackageName, workPackages],
-  );
-
   const launch = useCallback(
-    async (operation: () => Promise<AgentRun>, submitted?: AgentContext) => {
+    async (
+      operation: () => Promise<AgentRun>,
+      submitted?: AgentContext,
+      identity?: { key: string },
+    ) => {
       const attempt = ++fence.current.attempt;
       const current = () =>
         fence.current.project === project && fence.current.attempt === attempt;
@@ -156,12 +172,12 @@ export function useConcordAgent({
       try {
         const next = await operation();
         if (!current() || next.project_id !== project) return;
-        setActive({ run: next, context: submitted });
+        setActive({ run: next, context: submitted, identity });
         await cache.invalidateQueries({ queryKey: ["runs", project] });
         void cache.invalidateQueries({
           queryKey: ["current-operation-run", project, next.id],
         });
-        return next;
+        if (current()) return next;
       } catch (cause) {
         if (current())
           setError(cause instanceof Error ? cause.message : "调查启动失败");
@@ -172,15 +188,22 @@ export function useConcordAgent({
     [cache, project],
   );
   const startInvestigation = useCallback(
-    (instruction: string, submitted: AgentContext = context) =>
-      launch(
+    (instruction: string, submitted: AgentContext = context) => {
+      const key = engineeringContextKey(project, submitted);
+      // Callers may set scope and launch together before the next render.
+      if (contextIdentity.current.key !== key)
+        contextIdentity.current = { key };
+      const identity = contextIdentity.current;
+      return launch(
         () =>
           api.investigate(project, {
             instruction: instruction.trim(),
             scope: scopeFor(submitted),
           }),
         { ...submitted, elementIds: [...(submitted.elementIds ?? [])] },
-      ),
+        identity,
+      );
+    },
     [context, launch, project],
   );
   const retryRun = useCallback(
@@ -191,9 +214,13 @@ export function useConcordAgent({
         !["FAILED", "CANCELLED", "EXPIRED"].includes(next.status)
       )
         return Promise.resolve(undefined);
-      return launch(() => api.resume(next.id), remembered?.context);
+      return launch(
+        () => api.resume(next.id),
+        remembered?.run.id === next.id ? remembered.context : undefined,
+        remembered?.run.id === next.id ? remembered.identity : undefined,
+      );
     },
-    [launch, project, remembered?.context, run],
+    [launch, project, remembered, run],
   );
 
   const sourceContext = useCallback(
@@ -303,7 +330,17 @@ export function useConcordAgent({
         };
       })();
 
+  // Import/recheck presentation is unchanged; only Investigations need scope association.
+  const contextualRun =
+    run?.category !== "investigation" ||
+    (remembered?.identity === contextIdentity.current &&
+      remembered.identity.key === contextKey)
+      ? run
+      : undefined;
+
   return {
+    contextualRun,
+    contextualReport: contextualRun ? report : undefined,
     activeRun: shownRun
       ? {
           id: shownRun.id,

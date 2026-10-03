@@ -10,6 +10,7 @@ import {
 import { useRunStream } from "../api/stream";
 import {
   AGENT_ELEMENT_LIMIT_MESSAGE,
+  engineeringContextKey,
   MAX_AGENT_ELEMENTS,
   reportMatchesRun,
   scopeFor,
@@ -58,14 +59,7 @@ export function ConcordAgent({
 }) {
   const cache = useQueryClient();
   const [question, setQuestion] = useState("");
-  const contextKey = JSON.stringify([
-    project,
-    context.sourceId,
-    context.fromRevisionId,
-    context.revisionId,
-    context.workPackageId,
-    [...new Set(context.elementIds)].sort(),
-  ]);
+  const contextKey = engineeringContextKey(project, context);
   // A fresh token also fences A → B → A, not just different revision IDs.
   const askContext = useRef({ key: contextKey });
   if (askContext.current.key !== contextKey)

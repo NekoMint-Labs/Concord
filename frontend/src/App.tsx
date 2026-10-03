@@ -348,8 +348,8 @@ function ProjectApplication({
                 key={project}
                 project={project}
                 context={agent.context}
-                currentRun={agent.currentRun.data}
-                report={agent.investigation.data}
+                currentRun={agent.contextualRun}
+                report={agent.contextualReport}
                 onRun={agent.rememberRun}
                 onInvestigate={(instruction, context) =>
                   agent.startInvestigation(instruction, context)

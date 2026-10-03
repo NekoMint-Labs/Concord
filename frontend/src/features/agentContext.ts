@@ -21,6 +21,18 @@ export function scopeFor(context: AgentContext): DTO<"AgentScope-Input"> {
   };
 }
 
+/** Engineering identity excludes labels and treats selections as sets. */
+export function engineeringContextKey(project: string, context: AgentContext) {
+  return JSON.stringify([
+    project,
+    context.sourceId,
+    context.fromRevisionId,
+    context.revisionId,
+    context.workPackageId ?? undefined,
+    [...new Set(context.elementIds ?? [])].sort(),
+  ]);
+}
+
 /** A committed report is current only for this complete run identity. */
 export function reportMatchesRun(
   report: InvestigationReport | null | undefined,

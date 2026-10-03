@@ -10,6 +10,7 @@ import {
 import { afterEach, expect, it, vi } from "vitest";
 import { api, type DTO } from "../api/client";
 import { ConcordAgent, type ConcordContext } from "./ConcordAgent";
+import { useConcordAgent } from "./useConcordAgent";
 
 vi.mock("../components/ui/AppPopover", () => ({
   AppPopover: ({
@@ -450,3 +451,151 @@ it("allows Ask in the new context while the previous request is pending and pres
   expect(ask.mock.calls[1][1].scope?.to_revision_id).toBe("r3");
   cache.clear();
 });
+
+it("the header stops presenting an R2 Investigation after navigation while its historical report stays inspectable", async () => {
+  vi.spyOn(api, "agentSettings").mockResolvedValue({ initiative: "suggest" });
+  vi.spyOn(api, "agentNotices").mockResolvedValue([]);
+  const completed: DTO<"AgentRun"> = {
+    id: "completed-r2",
+    project_id: "project",
+    category: "investigation",
+    event_id: null,
+    status: "COMPLETED",
+    runtime: "dbos",
+    runtime_execution_id: null,
+    generation: 0,
+    runtime_generation: 0,
+    analysis_id: "analysis-r2",
+    error: null,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+  const report = {
+    ...askResponse,
+    run_id: completed.id,
+    analysis_id: completed.analysis_id!,
+    generation: 0,
+    persisted: true,
+  };
+  vi.spyOn(api, "runs").mockResolvedValue([completed]);
+  vi.spyOn(api, "run").mockResolvedValue(completed);
+  vi.spyOn(api, "investigate").mockResolvedValue(completed);
+  vi.spyOn(api, "investigation").mockResolvedValue(report);
+  vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
+  let agent!: ReturnType<typeof useConcordAgent>;
+  function Header() {
+    agent = useConcordAgent({
+      project: "project",
+      projectName: "Project",
+      workPackageId: "WP-27",
+    });
+    return (
+      <>
+        <ConcordAgent
+          project="project"
+          context={agent.context}
+          currentRun={agent.contextualRun}
+          report={agent.contextualReport}
+          onRun={agent.rememberRun}
+          onInvestigate={agent.startInvestigation}
+        />
+        <aside aria-label="Historical investigation">
+          {agent.investigation.data?.answer.summary}{" "}
+          {agent.reportContext.revisionId}
+        </aside>
+      </>
+    );
+  }
+  const cache = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={cache}>
+      <Header />
+    </QueryClientProvider>,
+  );
+  act(() => agent.bimContext("source-1", "r2", ["gid-1"], "r1"));
+  fireEvent.click(screen.getByRole("button", { name: "检查 1 个已选构件" }));
+  expect(await screen.findByText("Concord 调查状态")).toBeVisible();
+  await waitFor(() =>
+    expect(screen.getAllByText(/Answer for R2/)).toHaveLength(2),
+  );
+  act(() => agent.bimContext("source-1", "r3", ["gid-1"], "r2"));
+  expect(screen.queryByText("Concord 调查状态")).toBeNull();
+  expect(screen.getByLabelText("Historical investigation")).toHaveTextContent(
+    "Answer for R2 r2",
+  );
+  act(() => agent.bimContext("source-1", "r2", ["gid-1"], "r1"));
+  expect(screen.queryByText("Concord 调查状态")).toBeNull();
+  cache.clear();
+});
+
+it.each([false, true])(
+  "header retry preserves only its original context visit (navigate during retry: %s)",
+  async (navigate) => {
+    vi.spyOn(api, "agentSettings").mockResolvedValue({ initiative: "suggest" });
+    vi.spyOn(api, "agentNotices").mockResolvedValue([]);
+    const failed: DTO<"AgentRun"> = {
+      id: "failed-r2",
+      project_id: "project",
+      category: "investigation",
+      event_id: null,
+      status: "FAILED",
+      runtime: "dbos",
+      runtime_execution_id: null,
+      generation: 0,
+      runtime_generation: 0,
+      analysis_id: null,
+      error: "Failed",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    };
+    vi.spyOn(api, "runs").mockResolvedValue([]);
+    vi.spyOn(api, "run").mockResolvedValue(failed);
+    vi.spyOn(api, "investigate").mockResolvedValue(failed);
+    vi.spyOn(api, "investigation").mockResolvedValue(null);
+    let finish!: (run: DTO<"AgentRun">) => void;
+    const resume = vi.spyOn(api, "resume").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    let agent!: ReturnType<typeof useConcordAgent>;
+    function Header() {
+      agent = useConcordAgent({ project: "project", projectName: "Project" });
+      return (
+        <ConcordAgent
+          project="project"
+          context={agent.context}
+          currentRun={agent.contextualRun}
+          report={agent.contextualReport}
+          onRun={agent.rememberRun}
+          onInvestigate={agent.startInvestigation}
+        />
+      );
+    }
+    const cache = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={cache}>
+        <Header />
+      </QueryClientProvider>,
+    );
+    act(() => agent.bimContext("source", "r2", ["gid"]));
+    fireEvent.click(screen.getByRole("button", { name: "检查 1 个已选构件" }));
+    fireEvent.click(await screen.findByRole("button", { name: "重试调查" }));
+    await waitFor(() => expect(resume).toHaveBeenCalledWith(failed.id));
+    if (navigate) {
+      act(() => agent.bimContext("source", "r3", ["gid"]));
+      act(() => agent.bimContext("source", "r2", ["gid"]));
+    }
+    await act(async () => finish(failed));
+    await waitFor(() => expect(agent.pending).toBe(false));
+    if (navigate) expect(screen.queryByText("Concord 调查状态")).toBeNull();
+    else expect(screen.getByText("Concord 调查状态")).toBeVisible();
+    expect(agent.currentRun.data?.id).toBe(failed.id);
+    cache.clear();
+  },
+);
