@@ -1,0 +1,114 @@
+/* Mapping is a temporary mode of the shared Model shell, not a second split. */
+.application-shell .bim-workspace.spatial-workspace.is-mapping {
+  display: flex;
+  flex-direction: column;
+}
+.application-shell .bim-workspace.is-mapping > .pane-split {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+.application-shell .bim-workspace.is-mapping .spatial-main {
+  grid-template-rows: minmax(180px, 1fr) clamp(200px, 34vh, 320px);
+}
+.mapping-context-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface);
+}
+.mapping-context-bar > div {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+.mapping-context-bar small {
+  color: var(--muted);
+}
+.mapping-dock {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--line-soft);
+  background: var(--surface);
+}
+.mapping-dock-tools {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.mapping-dock-tools label {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  min-width: 100px;
+  font-size: var(--fs-label);
+}
+.mapping-dock-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 12px 8px;
+}
+.mapping-dock .candidate-list {
+  max-height: none;
+  margin: 0;
+}
+.mapping-candidate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.mapping-candidate.is-active {
+  background: var(--concord-accent-tint);
+}
+.mapping-candidate > button {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  padding: 8px;
+  text-align: left;
+}
+.mapping-dock .existing-bindings > button {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  text-align: left;
+}
+.application-shell .bim-workspace.is-mapping .viewer-actions {
+  left: 16px;
+  flex-wrap: wrap;
+  max-width: calc(100% - 32px);
+}
+.application-shell
+  .bim-workspace.is-mapping
+  .viewer-actions
+  button[aria-label$="候选"],
+.application-shell
+  .bim-workspace.is-mapping
+  .viewer-actions
+  button[aria-label="隔离已选"] {
+  width: auto;
+  padding-inline: 8px;
+  font-size: var(--fs-label);
+}
+
+.mapping-inspector-toggle {
+  position: absolute;
+  z-index: 5;
+  top: 16px;
+  right: 16px;
+  padding: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: var(--float-shadow);
+}

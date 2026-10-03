@@ -1,0 +1,94 @@
+/* ---------- page frame shared by 工作 and 项目 ---------- */
+
+/* One measure per page: the inbox is a queue and reads at column width; the
+   project sheet is a composition and is allowed the wider frame. */
+.application-shell .work-list {
+  max-width: 1060px;
+  padding: 22px var(--page-inset) 48px;
+}
+.application-shell .project-home {
+  max-width: 1240px;
+  padding: 22px var(--page-inset) 48px;
+}
+.application-shell .work-list > header,
+.application-shell .project-home > header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  min-height: 34px;
+  margin: 0 0 16px;
+}
+.application-shell .work-list h1,
+.application-shell .project-home h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.012em;
+}
+.application-shell .work-list header p,
+.application-shell .project-home header p {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.application-shell .work-list header p strong {
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.application-shell .work-list header p span::before {
+  margin-right: 8px;
+  color: var(--line);
+  content: "·";
+}
+
+/* One section heading for every list and table on both pages. A heading is a
+   label tier with a count, not a band: on 工作 the tray or the whitespace below
+   already owns the boundary, so the heading draws no rule of its own. */
+.application-shell .work-group > h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 24px;
+  margin: 0 0 6px;
+  padding-left: 12px;
+  color: var(--ink);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.application-shell .work-group > h2::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line);
+  content: "";
+}
+.application-shell .work-group.is-attention > h2::before {
+  background: var(--concord-danger-text);
+}
+.application-shell .work-group.is-done > h2::before {
+  background: var(--concord-ready-mark);
+}
+.application-shell .work-group.is-done > h2 {
+  color: var(--muted);
+}
+.application-shell .work-group > h2 > span {
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.application-shell .work-list .quiet-message {
+  margin: 0;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}

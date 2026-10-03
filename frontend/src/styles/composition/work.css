@@ -1,0 +1,493 @@
+/* The list is the workspace; Peek is a temporary layer, never a standing column. */
+.application-shell .work-list {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+.application-shell .work-layout {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  --work-peek-width: 480px;
+}
+.application-shell .work-queue {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface-workspace);
+}
+.application-shell .work-queue-head {
+  flex: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 6px 24px;
+  padding: 24px 32px 18px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.application-shell .work-queue-head h1 {
+  grid-column: 1;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+.application-shell .work-queue-head p {
+  grid-column: 1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.application-shell .work-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: start;
+  width: 100%;
+  height: 32px;
+  margin-top: 0;
+  padding: 0 10px;
+  border: 1px solid var(--line-control-soft);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--muted);
+}
+.application-shell .work-search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.application-shell .work-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  font-size: 13px;
+}
+.application-shell .work-queue-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 32px 32px;
+}
+.application-shell .work-layout:has(.work-peek) .work-queue-head {
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 280px);
+  padding-right: calc(var(--work-peek-width) + 32px);
+}
+.application-shell .work-layout:has(.work-peek) .work-queue-scroll {
+  padding-right: calc(var(--work-peek-width) + 32px);
+}
+.application-shell .work-list .work-group {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  margin: 0;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.application-shell .work-list .work-group > h2 {
+  height: auto;
+  margin: 0;
+  padding: 10px 8px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.application-shell .work-list .work-group > h2::before {
+  display: none;
+}
+.application-shell .work-rows {
+  border: 0;
+  container: work-rows / inline-size;
+}
+.application-shell .work-list .work-row {
+  display: block;
+  width: 100%;
+  min-height: 72px;
+  margin: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-instant) var(--ease);
+}
+.application-shell .work-list .work-row:hover:not(.is-selected) {
+  background: var(--hover);
+}
+.application-shell .work-list .work-row.is-selected {
+  background: var(--concord-row-selected);
+}
+.application-shell .work-list .work-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.application-shell .work-row-content {
+  display: grid;
+  grid-template-columns: 8px minmax(240px, 0.9fr) minmax(260px, 1.3fr) 100px;
+  align-items: center;
+  gap: 4px 16px;
+  width: min(100%, 900px);
+}
+.application-shell .work-list .work-row .work-mark {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  margin: 0;
+}
+.application-shell .work-row-copy {
+  display: contents;
+  line-height: 1.5;
+}
+.application-shell .work-row-copy strong,
+.application-shell .work-row-copy small,
+.application-shell .work-row-reason {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .work-row-copy strong {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.application-shell .work-row-copy small {
+  grid-column: 2;
+  grid-row: 2;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.application-shell .work-row-reason {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  max-width: 58ch;
+  line-height: 1.6;
+  white-space: normal;
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+.application-shell .work-list .work-state {
+  grid-column: 4;
+  grid-row: 1 / 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.application-shell .work-row-open {
+  opacity: 0.6;
+  color: var(--muted);
+  transition: opacity var(--motion-instant) var(--ease);
+}
+.application-shell .work-row:hover .work-row-open,
+.application-shell .work-row:focus-visible .work-row-open {
+  opacity: 1;
+}
+.application-shell .work-list .work-row.is-attention .work-state {
+  color: var(--concord-warning-text);
+}
+.application-shell .work-list .work-row[data-work-state="已阻塞"] .work-state {
+  color: var(--concord-danger-text);
+}
+.application-shell .work-list .work-row.is-attention .work-mark {
+  background: var(--concord-warning-text);
+}
+.application-shell .work-list .work-row[data-work-state="已阻塞"] .work-mark {
+  background: var(--concord-danger-text);
+}
+.application-shell .work-list .work-row.is-done .work-state {
+  color: var(--concord-ready-text);
+}
+.application-shell .work-more {
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+}
+.application-shell .work-peek {
+  position: absolute;
+  inset: 12px 12px 12px auto;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: var(--work-peek-width);
+  max-width: calc(100% - 24px);
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-detail);
+  box-shadow: var(--float-shadow);
+  animation: work-peek-enter 200ms var(--ease);
+}
+@keyframes work-peek-enter {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .application-shell .work-peek {
+    animation: none;
+  }
+}
+.application-shell .work-peek .detail-inspector-header {
+  flex: none;
+  padding: 20px;
+  border-bottom: 0;
+  background: transparent;
+}
+.application-shell .work-peek .detail-inspector-title {
+  gap: 6px;
+}
+.application-shell .work-peek .detail-inspector-title strong {
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.application-shell .work-peek .pane-header-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 8px 12px;
+}
+.application-shell .work-peek .detail-inspector-meta {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 12.5px;
+}
+.application-shell .work-peek .pane-header-row > .icon-button {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+}
+.application-shell .work-peek-scroll {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 20px 20px;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.application-shell .work-peek-section + .work-peek-section {
+  margin-top: 24px;
+}
+.application-shell .work-peek-section h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+.application-shell .work-peek-section h3 span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.application-shell .work-peek-section p {
+  margin: 0 0 8px;
+}
+.application-shell .work-peek-location {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.application-shell .work-peek-section > .button {
+  height: 32px;
+  margin-top: 4px;
+  font-size: 13px;
+}
+.application-shell .work-peek-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+.application-shell .work-peek-section > .work-peek-state {
+  display: flex;
+}
+.application-shell .work-peek .quiet-message {
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.application-shell .work-peek-state i {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+.application-shell .work-peek-state.is-ready {
+  color: var(--concord-ready-text);
+}
+.application-shell .work-peek-state.is-ready i {
+  background: var(--concord-ready-text);
+}
+.application-shell .work-peek-state.is-blocked {
+  color: var(--concord-danger-text);
+}
+.application-shell .work-peek-state.is-blocked i {
+  background: var(--concord-danger-text);
+}
+.application-shell .work-model-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--ink-2);
+}
+.application-shell .work-project-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.application-shell .work-project-facts > p {
+  margin: 0;
+}
+.application-shell .work-project-facts strong,
+.application-shell .work-model-list strong {
+  font-weight: 550;
+}
+.application-shell .work-project-facts button {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.application-shell .work-project-facts button:hover {
+  color: var(--accent);
+}
+.application-shell .work-project-facts small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.application-shell .work-project-facts p > span {
+  color: var(--muted);
+}
+.application-shell .work-project-facts .is-attention {
+  color: var(--concord-warning-text);
+}
+.application-shell .work-context-action,
+.application-shell .work-detail-links button {
+  padding: 3px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  text-align: left;
+}
+.application-shell .work-context-action:hover,
+.application-shell .work-detail-links button:hover {
+  text-decoration: underline;
+}
+.application-shell .work-detail-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+}
+.application-shell .work-model-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.application-shell .work-model-list li {
+  display: grid;
+  gap: 4px;
+}
+.application-shell .work-model-list li > span {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+@container work-rows (max-width: 720px) {
+  .application-shell .work-row-copy {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .application-shell .work-row-reason {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}
+@container workspace (max-width: 800px) {
+  .application-shell .work-layout:has(.work-peek) .work-queue-scroll {
+    padding-right: 24px;
+  }
+  .application-shell .work-row-copy {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .application-shell .work-row-reason {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}
+
+/* The row retains its hierarchy when Peek claims part of the working plane. */
+@container work-rows (max-width: 780px) {
+  .application-shell .work-row-content {
+    grid-template-columns: 8px minmax(0, 1fr) 88px;
+    gap: 12px;
+  }
+  .application-shell .work-row-copy {
+    display: grid;
+    gap: 3px;
+  }
+  .application-shell .work-row-copy strong,
+  .application-shell .work-row-copy small,
+  .application-shell .work-row-reason {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .application-shell .work-list .work-state {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+@media (max-width: 900px) {
+  .application-shell .work-list .work-group {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .application-shell .work-queue-head {
+    grid-template-columns: minmax(0, 1fr) 260px;
+  }
+}
+@media (max-width: 700px) {
+  .application-shell .work-queue-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .application-shell .work-search {
+    grid-column: 1;
+    grid-row: auto;
+    margin-top: 8px;
+  }
+}

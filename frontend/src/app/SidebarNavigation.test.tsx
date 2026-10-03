@@ -1,9 +1,49 @@
+import type { ReactNode } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
 import type { DTO, Workspace } from "../api/client";
 import { ProjectSidebar } from "./ProjectSidebar";
 import { WorkspaceHeader } from "./WorkspaceHeader";
+
+vi.mock("../components/ui/AppMenu", () => ({
+  AppMenu: ({
+    label,
+    trigger,
+    children,
+  }: {
+    label: string;
+    trigger: ReactNode;
+    children: ReactNode;
+  }) => (
+    <div>
+      <button aria-label={label}>{trigger}</button>
+      <div role="menu">{children}</div>
+    </div>
+  ),
+  AppMenuLabel: ({ children }: { children: ReactNode }) => (
+    <div>{children}</div>
+  ),
+  AppMenuSeparator: () => <hr />,
+  AppMenuItem: ({
+    children,
+    onSelect,
+    active,
+  }: {
+    children: ReactNode;
+    onSelect: () => void;
+    active?: boolean;
+  }) => (
+    <button
+      role="menuitem"
+      aria-current={active ? "page" : undefined}
+      onClick={onSelect}
+    >
+      {children}
+    </button>
+  ),
+}));
 
 /**
  * The navigation chrome of the desktop pass.
@@ -18,6 +58,7 @@ const data = structuredClone(fixture.waiting) as unknown as Workspace;
 const wp = data.state.work_packages.find((item) => item.id === "WP-200")!;
 const projects = [
   { id: "harbor-east", name: "Harbor East / Building A" },
+  { id: "campus-west", name: "Campus West" },
 ] as unknown as DTO<"Project">[];
 
 function sidebar({ collapsed = false, onCollapse = vi.fn() } = {}) {
@@ -38,8 +79,8 @@ function sidebar({ collapsed = false, onCollapse = vi.fn() } = {}) {
 
 it("carries the collapse control and the current project in its own header", () => {
   const onCollapse = sidebar();
-  const current = screen.getByRole("button", { name: "项目" });
-  expect(within(current).getByText("Harbor East / Building A")).toBeVisible();
+  const current = screen.getByRole("button", { name: "切换项目" });
+  expect(within(current).getByText("A 栋项目")).toBeVisible();
   expect(document.querySelector(".sidebar")).not.toHaveAttribute("inert");
 
   fireEvent.click(screen.getByRole("button", { name: "收起侧栏" }));
@@ -57,18 +98,138 @@ it("takes a collapsed column out of reach instead of unmounting it", () => {
 it("offers the way back only while the column is gone", () => {
   const onToggleNav = vi.fn();
   const view = render(
-    <WorkspaceHeader data={data} wp={wp} onToggleNav={onToggleNav} />,
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <WorkspaceHeader data={data} wp={wp} onToggleNav={onToggleNav} />
+    </QueryClientProvider>,
   );
   expect(screen.queryByRole("button", { name: "展开侧栏" })).toBeNull();
 
   view.rerender(
-    <WorkspaceHeader
-      data={data}
-      wp={wp}
-      navCollapsed
-      onToggleNav={onToggleNav}
-    />,
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <WorkspaceHeader
+        data={data}
+        wp={wp}
+        navCollapsed
+        onToggleNav={onToggleNav}
+      />
+    </QueryClientProvider>,
   );
   fireEvent.click(screen.getByRole("button", { name: "展开侧栏" }));
   expect(onToggleNav).toHaveBeenCalledTimes(1);
+});
+
+it("keeps fixture/debug wording out of the project picker", () => {
+  render(
+    <ProjectSidebar
+      data={data}
+      project="harbor-east"
+      projects={projects}
+      recent={[]}
+      selected="WP-200"
+      onCollapse={() => {}}
+      onProject={() => {}}
+      onSelect={() => {}}
+    />,
+  );
+
+  const trigger = screen.getByRole("button", { name: "切换项目" });
+  expect(within(trigger).getByText("A 栋项目")).toBeVisible();
+  expect(within(trigger).queryByText("演示 / 示例")).toBeNull();
+});
+
+it("keeps project actions and switching discoverable in the project switcher", async () => {
+  const onProject = vi.fn();
+  const onNewProject = vi.fn();
+  const onOpenProject = vi.fn();
+  const onProjectSettings = vi.fn();
+  render(
+    <ProjectSidebar
+      data={data}
+      project="harbor-east"
+      projects={projects}
+      selected="WP-200"
+      onCollapse={() => {}}
+      onProject={onProject}
+      onNewProject={onNewProject}
+      onOpenProject={onOpenProject}
+      onProjectSettings={onProjectSettings}
+      onSelect={() => {}}
+    />,
+  );
+
+  expect(
+    await screen.findByRole("menuitem", { name: /新建项目/ }),
+  ).toBeVisible();
+  expect(screen.getByRole("menuitem", { name: /打开项目/ })).toBeVisible();
+  expect(screen.getByRole("menuitem", { name: /项目设置/ })).toBeVisible();
+
+  fireEvent.click(screen.getByRole("menuitem", { name: /新建项目/ }));
+  expect(onNewProject).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Campus West" }));
+  expect(onProject).toHaveBeenCalledWith("campus-west");
+});
+
+it("opens Browse as a first-level destination without a hidden package or model tree", () => {
+  const onTab = vi.fn();
+  const onSelect = vi.fn();
+  render(
+    <ProjectSidebar
+      data={data}
+      project="harbor-east"
+      projects={projects}
+      selected="WP-200"
+      onCollapse={vi.fn()}
+      onProject={vi.fn()}
+      onSelect={onSelect}
+      onTab={onTab}
+    />,
+  );
+
+  const browse = screen.getByRole("button", { name: "浏览" });
+  expect(browse).not.toHaveAttribute("aria-current");
+  expect(browse).not.toHaveAttribute("aria-expanded");
+  fireEvent.click(browse);
+  expect(onTab).toHaveBeenCalledExactlyOnceWith("browse");
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(screen.queryByRole("searchbox", { hidden: true })).toBeNull();
+  expect(
+    screen.queryByRole("navigation", { name: "工作包", hidden: true }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("navigation", { name: "项目模型", hidden: true }),
+  ).toBeNull();
+  expect(screen.queryByText("东翼风管安装")).toBeNull();
+});
+
+it("marks Browse as the active destination instead of a disclosure", () => {
+  render(
+    <ProjectSidebar
+      data={data}
+      project="harbor-east"
+      projects={projects}
+      selected="WP-200"
+      tab="browse"
+      onCollapse={vi.fn()}
+      onProject={vi.fn()}
+      onSelect={vi.fn()}
+    />,
+  );
+
+  expect(screen.getByRole("button", { name: "浏览" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  for (const name of ["工作", "模型", "项目"]) {
+    expect(screen.getByRole("button", { name })).not.toHaveAttribute(
+      "aria-current",
+    );
+  }
 });

@@ -13,7 +13,7 @@ VIEWER = '[aria-label="IFC 模型查看器"]'
 PROJECT = "/api/projects/harbor-east"
 
 
-def rendered(session: NativeSession):
+def rendered(session: NativeSession, phase: str):
     session.wait(
         """
         const viewer = document.querySelector(arguments[0]);
@@ -23,6 +23,7 @@ def rendered(session: NativeSession):
         """,
         VIEWER,
         timeout=90,
+        phase=phase,
     )
     assert not session.script(
         "return !!document.querySelector(arguments[0] + ' [role=alert]')", VIEWER
@@ -30,29 +31,51 @@ def rendered(session: NativeSession):
 
 
 def import_ifc(session: NativeSession, fixture: Path) -> dict:
-    session.wait("return !!document.querySelector('.application-shell')")
+    session.wait("return !!document.querySelector('.startup')", phase="startup ready")
+    session.click(".startup", "打开示例项目")
+    session.wait("return !!document.querySelector('.work-list')", phase="initial workspace ready")
     profile = session.api("/api/profile")
     assert profile["profile"] == "desktop" and profile["runtime"] == "dbos"
     before = session.api(PROJECT + "/workspace")
-    session.click("nav[aria-label='工作区视图']", "BIM")
+    session.click("nav[aria-label='主要工作区']", "模型")
     session.choose_file('input[aria-label="本地 IFC 文件"]', fixture)
-    rendered(session)
+    rendered(session, "local IFC rendered")
     # Opening local geometry must not implicitly upload or mutate project state.
     assert session.api(PROJECT + "/workspace")["state"]["version"] == before["state"]["version"]
-    session.click(".bim-workspace", "导入项目")
+    # A loaded model closes its native 模型 disclosure; reopen it before import.
+    session.click("section[aria-label='模型工作区']", "模型")
+    session.click("section[aria-label='模型工作区']", "添加到项目")
     session.wait(
-        "return document.querySelector('.bim-workspace')?.textContent.includes('导入 已完成。')",
+        "return /已添加到项目|正在处理项目模型|模型处理完成/.test("
+        "document.querySelector('.bim-workspace')?.textContent || '')",
+        phase="project import started",
+    )
+    session.wait(
+        "return document.querySelector('.bim-workspace')?.textContent.includes('模型处理完成')",
         timeout=90,
+        phase="project import completed",
     )
     with fixture.open("rb") as original:
         expected_hash = hashlib.file_digest(original, "sha256").hexdigest()
-    assert session.api(PROJECT + "/bim/content", digest=True) == expected_hash
-    elements = session.api(PROJECT + "/bim/elements")
-    assert len(elements) == 3 and all(element["id"] for element in elements)
-    session.click(".bim-workspace", "结构化视图")
-    session.wait("return document.querySelectorAll('.bim-element').length === 3")
-    session.click(".bim-workspace", "打开项目 IFC")
-    rendered(session)
+    models = [item for item in session.api(PROJECT + "/sources") if item["source"]["kind"] == "BIM"]
+    assert len(models) == 1 and models[0]["latest_revision_id"]
+    source_id, revision_id = models[0]["source"]["id"], models[0]["latest_revision_id"]
+    revision = f"{PROJECT}/sources/{source_id}/revisions/{revision_id}"
+    assert session.api(revision + "/content", digest=True) == expected_hash
+    elements = session.api(revision + "/bim-snapshot")["elements"]
+    assert len(elements) == 3 and all(element["global_id"] for element in elements)
+    session.click("nav[aria-label='主要工作区']", "工作")
+    session.click("nav[aria-label='主要工作区']", "模型")
+    rendered(session, "project model rendered")
+    session.wait(
+        "return document.querySelector('[aria-label=\"IFC 模型查看器\"] [role=status]')"
+        "?.textContent.includes('project-model.ifc')",
+        phase="project model reopened",
+    )
+    assert not session.script(
+        "return (document.querySelector('[aria-label=\"模型工作区\"]')"
+        "?.textContent || '').includes('本地预览')"
+    ), "Local preview remained active after import"
     return {
         "status": "PASS",
         "runtime": "dbos",

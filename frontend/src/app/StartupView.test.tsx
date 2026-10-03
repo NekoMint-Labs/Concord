@@ -78,3 +78,55 @@ it("states that it is connecting rather than failing while it is connecting", ()
   expect(screen.getByText("正在连接项目工作区…")).toBeVisible();
   expect(screen.queryByRole("button", { name: "重新连接" })).toBeNull();
 });
+
+it("shows the connected no-project entry separately from a connection failure", () => {
+  const onNewProject = vi.fn();
+  const onOpenDemo = vi.fn();
+  render(
+    <StartupView
+      pending={false}
+      connected
+      desktop={false}
+      onNewProject={onNewProject}
+      onOpenDemo={onOpenDemo}
+      onReconnect={() => {}}
+      onToken={() => {}}
+    />,
+  );
+
+  expect(screen.queryByRole("alert")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "新建项目" }));
+  fireEvent.click(screen.getByRole("button", { name: "打开示例项目" }));
+  expect(onNewProject).toHaveBeenCalledOnce();
+  expect(onOpenDemo).toHaveBeenCalledOnce();
+});
+
+it("offers another project when the selected workspace cannot load", () => {
+  const onOpenProject = vi.fn();
+  const onReconnect = vi.fn();
+  const view = render(
+    <StartupView
+      pending={false}
+      desktop
+      message="Project not found"
+      onOpenProject={onOpenProject}
+      onReconnect={onReconnect}
+      onToken={() => {}}
+    />,
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent("无法打开项目工作区。");
+  fireEvent.click(screen.getByRole("button", { name: "打开项目" }));
+  fireEvent.click(screen.getByRole("button", { name: "重新连接" }));
+  expect(onOpenProject).toHaveBeenCalledOnce();
+  expect(onReconnect).toHaveBeenCalledOnce();
+  view.rerender(
+    <StartupView
+      pending
+      desktop
+      onOpenProject={onOpenProject}
+      onReconnect={onReconnect}
+      onToken={() => {}}
+    />,
+  );
+  expect(screen.queryByRole("button", { name: "打开项目" })).toBeNull();
+});

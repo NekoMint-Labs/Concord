@@ -1,0 +1,22 @@
+export const advancedTabs = [
+  { id: "operations", label: "活动与运行" },
+  { id: "gis", label: "现场地图" },
+  { id: "capabilities", label: "能力诊断" },
+] as const;
+
+export type WorkspaceTab =
+  | "work"
+  | "browse"
+  | "project"
+  | "coordination"
+  | "history"
+  | "settings"
+  | "work-packages"
+  | "bim"
+  | "sources"
+  | "impact"
+  | "packages"
+  | "documents"
+  | "operations"
+  | "gis"
+  | (typeof advancedTabs)[number]["id"];

@@ -187,6 +187,7 @@
 }
 .bim-element.selected {
   background: var(--accent-muted);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 .bim-element-name {
   display: flex;
@@ -238,7 +239,7 @@
 .bim-properties .pane-body {
   display: flex;
   flex-direction: column;
-  padding: 18px 22px 36px;
+  padding: 16px 20px 34px;
 }
 /*
  * Nothing selected: the instruction sits *inside* the property workspace rather
@@ -284,6 +285,10 @@
  * label starts 5px to the left of every row it names is a band *above* a list; on
  * the same edge it is the list's own title.
  */
+.bim-element-list > .pane-header,
+.bim-properties > .pane-header {
+  border-bottom: 1px solid var(--line-soft);
+}
 .bim-element-list > .pane-header {
   padding-left: 15px;
 }
@@ -298,7 +303,7 @@
  * animate would trade a real interaction for a decoration.
  */
 .bim-property-summary {
-  max-width: 620px;
+  max-width: 700px;
   padding-top: 2px;
 }
 /*
@@ -320,7 +325,7 @@
  * two-line value still reads back to its label.
  */
 .property-group + .property-group {
-  margin-top: 22px;
+  margin-top: 20px;
 }
 /*
  * The group's own name. It sits at the label tier in the stronger ink with wide
@@ -332,9 +337,9 @@
 .property-group-title {
   display: block;
   color: var(--ink-2);
-  font-size: var(--fs-label);
-  font-weight: 500;
-  letter-spacing: 0.08em;
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  letter-spacing: 0.05em;
 }
 .bim-property-list,
 .property-values {
@@ -386,9 +391,9 @@
  * curated groups above it rather than the next group of the same kind.
  */
 .bim-properties .disclosure-block {
-  max-width: 620px;
-  margin-top: 24px;
-  padding-top: 14px;
+  max-width: 700px;
+  margin-top: 22px;
+  padding-top: 13px;
   border-top: 1px solid var(--line-soft);
 }
 /* explanatory text belongs to the workspace footer, not over the canvas. The
@@ -398,6 +403,7 @@
 .viewer-note {
   flex-shrink: 0;
   padding: 7px 18px;
+  border-top: 1px solid var(--line-soft);
   background: var(--surface-chrome);
   color: var(--muted);
   font-size: var(--fs-meta);

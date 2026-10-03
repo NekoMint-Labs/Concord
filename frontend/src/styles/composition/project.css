@@ -1,0 +1,552 @@
+/* Project is a state workspace, an object register and an attached context pane. */
+.application-shell .project-home:has(.project-workspace) {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.application-shell .project-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(280px, 22vw, 340px);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.application-shell .project-primary {
+  min-width: 0;
+  overflow: auto;
+  padding: 24px 32px 32px;
+  background: var(--surface-workspace);
+}
+.application-shell .project-overview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 0 20px;
+}
+.application-shell .project-overview-head > div {
+  display: grid;
+  gap: 6px;
+}
+.application-shell .project-overview-head h1 {
+  margin: 0;
+  font-size: 23px;
+}
+.application-shell .project-home .project-overview-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.application-shell .project-overview-head > button {
+  flex: none;
+  padding: 5px 4px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.application-shell .project-overview-head > button:hover {
+  color: var(--accent);
+}
+.application-shell .project-state {
+  margin: 0 0 24px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.application-shell .project-state-flow {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  padding: 8px 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.application-shell .project-state-baseline,
+.application-shell .project-state-readiness {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  min-width: 0;
+}
+.application-shell .project-state-baseline > span,
+.application-shell .project-state-readiness > span,
+.application-shell .project-state-baseline small,
+.application-shell .project-state-flow > .state-arrow {
+  color: var(--muted);
+  font-size: 13px;
+}
+.application-shell .project-state-baseline strong,
+.application-shell .project-state-readiness strong {
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.application-shell .project-state-readiness strong.is-attention {
+  color: var(--concord-warning-text);
+}
+.application-shell .project-state-footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  padding: 0 0 12px;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.application-shell .project-state-footer p {
+  margin: 0;
+  color: var(--ink-2);
+}
+.application-shell .project-state-footer p > span {
+  color: var(--muted);
+}
+.application-shell .project-state-footer > span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.application-shell .project-main {
+  display: grid;
+  gap: 32px;
+  min-width: 0;
+}
+.application-shell .project-ledger {
+  min-width: 0;
+}
+.application-shell .project-ledger-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  margin-bottom: 8px;
+}
+.application-shell .project-ledger-head > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.application-shell .project-ledger-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+.application-shell .project-ledger-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.application-shell .project-ledger-head button {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+}
+.application-shell .project-package-list button {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 88px 64px 16px;
+  align-items: center;
+  gap: 16px;
+}
+.application-shell .project-package-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.application-shell .project-package-list li + li {
+  margin-top: 2px;
+}
+.application-shell .project-package-list button {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--surface-workspace);
+  color: var(--ink-2);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease);
+}
+.application-shell .project-package-list button:hover {
+  background: var(--concord-row-hover);
+}
+/* Selection persists when returning from the package's real workspace. */
+.application-shell .project-package-list button[aria-pressed="true"],
+.application-shell .project-package-list button:focus-visible {
+  background: var(--concord-row-selected);
+}
+.application-shell .project-package-list button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.application-shell .project-package-list button > span {
+  min-width: 0;
+}
+.application-shell .project-package-name {
+  display: grid;
+  gap: 4px;
+}
+.application-shell .project-package-name strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .project-package-name small {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.application-shell .project-package-id {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .project-package-open {
+  opacity: 0;
+  color: var(--muted);
+}
+.application-shell .project-package-list button:hover .project-package-open,
+.application-shell
+  .project-package-list
+  button:focus-visible
+  .project-package-open {
+  opacity: 1;
+}
+.application-shell .project-package-meta {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .project-package-list .numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.application-shell .project-workspace .package-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.application-shell .project-workspace .package-status.is-blocked {
+  color: var(--concord-danger-text);
+}
+.application-shell .project-workspace .package-status.is-waiting {
+  color: var(--concord-warning-text);
+}
+.application-shell .project-package-list .package-status {
+  justify-content: flex-end;
+}
+.application-shell .project-main > section:not(.project-ledger) > h2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.application-shell .project-main > section:not(.project-ledger) > h2 button {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 400;
+}
+.application-shell .project-revision {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) 125px 80px;
+  align-items: center;
+  gap: 16px;
+  min-height: 48px;
+  padding: 6px 16px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.application-shell .project-revision .mono {
+  color: var(--ink);
+  font-weight: 600;
+}
+.application-shell .project-revision-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .project-revision time {
+  color: var(--muted);
+  text-align: right;
+}
+.application-shell .project-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  overflow: auto;
+  padding: 24px 20px 32px;
+  border-left: 1px solid var(--line-soft);
+  background: var(--surface-list);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.application-shell .project-side h2,
+.application-shell .state-models-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 23px;
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+.application-shell .project-side h2 > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.application-shell .project-side h2 > button,
+.application-shell .state-models-head > button {
+  margin-left: auto;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 400;
+}
+.application-shell .state-models-head h2 {
+  margin: 0;
+}
+.application-shell .project-side .quiet-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.application-shell .state-models ul,
+.application-shell .project-side nav {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: none;
+  border: 0;
+}
+.application-shell .state-models li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 56px;
+  padding: 9px 0;
+}
+.application-shell .state-models li > button {
+  flex-basis: 100%;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .state-models li > button:hover {
+  color: var(--accent);
+}
+.application-shell .state-rev {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.application-shell .state-rev small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.application-shell .state-rev .mono {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.application-shell .state-models li .package-status {
+  margin-left: auto;
+}
+.application-shell .project-files button,
+.application-shell .project-activity button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+.application-shell .project-files button:hover,
+.application-shell .project-activity button:hover,
+.application-shell .project-side nav button:hover {
+  background: var(--hover);
+}
+.application-shell .project-files button > span,
+.application-shell .project-activity button > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.application-shell .project-files strong,
+.application-shell .project-activity strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .project-files time,
+.application-shell .project-activity time,
+.application-shell .project-activity small {
+  color: var(--muted);
+  flex-shrink: 0;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.application-shell .project-baselines > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 36px;
+  padding: 8px 2px;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.application-shell .project-baselines > div > span:nth-child(2) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.application-shell .project-baselines .mono {
+  font-weight: 500;
+}
+.application-shell .project-baselines time {
+  color: var(--muted);
+  font-size: 12px;
+}
+.application-shell .project-side nav button {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 2px;
+  border: 0;
+  border-bottom: 0;
+  background: none;
+  text-align: left;
+}
+.application-shell .project-side nav strong {
+  flex-shrink: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+.application-shell .project-side nav small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@container workspace (max-width: 950px) {
+  .application-shell .project-workspace {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+  .application-shell .project-primary {
+    padding: 24px;
+  }
+  .application-shell .project-side {
+    padding-inline: 16px;
+  }
+  .application-shell .project-package-list button {
+    gap: 10px;
+  }
+}
+
+.application-shell .project-state > h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.application-shell .project-state-reason {
+  margin: 0 0 8px;
+  max-width: 700px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.application-shell button.project-revision {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.application-shell button.project-revision:hover {
+  background: var(--hover);
+}
+.application-shell button.project-revision:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.application-shell .project-workspace > .sources-context-pane {
+  min-height: 0;
+  overflow: auto;
+}
+
+/* An empty project has no sidebar inventory. */
+.application-shell .project-workspace:not(:has(> aside)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.application-shell .project-support > .disclosure-body {
+  overflow: visible;
+}
+.application-shell .project-support .disclosure-inner {
+  display: grid;
+  gap: 20px;
+}
+
+.application-shell .project-empty-record-links {
+  display: flex;
+  gap: 20px;
+  margin-top: 24px;
+  border: 0;
+  font-size: 12.5px;
+}
+.application-shell .project-empty-record-links button {
+  width: auto;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+}

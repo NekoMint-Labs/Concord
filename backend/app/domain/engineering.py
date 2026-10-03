@@ -28,7 +28,7 @@ class Coordination(Model):
     project_id: str
     finding_id: str
     actor: str
-    decision: Literal["CONFIRMED", "DISMISSED", "CLOSED", "EDITED"]
+    decision: Literal["CONFIRMED", "DISMISSED", "CLOSED", "EDITED", "REOPENED"]
     note: str = Field(default="", max_length=4000)
     recheck_id: str | None = None
     created_at: AwareDatetime = Field(default_factory=utcnow)
@@ -74,7 +74,7 @@ class FindingDraft(Model):
 
 
 class FindingDecision(Model):
-    decision: Literal["CONFIRMED", "DISMISSED", "CLOSED", "EDITED"]
+    decision: Literal["CONFIRMED", "DISMISSED", "CLOSED", "EDITED", "REOPENED"]
     note: str = Field(default="", max_length=4000)
     recheck_id: str | None = None
     title: str | None = Field(default=None, min_length=1, max_length=240)

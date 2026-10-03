@@ -103,34 +103,40 @@ class NativeSession:
         return result["body"]
 
     def choose_file(self, selector: str, path: Path):
-        element = self.wait("return document.querySelector(arguments[0])", selector)
+        element = self.wait(
+            "return document.querySelector(arguments[0])", selector, phase="local IFC input ready"
+        )
         self.request(
             "POST",
             self.path(f"element/{element[ELEMENT_KEY]}/value"),
             {"text": str(path.resolve())},
         )
 
-    def wait(self, code: str, *args, timeout: float = 45):
+    def wait(self, code: str, *args, timeout: float = 45, phase: str = "UI condition"):
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             value = self.script(code, *args)
             if value:
                 return value
             time.sleep(0.2)
-        raise WebDriverError("Native UI did not reach its asserted state before the deadline")
+        raise WebDriverError(
+            f"Native UI phase '{phase}' did not reach its asserted state within {timeout:g}s"
+        )
 
     def click(self, root: str, label: str, *, startswith: bool = False):
         element = self.wait(
             """
-            const buttons = [...document.querySelectorAll(arguments[0] + ' button')];
-            const button = buttons.find(value => arguments[2]
-                ? value.textContent.trim().startsWith(arguments[1])
-                : value.textContent.trim() === arguments[1]);
-            return button && !button.disabled ? button : null;
+            const controls = [...document.querySelectorAll(arguments[0] + ' :is(button, summary)')];
+            const control = controls.find(value => {
+                const name = value.getAttribute('aria-label') || value.textContent.trim();
+                return arguments[2] ? name.startsWith(arguments[1]) : name === arguments[1];
+            });
+            return control && !control.disabled ? control : null;
         """,
             root,
             label,
             startswith,
+            phase="requested control ready",
         )
         identity = element.get(ELEMENT_KEY) if isinstance(element, dict) else None
         if not identity:
@@ -139,7 +145,10 @@ class NativeSession:
         self.request("POST", self.path(f"element/{identity}/click"), {})
 
     def open_menu(self):
-        element = self.wait("return document.querySelector('.header-tools .quiet-trigger')")
+        element = self.wait(
+            "return document.querySelector('button[aria-label=\"高级\"]')",
+            phase="advanced menu ready",
+        )
         self.request("POST", self.path(f"element/{element[ELEMENT_KEY]}/value"), {"text": "\ue007"})
 
     def choose_menu(self, label: str):
@@ -149,6 +158,7 @@ class NativeSession:
                 .find(value => value.textContent.trim() === arguments[0]);
         """,
             label,
+            phase="advanced menu item ready",
         )
         self.request("POST", self.path(f"element/{element[ELEMENT_KEY]}/click"), {})
 

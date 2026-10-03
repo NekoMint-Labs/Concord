@@ -1,0 +1,18 @@
+/* Final composition overrides for the shell, pages and Model workspace.
+ * Import order is cascade order; foundation owns shared composition roles,
+ * surface files own their layouts, and responsive adjustments come last.
+ */
+
+@import "./composition/foundation.css";
+@import "./composition/chrome.css";
+@import "./composition/sidebar.css";
+@import "./composition/pages.css";
+@import "./composition/work.css";
+@import "./composition/project.css";
+@import "./composition/source-detail.css";
+@import "./composition/explorer.css";
+@import "./composition/model.css";
+@import "./composition/documents.css";
+@import "./composition/objects.css";
+@import "./composition/history.css";
+@import "./composition/responsive.css";

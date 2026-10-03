@@ -1,86 +1,189 @@
-import { Fragment } from "react";
-import { AppDisclosure } from "../components/ui/AppDisclosure";
-import { Button } from "../components/ui/button";
-import { propertySections } from "./bimProperties";
-import { useIFCViewer } from "./useIFCViewer";
+import { Box, Focus, Layers3, MousePointer2 } from "lucide-react";
+import { useIFCViewer, type MappingSelection } from "./useIFCViewer";
 
-/** All SDK objects stay inside this lazy boundary, never in server/domain DTOs. */
+/** Geometry and controls remain on the canvas, not in a second technical pane. */
 export default function IFCViewer({
   file,
   impacted,
   onSelected,
+  focusId,
+  selectedLabel,
+  issueLabel,
+  onProperties,
+  mapping,
 }: {
   file: File;
   impacted: readonly string[];
   onSelected: (id: string) => void;
+  focusId?: string;
+  selectedLabel?: string;
+  issueLabel?: string;
+  onProperties?: (properties: unknown, id?: string) => void;
+  mapping?: MappingSelection;
 }) {
-  const { container, ready, message, error, properties, busy, act } =
-    useIFCViewer(file, impacted, onSelected);
-  /*
-   * The selected element's attributes are rendered as the property sheet renders
-   * them everywhere else in this product (frontend/src/viewers/bimProperties.ts).
-   * They used to be printed as JSON, which made the geometry viewer the second
-   * place a normal user was handed source instead of a value.
-   */
-  const sections = properties === null ? [] : propertySections(properties);
+  const {
+    container,
+    ready,
+    message,
+    error,
+    busy,
+    act,
+    anchor,
+    hasTarget,
+    isolated,
+    candidatesHighlighted,
+    viewMode,
+  } = useIFCViewer(file, impacted, onSelected, focusId, onProperties, mapping);
+  const canTarget = ready && !busy && hasTarget;
   return (
-    <div className="bim-stage" ref={container} aria-label="IFC 模型查看器">
-      <div className="viewer-actions">
-        <Button
-          disabled={!ready || busy}
-          size="sm"
-          variant="secondary"
+    <div
+      className="bim-stage"
+      ref={container}
+      aria-label="IFC 模型查看器"
+      data-view-mode={viewMode}
+      data-isolated={isolated}
+    >
+      <div className="viewer-actions" aria-label="模型工具">
+        <button
+          type="button"
+          title={isolated ? "返回选择并显示全部构件" : "当前为选择模式"}
+          aria-label="选择"
+          aria-pressed={!isolated}
+          className={!isolated ? "is-active" : undefined}
+          disabled={!ready || busy || !isolated}
+          onClick={() => void act("selectMode")}
+        >
+          <MousePointer2 size={17} />
+        </button>
+        <button
+          type="button"
+          title={hasTarget ? "聚焦当前或受影响构件" : "选择构件后聚焦"}
+          aria-label="聚焦"
+          disabled={!canTarget}
           onClick={() => void act("focus")}
         >
-          聚焦
-        </Button>
-        <Button
-          disabled={!ready || busy}
-          size="sm"
-          variant="secondary"
+          <Focus size={17} />
+        </button>
+        <button
+          type="button"
+          title={hasTarget ? "仅显示当前或受影响构件" : "选择构件后隔离"}
+          aria-label="隔离"
+          aria-pressed={isolated}
+          className={isolated ? "is-active" : undefined}
+          disabled={!canTarget || isolated}
           onClick={() => void act("isolate")}
         >
-          隔离
-        </Button>
-        <Button
-          disabled={!ready || busy}
-          size="sm"
-          variant="secondary"
+          <Box size={17} />
+        </button>
+        <button
+          type="button"
+          title="显示全部构件"
+          aria-label="显示全部"
+          disabled={!ready || busy || !isolated}
           onClick={() => void act("showAll")}
         >
-          显示全部
-        </Button>
+          <Layers3 size={17} />
+        </button>
+        {mapping && (
+          <>
+            <button
+              type="button"
+              aria-label="高亮候选"
+              aria-pressed={candidatesHighlighted}
+              className={candidatesHighlighted ? "is-active" : undefined}
+              disabled={!ready || busy || !mapping.candidateIds.length}
+              onClick={() => void act("highlightCandidates")}
+            >
+              高亮候选
+            </button>
+            <button
+              type="button"
+              aria-label="隔离候选"
+              disabled={!ready || busy || !mapping.candidateIds.length}
+              onClick={() => void act("isolateCandidates")}
+            >
+              隔离候选
+            </button>
+            <button
+              type="button"
+              aria-label="隔离已选"
+              disabled={!ready || busy || !mapping.selectedIds.length}
+              onClick={() => void act("isolateSelected")}
+            >
+              隔离已选
+            </button>
+          </>
+        )}
       </div>
-      <div className="viewer-message" role={error ? "alert" : "status"}>
+      {ready && selectedLabel && anchor && (
+        <div
+          className="viewer-object-label"
+          style={{ left: anchor.x, top: anchor.y }}
+        >
+          {selectedLabel}
+        </div>
+      )}
+      {ready && issueLabel && (
+        <div
+          className="viewer-issue-label"
+          style={
+            anchor
+              ? {
+                  left: Math.max(
+                    12,
+                    Math.min(
+                      anchor.x + 80,
+                      (container.current?.clientWidth ?? 0) - 200,
+                    ),
+                  ),
+                  top: Math.max(16, anchor.y - 100),
+                  right: "auto",
+                }
+              : undefined
+          }
+        >
+          <span className="dot red" />
+          {issueLabel}
+        </div>
+      )}
+      <div className="viewer-bottom-tools" aria-label="投影视图">
+        <button
+          type="button"
+          title="正交顶视图"
+          aria-label="2D"
+          aria-pressed={viewMode === "2d"}
+          className={viewMode === "2d" ? "is-active" : undefined}
+          disabled={!ready || busy || viewMode === "2d"}
+          onClick={() => void act("setViewMode", "2d")}
+        >
+          2D
+        </button>
+        <button
+          type="button"
+          title="透视轨道视图"
+          aria-label="3D"
+          aria-pressed={viewMode === "3d"}
+          className={viewMode === "3d" ? "is-active" : undefined}
+          disabled={!ready || busy || viewMode === "3d"}
+          onClick={() => void act("setViewMode", "3d")}
+        >
+          3D
+        </button>
+      </div>
+      <div
+        className="viewer-message"
+        role={error ? "alert" : "status"}
+        hidden={ready && !error}
+      >
         {error
           ? `3D 查看器不可用：${error}。结构化 BIM 数据仍可使用。`
           : message}
-        {properties !== null && (
-          <AppDisclosure label="所选构件属性">
-            {sections.length ? (
-              <div className="bim-property-summary">
-                {sections.map((section, index) => (
-                  <div className="property-group" key={section.title ?? index}>
-                    <span className="property-group-title">
-                      {section.title ?? "构件属性"}
-                    </span>
-                    <dl className="property-values">
-                      {section.fields.map((field, fieldIndex) => (
-                        <Fragment key={`${field.label}-${fieldIndex}`}>
-                          <dt>{field.label}</dt>
-                          <dd>{field.value}</dd>
-                        </Fragment>
-                      ))}
-                    </dl>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="quiet-message">该构件没有可显示的属性。</p>
-            )}
-          </AppDisclosure>
-        )}
       </div>
+      {ready && (
+        <span className="sr-only" role="status">
+          {message}
+        </span>
+      )}
     </div>
   );
 }

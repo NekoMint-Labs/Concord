@@ -14,7 +14,12 @@ export type RunEvent = {
   message?: string;
 };
 
-export function useRunStream(runId?: string, active = true, generation = 0) {
+export function useRunStream(
+  runId?: string,
+  active = true,
+  generation = 0,
+  project?: string,
+) {
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [error, setError] = useState("");
   const query = useQueryClient();
@@ -28,7 +33,17 @@ export function useRunStream(runId?: string, active = true, generation = 0) {
         ["workspace", "documents", "bim", "runs", "job", "timeline"].map(
           (key) => query.invalidateQueries({ queryKey: [key] }),
         ),
-      );
+      ).then(() => {
+        if (!project || !runId) return;
+        return Promise.all([
+          query.invalidateQueries({
+            queryKey: ["investigation-report", project, runId],
+          }),
+          query.invalidateQueries({
+            queryKey: ["current-operation-run", project, runId],
+          }),
+        ]);
+      });
     void readRunEvents(
       apiUrl(`/api/runs/${encodeURIComponent(runId)}/events`),
       {
@@ -64,6 +79,6 @@ export function useRunStream(runId?: string, active = true, generation = 0) {
       if (!controller.signal.aborted) void refresh();
     });
     return () => controller.abort();
-  }, [runId, active, generation, query]);
+  }, [runId, active, generation, project, query]);
   return { events, error };
 }

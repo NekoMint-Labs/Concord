@@ -96,6 +96,13 @@ class InvestigationService:
     ) -> tuple[Analysis, InvestigationReport]:
         with self.factory.open() as repo:
             request = repo.investigation(run.id).request
+            # A verified effect makes the selected WP eligible for its real
+            # deterministic readiness row; BIM impact still cannot manufacture READY.
+            executed_packages = {
+                proposal.work_package_id
+                for proposal in repo.proposals(run.id)
+                if repo.execution(proposal.operation_id) is not None
+            }
         response, tools = self._reason(state, snapshot, request, run)
         allowed = tools.allowed_packages
         engineering, changed_elements = engineering_findings(
@@ -147,7 +154,11 @@ class InvestigationService:
                 r
                 for r in readiness
                 if r.work_package_id in allowed
-                and (r.work_package_id not in changed_packages or r.status == "BLOCKED")
+                and (
+                    r.work_package_id not in changed_packages
+                    or r.status == "BLOCKED"
+                    or r.work_package_id in executed_packages
+                )
             ),
             reasoning_summary=response.answer.summary,
             reasoning_mode=self.engine.mode,

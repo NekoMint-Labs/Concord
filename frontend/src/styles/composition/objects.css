@@ -1,0 +1,81 @@
+/* Shared object and empty-state grammar; workspace files still own their layout. */
+.application-shell .object-kind {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.application-shell .object-identity {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.application-shell .workspace-empty {
+  width: min(620px, 100%);
+  margin: clamp(48px, 12vh, 104px) 0 0;
+  padding: 8px 0 8px 28px;
+  border-left: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+.application-shell .workspace-empty h2 {
+  margin: 0 0 14px;
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.application-shell .workspace-empty p {
+  max-width: 56ch;
+  margin: 0 0 12px;
+}
+.application-shell .workspace-empty-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-top: 24px;
+}
+.application-shell .workspace-empty .quiet-message {
+  padding: 0;
+  font-size: 12.5px;
+}
+.application-shell .workspace-empty .button {
+  min-height: 30px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+.application-shell
+  :is(button, input, textarea, select, summary, [tabindex]):focus-visible,
+.application-shell .work-list .work-row:focus-visible,
+.application-shell .explorer-group li > button:focus-visible {
+  outline: 2px solid var(--line-control-soft);
+  outline-offset: -2px;
+}
+.application-shell
+  :is(.work-search, .explorer-search, .document-search):focus-within {
+  outline: 1px solid var(--line-control-soft);
+  outline-offset: -1px;
+}
+.application-shell
+  :is(.work-search, .explorer-search, .document-search)
+  input:focus-visible {
+  outline: none;
+}
+.application-shell :is(.spatial-inspector-tabs, .spatial-context-tabs) button,
+.application-shell
+  :is(.spatial-inspector-tabs, .spatial-context-tabs)
+  button.active,
+.application-shell
+  :is(.spatial-inspector-tabs, .spatial-context-tabs)
+  button[aria-selected="true"] {
+  font-weight: 500;
+}
+@media (max-width: 800px) {
+  .application-shell .workspace-empty {
+    margin-top: 40px;
+    padding-left: 20px;
+  }
+}

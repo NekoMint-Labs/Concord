@@ -36,12 +36,17 @@ export function AppDisclosure({
   label,
   children,
   className,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   label: string;
   children: ReactNode;
   className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
+  const open = controlledOpen ?? localOpen;
   const bodyId = useId();
   const { transition, variants } = useMotion();
   const classes = ["disclosure-block", className].filter(Boolean).join(" ");
@@ -52,7 +57,10 @@ export function AppDisclosure({
         className="disclosure"
         aria-expanded={open}
         aria-controls={bodyId}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          setLocalOpen(!open);
+          onOpenChange?.(!open);
+        }}
       >
         <ChevronRight {...icon} size={13} />
         {label}

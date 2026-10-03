@@ -1,0 +1,318 @@
+import type {
+  ActionProposal,
+  AgentRun,
+  InvestigationReport,
+} from "../api/client";
+import { useRunStream } from "../api/stream";
+import { reportMatchesRun } from "./agentContext";
+import { Button } from "../components/ui/button";
+import { DetailInspectorHeader } from "../components/DetailInspector";
+import { PropertyRow, PropertyTable } from "../components/PropertyTable";
+import { Status } from "../components/Status";
+import { documentLocation, domainLabel } from "../ui/labels";
+import {
+  demoEvidenceFact,
+  demoInvestigationText,
+  demoProposalExplanation,
+  demoProposalTitle,
+  demoSourceLabel,
+} from "../ui/demo/demoPresentation";
+import type { InspectorView } from "./Inspector";
+import type { ConcordContext } from "./ConcordAgent";
+
+export type WorkspaceInspectorView = InspectorView | "investigation";
+
+const shortId = (value?: string | null) => (value ? value.slice(0, 8) : "—");
+
+function InvestigationActivity({
+  run,
+  project,
+}: {
+  run?: AgentRun | null;
+  project?: string;
+}) {
+  const stream = useRunStream(run?.id, !!run, run?.generation ?? 0, project);
+  if (!stream.events.length) return null;
+  return (
+    <section className="investigation-activity" aria-label="调查活动">
+      <h4>调查活动</h4>
+      <ol>
+        {stream.events.slice(-6).map((event) => (
+          <li key={event.sequence}>
+            {domainLabel("runTrace", event.name ?? event.type)}
+            {event.stepName && (
+              <small>{domainLabel("runTrace", event.stepName)}</small>
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+export function InvestigationInspector({
+  report: incomingReport,
+  run,
+  context,
+  onClose,
+  proposal,
+  onReview,
+  project,
+}: {
+  report?: InvestigationReport | null;
+  proposal?: ActionProposal;
+  onReview?: () => void;
+  run?: AgentRun | null;
+  context: ConcordContext;
+  onClose: () => void;
+  project?: string;
+}) {
+  const report = run
+    ? reportMatchesRun(incomingReport, run)
+      ? incomingReport
+      : null
+    : incomingReport;
+  const scope = report?.scope;
+  const source = scope?.source_id
+    ? scope.source_id === context.sourceId
+      ? context.sourceName || "工程来源"
+      : "工程来源"
+    : undefined;
+  const fromRevision =
+    scope?.from_revision_id === context.fromRevisionId
+      ? (context.fromRevisionLabel ?? shortId(scope?.from_revision_id))
+      : shortId(scope?.from_revision_id);
+  const toRevision =
+    scope?.to_revision_id === context.revisionId
+      ? (context.revisionLabel ?? shortId(scope?.to_revision_id))
+      : shortId(scope?.to_revision_id);
+  const workPackages = scope?.work_package_ids ?? [];
+  const elements = scope?.element_ids ?? [];
+  const summary = report?.answer.summary ?? "";
+  const comparison = summary.match(
+    /Compared IFC revisions: \d+ added, \d+ deleted, \d+ changed; GlobalId continuity [\d.]+%\./,
+  )?.[0];
+
+  return (
+    <aside className="investigation-inspector" aria-label="工程调查详情">
+      <DetailInspectorHeader
+        title="工程调查"
+        meta={run ? <Status value={run.status} /> : undefined}
+        onClose={onClose}
+      />
+
+      <div className="investigation-body">
+        {run && project && (
+          <InvestigationActivity run={run} project={project} />
+        )}
+        {report ? (
+          <>
+            {scope?.to_revision_id &&
+              context.revisionId &&
+              scope.to_revision_id !== context.revisionId && (
+                <p className="viewer-status" role="status">
+                  这是旧版本的调查结果。请从当前模型变化重新查看原因。
+                </p>
+              )}
+            <section className="investigation-answer">
+              <span className="fact-label">影响</span>
+              <p>
+                {comparison
+                  ? demoInvestigationText(summary.split(/\.\s+/)[0] + ".")
+                  : demoInvestigationText(summary)}
+              </p>
+              {comparison && <p>{demoInvestigationText(comparison)}</p>}
+              <details>
+                <summary>查看原因与限制</summary>
+                {comparison && <p>{demoInvestigationText(summary)}</p>}
+                {report.answer.limitations.map((item) => (
+                  <small key={item}>{demoInvestigationText(item)}</small>
+                ))}
+              </details>
+            </section>
+
+            <section aria-labelledby="investigation-properties">
+              <h4 id="investigation-properties">上下文</h4>
+              <PropertyTable className="investigation-properties">
+                <PropertyRow
+                  label="状态"
+                  value={
+                    run ? (
+                      <Status value={run.status} />
+                    ) : report.persisted ? (
+                      "调查已完成"
+                    ) : (
+                      "只读"
+                    )
+                  }
+                />
+                <PropertyRow label="模型" value={source || "当前项目"} />
+                {(scope?.from_revision_id || scope?.to_revision_id) && (
+                  <PropertyRow
+                    label="版本"
+                    value={
+                      scope.from_revision_id
+                        ? `${fromRevision} → ${toRevision}`
+                        : toRevision
+                    }
+                    mono
+                  />
+                )}
+                <PropertyRow
+                  label="工作包"
+                  value={
+                    workPackages.length ? `${workPackages.length} 个` : "—"
+                  }
+                />
+                <PropertyRow
+                  label="BIM 构件"
+                  value={elements.length ? `${elements.length} 个` : "—"}
+                />
+                <PropertyRow
+                  label="判断依据"
+                  value={`${report.evidence.length} 条`}
+                />
+                {run && (
+                  <PropertyRow
+                    label="更新时间"
+                    value={
+                      <time dateTime={run.updated_at}>
+                        {new Date(run.updated_at).toLocaleString("zh-CN")}
+                      </time>
+                    }
+                  />
+                )}
+              </PropertyTable>
+            </section>
+
+            <section aria-labelledby="investigation-evidence">
+              <div className="investigation-section-heading">
+                <h4 id="investigation-evidence">判断依据</h4>
+                <span className="count">{report.evidence.length}</span>
+              </div>
+              {report.evidence.length ? (
+                <ol className="investigation-evidence">
+                  {report.evidence.map((evidence, index) => {
+                    const historical =
+                      /^Recorded evidence (\S+) from snapshot (\S+): (.*)$/s.exec(
+                        evidence.fact,
+                      );
+                    const revisionFact =
+                      /^Source \S+: revision \S+ \(sequence \d+, SHA256 \S+\)\./.test(
+                        evidence.fact,
+                      );
+                    return (
+                      <li key={evidence.id}>
+                        <span className="evidence-index">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <div>
+                          <strong>
+                            {demoSourceLabel(evidence.source_id) ===
+                            evidence.source_id
+                              ? `判断依据 ${index + 1}`
+                              : demoSourceLabel(evidence.source_id)}
+                          </strong>
+                          <p>
+                            {revisionFact
+                              ? "工程来源版本已核对，原始记录见技术详情。"
+                              : demoEvidenceFact(
+                                  evidence.source_id,
+                                  historical?.[3] ?? evidence.fact,
+                                )}
+                          </p>
+                          <small>
+                            {domainLabel("quality", evidence.quality)} ·{" "}
+                            {evidence.location
+                              ? documentLocation(evidence.location)
+                              : "无位置"}
+                          </small>
+                          <details className="investigation-technical">
+                            <summary>技术详情</summary>
+                            <small>来源 {evidence.source_id}</small>
+                            <small>版本 {evidence.source_revision}</small>
+                            <small>依据编号 {evidence.id}</small>
+                            {historical && (
+                              <small>
+                                原始依据 {historical[1]} · 快照 {historical[2]}
+                              </small>
+                            )}
+                            {revisionFact && (
+                              <small>原始记录 {evidence.fact}</small>
+                            )}
+                          </details>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <p className="quiet-message">本次调查没有持久化判断依据。</p>
+              )}
+            </section>
+            {proposal ? (
+              <section className="investigation-proposal">
+                <span className="fact-label">建议处理</span>
+                <h4>
+                  {demoProposalTitle(proposal.work_package_id, proposal.title)}
+                </h4>
+                <p>
+                  {demoProposalExplanation(proposal.resolution.explanation)}
+                </p>
+                <small>
+                  {proposal.evidence_ids.length} 条依据 · 审批前不会执行
+                </small>
+                {onReview && (
+                  <Button size="sm" onClick={onReview}>
+                    审查处理方案 →
+                  </Button>
+                )}
+              </section>
+            ) : (
+              <section className="investigation-proposal">
+                <span className="fact-label">处理建议</span>
+                <p>
+                  仅有模型变化并不代表施工受阻。本次调查没有需要批准的处理动作；请核对受影响工作包，再重新检查。
+                </p>
+                <Button size="sm" variant="ghost" onClick={onClose}>
+                  返回工程工作区
+                </Button>
+              </section>
+            )}
+            <details className="investigation-process">
+              <summary>技术详情 · {report.tools.length} 步</summary>
+              <ol className="investigation-trace">
+                {report.tools.map((tool, index) => (
+                  <li key={`${tool.tool}:${index}`}>
+                    <strong>{domainLabel("runTrace", tool.tool)}</strong>
+                    <small>
+                      {tool.available ? "已完成" : "不可用"} ·{" "}
+                      {tool.evidence_ids.length} 条依据
+                    </small>
+                  </li>
+                ))}
+              </ol>
+              <small>
+                运行 {shortId(report.run_id)} · 分析{" "}
+                {shortId(report.analysis_id)} · 代次 {report.generation}
+              </small>
+              {scope?.source_id && <small>工程来源 {scope.source_id}</small>}
+            </details>
+          </>
+        ) : (
+          <div className="investigation-pending">
+            {run && <Status value={run.status} />}
+            <strong>
+              {run?.status === "FAILED" ? "调查未完成" : "正在查看原因"}
+            </strong>
+            <p>
+              {run?.status === "FAILED"
+                ? "本次调查失败，请返回工程上下文重试。"
+                : "完成后将在此显示影响、判断依据与处理建议。"}
+            </p>
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}

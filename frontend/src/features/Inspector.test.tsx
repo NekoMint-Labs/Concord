@@ -66,11 +66,11 @@ describe("evidence-backed action controls", () => {
     ).toBeDisabled();
     const approve = screen.getByRole("button", { name: "批准 R4" });
     expect(approve).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("R4 confirmation"), {
+    fireEvent.change(screen.getByLabelText("R4 强确认"), {
       target: { value: "approve r4" },
     });
     expect(approve).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("R4 confirmation"), {
+    fireEvent.change(screen.getByLabelText("R4 强确认"), {
       target: { value: "APPROVE R4" },
     });
     expect(approve).toBeEnabled();
@@ -81,7 +81,7 @@ describe("evidence-backed action controls", () => {
       .spyOn(api, "approve")
       .mockResolvedValue(fixture.approval as Workspace["approvals"][number]);
     render(action(waiting));
-    fireEvent.change(screen.getByLabelText("R4 confirmation"), {
+    fireEvent.change(screen.getByLabelText("R4 强确认"), {
       target: { value: "APPROVE R4" },
     });
     fireEvent.click(screen.getByRole("button", { name: "批准 R4" }));
@@ -91,7 +91,7 @@ describe("evidence-backed action controls", () => {
 
   it("clears typed consent when a new proposal replaces the old one", () => {
     const { rerender } = render(action(waiting));
-    fireEvent.change(screen.getByLabelText("R4 confirmation"), {
+    fireEvent.change(screen.getByLabelText("R4 强确认"), {
       target: { value: "APPROVE R4" },
     });
     const next = {
@@ -102,7 +102,7 @@ describe("evidence-backed action controls", () => {
       })),
     };
     rerender(action(next));
-    expect(screen.getByLabelText("R4 confirmation")).toHaveValue("");
+    expect(screen.getByLabelText("R4 强确认")).toHaveValue("");
     expect(screen.getByRole("button", { name: "批准 R4" })).toBeDisabled();
   });
 
@@ -233,4 +233,45 @@ describe("contextual detail", () => {
       ),
     ).toBeVisible();
   });
+});
+
+it("rejects an unrelated WAITING_APPROVAL owner even at the same generation", () => {
+  render(
+    action({
+      ...approved,
+      analysis_run: { ...approved.analysis_run!, id: "unrelated-owner" },
+      run: { ...approved.run!, id: "unrelated-run" },
+    }),
+  );
+  expect(screen.getByRole("button", { name: "执行并重新检查" })).toBeDisabled();
+  expect(
+    screen.getByText("执行方式：模拟执行（不会修改外部系统）"),
+  ).toBeVisible();
+});
+
+it("persists a scoped rejection and gives it precedence over an old approval", () => {
+  const audit = {
+    ...waiting.audit[0],
+    id: "rejection-audit",
+    action: "ACTION_PROPOSAL_REJECTED",
+    detail: {
+      proposal_id: proposal.id!,
+      work_package_id: "WP-200",
+      generation: proposal.generation,
+      reason: "需要现场复核",
+    },
+  };
+  const reject = vi.spyOn(api, "reject").mockResolvedValue(audit);
+  const { rerender } = render(action(waiting));
+  fireEvent.change(screen.getByLabelText("拒绝原因（可选）"), {
+    target: { value: "需要现场复核" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /^拒绝$/ }));
+  expect(reject).toHaveBeenCalledWith(proposal.id, "需要现场复核");
+  rerender(action({ ...approved, audit: [...waiting.audit, audit] }));
+  expect(screen.getByRole("button", { name: "已拒绝" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "批准 R4" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "执行并重新检查" })).toBeDisabled();
+  expect(screen.getByText(/既有阻塞事实保留/)).toBeVisible();
+  expect(screen.queryByLabelText("R4 强确认")).toBeNull();
 });

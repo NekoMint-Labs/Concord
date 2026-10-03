@@ -66,7 +66,6 @@ function setup() {
       />
     </QueryClientProvider>,
   );
-  fireEvent.click(screen.getByText("派生向量检索 / PostgreSQL"));
 }
 
 function chooseDocument(name: string) {

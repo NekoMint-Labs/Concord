@@ -211,7 +211,7 @@ def build_services(
             SourceImportService(factory, jobs, runtime),
             BimBindingService(factory),
             BimRevisionService(factory, storage, _build_ifc_comparison()),
-            FindingService(factory),
+            FindingService(factory, rechecks),
             EngineeringPublisher(factory),
             rechecks,
             artifacts,

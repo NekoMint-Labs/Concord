@@ -1,3 +1,4 @@
+import { Ellipsis } from "lucide-react";
 import { useState } from "react";
 import type { DTO } from "../api/client";
 import {
@@ -8,30 +9,23 @@ import {
 } from "../components/ui/AppMenu";
 import { AppDialog } from "../components/ui/AppDialog";
 import { Button } from "../components/ui/button";
-import { advancedTabs, type WorkspaceTab } from "./WorkspaceTabs";
+import { icon } from "../components/ui/icon";
+import { advancedTabs, type WorkspaceTab } from "./destinations";
 
 /**
  * 高级: the one door to everything that is not the workflow.
  *
- * Two things used to sit in the window's own chrome as if they were workflow. The
- * diagnostics (运行, 能力) were peers of 协调 and BIM in the view strip, and the
- * demo fixture tools were a top-level 演示选项 button beside 记录变更 - which is
- * how a working product reads as a demonstration build: the second most prominent
- * control in the window rewrote the fixture.
- *
- * Neither capability is removed. Both move behind one explicitly separated entry,
- * which is the smallest honest containment available before the full settings
- * surface exists (the next pass: a Settings window with 常规 / 外观 / AI / 高级;
- * runtime information, run history, capability diagnostics and demo tools are its
- * 高级 section). What this file is, then, is that section, temporarily hung off
- * the window's actions band.
+ * Capability diagnostics used to sit in the window chrome as a workflow peer.
+ * Run history and checks remain reachable here without expanding the primary
+ * workspace sidebar; capability health also lives behind this entry because it
+ * diagnoses the installation rather than the selected work package.
  *
  * Demo tools are additionally gated on the profile the backend is actually
  * running under: `api.profile()` is the one honest signal, and it reports `local`
  * for the browser/development host the demo runs on and `desktop` for the
  * packaged application, whose sidecar never seeds a demo. So a shipped
  * application does not carry fixture controls at all, and a development or
- * judging session still has them.
+ * judging session still has them for the `harbor-east` fixture only.
  *
  * That gate is positive, and only positive: the tools appear when the profile
  * has arrived and says `local`, and stay hidden while the query is in flight or
@@ -61,11 +55,15 @@ export function AdvancedMenu({
   onReset: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
-  const demo = profile?.profile === "local";
+  const demo = profile?.profile === "local" && project === "harbor-east";
   return (
     <>
-      <AppMenu label="高级">
-        <AppMenuLabel>诊断</AppMenuLabel>
+      <AppMenu
+        label="高级"
+        trigger={<Ellipsis {...icon} />}
+        triggerClassName="icon-button advanced-menu-trigger"
+      >
+        <AppMenuLabel>其他工具</AppMenuLabel>
         {advancedTabs.map(({ id, label }) => (
           <AppMenuItem key={id} active={tab === id} onSelect={() => onTab(id)}>
             {label}
@@ -118,7 +116,7 @@ export function AdvancedMenu({
         The dialog is a sibling of the menu rather than an item inside it, because
         a closed menu unmounts its content and would take the dialog with it.
       */}
-      {confirming && (
+      {confirming && demo && (
         <AppDialog
           open
           onOpenChange={(next) => {

@@ -41,23 +41,27 @@ export function SemanticRetrieval({
   }
   const documentId = selected || documents.data?.[0]?.id || "";
   return (
-    <details className="operation-form">
-      <summary>派生向量检索 / PostgreSQL</summary>
+    <section className="semantic-operation" aria-labelledby="retrieval-tool">
+      <h4 id="retrieval-tool">文档检索</h4>
       <p>
-        结构化与本地文本检索仍为默认方式。仅索引所选文档（最多 128
-        个分块）。测试令牌向量已明确标注，且并非语言模型。
+        默认使用结构化与本地文本检索。派生索引仅处理所选文档，最多 128 个分块。
       </p>
       <AppSelect
         label="待索引文档"
-        value={documentId}
+        value={documentId || "__none__"}
         onChange={(next) => {
           changeSelection();
-          setSelected(next);
+          setSelected(next === "__none__" ? "" : next);
         }}
-        options={(documents.data ?? []).map((doc) => ({
-          value: doc.id,
-          label: doc.filename,
-        }))}
+        options={[
+          ...(documents.data?.length
+            ? []
+            : [{ value: "__none__", label: "尚无可索引文档" }]),
+          ...(documents.data ?? []).map((doc) => ({
+            value: doc.id,
+            label: doc.filename,
+          })),
+        ]}
       />
       <label className="consent">
         <input
@@ -97,10 +101,7 @@ export function SemanticRetrieval({
         </Button>
       </div>
       {!enabled && (
-        <small>
-          需要服务端扩展、带 pgvector 的
-          PostgreSQL、CCA_VECTOR_ENABLED，以及可选的向量迁移。
-        </small>
+        <small>向量检索扩展未启用。结构化与本地文本搜索仍可使用。</small>
       )}
       {searched && matches.length === 0 && (
         <p>没有匹配的已索引证据。请确认所选来源 / 模型修订的索引已完成。</p>
@@ -118,6 +119,6 @@ export function SemanticRetrieval({
           </small>
         </article>
       ))}
-    </details>
+    </section>
   );
 }

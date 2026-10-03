@@ -72,7 +72,7 @@ source of exact request/response fields.
 | GET | `/evidence/{evidence_id}` | One project-owned Evidence record |
 | GET / POST | `/findings` | List / propose an evidence-bound Finding |
 | GET | `/findings/{id}` | Finding, impact, evidence IDs and dependencies |
-| POST | `/findings/{id}/decisions` | Human confirm, dismiss, edit or close |
+| POST | `/findings/{id}/decisions` | Human confirm, dismiss, edit, close or explicitly reopen |
 | GET | `/findings/{id}/coordination` | Append-only human decisions |
 | GET / POST | `/findings/{id}/rechecks` | History / request current-source checks |
 
@@ -92,6 +92,19 @@ to one Finding. Closing requires a confirmed Finding and current resolved ReChec
 evidence for **every** dependency source. A newer revision, an Agent explanation or an
 old resolved result cannot authorize closure. Baseline acceptance remains its existing,
 separate explicit API. No new approval tool is exposed to the Agent.
+
+Decision transitions are enforced: a `PROPOSED` Finding may be confirmed, dismissed or
+edited; a `CONFIRMED` Finding may be dismissed, closed (with fresh ReCheck evidence) or
+edited. `CLOSED` and `DISMISSED` Findings accept only `REOPENED`, which returns them to
+`PROPOSED` for a new human confirmation. Invalid transitions return a conflict without
+changing the Finding or its append-only decision history. Reopening never reuses old
+closure authorization.
+
+Confirming a proposal also checks the latest revision of every dependency source inside
+the decision transaction. If a revision arrived while the Finding was only proposed,
+the platform queues a ReCheck against that latest revision, scoped only to this Finding.
+Confirmation does not resolve it or rewrite its original Evidence/dependency provenance.
+The outbox commits with the decision; dispatch follows the commit and survives restart.
 
 ## Runtime, storage and failure behavior
 

@@ -26,9 +26,15 @@ export function useWorkspaceMutation() {
       await operation();
       await cache.invalidateQueries({ queryKey: ["workspace"] });
       await Promise.all(
-        ["timeline", "runs", "documents", "bim", "job"].map((key) =>
-          cache.invalidateQueries({ queryKey: [key] }),
-        ),
+        [
+          "timeline",
+          "runs",
+          "documents",
+          "bim",
+          "job",
+          "current-operation-run",
+          "investigation-report",
+        ].map((key) => cache.invalidateQueries({ queryKey: [key] })),
       );
       if (completed) notify.success(completed);
     } catch (cause) {

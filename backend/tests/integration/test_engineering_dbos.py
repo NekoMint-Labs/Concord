@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 @pytest.mark.integration
-def test_engineering_outbox_recovers_in_new_dbos_process(tmp_path):
+@pytest.mark.parametrize("enqueue", ["revision", "confirmation"])
+def test_engineering_outbox_recovers_in_new_dbos_process(tmp_path, enqueue):
     pytest.importorskip("dbos")
     preamble = """
 import sys, time
@@ -21,18 +22,22 @@ sys.path.insert(0, str(Path.cwd() / 'backend/tests'))
 from app.bootstrap import build_services
 from app.settings import Settings
 from app.domain.actions import Principal
+from app.domain.engineering import FindingDecision
 from test_engineering_coordination import setup_finding
 settings = Settings(data_dir=Path(sys.argv[1]), seed_demo=False, _env_file=None)
 admin = Principal(id='dbos-test', role='admin')
 svc = build_services(settings)
 """
+    confirm = enqueue == "revision"
     prepare = (
         preamble
-        + """
+        + f"""
 try:
-    project, source, _, finding, _, _ = setup_finding(svc, admin)
+    project, source, _, finding, _, _ = setup_finding(svc, admin, confirm={confirm})
     svc.rechecks.dispatch = lambda _: None
     svc.sources.upload(project.id, source.id, 'r2.ifc', b'r2', admin)
+    if not {confirm}:
+        svc.findings.decide(project.id, finding.id, FindingDecision(decision='CONFIRMED'), admin)
     with svc.factory.open() as repo:
         check = repo.rechecks(project.id, finding.id)[0]
         assert repo.run(check.id).status == 'QUEUED'

@@ -18,7 +18,7 @@ from app.domain.project_sources import CreateProjectSource
 from app.settings import Settings
 
 
-def setup_finding(svc, admin):
+def setup_finding(svc, admin, *, confirm=True):
     project = svc.projects.create(CreateProject(name="Coordination acceptance"), admin)
     source = svc.sources.create(project.id, CreateProjectSource(name="Model", kind="BIM"), admin)
     revision = svc.sources.upload(project.id, source.id, "r1.ifc", b"r1", admin).revision
@@ -71,9 +71,10 @@ def setup_finding(svc, admin):
         ),
     )
     finding = svc.findings.create(project.id, draft, admin)
-    finding = svc.findings.decide(
-        project.id, finding.id, FindingDecision(decision="CONFIRMED"), admin
-    )
+    if confirm:
+        finding = svc.findings.decide(
+            project.id, finding.id, FindingDecision(decision="CONFIRMED"), admin
+        )
     return project, source, revision, finding, publication, draft
 
 

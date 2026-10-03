@@ -8,9 +8,17 @@
 @import "./styles/ui.css";
 @import "./styles/shell.css";
 @import "./styles/features/inspector.css";
-@import "./styles/features/impact.css";
 @import "./styles/features/documents.css";
-@import "./styles/features/timeline.css";
 @import "./styles/features/events.css";
 @import "./styles/features/operations.css";
+@import "./styles/features/projects.css";
+@import "./styles/features/sources.css";
 @import "./styles/viewers.css";
+@import "./styles/convergence.css";
+@import "./styles/spatial.css";
+@import "./styles/reference.css";
+@import "./styles/composition.css";
+
+@import "./styles/features/mapping.css";
+
+@import "./styles/features/agent-context.css";

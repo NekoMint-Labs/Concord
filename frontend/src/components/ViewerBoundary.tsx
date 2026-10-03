@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { WorkspaceState } from "./WorkspaceState";
 
 /** A failed lazy viewer or WebGL render must not remove approval controls. */
 export class ViewerBoundary extends Component<
@@ -14,11 +15,11 @@ export class ViewerBoundary extends Component<
   render() {
     if (this.state.failed) {
       return (
-        <section className="loading-view" role="alert">
-          <h2>此工作区视图无法加载</h2>
-          <p>项目检查器、批准与其他视图仍可使用。</p>
-          <p>请切换到其他视图。检查浏览器、网络连接与查看器资源后重新加载。</p>
-        </section>
+        <WorkspaceState
+          kind="error"
+          title="此工作区暂时无法加载"
+          description="其他视图与审批操作仍可使用。请切换视图，检查连接后重试。"
+        />
       );
     }
     return this.props.children;

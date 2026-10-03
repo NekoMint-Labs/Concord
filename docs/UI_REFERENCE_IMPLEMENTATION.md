@@ -2,6 +2,34 @@
 
 Patterns are adapted to Concord's React/CSS/CVA/Radix Slot/Lucide stack; no dependency or copied source is introduced.
 
+## WP-01 desktop workspace direction — current
+
+The approved wide desktop mock (`WP-01 机电工程`) supersedes all earlier palette,
+density, shell, and navigation value statements in this document. Concord now uses:
+
+- a compact near-white project/work-package sidebar with explicit header, content,
+  project hierarchy, and footer regions;
+- a two-band application header that separates project/object context from the six
+  Chinese workflow destinations (`概览 / 模型 / 变更 / 问题 / 文档 / 运行检查`) and local actions;
+- white/off-white work planes separated by spacing and thin soft rules rather than
+  high-contrast grey slabs;
+- compact 12–18px product typography, 28–32px controls, modest radii, and shadows
+  only on floating surfaces;
+- one shared state grammar for loading, empty, and recoverable errors;
+- compact single-column dialogs, with prerequisite helpers nested in the flow rather
+  than parallel CRUD columns;
+- no detached global activity strip: runs and activity stay in the selected run/detail
+  pane, while the primary work surface stays dominant.
+
+Material upstream use for this direction is recorded in `THIRD_PARTY_NOTICES.md`.
+Supabase Studio supplies the full-height shell and fixed-chrome/scrollable-work-region
+composition; shadcn/sidebar-07 supplies the sidebar header/content/footer, project
+switcher, and grouped navigation structure. Radix-backed Concord primitives remain
+implementation primitives, not the product's visual identity.
+
+The sections below are retained as implementation history. Where they call Quiet
+Instrument or any older pass “current”, this section wins.
+
 ## Frontend UI system: ownership, and where the next thing goes
 
 **Start here.** This is the frontend-system pass's record, and it is also the practical answer to "where does this belong". Everything after it is the design record of the earlier visual passes, newest first within each topic; where an earlier pass states a policy this one changed, the change is called out in place.
@@ -52,7 +80,7 @@ This document is a design record, and the sections below are ordered newest firs
 - **shadcn is a source of primitives and structure, not of visual identity.** shadcn-admin and shadcn/ui remain the reference for how a sidebar, a toolbar, or a control is *composed*; they are not the reference for what Concord *looks like*. A generated shadcn admin template is the failure mode this document exists to steer away from, and the palette, radius, and shell sections below were rewritten specifically because an earlier pass drifted toward it.
 - **Colour, radius, and motion are declared once**, in `frontend/src/styles/base.css`, and asserted by `frontend/tests/design-tokens.test.mjs`. Feature stylesheets consume tokens and never restate them.
 
-## Quiet Instrument: the current visual direction
+## Quiet Instrument: historical visual direction
 
 **This section supersedes any visual-value statement below it** (the surface ladder, the radius usage, the accent's role, and the product-text floor are all restated here). The section after it records *composition* decisions that are still current: one edge-to-edge workspace, one `PaneSplit` API, one docked Inspector, and no cards. **The final-polish section at the end of this block supersedes the value statements again** - read it before trusting any hex or type size in this document.
 

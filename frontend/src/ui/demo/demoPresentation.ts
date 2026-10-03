@@ -33,6 +33,14 @@ export function setDemoLocale(next: DemoLocale): void {
   locale = next;
 }
 
+const PROJECT_NAMES: Record<string, string> = {
+  "harbor-east": "A 栋项目",
+};
+
+const PROJECT_DESCRIPTIONS: Record<string, string> = {
+  "harbor-east": "合成施工协调参考项目",
+};
+
 const WORK_PACKAGE_NAMES: Record<string, string> = {
   "WP-100": "结构交接",
   "WP-200": "东翼风管安装",
@@ -64,6 +72,8 @@ const SOURCE_LABELS: Record<string, string> = {
   material: "材料",
   equipment: "设备",
   inspection: "验收",
+  project_state: "项目状态",
+  "harbor-east": "A 栋项目",
 };
 
 const CONSTRAINT_KINDS: Record<string, string> = {
@@ -142,6 +152,14 @@ const SOURCE_KINDS: Record<string, string[]> = {
   inspection: ["inspection"],
 };
 
+export function demoProjectName(id: string, fallback: string): string {
+  return locale === "zh" ? (PROJECT_NAMES[id] ?? fallback) : fallback;
+}
+
+export function demoProjectDescription(id: string, fallback: string): string {
+  return locale === "zh" ? (PROJECT_DESCRIPTIONS[id] ?? fallback) : fallback;
+}
+
 export function demoWorkPackageName(id: string, fallback: string): string {
   return locale === "zh" ? (WORK_PACKAGE_NAMES[id] ?? fallback) : fallback;
 }
@@ -198,6 +216,47 @@ export function demoConstraintText(
   return match ? rule!.zh(...match.slice(1)) : text;
 }
 
+const INVESTIGATION_LIMITATIONS: Record<string, string> = {
+  "File metadata does not establish BIM changes or engineering readiness.":
+    "文件元数据不足以判断 BIM 变更或工程就绪状态。",
+  "Persisted BIM comparison provider is not connected.":
+    "尚未接入 BIM 版本对比服务。",
+  "Persisted source-level BIM binding provider is not connected.":
+    "尚未接入工程来源与构件关联服务。",
+  "Historical evidence retains its original snapshot and source revision.":
+    "历史依据保留原始快照与工程来源版本。",
+  "Source catalog truncated to 50; select a source for further work.":
+    "工程来源仅显示前 50 项；请选择来源继续调查。",
+  "Work-package catalog truncated to 50; narrow the scope for more.":
+    "工作包仅显示前 50 项；请缩小调查范围。",
+  "Overview evidence truncated to 30; narrow the scope for details.":
+    "概览依据仅显示前 30 条；请缩小调查范围。",
+  "Work-package metadata and scoped blocker counts do not establish readiness.":
+    "工作包元数据与阻塞项数量不足以判断施工条件是否就绪。",
+  "Documents lack scoped WP/element associations.":
+    "文档尚无与当前工作包或构件的范围关联。",
+};
+
+export function demoInvestigationText(text: string): string {
+  if (locale !== "zh") return text;
+  if (text.includes("\n"))
+    return text.split("\n").map(demoInvestigationText).join("\n");
+  if (INVESTIGATION_LIMITATIONS[text]) return INVESTIGATION_LIMITATIONS[text];
+  const projectState =
+    /^Recorded project version (\d+); showing (\d+) scoped work packages; (\d+) returned sources differ from baseline\.$/.exec(
+      text,
+    );
+  if (projectState)
+    return `已记录项目版本 ${projectState[1]}；当前范围包含 ${projectState[2]} 个工作包；${projectState[3]} 个工程来源与基准不同。`;
+  const comparison =
+    /^Compared IFC revisions: (\d+) added, (\d+) deleted, (\d+) changed; GlobalId continuity ([\d.]+%)\.$/.exec(
+      text,
+    );
+  return comparison
+    ? `IFC 版本对比：新增 ${comparison[1]}、删除 ${comparison[2]}、修改 ${comparison[3]}；构件标识连续率 ${comparison[4]}。`
+    : text;
+}
+
 /**
  * Evidence carries no kind, so only the kinds its deterministic source prefix
  * can produce are considered. An unrecognized source passes through unchanged.
@@ -208,7 +267,7 @@ export function demoEvidenceFact(sourceId: string, fact: string): string {
     const translated = demoConstraintText(kind, fact);
     if (translated !== fact) return translated;
   }
-  return fact;
+  return demoInvestigationText(fact);
 }
 
 /** Human label for the source an evidence row came from. */

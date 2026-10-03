@@ -2,6 +2,7 @@
 
 from app.application.engineering_publication import validate_evidence
 from app.application.projects import record_lifecycle_change
+from app.application.rechecks import ReCheckService
 from app.domain.actions import Principal
 from app.domain.engineering import Coordination, FindingDecision, FindingDraft
 from app.domain.errors import Conflict
@@ -38,8 +39,8 @@ def validate_draft(repo: CoordinationRepository, project_id: str, request: Findi
 
 
 class FindingService:
-    def __init__(self, factory: RepositoryFactory):
-        self.factory = factory
+    def __init__(self, factory: RepositoryFactory, rechecks: ReCheckService):
+        self.factory, self.rechecks = factory, rechecks
 
     def create(self, project_id: str, request: FindingDraft, principal: Principal) -> Finding:
         require(principal, "ingest")
@@ -70,11 +71,21 @@ class FindingService:
         require(principal, "approve")
         with self.factory.open(project_id, write=True) as repo:
             item = repo.finding(project_id, finding_id)
+            allowed = {
+                "PROPOSED": {"CONFIRMED", "DISMISSED", "EDITED"},
+                "CONFIRMED": {"DISMISSED", "CLOSED", "EDITED"},
+                "DISMISSED": {"REOPENED"},
+                "CLOSED": {"REOPENED"},
+            }
+            if request.decision not in allowed[item.state]:
+                raise Conflict(f"Cannot apply {request.decision} to a {item.state} Finding")
             if request.decision == "CLOSED":
                 self._check_closure(repo, project_id, item, request)
             updates: dict = {"updated_at": utcnow()}
             if request.decision != "EDITED":
-                updates["state"] = request.decision
+                updates["state"] = (
+                    "PROPOSED" if request.decision == "REOPENED" else request.decision
+                )
             if request.title is not None:
                 updates["title"] = request.title
             if request.suggested_action is not None:
@@ -98,6 +109,17 @@ class FindingService:
                 "FINDING_" + request.decision,
                 {"finding_id": item.id},
             )
+            if request.decision == "CONFIRMED":
+                # An arrival while this Finding was only proposed did not enqueue it.
+                # Bind catch-up checks to the confirmed version in the same transaction.
+                for source_id in {d.source_id for d in updated.dependencies}:
+                    revision = repo.latest_source_revision(project_id, source_id)
+                    if revision:
+                        self.rechecks.record_revision(
+                            repo, revision, principal, finding_id=updated.id
+                        )
+        if request.decision == "CONFIRMED":
+            self.rechecks.dispatch(project_id)
         return updated
 
     @staticmethod

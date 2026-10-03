@@ -1,177 +1,267 @@
 import { lazy, Suspense } from "react";
-import { ArrowLeft } from "lucide-react";
-import type { Workspace } from "../api/client";
+import { ProjectExplorer } from "../features/ProjectExplorer";
+import { scopeFor } from "../features/agentContext";
 import { ViewerBoundary } from "../components/ViewerBoundary";
-import { icon } from "../components/ui/icon";
-import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
-import {
-  condensedFor,
-  inspectorWidthFor,
-  usePaneWidth,
-} from "../layout/paneBudget";
-import { CoordinationWorkspace } from "../features/CoordinationWorkspace";
-import { Inspector, type InspectorView } from "../features/Inspector";
-import { WorkPackages } from "../features/WorkPackages";
+import { WorkspaceState } from "../components/WorkspaceState";
+import { Pane, PaneSplit } from "../layout/PaneSplit";
+import { condensedFor, usePaneWidth } from "../layout/paneBudget";
+import { WorkList } from "../features/WorkList";
+import { ChangeExplorer } from "../features/ChangeExplorer";
+import { IssueExplorer } from "../features/IssueExplorer";
 import { Documents } from "../features/Documents";
 import { Capabilities } from "../features/Capabilities";
 import { Operations } from "../features/Operations";
-import { WorkspaceTabs, type WorkspaceTab } from "./WorkspaceTabs";
+import { WorkPackageDirectory } from "./WorkPackageDirectory";
+import { CoordinationView } from "./CoordinationView";
+import { ModelWorkspaceView } from "./ModelWorkspaceView";
+import { ProjectWorkspaceView, SourceHistoryView } from "./ProjectSourceViews";
+import { WorkspaceDetailPane } from "./WorkspaceDetailPane";
+import { useWorkspaceNavigation } from "./useWorkspaceNavigation";
+import type { WorkspaceViewsProps } from "./WorkspaceViewsProps";
 
-const ImpactGraph = lazy(() => import("../features/ImpactGraph"));
-const BIMWorkspace = lazy(() => import("../viewers/BIMWorkspace"));
 const GISWorkspace = lazy(() => import("../viewers/GISWorkspace"));
 
-/**
- * The view destinations are the navigation's own business, and they live there
- * rather than here: what counts as workflow, what is secondary, and what is a
- * diagnostic is a product decision, and it is stated once
- * (frontend/src/app/WorkspaceTabs.tsx).
- */
-export type { WorkspaceTab };
+// Preserve the existing entry-point exports without changing callers.
+export { EmptyWorkPackages } from "./WorkPackageDirectory";
+export type { WorkspaceTab } from "./destinations";
 
-export function WorkspaceViews({
-  project,
-  data,
-  selected,
-  selectedConstraint,
-  tab,
-  busy,
-  detailsOpen,
-  inspectorView,
-  perform,
-  onTab,
-  onSelected,
-  onConstraint,
-  onDetailsOpen,
-  onInspectorView,
-  onRecheck,
-}: {
-  project: string;
-  data: Workspace;
-  selected: string;
-  selectedConstraint: string;
-  tab: WorkspaceTab;
-  busy: boolean;
-  detailsOpen: boolean;
-  inspectorView: InspectorView;
-  perform: (operation: () => Promise<unknown>) => Promise<void>;
-  onTab: (tab: WorkspaceTab) => void;
-  onSelected: (id: string) => void;
-  onConstraint: (id: string) => void;
-  onDetailsOpen: (open: boolean) => void;
-  onInspectorView: (view: InspectorView) => void;
-  onRecheck: () => void;
-}) {
+/** Navigation owns destinations; this component only composes the selected work surface. */
+export function WorkspaceViews(props: WorkspaceViewsProps) {
+  const {
+    project,
+    data,
+    modelSources = [],
+    localIfcFile,
+    onLocalIfcFile,
+    selected,
+    selectedElement,
+    selectedSpatialIssue,
+    onElementSelected,
+    onSpatialIssueSelected,
+    tab,
+    detailsOpen,
+    perform,
+    onTab,
+    onSelected,
+    onRecheck,
+    onStructure,
+    report,
+    run,
+    onSourceContext,
+    onInvestigateSource,
+    onInspectImpact,
+    onInvestigateWork,
+  } = props;
+  const navigation = useWorkspaceNavigation(props);
+  const {
+    explorerTarget,
+    setExplorerTarget,
+    openSource,
+    openWorkPackage,
+    openInvestigation,
+    selectConstraint,
+  } = navigation;
   /*
-   * The pane budget: the Inspector is what the user just opened, so it always
-   * wins the column it needs. Below 1280px the nested list pane yields to it and
-   * is reached as a menu instead of as a third column
-   * (frontend/src/layout/paneBudget.ts).
+   * The Inspector owns its pane budget; constrained windows yield the nested list
+   * instead of creating an unreadable third column (layout/paneBudget.ts).
    */
   const width = usePaneWidth();
   const condensed = condensedFor(width, detailsOpen);
+  const stackedInspector = detailsOpen && width <= 1120;
   return (
     <>
-      <WorkspaceTabs tab={tab} onTab={onTab} />
       {/*
         The workspace and its detail pane are one adjustable split. The pane is a
         real desktop pane: it can be dragged, it can be moved with the arrow keys
         while the divider has focus, and it states its own minimum so it can never
         be collapsed into an unreadable strip.
       */}
-      <PaneSplit id="workspace">
-        <Pane className="central-workspace">
-          {tab === "impact" && (
-            <button
-              className="canvas-back text-button"
-              onClick={() => onTab("coordination")}
-            >
-              <ArrowLeft {...icon} size={13} /> 返回协调
-            </button>
-          )}
+      <PaneSplit
+        id={`workspace-${stackedInspector ? "stacked" : "wide"}`}
+        orientation={stackedInspector ? "vertical" : "horizontal"}
+      >
+        <Pane
+          className={`central-workspace${detailsOpen ? " has-detail" : ""}`}
+          minSize={stackedInspector ? "300px" : "480px"}
+          maxSize={stackedInspector ? "75%" : undefined}
+        >
           <ViewerBoundary key={`${project}:${tab}`}>
             <Suspense
-              fallback={<div className="loading-view">正在加载工作区…</div>}
+              fallback={
+                <WorkspaceState
+                  kind="loading"
+                  title="正在加载工作区"
+                  description="正在准备工程数据与视图。"
+                />
+              }
             >
-              {tab === "coordination" && (
-                <CoordinationWorkspace
-                  workspace={data}
-                  selected={selected}
-                  busy={busy}
-                  onRecheck={onRecheck}
-                  onDetails={(view) => {
-                    onInspectorView(view);
-                    onDetailsOpen(true);
-                  }}
-                  onImpact={() => onTab("impact")}
-                />
-              )}
-              {tab === "operations" && (
-                <Operations project={project} perform={perform} />
-              )}
-              {tab === "impact" && (
-                <ImpactGraph
-                  workspace={data}
-                  selected={selected}
-                  onConstraint={onConstraint}
-                />
-              )}
-              {tab === "packages" && (
-                <WorkPackages workspace={data} onSelect={onSelected} />
-              )}
-              {tab === "documents" && (
-                <Documents
-                  project={project}
-                  perform={perform}
-                  condensed={condensed}
-                />
-              )}
-              {tab === "capabilities" && <Capabilities />}
-              {tab === "bim" && (
-                <BIMWorkspace
-                  project={project}
-                  impacted={data.analysis?.impact.element_ids ?? []}
-                  condensed={condensed}
-                />
-              )}
-              {tab === "gis" && (
-                <GISWorkspace
-                  project={project}
-                  selected={selected}
-                  onSelected={onSelected}
-                />
-              )}
+              <>
+                {tab === "work" && (
+                  <WorkList
+                    workspace={data}
+                    sources={modelSources}
+                    report={report}
+                    run={run}
+                    onSource={(id) => openSource({ kind: "source", id })}
+                    onInvestigate={
+                      onInvestigateWork ??
+                      ((context) => {
+                        onSourceContext?.(
+                          context.sourceId,
+                          context.revisionId,
+                          context.revisionLabel,
+                          context.fromRevisionId,
+                          context.fromRevisionLabel,
+                        );
+                        onInvestigateSource?.(
+                          context.sourceId,
+                          context.revisionId,
+                          context.fromRevisionId,
+                        );
+                      })
+                    }
+                    onPackage={openWorkPackage}
+                    onModels={() => onTab("sources")}
+                    onRecheck={onRecheck}
+                    onReport={openInvestigation}
+                    onProject={() => onTab("project")}
+                    onTab={onTab}
+                  />
+                )}
+                {tab === "browse" && (
+                  <ProjectExplorer
+                    workspace={data}
+                    sources={modelSources}
+                    onTab={onTab}
+                    onOpen={navigation.openExplorerTarget}
+                  />
+                )}
+                {tab === "project" && (
+                  <ProjectWorkspaceView
+                    {...props}
+                    investigationScope={scopeFor(props.investigationContext)}
+                    modelSources={modelSources}
+                    navigation={navigation}
+                  />
+                )}
+                {tab === "work-packages" && (
+                  <WorkPackageDirectory
+                    data={data}
+                    onStructure={onStructure}
+                    openWorkPackage={openWorkPackage}
+                  />
+                )}
+                {tab === "coordination" && (
+                  <CoordinationView
+                    {...props}
+                    openInvestigation={openInvestigation}
+                    selectConstraint={selectConstraint}
+                    showDetails={navigation.showDetails}
+                  />
+                )}
+                {tab === "operations" && (
+                  <Operations project={project} perform={perform} />
+                )}
+                {tab === "impact" && (
+                  <ChangeExplorer
+                    project={project}
+                    workspace={data}
+                    onWorkPackage={openWorkPackage}
+                    initialElement={selectedElement}
+                    onElementSelected={onElementSelected}
+                    localFile={localIfcFile}
+                    onLocalFile={onLocalIfcFile}
+                    onModels={() => onTab("sources")}
+                    onInvestigate={(
+                      sourceId,
+                      revisionId,
+                      fromRevisionId,
+                      ids,
+                    ) =>
+                      onInvestigateSource(
+                        sourceId,
+                        revisionId,
+                        fromRevisionId,
+                        ids,
+                      )
+                    }
+                    onInspect={(workPackageId, sourceId, comparison, change) =>
+                      onInspectImpact(workPackageId, {
+                        sourceId,
+                        fromRevisionId: comparison.from_revision_id,
+                        revisionId: comparison.to_revision_id,
+                        highlightIds: [change.global_id],
+                        changes: [change],
+                      })
+                    }
+                  />
+                )}
+                {tab === "packages" && (
+                  <IssueExplorer
+                    project={project}
+                    workspace={data}
+                    selectedElement={selectedElement}
+                    selectedIssue={selectedSpatialIssue}
+                    onWorkPackage={openWorkPackage}
+                    onElementSelected={onElementSelected}
+                    onIssueSelected={onSpatialIssueSelected}
+                    localFile={localIfcFile}
+                    onLocalFile={onLocalIfcFile}
+                    onResolve={selectConstraint}
+                    onSelectWorkPackage={(id) => {
+                      setExplorerTarget(null);
+                      onSelected(id);
+                    }}
+                  />
+                )}
+                {tab === "documents" && (
+                  <Documents
+                    key={
+                      explorerTarget?.kind === "document"
+                        ? explorerTarget.id
+                        : "documents"
+                    }
+                    initialDocumentId={
+                      explorerTarget?.kind === "document"
+                        ? explorerTarget.id
+                        : undefined
+                    }
+                    project={project}
+                    perform={perform}
+                    condensed={condensed}
+                  />
+                )}
+                {tab === "capabilities" && <Capabilities />}
+                {(tab === "sources" || tab === "history") && (
+                  <SourceHistoryView {...props} navigation={navigation} />
+                )}
+                {tab === "bim" && (
+                  <ModelWorkspaceView
+                    {...props}
+                    modelTarget={navigation.modelTarget}
+                    condensed={condensed}
+                    openInvestigation={openInvestigation}
+                    openWorkPackage={openWorkPackage}
+                  />
+                )}
+                {tab === "gis" && (
+                  <GISWorkspace
+                    project={project}
+                    selected={selected}
+                    onSelected={onSelected}
+                  />
+                )}
+              </>
             </Suspense>
           </ViewerBoundary>
         </Pane>
         {detailsOpen && (
-          <>
-            <PaneDivider label="调整详情面板宽度" />
-            <Pane
-              id="inspector-pane"
-              className="inspector-pane pane-stack"
-              /* A wide window can afford the Inspector's designed width; a
-                 constrained one gives its own column back to the content. */
-              defaultSize={inspectorWidthFor(width)}
-              minSize="240px"
-              /* A pixel ceiling, for the reason the local browsers state: a
-                 percentage ceiling shrinks with the window and binds a width
-                 the user chose. 480px is the 40% of the 1440px window this
-                 layout is drawn at. */
-              maxSize="480px"
-            >
-              <Inspector
-                busy={busy}
-                workspace={data}
-                selected={selected}
-                selectedConstraint={selectedConstraint}
-                view={inspectorView}
-                perform={perform}
-                onClose={() => onDetailsOpen(false)}
-                onView={onInspectorView}
-              />
-            </Pane>
-          </>
+          <WorkspaceDetailPane
+            {...props}
+            explorerTarget={explorerTarget}
+            stackedInspector={stackedInspector}
+            width={width}
+          />
         )}
       </PaneSplit>
     </>

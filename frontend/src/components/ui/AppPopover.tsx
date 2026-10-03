@@ -38,3 +38,7 @@ export function AppPopover({
     </Popover.Root>
   );
 }
+
+export function AppPopoverClose({ children }: { children: ReactElement }) {
+  return <Popover.Close asChild>{children}</Popover.Close>;
+}

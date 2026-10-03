@@ -1,0 +1,1929 @@
+/* Concord reference workspace: restrained chrome around one dominant model plane. */
+.application-shell {
+  --accent: var(--concord-accent);
+  --accent-muted: var(--concord-accent-tint);
+  --primary: var(--concord-accent);
+  --primary-hover: var(--concord-accent-strong);
+  --surface-nav: var(--concord-shell-surface);
+  --surface-detail: var(--concord-shell-surface);
+  --ink: var(--concord-ink);
+  --muted: var(--concord-muted);
+  --line-soft: var(--concord-divider);
+  --font-ui: var(--concord-font-ui);
+  font-family: var(--font-ui);
+  font-size: 12.25px;
+}
+.application-shell .sidebar {
+  background: var(--surface-nav);
+  border-right: 1px solid var(--concord-shell-divider);
+}
+.application-shell .brand {
+  height: 41px;
+  padding-left: 16px;
+}
+.application-shell .brand-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  font-size: 10px;
+  background: var(--concord-brand-mark);
+}
+.application-shell .brand-name strong {
+  font-size: 15px;
+  letter-spacing: -0.025em;
+}
+.application-shell .brand > .icon-button {
+  opacity: 0;
+}
+.application-shell .brand:hover > .icon-button,
+.application-shell .brand > .icon-button:focus-visible {
+  opacity: 1;
+}
+.application-shell .project-picker {
+  padding: 2px 9px 6px;
+}
+.application-shell .project-trigger {
+  height: 30px;
+  font-size: 12px;
+}
+.application-shell .project-trigger .project-name strong {
+  font-size: 12px;
+}
+.application-shell .sidebar-search {
+  display: none;
+}
+.application-shell .sidebar-primary {
+  padding: 4px 11px 12px;
+  gap: 2px;
+  border: 0;
+}
+.application-shell .sidebar-primary button {
+  height: 30px;
+  padding: 0 8px;
+  gap: 10px;
+  color: var(--concord-nav-text);
+  font-size: 12px;
+  font-weight: 400;
+}
+.application-shell .sidebar-primary button svg,
+.application-shell .sidebar-footer button svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.7;
+}
+.application-shell .sidebar-primary button.active {
+  background: var(--concord-nav-selection);
+  color: var(--concord-nav-active);
+  font-weight: 500;
+}
+.application-shell .sidebar-group {
+  padding: 10px 11px;
+  border-top: 1px solid var(--concord-nav-divider);
+}
+.application-shell .sidebar-group-heading {
+  padding: 0 8px 6px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+.application-shell .area-group {
+  margin-top: 5px;
+}
+.application-shell .area-title {
+  color: var(--concord-area-label);
+  font-size: 10.5px;
+}
+.application-shell .package-nav {
+  padding: 5px 8px;
+}
+.application-shell .package-nav strong {
+  font-size: 11.5px;
+  font-weight: 400;
+}
+.application-shell .package-nav small {
+  font-size: 10.5px;
+}
+.application-shell .sidebar-footer {
+  border-top: 1px solid var(--concord-nav-divider);
+}
+.application-shell .sidebar-footer button {
+  height: 28px;
+  font-size: 11px;
+}
+.application-shell .app-header,
+.application-shell .context-bar,
+.application-shell .local-actions {
+  min-height: 41px;
+  height: 41px;
+  border: 0;
+  background: var(--surface);
+}
+.application-shell .app-header {
+  border-bottom: 1px solid var(--concord-header-divider);
+}
+.application-shell .context-bar {
+  gap: 12px;
+  padding: 0 15px;
+}
+.application-shell .breadcrumb {
+  font-size: 11.5px;
+}
+.application-shell .breadcrumb strong {
+  font-weight: 600;
+}
+.application-shell .workspace-location {
+  margin-left: 4px;
+  padding-left: 10px;
+}
+.application-shell .header-versions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--concord-header-label);
+}
+.application-shell .header-versions > span:not(:nth-child(2)) {
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: var(--concord-header-control);
+  color: var(--concord-dark-ink);
+}
+.application-shell .header-versions i {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--concord-ready-mark);
+}
+.application-shell .local-actions {
+  gap: 10px;
+  padding: 0 12px;
+}
+.application-shell .local-actions > .button {
+  font-size: 10px;
+  height: 27px;
+  padding: 0 7px;
+}
+.application-shell .central-workspace {
+  background: var(--surface);
+}
+/* The divider changes only the Inspector column; the stage retains the bottom context. */
+.application-shell .bim-workspace.spatial-workspace {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+.application-shell .bim-workspace > .pane-split {
+  height: 100%;
+}
+.application-shell .bim-workspace .spatial-main {
+  display: grid;
+  grid-template-rows: minmax(260px, 1fr) 40px;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.application-shell .bim-workspace.is-list-open .spatial-main {
+  grid-template-rows: minmax(260px, 1fr) 210px;
+}
+.application-shell .bim-workspace .spatial-stage {
+  min-height: 0;
+  background: var(--concord-viewer-stage);
+}
+.application-shell .bim-workspace .spatial-inspector-pane {
+  min-height: 0;
+  background: var(--surface-detail);
+}
+.application-shell .bim-workspace .spatial-inspector {
+  height: 100%;
+  min-width: 0;
+  background: var(--surface-detail);
+  border-left: 1px solid var(--concord-shell-divider);
+}
+.application-shell .bim-workspace .spatial-context {
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--concord-context-divider);
+}
+.application-shell .bim-stage {
+  min-height: 0;
+  background: var(--concord-viewer-stage);
+}
+.application-shell .spatial-inspector-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 17px 17px 10px;
+  color: var(--concord-inspector-title);
+}
+.application-shell .spatial-inspector-head > div {
+  flex: 1;
+  min-width: 0;
+}
+.application-shell .spatial-inspector-menu {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--concord-inspector-subtitle);
+}
+.application-shell .spatial-inspector-menu:hover,
+.application-shell .spatial-inspector-menu[data-state="open"] {
+  background: var(--hover);
+}
+.application-shell .spatial-inspector-head h2 {
+  margin: 0 0 3px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  line-height: 1.15;
+  font-weight: 600;
+}
+.application-shell .spatial-inspector-head span {
+  color: var(--concord-inspector-subtitle);
+  font-size: 11px;
+}
+.application-shell .spatial-inspector-tabs {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  height: 34px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--concord-inspector-divider);
+}
+.application-shell .spatial-inspector-tabs button {
+  position: relative;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--concord-tab-label);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.application-shell .spatial-inspector-tabs button[aria-selected="true"] {
+  color: var(--concord-tab-active);
+  font-weight: 600;
+}
+.application-shell .spatial-inspector-tabs button[aria-selected="true"]:after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+.application-shell .spatial-inspector-tabs small,
+.application-shell .element-section h3 small,
+.application-shell .spatial-context-tabs small {
+  margin-left: 4px;
+  padding: 1px 4px;
+  border-radius: 8px;
+  background: var(--concord-count-surface);
+  color: var(--concord-quiet-metadata);
+  font-size: 9px;
+  font-weight: 400;
+}
+.application-shell .spatial-inspector-body {
+  padding: 12px 17px 32px;
+  font-size: 11.5px;
+}
+.application-shell .element-identity {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  height: 102px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: var(--concord-element-surface);
+  color: var(--concord-element-icon);
+}
+.application-shell .element-identity span {
+  color: var(--concord-element-kind);
+  font-size: 10px;
+}
+.application-shell .element-facts {
+  margin: 0;
+}
+.application-shell .element-facts div {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  align-items: center;
+  min-height: 25px;
+  border-bottom: 1px solid var(--concord-shell-divider);
+}
+.application-shell .element-facts dt {
+  color: var(--concord-fact-label);
+  font-size: 11px;
+}
+.application-shell .element-facts dd {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--concord-fact-value);
+  font-size: 11px;
+}
+.application-shell .element-section {
+  margin-top: 16px;
+  padding-top: 11px;
+  border-top: 1px solid var(--concord-inspector-divider);
+}
+.application-shell .element-section h3 {
+  margin: 0 0 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.application-shell .element-section .quiet-message {
+  margin: 6px 0;
+  font-size: 11px;
+}
+.application-shell .element-context-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 5px;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: var(--concord-fact-value);
+  text-align: left;
+  font-size: 11px;
+}
+.application-shell .element-context-row:hover,
+.application-shell .spatial-context tbody tr:hover {
+  background: var(--concord-row-hover);
+}
+.application-shell .element-context-row svg:last-child {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.application-shell .dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.application-shell .dot.blue {
+  background: var(--accent);
+}
+.application-shell .dot.amber {
+  background: var(--concord-amber-mark);
+}
+.application-shell .dot.red {
+  background: var(--concord-red-mark);
+}
+.application-shell .issue-inspection p {
+  font-size: 11px;
+}
+.application-shell .issue-inspection small {
+  color: var(--concord-quiet-metadata);
+}
+.application-shell .technical-properties {
+  margin-top: 12px;
+  color: var(--concord-technical-text);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.application-shell .investigate-link {
+  margin-top: 12px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+}
+.application-shell .spatial-context-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 15px;
+}
+.application-shell .spatial-context-header > span {
+  margin-left: auto;
+  color: var(--concord-context-label);
+  font-size: 11px;
+}
+.application-shell .spatial-context-header > button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  background: var(--concord-control-surface);
+  border-radius: 4px;
+}
+.application-shell .spatial-context-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  height: 100%;
+}
+.application-shell .spatial-context-tabs button {
+  position: relative;
+  border: 0;
+  background: none;
+  color: var(--concord-context-tab);
+  font-size: 11px;
+}
+.application-shell .spatial-context-tabs button.active {
+  color: var(--concord-context-active);
+  font-weight: 600;
+}
+.application-shell .spatial-context-tabs button.active:after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+}
+.application-shell .spatial-context-scroll {
+  overflow: auto;
+  height: calc(100% - 40px);
+  padding: 0 15px;
+}
+.application-shell .spatial-context-scroll[hidden] {
+  display: none;
+}
+.application-shell .spatial-context table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 11px;
+}
+.application-shell .spatial-context th {
+  height: 27px;
+  color: var(--concord-table-label);
+  font-size: 10px;
+  font-weight: 400;
+  text-align: left;
+}
+.application-shell .spatial-context td {
+  height: 30px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-top: 1px solid var(--concord-shell-divider);
+  color: var(--concord-table-value);
+  cursor: pointer;
+}
+.application-shell .spatial-context td:nth-child(1) {
+  width: 85px;
+}
+.application-shell .spatial-context th:nth-child(1) {
+  width: 85px;
+}
+.application-shell .spatial-context th:nth-child(2) {
+  width: 18%;
+}
+.application-shell .spatial-context th:nth-child(4) {
+  width: 25%;
+}
+.application-shell .spatial-context th:nth-child(5) {
+  width: 15%;
+}
+.application-shell .spatial-context th:last-child {
+  width: 15px;
+}
+.application-shell .spatial-context td .dot {
+  margin-right: 7px;
+}
+.application-shell .spatial-context td button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--concord-table-action);
+  font-size: inherit;
+  font-weight: 600;
+}
+.application-shell .spatial-context tbody tr.selected {
+  background: var(--concord-row-selected);
+}
+.application-shell .context-status {
+  padding: 3px 6px;
+  border-radius: 9px;
+  background: var(--concord-warning-surface);
+  color: var(--concord-warning-text);
+  font-size: 9px;
+}
+.application-shell .context-status.is-open {
+  background: var(--concord-danger-surface);
+  color: var(--concord-danger-text);
+}
+.application-shell .context-empty {
+  padding: 16px 0;
+  color: var(--concord-empty-text);
+  font-size: 11px;
+}
+.application-shell .viewer-actions {
+  top: 12px;
+  left: 12px;
+  display: grid;
+  gap: 0;
+  padding: 4px;
+  border-radius: 5px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px var(--concord-viewer-shadow);
+}
+.application-shell .viewer-actions button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: var(--concord-viewer-text);
+}
+.application-shell .viewer-actions button:hover,
+.application-shell .viewer-bottom-tools button:hover {
+  background: var(--concord-action-hover);
+  color: var(--accent);
+}
+.application-shell .viewer-actions button.is-active {
+  color: var(--accent);
+  background: var(--concord-action-hover);
+}
+.application-shell .viewer-actions button:disabled {
+  opacity: 0.45;
+}
+.application-shell .viewer-orientation {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  z-index: 5;
+  display: grid;
+  gap: 8px;
+  text-align: center;
+  color: var(--concord-viewer-text);
+  font-size: 10px;
+  font-weight: 600;
+}
+.application-shell .viewer-light {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--concord-viewer-text);
+  transform: translateY(45px);
+}
+.application-shell .viewer-object-label {
+  position: absolute;
+  z-index: 5;
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--on-primary);
+  font-size: 10px;
+  pointer-events: none;
+  transform: translate(-50%, -160%);
+  box-shadow: 0 2px 5px var(--concord-label-shadow);
+}
+.application-shell .viewer-issue-label {
+  position: absolute;
+  z-index: 5;
+  top: 19%;
+  right: 10%;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  max-width: 180px;
+  padding: 8px;
+  border: 1px solid var(--concord-issue-border);
+  border-radius: 4px;
+  background: var(--concord-issue-surface);
+  box-shadow: 0 3px 12px var(--concord-issue-shadow);
+  color: var(--concord-issue-text);
+  font-size: 10px;
+}
+.application-shell .viewer-bottom-tools {
+  position: absolute;
+  z-index: 5;
+  bottom: 13px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 30px;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: var(--surface);
+  box-shadow: 0 2px 10px var(--concord-toolbar-shadow);
+  transform: translateX(-50%);
+}
+.application-shell .viewer-bottom-tools button {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 24px;
+  border: 0;
+  background: none;
+  color: var(--concord-viewer-text);
+}
+.application-shell .viewer-bottom-tools button {
+  width: 31px;
+  font-size: 10px;
+}
+.application-shell .viewer-bottom-tools button.is-active {
+  border-radius: 3px;
+  background: var(--concord-toolbar-active);
+  color: var(--on-primary);
+}
+.application-shell .viewer-bottom-tools button:disabled {
+  opacity: 0.45;
+}
+.application-shell .viewer-message[hidden] {
+  display: none;
+}
+.application-shell .viewer-message:not([hidden]) {
+  left: 50%;
+  bottom: auto;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.application-shell .spatial-source-actions {
+  position: absolute;
+  z-index: 6;
+  top: 12px;
+  left: 56px;
+  display: flex;
+  gap: 3px;
+}
+.application-shell .spatial-source-actions button,
+.application-shell .spatial-context-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 27px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: 0 1px 5px var(--concord-control-shadow);
+  color: var(--concord-viewer-text);
+  font-size: 11px;
+  cursor: pointer;
+}
+.application-shell .spatial-context-controls {
+  position: absolute;
+  z-index: 6;
+  top: 12px;
+  left: 56px;
+  display: flex;
+  gap: 4px;
+}
+.application-shell
+  .spatial-stage:has(.spatial-context-controls)
+  .spatial-source-actions {
+  top: 45px;
+}
+@media (max-width: 850px) {
+  .application-shell .bim-workspace.is-list-open .spatial-main {
+    grid-template-rows: minmax(240px, 1fr) 150px;
+  }
+}
+
+/* Changes and Issues are alternate contexts of the same model workspace. */
+.application-shell .change-workspace,
+.application-shell .issue-workspace {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+.application-shell .change-stage,
+.application-shell .issue-stage {
+  height: 100%;
+  min-height: 0;
+}
+.application-shell .change-stage .bim-workspace.spatial-workspace,
+.application-shell .issue-stage .bim-workspace.spatial-workspace {
+  display: block;
+  height: 100%;
+}
+.application-shell .change-stage .spatial-inspector,
+.application-shell .issue-stage .spatial-inspector {
+  display: flex;
+}
+.application-shell .change-stage .spatial-stage,
+.application-shell .issue-stage .spatial-stage {
+  height: auto;
+}
+.application-shell .spatial-context-controls select {
+  height: 27px;
+  max-width: 130px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--concord-viewer-text);
+  font-size: 11px;
+}
+.application-shell .spatial-context-controls button[aria-pressed="true"] {
+  background: var(--concord-action-hover);
+  color: var(--accent);
+}
+
+.application-shell .spatial-source-actions {
+  display: block;
+}
+.application-shell .spatial-source-actions > summary {
+  display: none;
+}
+.application-shell .spatial-source-actions > div {
+  display: flex;
+  gap: 3px;
+}
+.application-shell .spatial-source-actions.is-loaded > summary {
+  display: inline-flex;
+  align-items: center;
+  height: 27px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: 0 1px 5px var(--concord-control-shadow);
+  font-size: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+.application-shell
+  .spatial-source-actions.is-loaded
+  > summary::-webkit-details-marker {
+  display: none;
+}
+.application-shell .spatial-source-actions.is-loaded > div {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  display: grid;
+  min-width: 140px;
+  padding: 5px;
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: 0 3px 12px var(--concord-control-shadow);
+}
+.application-shell .spatial-source-actions.is-loaded:not([open]) > div {
+  display: none;
+}
+
+.application-shell .technical-properties dl {
+  margin: 6px 0 0;
+}
+.application-shell .technical-properties dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+.application-shell .technical-properties dt {
+  color: var(--concord-metadata-label);
+}
+.application-shell .technical-properties dd {
+  margin: 0;
+  color: var(--concord-fact-value);
+  text-align: right;
+}
+
+.application-shell .spatial-context-tabs button:disabled {
+  color: var(--concord-disabled-tab);
+  cursor: default;
+}
+.application-shell .spatial-context-tabs button:focus-visible,
+.application-shell .spatial-inspector button:focus-visible,
+.application-shell .spatial-source-actions button:focus-visible,
+.application-shell .viewer-actions button:focus-visible,
+.application-shell .spatial-context tbody button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.application-shell .context-status.is-ready {
+  background: var(--concord-ready-surface);
+  color: var(--concord-ready-text);
+}
+
+/* Comparison and issue contexts keep the canvas primary and the right edge decision-oriented. */
+.application-shell .is-changes .element-identity {
+  display: none;
+}
+.application-shell .is-changes .spatial-inspector-body > .element-section {
+  margin-top: 12px;
+}
+.application-shell .comparison-inspection h3,
+.application-shell .issue-primary h3 {
+  margin: 18px 0 9px;
+  padding-top: 11px;
+  border-top: 1px solid var(--concord-shell-divider);
+  font-size: 11.5px;
+}
+.application-shell .comparison-inspection h3:first-of-type,
+.application-shell .issue-primary h3:first-child {
+  border: 0;
+  padding-top: 0;
+}
+.application-shell .comparison-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid var(--concord-comparison-border);
+  border-radius: 4px;
+  margin: 4px 0;
+  font-size: 11px;
+}
+.application-shell .comparison-step strong {
+  padding: 3px 5px;
+  border-radius: 3px;
+  background: var(--concord-comparison-surface);
+  color: var(--accent);
+}
+.application-shell .comparison-step span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.application-shell .comparison-inspection p {
+  color: var(--concord-comparison-text);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.application-shell .comparison-inspection button {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  padding: 4px 0;
+  font-size: 10px;
+}
+.application-shell .is-issues .spatial-inspector-head {
+  border-bottom: 1px solid var(--concord-inspector-divider);
+}
+.application-shell .is-issues .spatial-inspector-head > svg:first-child {
+  color: var(--concord-issue-icon);
+}
+.application-shell .is-issues .spatial-inspector-body {
+  padding-top: 3px;
+}
+.application-shell .is-issues .issue-primary h3 {
+  margin-top: 14px;
+}
+.application-shell .is-issues .issue-primary p {
+  line-height: 1.5;
+  color: var(--concord-issue-body);
+}
+.application-shell .issue-priority {
+  color: var(--concord-blocking-text) !important;
+}
+.application-shell .issue-resolution {
+  width: 100%;
+  height: 29px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--concord-issue-action);
+  color: var(--on-primary);
+  font-size: 11px;
+  cursor: pointer;
+}
+.application-shell .compare-filter {
+  display: grid;
+  min-width: 106px;
+  padding: 5px;
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px var(--concord-filter-shadow);
+}
+.application-shell .compare-filter button {
+  display: flex;
+  justify-content: space-between;
+  min-width: 100%;
+  box-shadow: none;
+  background: none;
+}
+.application-shell .compare-filter button[aria-pressed="true"] {
+  color: var(--accent);
+  background: var(--concord-action-hover);
+}
+.application-shell .compare-filter small {
+  margin-left: 8px;
+  color: var(--concord-filter-count);
+}
+.application-shell .spatial-context-controls:has(.compare-filter) {
+  align-items: flex-start;
+}
+/* The investigation is a working surface for actual IFC and persisted evidence, not a squeezed Change table. */
+.application-shell .investigation-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface);
+}
+.application-shell .investigation-tabs {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  height: 35px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--concord-investigation-tab);
+  font-size: 10px;
+}
+.application-shell .investigation-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+.application-shell .investigation-tabs .active {
+  border-bottom: 2px solid var(--accent);
+  color: var(--concord-investigation-active);
+  font-weight: 600;
+}
+.application-shell .investigation-tabs small {
+  border-radius: 9px;
+  background: var(--concord-investigation-count);
+  padding: 1px 4px;
+  font-size: 9px;
+}
+.application-shell .investigation-tabs strong {
+  margin-left: auto;
+  color: var(--concord-investigation-status);
+  font-size: 10px;
+}
+.application-shell .investigation-visuals {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  padding: 8px;
+  gap: 6px;
+}
+.application-shell .investigation-visuals [hidden] {
+  display: none;
+}
+.application-shell .investigation-model,
+.application-shell .investigation-document {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--concord-section-divider);
+  border-radius: 4px;
+}
+.application-shell .investigation-model .bim-stage {
+  height: 100%;
+  min-height: 0;
+}
+.application-shell .investigation-model .viewer-actions,
+.application-shell .investigation-model .viewer-orientation,
+.application-shell .investigation-model .viewer-light,
+.application-shell .investigation-model .viewer-bottom-tools {
+  display: none;
+}
+.application-shell .investigation-document {
+  display: flex;
+  flex-direction: column;
+}
+.application-shell .investigation-document header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 11px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 10px;
+}
+.application-shell .investigation-document header strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+.application-shell .investigation-document header span {
+  margin-left: auto;
+  color: var(--concord-document-status);
+  white-space: nowrap;
+}
+.application-shell .investigation-document-body {
+  overflow: auto;
+  min-height: 0;
+  padding: 9px 13px;
+}
+.application-shell .investigation-document-body section {
+  padding: 4px 0 9px;
+  border-bottom: 1px solid var(--concord-shell-divider);
+}
+.application-shell .investigation-document-body section small {
+  color: var(--concord-document-meta);
+  font-size: 10px;
+}
+.application-shell .investigation-document-body section p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.application-shell .investigation-inspector {
+  height: 100%;
+  background: var(--surface-detail);
+  border-left: 1px solid var(--concord-shell-divider);
+}
+.application-shell .investigation-inspector .detail-inspector-header {
+  min-height: 59px;
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--concord-shell-divider);
+}
+.application-shell .investigation-inspector .detail-inspector-title strong {
+  font-size: 14px;
+}
+.application-shell .investigation-inspector .detail-inspector-title .eyebrow {
+  color: var(--concord-eyebrow);
+  font-size: 9px;
+}
+.application-shell .investigation-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 15px;
+  overflow: auto;
+  font-size: 10px;
+}
+.application-shell .investigation-body > section {
+  border-color: var(--line-soft);
+}
+.application-shell .investigation-answer {
+  order: 0;
+}
+.application-shell .investigation-answer p {
+  margin: 5px 0;
+  line-height: 1.55;
+  font-size: 11px;
+}
+.application-shell .investigation-body > section:has(#investigation-evidence) {
+  order: 1;
+}
+.application-shell
+  .investigation-body
+  > section:has(#investigation-properties) {
+  order: 3;
+}
+.application-shell .investigation-proposal {
+  order: 2;
+  margin: 0;
+  padding-top: 8px;
+}
+.application-shell .investigation-process {
+  order: 4;
+  margin: 0;
+}
+.application-shell .investigation-section-heading h4,
+.application-shell .investigation-body h4 {
+  margin: 0 0 7px;
+  font-size: 11px;
+}
+.application-shell .investigation-evidence {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.application-shell .investigation-evidence li {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--concord-shell-divider);
+}
+.application-shell .investigation-evidence li > div {
+  flex: 1;
+  min-width: 0;
+}
+.application-shell .investigation-evidence li strong {
+  font-size: 10.5px;
+  overflow-wrap: anywhere;
+}
+.application-shell .investigation-evidence li p {
+  margin: 3px 0;
+  line-height: 1.5;
+  font-size: 10.5px;
+}
+.application-shell .investigation-evidence li small {
+  font-size: 9.5px;
+  overflow-wrap: anywhere;
+}
+
+/* Document library: browse actual imported files beside their parsed pages. */
+.application-shell .documents-view .view-toolbar {
+  min-height: 52px;
+  gap: 14px;
+  padding: 7px 15px;
+  border-bottom: 1px solid var(--concord-document-divider);
+}
+.application-shell .documents-view .view-toolbar h2 {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+.application-shell .documents-search {
+  max-width: 340px;
+  margin: auto;
+  position: relative;
+}
+.application-shell .documents-search input {
+  border-radius: 5px;
+  padding: 0 7px;
+  font-size: 11px;
+  background: var(--concord-document-input);
+}
+.application-shell .documents-view .pane-split {
+  background: var(--concord-document-region);
+}
+.application-shell .document-list {
+  background: var(--concord-document-list);
+}
+.application-shell .document-list > .pane-header {
+  height: 41px;
+  padding-left: 15px;
+  border: 0;
+  background: transparent;
+}
+.application-shell .document-list .pane-header-label {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--concord-list-heading);
+}
+.application-shell .document-filters {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 14px 10px;
+}
+.application-shell .document-filters button {
+  border: 0;
+  border-radius: 4px;
+  padding: 5px 10px;
+  background: transparent;
+  color: var(--concord-document-filter);
+  font-size: 11px;
+  cursor: pointer;
+}
+.application-shell .document-filters button[aria-pressed="true"] {
+  color: var(--concord-document-active);
+  background: var(--concord-document-filter-active);
+}
+.application-shell .document-list .pane-body {
+  padding: 0 11px 20px;
+}
+.application-shell .document-list .pane-body > button {
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  margin: 0 0 7px;
+  border: 1px solid var(--concord-document-row-border);
+  border-radius: 5px;
+  background: var(--surface);
+  min-height: 77px;
+}
+.application-shell .document-list .pane-body > button.selected {
+  background: var(--concord-document-selected);
+  border-color: var(--concord-document-selected-border);
+}
+.application-shell .document-list .pane-body > button > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--concord-document-icon);
+}
+.application-shell .document-list .pane-body > button > span {
+  min-width: 0;
+}
+.application-shell .document-list .pane-body > button strong {
+  font-size: 11.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.application-shell .document-list .pane-body > button small {
+  font-size: 10px;
+  margin-top: 5px;
+}
+.application-shell .document-content {
+  background: var(--concord-document-preview);
+}
+.application-shell .document-content > .pane-header {
+  min-height: 41px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--concord-context-divider);
+  background: var(--surface);
+}
+.application-shell .document-content > .pane-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+}
+.application-shell .document-content > .pane-header h3 svg {
+  color: var(--concord-document-header-icon);
+}
+.application-shell .document-content .pane-body {
+  --evidence-gutter: 88px;
+  padding: 14px 20px 40px;
+}
+.application-shell .document-chunk.evidence-sheet {
+  max-width: 690px;
+  min-height: 160px;
+  padding: 17px 16px;
+  margin: 0 auto 13px;
+  border: 1px solid var(--concord-document-sheet-border);
+  border-radius: 2px;
+  background: var(--surface);
+  box-shadow: 0 1px 3px var(--concord-document-sheet-shadow);
+}
+.application-shell .document-chunk .chunk-gutter {
+  gap: 5px;
+}
+.application-shell .document-chunk .chunk-fact {
+  gap: 0;
+}
+.application-shell .document-chunk .chunk-fact-label {
+  color: var(--concord-metadata-label);
+  font-size: 10px;
+}
+.application-shell .document-chunk .chunk-fact-value {
+  font-size: 10px;
+}
+.application-shell .document-chunk pre {
+  font-size: 12px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.application-shell .document-chunk .chunk-body {
+  padding-left: 15px;
+}
+@media (max-width: 760px) {
+  .application-shell .documents-view .view-toolbar {
+    flex-wrap: wrap;
+  }
+  .application-shell .documents-search {
+    order: 3;
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* Work-package overview uses a compact tabbed header and real readiness facts. */
+.application-shell .coordination-workspace {
+  width: 100%;
+  padding: 10px 14px 32px;
+}
+.application-shell .overview-layout {
+  grid-template-columns: minmax(0, 1fr) 258px;
+  gap: 12px;
+}
+.application-shell .overview-main {
+  display: flex;
+  flex-direction: column;
+}
+.application-shell .work-object-header {
+  order: 0;
+  margin-bottom: 6px;
+}
+.application-shell .work-object-header .object-kicker {
+  font-size: 10px;
+}
+.application-shell .work-object-header h1 {
+  font-size: 18px;
+  margin-top: 1px;
+}
+.application-shell .work-object-header p {
+  font-size: 11px;
+}
+.application-shell .work-package-tabs {
+  order: 1;
+  display: flex;
+  gap: 18px;
+  height: 32px;
+  align-items: stretch;
+  margin-bottom: 9px;
+  border-bottom: 1px solid var(--concord-section-divider);
+}
+.application-shell .work-package-tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0 3px;
+  color: var(--concord-worktab-text);
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
+}
+.application-shell .work-package-tabs button.active {
+  color: var(--concord-worktab-active);
+  border-color: var(--concord-worktab-active);
+  font-weight: 600;
+}
+.application-shell .work-package-tabs button:last-child {
+  margin-right: auto;
+}
+.application-shell .readiness-summary {
+  order: 2;
+  padding: 8px 11px;
+  gap: 7px;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+}
+.application-shell .readiness-summary > svg {
+  width: 16px;
+  height: 16px;
+}
+.application-shell .readiness-copy h3 {
+  margin-top: 1px;
+  font-size: 11px;
+}
+.application-shell .readiness-copy > p {
+  margin-top: 1px;
+  font-size: 11px;
+}
+.application-shell .readiness-meta {
+  margin-top: 4px;
+  font-size: 10px;
+}
+.application-shell .construction-conditions {
+  order: 3;
+  margin-top: 10px;
+}
+.application-shell .construction-conditions .overview-section-header {
+  margin-bottom: 4px;
+}
+.application-shell .construction-conditions .overview-section-header h2 {
+  font-size: 11px;
+}
+.application-shell .condition-metrics {
+  gap: 6px;
+}
+.application-shell .condition-metrics article {
+  padding: 7px;
+}
+.application-shell .condition-metrics article > svg {
+  width: 15px;
+  height: 15px;
+}
+.application-shell .condition-metrics article strong {
+  font-size: 13px;
+}
+.application-shell .model-context {
+  order: 4;
+  margin-top: 11px;
+}
+.application-shell .model-context-layout {
+  min-height: 268px;
+  grid-template-columns: minmax(0, 1.65fr) minmax(160px, 0.75fr);
+}
+.application-shell .overview-model-stage,
+.application-shell .overview-model-stage .bim-stage {
+  min-height: 268px;
+}
+.application-shell .overview-decision {
+  order: 5;
+}
+.application-shell .relevant-change-strip {
+  order: 6;
+}
+.application-shell .overview-basis {
+  order: 7;
+}
+.application-shell .overview-inspector {
+  border: 1px solid var(--concord-shell-divider);
+  background: var(--surface-detail);
+}
+.application-shell .overview-inspector-header {
+  padding: 11px;
+}
+.application-shell .overview-inspector-header h2 {
+  font-size: 15px;
+}
+.application-shell .overview-inspector-tabs button {
+  height: 34px;
+  font-size: 11px;
+}
+.application-shell .overview-inspector-body {
+  padding: 9px 11px;
+}
+.application-shell .package-tab-content {
+  order: 2;
+  min-height: 250px;
+  padding: 16px;
+  border: 1px solid var(--concord-section-divider);
+  background: var(--surface);
+}
+.application-shell .package-tab-content h2 {
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.application-shell .package-tab-content p {
+  font-size: 11px;
+  color: var(--concord-package-description);
+}
+.application-shell .package-issue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--concord-shell-divider);
+  padding: 10px 0;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+.application-shell .package-issue > svg {
+  color: var(--concord-package-issue);
+}
+.application-shell .package-issue strong,
+.application-shell .package-issue small {
+  display: block;
+  font-size: 10px;
+}
+.application-shell .package-issue small {
+  color: var(--concord-package-meta);
+  margin-top: 3px;
+}
+@media (max-width: 900px) {
+  .application-shell .overview-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.application-shell .compare-filter {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+}
+.application-shell .compare-filter button {
+  min-width: 0;
+  width: auto;
+  white-space: nowrap;
+  padding: 5px 6px;
+  font-size: 10.5px;
+}
+.application-shell .compare-filter small {
+  margin-left: 4px;
+}
+.application-shell .spatial-context-controls:has(.compare-filter) {
+  align-items: center;
+}
+.application-shell .construction-secondary {
+  order: 5;
+  margin-top: 8px;
+}
+.application-shell .construction-conditions .overview-section-header {
+  display: none;
+}
+.application-shell .construction-conditions {
+  margin-top: 7px;
+}
+.application-shell .model-context {
+  margin-top: 6px;
+}
+.application-shell .investigation-document-body section:first-child {
+  background: var(--surface);
+}
+
+.application-shell .investigation-evidence li p {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+/* The object list is available on demand, while the model remains the workspace. */
+.application-shell .bim-workspace.spatial-workspace {
+  grid-template-rows: minmax(260px, 1fr) 39px;
+}
+.application-shell .bim-workspace.spatial-workspace.is-list-open {
+  grid-template-rows: minmax(260px, 1fr) 210px;
+}
+.application-shell .spatial-context-header {
+  height: 38px;
+}
+.application-shell .bim-workspace:not(.is-list-open) .spatial-context-scroll {
+  display: none;
+}
+.application-shell .spatial-context-header > button {
+  cursor: pointer;
+}
+
+.application-shell
+  .change-stage
+  .bim-workspace.spatial-workspace:not(.is-list-open),
+.application-shell
+  .issue-stage
+  .bim-workspace.spatial-workspace:not(.is-list-open) {
+  grid-template-rows: minmax(260px, 1fr) 39px;
+}
+
+/* Shell convergence: one spacing rhythm and a quieter contextual edge. */
+.application-shell {
+  font-size: 13px;
+}
+.application-shell .brand,
+.application-shell .app-header,
+.application-shell .context-bar,
+.application-shell .local-actions {
+  min-height: 44px;
+  height: 44px;
+}
+.application-shell .sidebar-primary button,
+.application-shell .sidebar-footer button {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.application-shell .sidebar-group-heading,
+.application-shell .area-title,
+.application-shell .package-nav small {
+  font-size: 11px;
+}
+.application-shell .package-nav strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.application-shell .local-actions > .button,
+.application-shell .spatial-inspector-tabs button,
+.application-shell .spatial-context-tabs button {
+  font-size: 12px;
+}
+.application-shell .spatial-inspector {
+  background: var(--surface);
+  border-left-color: var(--concord-context-divider);
+}
+.application-shell .spatial-inspector-head {
+  min-height: 64px;
+  align-items: center;
+  padding: 12px 16px;
+}
+.application-shell .spatial-inspector-head h2 {
+  line-height: 1.4;
+}
+.application-shell .spatial-inspector-tabs {
+  padding: 0 14px;
+  border-bottom-color: var(--concord-context-divider);
+}
+.application-shell .spatial-inspector-body {
+  padding: 16px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.application-shell .element-section h3,
+.application-shell .spatial-inspector-body .quiet-message,
+.application-shell .element-facts dt,
+.application-shell .element-facts dd,
+.application-shell .spatial-context th,
+.application-shell .spatial-context td {
+  font-size: 11.5px;
+}
+.application-shell .spatial-context-header {
+  padding: 0 16px;
+}
+.application-shell
+  .spatial-stage:has(.spatial-stage-empty)
+  .spatial-stage-empty {
+  padding-bottom: 80px;
+}
+.application-shell .spatial-stage-empty svg {
+  width: 36px;
+  height: 36px;
+  color: var(--concord-element-icon);
+  stroke-width: 1.4;
+}
+.application-shell .spatial-stage-empty strong {
+  margin-top: 6px;
+  color: var(--concord-inspector-title);
+  font-size: 17px;
+  font-weight: 600;
+}
+.application-shell .spatial-stage-empty span {
+  color: var(--concord-context-label);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.application-shell
+  .spatial-stage:has(.spatial-stage-empty)
+  .spatial-source-actions {
+  top: calc(50% + 40px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+}
+.application-shell
+  .spatial-stage:has(.spatial-stage-empty)
+  .spatial-source-actions
+  > div {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.application-shell
+  .spatial-stage:has(.spatial-stage-empty)
+  .spatial-source-actions
+  button {
+  height: 32px;
+  font-size: 12px;
+  box-shadow: none;
+  border: 1px solid var(--concord-context-divider);
+}
+.application-shell
+  .spatial-stage:has(.spatial-stage-empty)
+  .spatial-source-actions
+  button:first-of-type {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.application-shell .model-hint {
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  right: auto;
+  padding: 7px 10px;
+  border: 1px solid var(--concord-context-divider);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--concord-context-label);
+  font-size: 11.5px;
+}
+
+/* Persistent workspace grammar: one quiet detail plane and one tab rhythm. */
+.application-shell .bim-workspace > .spatial-inspector,
+.application-shell .overview-inspector,
+.application-shell .investigation-inspector,
+.application-shell .inspector-pane {
+  background: var(--concord-shell-surface);
+  border-left: 1px solid var(--concord-context-divider);
+}
+.application-shell .spatial-inspector-head,
+.application-shell .overview-inspector-header,
+.application-shell .investigation-inspector .detail-inspector-header,
+.application-shell .inspector .detail-inspector-header {
+  min-height: 64px;
+  padding: 12px 16px;
+  background: transparent;
+  border-bottom: 0;
+}
+.application-shell .overview-inspector-header h2,
+.application-shell .spatial-inspector-head h2,
+.application-shell .detail-inspector-title strong {
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--concord-inspector-title);
+}
+.application-shell .spatial-inspector-tabs,
+.application-shell .overview-inspector-tabs,
+.application-shell .inspector-switch,
+.application-shell .investigation-tabs,
+.application-shell .work-package-tabs,
+.application-shell .spatial-context-tabs {
+  align-items: stretch;
+  gap: 12px;
+  height: 34px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--concord-context-divider);
+  background: transparent;
+}
+.application-shell .spatial-context-tabs {
+  border-bottom: 0;
+  padding: 0;
+}
+.application-shell .inspector-switch {
+  width: 100%;
+  padding: 0;
+  border-bottom: 0;
+}
+.application-shell .spatial-inspector-tabs button,
+.application-shell .overview-inspector-tabs button,
+.application-shell .inspector-switch button,
+.application-shell .spatial-context-tabs button,
+.application-shell .work-package-tabs button,
+.application-shell .investigation-tabs button {
+  position: relative;
+  flex: 0 0 auto;
+  height: 100%;
+  padding: 0 2px;
+  border: 0;
+  color: var(--concord-tab-label);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.application-shell .work-package-tabs button.active,
+.application-shell .spatial-inspector-tabs button[aria-selected="true"],
+.application-shell .overview-inspector-tabs button.active,
+.application-shell .inspector-switch button.active,
+.application-shell .spatial-context-tabs button.active,
+.application-shell .investigation-tabs .active {
+  color: var(--concord-tab-active);
+  font-weight: 600;
+}
+.application-shell .work-package-tabs button.active::after,
+.application-shell .spatial-inspector-tabs button[aria-selected="true"]::after,
+.application-shell .overview-inspector-tabs button.active::after,
+.application-shell .inspector-switch button.active::after,
+.application-shell .spatial-context-tabs button.active::after,
+.application-shell .investigation-tabs .active::after {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  content: "";
+}
+.application-shell .spatial-inspector-body,
+.application-shell .overview-inspector-body,
+.application-shell .inspector-body,
+.application-shell .investigation-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.application-shell .overview-inspector-body,
+.application-shell .investigation-body,
+.application-shell .inspector-body {
+  flex: 1 1 auto;
+}
+.application-shell .overview-inspector,
+.application-shell .investigation-inspector,
+.application-shell .inspector-pane {
+  border-left-color: var(--concord-shell-divider);
+}
+.application-shell
+  .overview-inspector-body
+  .shared-property-group
+  + .shared-property-group {
+  margin-top: 18px;
+  padding-top: 0;
+  border-top: 0;
+}
+.application-shell .coordination-workspace {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+.application-shell .overview-layout {
+  grid-template-columns: minmax(0, 1fr) clamp(290px, 27%, 330px);
+  gap: 0;
+  min-height: 100%;
+}
+.application-shell .overview-main {
+  padding: 12px 16px 32px;
+}
+.application-shell .overview-inspector {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 44px);
+  min-height: 0;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+.application-shell .overview-inspector-header {
+  flex-shrink: 0;
+}
+.application-shell .overview-inspector-tabs {
+  flex-shrink: 0;
+}
+.application-shell .work-package-tabs {
+  padding: 0;
+}
+.application-shell .investigation-workspace {
+  background: var(--surface);
+}
+.application-shell .investigation-visuals {
+  gap: 0;
+  padding: 0;
+  grid-template-rows: 55% 45%;
+}
+.application-shell .investigation-model,
+.application-shell .investigation-document {
+  border: 0;
+  border-radius: 0;
+}
+.application-shell .investigation-document {
+  border-top: 1px solid var(--concord-context-divider);
+}
+.application-shell .investigation-inspector {
+  display: flex;
+  flex-direction: column;
+}
+.application-shell .investigation-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.application-shell .investigation-body > section {
+  flex-shrink: 0;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--concord-shell-divider);
+}
+.application-shell .investigation-answer {
+  background: transparent;
+  padding-top: 0 !important;
+}
+.application-shell .investigation-answer p,
+.application-shell .investigation-evidence li p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.application-shell .investigation-answer p + p {
+  color: var(--concord-inspector-title);
+  font-weight: 500;
+}
+.application-shell .investigation-evidence li strong {
+  font-size: 12px;
+}
+.application-shell .investigation-technical {
+  margin-top: 6px;
+  color: var(--concord-quiet-metadata);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.application-shell .investigation-technical summary {
+  cursor: pointer;
+}
+.application-shell .investigation-technical small {
+  display: block;
+  margin-top: 4px;
+}
+.application-shell .documents-view .view-toolbar {
+  min-height: 44px;
+  padding: 6px 16px;
+}
+.application-shell .document-list {
+  background: var(--concord-shell-surface);
+}
+.application-shell .document-list .pane-body > button {
+  min-height: 60px;
+  border: 0;
+  background: transparent;
+}
+.application-shell .document-list .pane-body > button.selected {
+  border: 0;
+  background: var(--concord-nav-selection);
+}
+.application-shell .document-content {
+  background: var(--surface);
+}
+.application-shell .document-chunk.evidence-sheet {
+  min-height: 0;
+  margin-bottom: 0;
+  border: 0;
+  border-bottom: 1px solid var(--concord-context-divider);
+  background: transparent;
+  box-shadow: none;
+}
+@container workspace (max-width: 1050px) {
+  .application-shell .overview-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .application-shell .overview-inspector {
+    position: static;
+    height: auto;
+    border-left: 0;
+    border-top: 1px solid var(--concord-context-divider);
+  }
+  .application-shell .overview-inspector-body {
+    min-height: 190px;
+  }
+}
+
+.application-shell .inspector .detail-inspector-header,
+.application-shell .investigation-inspector .detail-inspector-header {
+  gap: 0;
+  padding: 0 16px;
+}
+.application-shell .detail-inspector-header .pane-header-row {
+  min-height: 64px;
+}

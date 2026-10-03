@@ -9,7 +9,13 @@ from typing import Any, cast
 from uuid import NAMESPACE_URL, uuid5
 
 from app.adapters.runtime_identity import bind_execution
-from app.domain.errors import CapabilityUnavailable, WorkflowError
+from app.domain.errors import (
+    CapabilityUnavailable,
+    DomainError,
+    ExternalSystemUnavailable,
+    TransientProviderError,
+    WorkflowError,
+)
 from app.ports.coordination import RepositoryFactory
 from app.ports.services import WorkflowDriver
 
@@ -20,23 +26,42 @@ _owner = None
 _lifecycle_lock = RLock()
 
 
+def _should_retry(exc: BaseException) -> bool:
+    """Retry runtime failures, but let persisted domain failures stay terminal."""
+    return not isinstance(exc, DomainError) or isinstance(
+        exc, (TransientProviderError, ExternalSystemUnavailable)
+    )
+
+
 def _register() -> None:
     global _registered, _workflow
     if _registered:
         return
     from dbos import DBOS
 
-    @DBOS.step(retries_allowed=True, max_attempts=3, interval_seconds=1, backoff_rate=2)
+    @DBOS.step(
+        retries_allowed=True,
+        max_attempts=3,
+        interval_seconds=1,
+        backoff_rate=2,
+        should_retry=_should_retry,
+    )
     def analyze_step(run_id: str, generation: int = 0) -> str:
         assert _active is not None
         return _active.begin(run_id, generation=generation)
 
-    @DBOS.step(retries_allowed=True, max_attempts=3, interval_seconds=1, backoff_rate=2)
+    @DBOS.step(
+        retries_allowed=True,
+        max_attempts=3,
+        interval_seconds=1,
+        backoff_rate=2,
+        should_retry=_should_retry,
+    )
     def decision_step(run_id: str, message: dict, generation: int = 0) -> str:
         assert _active is not None
         return _active.advance(run_id, message, generation=generation)
 
-    @DBOS.step(retries_allowed=True, max_attempts=3)
+    @DBOS.step(retries_allowed=True, max_attempts=3, should_retry=_should_retry)
     def expire_step(run_id: str, generation: int = 0) -> str:
         assert _active is not None
         return _active.expire(run_id, generation=generation)

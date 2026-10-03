@@ -13,7 +13,7 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 from app.adapters import runtime_dbos as module
-from app.domain.errors import WorkflowError
+from app.domain.errors import ProviderError, TransientProviderError, WorkflowError
 from app.domain.runs import AgentRun
 from app.settings import Settings
 
@@ -28,6 +28,7 @@ def sdk(monkeypatch):
         resumes = []
         cancels = []
         destroys = 0
+        step_options = []
         launch_failure = False
         start_failure = False
         identity = None
@@ -40,6 +41,7 @@ def sdk(monkeypatch):
 
         @staticmethod
         def step(**kwargs):
+            SDK.step_options.append(kwargs)
             return lambda function: function
 
         @staticmethod
@@ -119,6 +121,17 @@ def runtime(services, coordinator=None, **kwargs):
     return module.DBOSRuntime(
         coordinator or object(), "sqlite:///runtime.sqlite", services.factory, **kwargs
     )
+
+
+def test_domain_failures_end_dbos_steps_without_retrying(sdk, services):
+    adapter = runtime(services)
+    try:
+        retry = sdk.step_options[0]["should_retry"]
+        assert retry(ProviderError("Malformed IFC")) is False
+        assert retry(TransientProviderError("Provider unavailable")) is True
+        assert retry(RuntimeError("worker interrupted")) is True
+    finally:
+        adapter.close()
 
 
 def test_dbos_application_identity_has_a_stable_default_and_validated_override(sdk, services):

@@ -1,0 +1,34 @@
+.application-shell {
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --page-inset: 24px;
+  --row-rule: 1px solid var(--line-soft);
+  --float-edge: 1px solid var(--concord-float-edge);
+  --float-shadow: 0 1px 3px var(--concord-float-shadow);
+}
+
+/* The status mark: one object, used by the tree, the inbox and the tables. */
+.package-state,
+.application-shell .work-mark,
+.application-shell .package-status i {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line);
+}
+.package-state.is-ready,
+.application-shell .package-status.is-ready i,
+.application-shell .work-row.is-done .work-mark {
+  background: var(--concord-ready-mark);
+}
+.package-state.is-blocked,
+.application-shell .package-status.is-blocked i,
+.application-shell .work-row.is-attention .work-mark {
+  background: var(--concord-danger-text);
+}
+.package-state.is-waiting,
+.application-shell .package-status.is-waiting i,
+.application-shell .work-row.is-waiting .work-mark {
+  background: var(--concord-amber-mark);
+}

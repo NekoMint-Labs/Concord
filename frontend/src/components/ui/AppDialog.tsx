@@ -1,7 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
-import { AppTooltip } from "./AppTooltip";
 import { icon } from "./icon";
 
 /**
@@ -56,11 +55,9 @@ export function AppDialog({
                   <Dialog.Description>{description}</Dialog.Description>
                 )}
               </div>
-              <AppTooltip label={closeLabel}>
-                <Dialog.Close className="icon-button" aria-label={closeLabel}>
-                  <X {...icon} />
-                </Dialog.Close>
-              </AppTooltip>
+              <Dialog.Close className="icon-button" aria-label={closeLabel}>
+                <X {...icon} />
+              </Dialog.Close>
             </header>
             {children}
           </Dialog.Content>

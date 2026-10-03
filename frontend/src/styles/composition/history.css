@@ -1,0 +1,126 @@
+/* History is a reading area, not the compact baseline strip in the register. */
+.application-shell .sources-history-workspace {
+  max-width: 1108px;
+  padding: 28px var(--page-inset) 48px;
+}
+.application-shell .history-heading {
+  margin-bottom: 28px;
+}
+.application-shell .history-heading h1 {
+  margin: 0 0 8px;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.application-shell .history-heading p {
+  margin: 0;
+  line-height: 1.6;
+}
+.application-shell .sources-history-workspace .baseline-register {
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  background: none;
+}
+.application-shell .sources-history-workspace .baseline-register > header {
+  min-height: 36px;
+  padding-bottom: 12px;
+}
+.application-shell .sources-history-workspace .baseline-register h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.application-shell .sources-history-workspace .baseline-list {
+  border-top-color: var(--line);
+}
+.application-shell .sources-history-workspace .baseline-entry {
+  padding: 24px 20px 18px;
+}
+.application-shell .sources-history-workspace .baseline-identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.application-shell .sources-history-workspace .baseline-identity > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.application-shell
+  .sources-history-workspace
+  .baseline-identity
+  .object-identity {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+.application-shell .sources-history-workspace .object-kind,
+.application-shell .sources-history-workspace .baseline-state {
+  color: var(--muted);
+  font-size: 12px;
+}
+.application-shell .sources-history-workspace .baseline-name {
+  margin: 12px 0 6px;
+  color: var(--ink);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.application-shell .sources-history-workspace .baseline-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  margin: 12px 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.application-shell .sources-history-workspace .baseline-entry .disclosure {
+  width: auto;
+  min-height: 30px;
+  padding: 0;
+  color: var(--ink);
+}
+.application-shell .sources-history-workspace .baseline-entries {
+  display: block;
+  padding: 0 0 6px 20px;
+}
+.application-shell .sources-history-workspace .baseline-entries code {
+  padding: 8px 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.application-shell .sources-history-workspace .baseline-empty {
+  min-height: 270px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  border-left: 0;
+  gap: 0;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+}
+.application-shell .sources-history-workspace .baseline-empty h2 {
+  margin: 12px 0 10px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.application-shell .sources-history-workspace .baseline-empty p {
+  margin: 0;
+  max-width: 48ch;
+  line-height: 1.8;
+}
+.application-shell .sources-history-workspace .workspace-empty-actions {
+  margin-top: 20px;
+}
+.application-shell .sources-history-workspace > [role="status"],
+.application-shell .sources-history-workspace > [role="alert"] {
+  padding: 24px 20px;
+  border-block: 1px solid var(--line-soft);
+}

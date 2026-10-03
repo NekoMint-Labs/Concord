@@ -3,8 +3,8 @@
 from fastapi import APIRouter, Depends
 
 from app.api.auth import CurrentUser, services
-from app.api.schemas import ApprovalRequest, ExecuteResponse
-from app.domain.actions import ActionExecution, Approval
+from app.api.schemas import ApprovalRequest, ExecuteResponse, RejectionRequest
+from app.domain.actions import ActionExecution, Approval, AuditRecord
 from app.domain.errors import NotFound, StaleSnapshotError
 from app.domain.models import utcnow
 from app.policies.actions import require
@@ -25,6 +25,16 @@ def approve(proposal_id: str, body: ApprovalRequest, user: CurrentUser, svc=Depe
             proposal.run_id, {"kind": "refresh"}, f"stale-approval:{proposal_id}:{version}"
         )
         raise
+
+
+@router.post("/proposals/{proposal_id}/reject", response_model=AuditRecord)
+def reject(
+    proposal_id: str,
+    user: CurrentUser,
+    body: RejectionRequest | None = None,
+    svc=Depends(services),
+):
+    return svc.actions.reject(proposal_id, user, body.reason if body else "")
 
 
 @router.post("/proposals/{proposal_id}/execute", response_model=ExecuteResponse, status_code=202)

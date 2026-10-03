@@ -1,133 +1,212 @@
-import { Building2, ChevronDown, PanelLeftClose } from "lucide-react";
-import type { DTO, Workspace } from "../api/client";
-import { Status } from "../components/Status";
-import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
+import {
+  Box,
+  Building2,
+  ChevronsUpDown,
+  FolderOpen,
+  Home,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Settings2,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { DTO, ProjectSourceStatus, Workspace } from "../api/client";
+import {
+  AppMenu,
+  AppMenuItem,
+  AppMenuLabel,
+  AppMenuSeparator,
+} from "../components/ui/AppMenu";
 import { AppTooltip } from "../components/ui/AppTooltip";
 import { icon } from "../components/ui/icon";
-import {
-  demoAreaName,
-  demoDiscipline,
-  demoWorkPackageName,
-} from "../ui/demo/demoPresentation";
+import { demoProjectName } from "../ui/demo/demoPresentation";
+import type { WorkspaceTab } from "./destinations";
 
-/** Abnormal states earn the only labels here; normal rows stay plain text. */
-const notable = new Set(["BLOCKED", "WAITING_APPROVAL", "STALE"]);
+const workspaceLinks: {
+  tab: WorkspaceTab;
+  label: string;
+  icon: LucideIcon;
+}[] = [
+  { tab: "work", label: "工作", icon: Home },
+  { tab: "bim", label: "模型", icon: Box },
+  { tab: "project", label: "项目", icon: Building2 },
+];
 
 export function ProjectSidebar({
-  data,
   project,
   projects,
-  selected,
+  recent = [],
+  tab = "work",
   collapsed = false,
   onCollapse,
   onProject,
-  onSelect,
+  onNewProject,
+  onOpenProject,
+  onOpenDemo,
+  onProjectSettings,
+  onTab,
 }: {
   data: Workspace;
   project: string;
   projects: DTO<"Project">[] | undefined;
+  recent?: DTO<"Project">[];
+  sources?: ProjectSourceStatus[];
   selected: string;
+  tab?: WorkspaceTab;
   collapsed?: boolean;
   onCollapse: () => void;
   onProject: (id: string) => void;
+  onNewProject?: () => void;
+  onOpenProject?: () => void;
+  onOpenDemo?: () => void;
+  onProjectSettings?: () => void;
+  onStructure?: () => void;
   onSelect: (id: string) => void;
+  onTab?: (tab: WorkspaceTab) => void;
 }) {
-  const current =
+  const storedName =
     projects?.find((item) => item.id === project)?.name ?? project;
+  const current = demoProjectName(project, storedName);
+  const demo = project === "harbor-east";
+  const otherProjects = projects
+    ?.filter(
+      (item) =>
+        item.id !== project &&
+        !recent.some((recentItem) => recentItem.id === item.id),
+    )
+    .slice(0, 5);
+
   return (
-    /*
-      Collapsed, the column is off the window's own edge rather than unmounted -
-      the slide is a state of the shell, and a column that left the tree could not
-      be animated out of one. `inert` is what keeps that honest: a region that is
-      not on screen must not be reachable by Tab, and it is the one attribute that
-      takes an off-canvas subtree out of focus, pointer, and assistive-technology
-      reach in the same statement.
-    */
-    <aside className="sidebar" aria-label="项目与工作包" inert={collapsed}>
-      <div className="brand">
-        <span className="brand-name">
-          <strong>Concord</strong>
-          <span>施工协同</span>
-        </span>
-        <AppTooltip label="收起侧栏" side="right">
+    <aside className="sidebar" aria-label="项目导航" inert={collapsed}>
+      <header className="sidebar-header">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            C
+          </span>
+          <span className="brand-name">
+            <strong>Concord</strong>
+          </span>
+          <AppTooltip label="收起侧栏" side="right">
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="收起侧栏"
+              onClick={onCollapse}
+            >
+              <PanelLeftClose {...icon} />
+            </button>
+          </AppTooltip>
+        </div>
+        <div className="project-picker">
+          <AppMenu
+            label="切换项目"
+            align="start"
+            triggerClassName="project-trigger"
+            trigger={
+              <>
+                <Building2 className="project-mark" {...icon} />
+                <span className="project-name">
+                  <strong>{current}</strong>
+                </span>
+                <ChevronsUpDown className="project-chevron" {...icon} />
+              </>
+            }
+          >
+            <AppMenuLabel>当前项目</AppMenuLabel>
+            <AppMenuItem active onSelect={() => onProject(project)}>
+              {current}
+              {demo && " · 示例项目"}
+            </AppMenuItem>
+            {recent.some((item) => item.id !== project) && (
+              <>
+                <AppMenuSeparator />
+                <AppMenuLabel>最近项目</AppMenuLabel>
+                {recent
+                  .filter((item) => item.id !== project)
+                  .map((item) => (
+                    <AppMenuItem
+                      key={item.id}
+                      onSelect={() => onProject(item.id)}
+                    >
+                      {demoProjectName(item.id, item.name)}
+                      {item.id === "harbor-east" && " · 示例项目"}
+                    </AppMenuItem>
+                  ))}
+              </>
+            )}
+            {!!otherProjects?.length && (
+              <>
+                <AppMenuSeparator />
+                <AppMenuLabel>其他项目</AppMenuLabel>
+                {otherProjects.map((item) => (
+                  <AppMenuItem
+                    key={item.id}
+                    onSelect={() => onProject(item.id)}
+                  >
+                    {demoProjectName(item.id, item.name)}
+                    {item.id === "harbor-east" && " · 示例项目"}
+                  </AppMenuItem>
+                ))}
+              </>
+            )}
+            <AppMenuSeparator />
+            <AppMenuItem onSelect={() => onNewProject?.()}>
+              <Plus {...icon} /> 新建项目
+            </AppMenuItem>
+            <AppMenuItem onSelect={() => onOpenProject?.()}>
+              <FolderOpen {...icon} /> 打开项目…
+            </AppMenuItem>
+            <AppMenuItem onSelect={() => onOpenDemo?.()}>
+              <FolderOpen {...icon} /> 打开示例项目
+            </AppMenuItem>
+            <AppMenuItem onSelect={() => onProjectSettings?.()}>
+              <Settings2 {...icon} /> 项目设置
+            </AppMenuItem>
+          </AppMenu>
+        </div>
+      </header>
+
+      <div className="sidebar-content">
+        <nav className="sidebar-primary" aria-label="主要工作区">
+          {workspaceLinks.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.tab}
+                type="button"
+                className={tab === item.tab ? "active" : ""}
+                aria-current={tab === item.tab ? "page" : undefined}
+                aria-label={item.label}
+                onClick={() => {
+                  onTab?.(item.tab);
+                }}
+              >
+                <Icon {...icon} />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="sidebar-browse">
           <button
             type="button"
-            className="icon-button"
-            aria-label="收起侧栏"
-            onClick={onCollapse}
+            className={tab === "browse" ? "active" : ""}
+            aria-label="浏览"
+            aria-current={tab === "browse" ? "page" : undefined}
+            onClick={() => {
+              onTab?.("browse");
+            }}
           >
-            <PanelLeftClose {...icon} />
+            <PanelLeftOpen {...icon} />
+            浏览
           </button>
-        </AppTooltip>
+        </div>
       </div>
-      {/*
-        The project picker is a menu, not a native <select>: the platform's own
-        dropdown is a different control language, it renders its own arrow and
-        popup, and on the WebView it is the one control on this surface whose
-        appearance the product does not decide. The menu also states which
-        project is current, which a closed select cannot do at a glance.
-
-        It reads as a workspace switcher rather than as a form field because it
-        states the three things a picker states - the kind of thing (a mark), the
-        current one (the name), and that there are others (a chevron) - and spends
-        its boundary on interaction instead of on rest (styles/shell.css).
-      */}
-      <div className="project-picker">
-        <AppMenu
-          label="项目"
-          align="start"
-          triggerClassName="project-trigger"
-          trigger={
-            <>
-              <Building2 className="project-mark" {...icon} />
-              <span className="project-name">{current}</span>
-              <ChevronDown className="project-chevron" {...icon} />
-            </>
-          }
-        >
-          {projects?.map((item) => (
-            <AppMenuItem
-              key={item.id}
-              active={item.id === project}
-              onSelect={() => onProject(item.id)}
-            >
-              {item.name}
-            </AppMenuItem>
-          ))}
-        </AppMenu>
+      <div className="sidebar-footer">
+        <button type="button" onClick={() => onProjectSettings?.()}>
+          <Settings2 {...icon} /> 设置
+        </button>
       </div>
-      <nav className="sidebar-section" aria-label="工作包">
-        <div className="sidebar-label">工作包</div>
-        {data.state.areas.map((area) => (
-          <div key={area.id} className="area-group">
-            <div className="area-title">{demoAreaName(area.id, area.name)}</div>
-            {data.state.work_packages
-              .filter((item) => item.area_id === area.id)
-              .map((item) => {
-                const status =
-                  data.analysis?.readiness.find(
-                    (readiness) => readiness.work_package_id === item.id,
-                  )?.status ?? "UNCHECKED";
-                return (
-                  <button
-                    key={item.id}
-                    className={`package-nav ${selected === item.id ? "selected" : ""}`}
-                    aria-current={selected === item.id ? "page" : undefined}
-                    onClick={() => onSelect(item.id)}
-                  >
-                    <span>
-                      <strong>{demoWorkPackageName(item.id, item.name)}</strong>
-                      <small>
-                        {item.id} · {demoDiscipline(item.discipline)}
-                      </small>
-                    </span>
-                    {notable.has(status) && <Status value={status} />}
-                  </button>
-                );
-              })}
-          </div>
-        ))}
-      </nav>
     </aside>
   );
 }

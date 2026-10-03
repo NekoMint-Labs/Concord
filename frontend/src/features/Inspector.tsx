@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { X } from "lucide-react";
 import { api, type Workspace } from "../api/client";
+import { DetailInspectorHeader } from "../components/DetailInspector";
+import { PropertyRow, PropertyTable } from "../components/PropertyTable";
 import { Button } from "../components/ui/button";
+import { proposalRejected } from "./proposalState";
 import { AppDisclosure } from "../components/ui/AppDisclosure";
-import { AppTooltip } from "../components/ui/AppTooltip";
-import { icon } from "../components/ui/icon";
 import { useMotion } from "../motion";
 import {
   demoConstraintKind,
@@ -16,6 +16,7 @@ import {
   demoProposalExplanation,
   demoProposalTitle,
   demoSourceLabel,
+  demoWorkPackageName,
 } from "../ui/demo/demoPresentation";
 
 /** The one thing the user opened. The inspector never narrates the whole story. */
@@ -31,6 +32,7 @@ export function Inspector({
   workspace,
   selected,
   selectedConstraint,
+  selectedEvidenceId,
   view,
   perform,
   onClose,
@@ -41,34 +43,43 @@ export function Inspector({
   busy?: boolean;
   selected: string;
   selectedConstraint: string;
+  selectedEvidenceId?: string;
   view: InspectorView;
   perform: (operation: () => Promise<unknown>) => Promise<void>;
   onClose: () => void;
   onView: (view: InspectorView) => void;
 }) {
   const [confirmation, setConfirmation] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
   const [focusedConstraint, setFocusedConstraint] =
     useState(selectedConstraint);
-  const wp = workspace.state.work_packages.find(
-    (item) => item.id === selected,
-  )!;
+  const wp = workspace.state.work_packages.find((item) => item.id === selected);
   const constraints = (workspace.analysis?.constraints ?? []).filter(
     (item) => item.work_package_id === selected && item.blocking,
   );
   const proposal = workspace.proposals.find(
     (item) => item.work_package_id === selected,
   );
-  const actionRun =
-    workspace.analysis_run ??
-    (workspace.run?.id === proposal?.run_id ? workspace.run : null);
+  const actionRun = proposal
+    ? [workspace.analysis_run, workspace.run].find(
+        (candidate) =>
+          candidate?.id === proposal.run_id &&
+          candidate.project_id === workspace.state.project.id,
+      )
+    : undefined;
   const inactive =
-    !!actionRun &&
-    (actionRun.status !== "WAITING_APPROVAL" ||
-      proposal?.generation !== actionRun.generation);
+    !actionRun ||
+    actionRun.status !== "WAITING_APPROVAL" ||
+    proposal?.generation !== actionRun.generation;
+  const rejected = proposalRejected(workspace, proposal?.id);
   const approved =
+    !rejected &&
     !!proposal &&
     workspace.approvals.some((item) => item.proposal_id === proposal.id);
-  useEffect(() => setConfirmation(""), [proposal?.id]);
+  useEffect(() => {
+    setConfirmation("");
+    setRejectionReason("");
+  }, [proposal?.id]);
   useEffect(
     () => setFocusedConstraint(selectedConstraint),
     [selectedConstraint],
@@ -76,7 +87,9 @@ export function Inspector({
   const activeConstraint =
     constraints.find((item) => item.id === focusedConstraint) ?? constraints[0];
   const evidence = (workspace.analysis?.evidence ?? []).filter((item) =>
-    activeConstraint?.evidence_ids.includes(item.id ?? ""),
+    selectedEvidenceId
+      ? item.id === selectedEvidenceId
+      : activeConstraint?.evidence_ids.includes(item.id ?? ""),
   );
   const { transition, variants } = useMotion();
 
@@ -103,41 +116,32 @@ export function Inspector({
         nothing. Chrome band above a recessed surface is what makes this read as
         a pane instead of as another grey column with a line beside it.
       */}
-      <header className="pane-header is-stacked inspector-header">
-        <div className="pane-header-row">
-          <span className="mono inspector-scope">{wp.id}</span>
-          <span className="pane-header-actions">
-            <AppTooltip label="关闭详情" side="left">
-              <button
-                className="icon-button"
-                onClick={onClose}
-                aria-label="关闭详情"
-              >
-                <X {...icon} />
-              </button>
-            </AppTooltip>
-          </span>
-        </div>
-
-        <nav className="inspector-switch" aria-label="详情类型">
-          {views.map((item) => (
-            <button
-              key={item.id}
-              className={view === item.id ? "active" : ""}
-              aria-current={view === item.id ? "true" : undefined}
-              onClick={() => onView(item.id)}
-            >
-              {item.label}
-              {item.id === "blocker" && constraints.length > 0 && (
-                <span className="count">{constraints.length}</span>
-              )}
-              {item.id === "evidence" && evidence.length > 0 && (
-                <span className="count">{evidence.length}</span>
-              )}
-            </button>
-          ))}
-        </nav>
-      </header>
+      <DetailInspectorHeader
+        eyebrow={
+          selectedEvidenceId && !evidence[0]?.work_package_id
+            ? "项目"
+            : "工作包"
+        }
+        title={
+          selectedEvidenceId && !evidence[0]?.work_package_id
+            ? "判断依据"
+            : wp
+              ? demoWorkPackageName(wp.id, wp.name)
+              : "项目判断依据"
+        }
+        tabs={views.map((item) => ({
+          ...item,
+          count:
+            item.id === "blocker"
+              ? constraints.length
+              : item.id === "evidence"
+                ? evidence.length
+                : undefined,
+        }))}
+        activeTab={view}
+        onTab={onView}
+        onClose={onClose}
+      />
 
       {/* the pane's own scroll, so the header stays put while detail moves */}
       <div className="inspector-body">
@@ -189,35 +193,28 @@ export function Inspector({
                   查看判断依据
                 </button>
               )}
-              <AppDisclosure
-                className="supplementary-details"
-                label="工作包属性"
-              >
-                <div className="fact-list">
-                  <div className="fact">
-                    <span className="fact-label">区域</span>
-                    <span className="fact-value">{wp.area_id}</span>
-                  </div>
-                  <div className="fact">
-                    <span className="fact-label">负责人</span>
-                    <span className="fact-value">
-                      {demoOwner(wp.id, wp.owner)}
-                    </span>
-                  </div>
-                  <div className="fact">
-                    <span className="fact-label">修订</span>
-                    <span className="fact-value">
-                      {wp.accepted_revision} / {wp.design_revision}
-                    </span>
-                  </div>
-                  <div className="fact">
-                    <span className="fact-label">班组</span>
-                    <span className="fact-value">
-                      {wp.available_workers} / {wp.required_workers}
-                    </span>
-                  </div>
-                </div>
-              </AppDisclosure>
+              {wp && (
+                <AppDisclosure
+                  className="supplementary-details"
+                  label="工作包属性"
+                >
+                  <PropertyTable>
+                    <PropertyRow label="区域" value={wp.area_id} />
+                    <PropertyRow
+                      label="负责人"
+                      value={demoOwner(wp.id, wp.owner)}
+                    />
+                    <PropertyRow
+                      label="修订"
+                      value={`${wp.accepted_revision} / ${wp.design_revision}`}
+                    />
+                    <PropertyRow
+                      label="班组"
+                      value={`${wp.available_workers} / ${wp.required_workers}`}
+                    />
+                  </PropertyTable>
+                </AppDisclosure>
+              )}
             </>
           )}
 
@@ -225,7 +222,7 @@ export function Inspector({
             <>
               {evidence.length === 0 ? (
                 <p className="quiet-message">
-                  当前阻塞原因没有可展示的支撑依据。
+                  判断依据来自工程检查；当前没有与此阻塞原因关联的依据。返回工作包核对资料并运行检查后再查看。
                 </p>
               ) : (
                 <ol className="evidence-list">
@@ -266,6 +263,12 @@ export function Inspector({
                     {demoProposalExplanation(proposal.resolution.explanation)}
                   </p>
                   <div className="effect-list">
+                    <div>
+                      执行方式：
+                      {proposal.execution_mode === "simulated"
+                        ? "模拟执行（不会修改外部系统）"
+                        : "外部系统执行"}
+                    </div>
                     {proposal.resolution.effects.map((effect, index) => (
                       <div key={index}>{demoEffectKind(effect.kind)}</div>
                     ))}
@@ -280,14 +283,15 @@ export function Inspector({
                   */}
                   <div className="action-gate">
                     <p className="approval-required">
-                      执行前需要批准
-                      {proposal.risk >= 4 ? "；R4 需要强确认。" : "。"}
+                      {rejected
+                        ? "方案已拒绝；既有阻塞事实保留，此方案不可执行。"
+                        : `执行前需要批准${proposal.risk >= 4 ? "；R4 需要强确认。" : "。"}`}
                     </p>
-                    {proposal.risk >= 4 && !approved && (
+                    {proposal.risk >= 4 && !approved && !rejected && (
                       <label className="form-label">
                         强确认：输入 APPROVE R4
                         <input
-                          aria-label="R4 confirmation"
+                          aria-label="R4 强确认"
                           value={confirmation}
                           onChange={(event) =>
                             setConfirmation(event.target.value)
@@ -296,10 +300,37 @@ export function Inspector({
                         />
                       </label>
                     )}
+                    {!rejected && (
+                      <label className="form-label">
+                        拒绝原因（可选）
+                        <input
+                          aria-label="拒绝原因（可选）"
+                          maxLength={500}
+                          value={rejectionReason}
+                          onChange={(event) =>
+                            setRejectionReason(event.target.value)
+                          }
+                        />
+                      </label>
+                    )}
                     <div className="action-buttons">
+                      <Button
+                        variant="ghost"
+                        disabled={
+                          busy || inactive || workspace.stale || rejected
+                        }
+                        onClick={() =>
+                          void perform(() =>
+                            api.reject(proposal.id!, rejectionReason),
+                          )
+                        }
+                      >
+                        {rejected ? "已拒绝" : "拒绝"}
+                      </Button>
                       <Button
                         disabled={
                           busy ||
+                          rejected ||
                           inactive ||
                           workspace.stale ||
                           approved ||
@@ -320,7 +351,11 @@ export function Inspector({
                       </Button>
                       <Button
                         disabled={
-                          busy || inactive || workspace.stale || !approved
+                          busy ||
+                          rejected ||
+                          inactive ||
+                          workspace.stale ||
+                          !approved
                         }
                         onClick={() =>
                           void perform(() => api.execute(proposal.id!))

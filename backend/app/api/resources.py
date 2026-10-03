@@ -59,6 +59,9 @@ def bim(
             and (not kind or e.type == kind)
             and (not location or location in {e.storey, e.space})
         ]
+    # The configured fallback is a sample model, not data belonging to a new project.
+    if project_id != "harbor-east":
+        return []
     return svc.bim.elements(element_id=element_id, kind=kind, location=location)
 
 
@@ -67,6 +70,9 @@ def geo(project_id: str, user: CurrentUser, svc=Depends(services)):
     require(user, "read")
     with svc.factory.open() as repo:
         repo.state(project_id)
+    # No real-project geospatial ingestion contract exists yet. Never invent site geometry.
+    if project_id != "harbor-east":
+        return {"type": "FeatureCollection", "features": []}
     return svc.geo.features(project_id)
 
 

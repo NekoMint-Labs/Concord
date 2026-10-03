@@ -123,3 +123,15 @@ def test_server_and_desktop_tokens_fail_safe(tmp_path):
     )
     with pytest.raises(ValueError):
         Settings(profile="local", host="0.0.0.0", data_dir=tmp_path)
+
+
+def test_new_project_has_no_sample_bim_or_site_geometry(client):
+    project = client.post("/api/projects", json={"name": "Real site"}).json()
+    assert client.get(f"/api/projects/{project['id']}/bim/elements").json() == []
+    assert client.get(f"/api/projects/{project['id']}/geo").json() == {
+        "type": "FeatureCollection",
+        "features": [],
+    }
+    # The deliberately opened example remains usable.
+    assert client.get("/api/projects/harbor-east/bim/elements").json()
+    assert client.get("/api/projects/harbor-east/geo").json()["features"]

@@ -27,6 +27,10 @@ class ApprovalRequest(APIModel):
     confirmation: str = Field(default="", max_length=80)
 
 
+class RejectionRequest(APIModel):
+    reason: str = Field(default="", max_length=500)
+
+
 class ExecuteResponse(APIModel):
     run_id: str
     operation_id: str

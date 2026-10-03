@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 
 import httpx
-from native_webdriver_client import NativeSession, WebDriverError
+from native_webdriver_client import ELEMENT_KEY, NativeSession, WebDriverError
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -87,23 +87,51 @@ def stop_driver(driver: subprocess.Popen):
 
 
 def coordination(session: NativeSession, artifacts: Path) -> dict:
-    session.wait("return !!document.querySelector('.application-shell')")
-    session.wait("return document.body.textContent.includes('当前没有阻塞施工的条件')")
+    session.wait("return !!document.querySelector('.startup')", phase="startup ready")
+    session.click(".startup", "打开示例项目")
+    session.wait("return !!document.querySelector('.work-list')", phase="initial workspace ready")
+    session.click(".work-list", "东翼风管安装", startswith=True)
+    session.click("[aria-label='所选工作事项']", "查看详情")
+    readiness = '[aria-label="工作包概览"] .readiness-summary'
+    ready = """
+        const overview = document.querySelector(arguments[0]);
+        return overview?.querySelector('h2')?.textContent.trim() === '可施工' &&
+            overview?.querySelector('h3')?.textContent.trim() === '当前没有未解决的阻塞条件';
+    """
+    session.wait(
+        "return document.querySelector('[aria-label=\"工作包概览\"] h1')"
+        "?.textContent.trim() === '东翼风管安装'",
+        phase="selected work package ready",
+    )
+    session.wait(ready, readiness, phase="initial ready judgement")
     profile = session.api("/api/profile")
     assert profile["profile"] == "desktop" and profile["runtime"] == "dbos", profile
     session.open_menu()
     session.choose_menu("能力诊断")
-    session.wait("return document.querySelector('.profile-tag')?.textContent.includes('desktop')")
-    session.click("nav[aria-label='工作区视图']", "协调")
-    session.click(".header-tools", "记录变更")
+    session.wait(
+        "return document.querySelector('.profile-tag')?.textContent.includes('desktop')",
+        phase="capability page ready",
+    )
+    session.click("nav[aria-label='主要工作区']", "工作")
+    session.click(".work-list", "东翼风管安装", startswith=True)
+    session.click("[aria-label='所选工作事项']", "查看详情")
+    session.click("[aria-label='当前工作区操作']", "记录变更")
+    revision = session.wait(
+        "return document.querySelector('.event-dialog input[type=text]')",
+        phase="design revision input ready",
+    )
+    session.request("POST", session.path(f"element/{revision[ELEMENT_KEY]}/value"), {"text": "V17"})
     session.click(".event-dialog", "提交并分析")
     session.wait(
-        "return document.querySelector('.coordination-state-tag')?.textContent.includes('已阻塞')"
+        "return ['已阻塞', '待批准'].includes("
+        "document.querySelector(arguments[0] + ' h2')?.textContent.trim())",
+        readiness,
+        phase="blocked or waiting-approval state reached",
     )
     route = "/api/projects/harbor-east/workspace"
     before = session.api(route)
     assert before["analysis"]["constraints"] and not before["stale"]
-    session.click("body", "批准并继续")
+    session.click("section[aria-label='工作包概览']", "审查处理方案")
     inspector = "[aria-label='判断依据与处理详情']"
     assert session.wait(
         """
@@ -111,13 +139,16 @@ def coordination(session: NativeSession, artifacts: Path) -> dict:
             .find(b => b.textContent.trim() === '执行并重新检查')?.disabled === true;
     """,
         inspector,
+        phase="unapproved execution disabled",
     ), "Unapproved native execution was not disabled"
     session.click(inspector, "批准 R", startswith=True)
     session.wait(
-        "return document.querySelector(arguments[0])?.textContent.includes('已批准')", inspector
+        "return document.querySelector(arguments[0])?.textContent.includes('已批准')",
+        inspector,
+        phase="approval completed",
     )
     session.click(inspector, "执行并重新检查")
-    session.wait("return document.body.textContent.includes('当前没有阻塞施工的条件')")
+    session.wait(ready, readiness, phase="re-check reached ready")
     after = session.api(route)
     assert not after["stale"] and not after["analysis"]["constraints"]
     assert after["analysis"]["snapshot"]["id"] != before["analysis"]["snapshot"]["id"]
