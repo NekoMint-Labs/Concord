@@ -1,0 +1,13 @@
+--- a/src/lib/loading/ifc-source.ts
++++ b/src/lib/loading/ifc-source.ts
+@@ -789,7 +789,9 @@
+     // Uncacheable bytes get a key no other load shares, as before bytes were
+     // cached: the key also keys cached validation results and saved placement,
+     // which must not outlive an edit this load cannot see.
+-    const cacheKey = buildCacheKey({ name: fileName, size, lastModified: cacheable ? m.lastModified : now() })
++    const cacheKey = fingerprint?.startsWith('f2:')
++      ? `concord-ifc:5073adf1f5fadef76129460555482b6507c2be74:cd7223b245b36d2e0534bbed4499185e94647ae56463ec95632f8dd105db7ea0:${fingerprint}`
++      : buildCacheKey({ name: fileName, size, lastModified: cacheable ? m.lastModified : now() })
+ 
+     // 3. cache-lookup ────────────────────────────────────────────────────────
+     enter('cache-lookup')

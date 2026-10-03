@@ -10,9 +10,16 @@ dependencies = [
 ]
 [project.optional-dependencies]
 models = ["openai>=3.8,<4", "pydantic-ai-slim[openai,anthropic,google]>=2.40,<3", "pillow>=11,<13"]
-bim = ["ifcopenshell>=0.8.5,<0.9", "ifcdiff==0.8.5"]
+bim = [
+  "ifcopenshell>=0.8.5,<0.9",
+  "ifcdiff==0.8.5",
+  "ifcclash==0.8.5",
+  "ifctester==0.8.5",
+  "bcf-client==0.8.5",
+  "xmlschema>=4,<5",
+]
 optimization = ["ortools>=9.12,<10"]
-documents = ["docling>=2,<3"]
+documents = ["docling>=2,<3", "rapidocr>=3.9,<4", "onnxruntime==1.24.4"]
 storage = ["minio>=7.2.20,<8", "urllib3>=2.3,<3"]
 server = ["psycopg[binary]>=3.2,<4", "pgvector>=0.3,<1"]
 temporal = ["temporalio>=1.10,<2"]
