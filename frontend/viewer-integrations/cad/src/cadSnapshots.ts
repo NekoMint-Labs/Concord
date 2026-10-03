@@ -32,8 +32,6 @@ export function snapshotCadOptions(
     )
       throw new Error(`CAD comparison option ${key} must be finite`);
   }
-  if (options.tolerance !== undefined && options.tolerance <= 0)
-    throw new Error("CAD comparison tolerance must be positive");
   for (const [key, min, max] of [
     ["compareProps", 0, 127],
     ["compareHatch", 0, 1],

@@ -196,7 +196,6 @@ describe("native donor snapshot comparison", () => {
   });
   it.each([
     { tolerance: NaN },
-    { tolerance: 0 },
     { compareProps: 128 },
     { compareHatch: 2 },
     { compareText: -1 },
@@ -208,6 +207,17 @@ describe("native donor snapshot comparison", () => {
     expect(() =>
       snapshotCadOptions(options as AcApDiffCompareOptions),
     ).toThrow();
+  });
+  it("preserves donor fallback semantics for non-positive explicit tolerance", () => {
+    expect(cadSnapshotKey(hash, { tolerance: 0 })).toBe(
+      cadSnapshotKey(hash, {}),
+    );
+    expect(cadSnapshotKey(hash, { tolerance: -1 })).toBe(
+      cadSnapshotKey(hash, {}),
+    );
+    expect(snapshotCadOptions({ tolerance: 0 })).toMatchObject({
+      tolerance: 0,
+    });
   });
   it("rejects an invalid source hash or already cancelled request", async () => {
     const controller = new AbortController();
