@@ -126,7 +126,9 @@ verification boundary.
 ## Revision-aware engineering verification (#18)
 
 Native file reads use per-format bounds: IFC 512 MiB, PDF 128 MiB and the existing
-document formats 25 MiB. The backend remains authoritative and may apply a smaller
+document formats 25 MiB. DXF is not supported by the native import dialog; the
+backend DXF allowance does not enable a desktop parser or import path.
+The backend remains authoritative and may apply a smaller
 configured limit. The native picker, main-window restriction, loopback connection,
 per-launch token and redirect prohibition remain in force.
 
