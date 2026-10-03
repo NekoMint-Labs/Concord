@@ -21,6 +21,8 @@
     "R2/structural-drawing.pdf": "846e87c9878cb91274373b6c48f2f2b4496a9a784351e55985a345dced141a9c",
     "R2/structure.ifc": "891acd8b37b0d8b3e9a71822af622a6f9901978ad078aa6b700847243742f097",
     "R3/mep-drawing.pdf": "56f2417b71c226f4c524ee88ccdbc948489a0e769de61284ce6ea416972214c2",
-    "R3/mep.ifc": "d354982e3cb1b7616b35ce7e68f6911e2c502f1f40e1584248db7cc440ac7241"
+    "R3/mep.ifc": "d354982e3cb1b7616b35ce7e68f6911e2c502f1f40e1584248db7cc440ac7241",
+    "viewpoints/perspective.bcfzip": "736d1d1d0aff55d384dbba3d359225b2ee4e0b19f0f496f7f3bc959859cbfcf2",
+    "viewpoints/orthogonal.bcfzip": "b378a18ab2675a39f487dc3d9c9f2364d44b71962251a211eecffcca373e1754"
   }
 }

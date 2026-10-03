@@ -90,6 +90,11 @@ class BCFComment(Model):
     modified_date: datetime | None = None
 
 
+class BCFClippingPlane(Model):
+    location: tuple[float, float, float]
+    direction: tuple[float, float, float]
+
+
 class BCFViewpoint(Model):
     source_id: str
     source_revision_id: str
@@ -98,6 +103,7 @@ class BCFViewpoint(Model):
     viewpoint_guid: UUID | None = None
     comments: tuple[BCFComment, ...] = ()
     selected_global_ids: tuple[str, ...] = ()
+    clipping_planes: tuple[BCFClippingPlane, ...] = ()
     position: tuple[float, float, float] | None = None
     direction: tuple[float, float, float] | None = None
     up: tuple[float, float, float] | None = None

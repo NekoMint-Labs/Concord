@@ -8,7 +8,6 @@ from app.domain.errors import CapabilityUnavailable, DomainError
     [
         ("revit", "model.ifc", "BIM"),
         ("autocad", "plan.dxf", "DRAWING"),
-        ("navisworks", "coordination.ifc", "BIM"),
     ],
 )
 def test_connector_exports_are_hashable_staged_artifacts(host, filename, kind):
@@ -53,3 +52,26 @@ def test_connector_rejects_unsafe_or_host_incompatible_exports(filename):
         AECConnectorBoundary().stage(
             b"content", host="revit", external_id="revision", filename=filename
         )
+
+
+@pytest.mark.parametrize("filename", ["coordination.ifc", "model.json", "model.fbx"])
+def test_navisworks_does_not_claim_an_unqualified_native_conversion(filename):
+    with pytest.raises(CapabilityUnavailable, match="qualified native host conversion"):
+        AECConnectorBoundary().stage(
+            b"artifact", host="navisworks", external_id="host-1", filename=filename
+        )
+
+
+def test_connector_staging_checks_limits_before_hashing():
+    with pytest.raises(ValueError, match="positive"):
+        AECConnectorBoundary(max_bytes=0)
+    boundary = AECConnectorBoundary(max_bytes=3)
+    with pytest.raises(DomainError, match="size limit"):
+        boundary.stage(b"four", host="revit", external_id="r1", filename="model.ifc")
+    assert (
+        boundary.stage(b"ifc", host="revit", external_id="r1", filename="model.ifc").size_bytes == 3
+    )
+    with pytest.raises(DomainError, match="external identifier"):
+        boundary.stage(b"ifc", host="revit", external_id="x" * 513, filename="model.ifc")
+    with pytest.raises(DomainError, match="filename"):
+        boundary.stage(b"ifc", host="revit", external_id="r1", filename="x" * 256 + ".ifc")

@@ -7,3 +7,10 @@ fixtures/coordination-project/R*/*.dxf binary
 fixtures/coordination-project/R*/*.ifc whitespace=cr-at-eol
 fixtures/coordination-project/R*/*.ids whitespace=cr-at-eol
 fixtures/coordination-project/R*/*.csv whitespace=cr-at-eol
+
+fixtures/coordination-project/viewpoints/*.bcfzip binary -text
+
+# Preserve pinned donor bytes and portable patch syntax across Git checkouts.
+frontend/vendor/** -text whitespace=cr-at-eol
+frontend/viewer-integrations/cad/vendor/** -text whitespace=cr-at-eol
+*.patch -text whitespace=cr-at-eol,-blank-at-eol,-blank-at-eof

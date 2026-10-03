@@ -9,6 +9,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from golden_bcf_fixture import viewpoints
 from golden_document_fixture import (
     change_document,
     drawing,
@@ -57,6 +58,7 @@ def main() -> None:
         "DUCT-01,023,Route requires review\n",
         encoding="utf-8",
     )
+    viewpoints(folder / "viewpoints")
     hashes = {
         p.relative_to(folder).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in sorted(folder.rglob("*"))

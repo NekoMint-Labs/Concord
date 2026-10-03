@@ -39,8 +39,13 @@ class AECConnectorBoundary:
     _export_extensions: dict[ConnectorHost, set[str]] = {
         "revit": {".ifc"},
         "autocad": {".dxf", ".pdf"},
-        "navisworks": {".ifc"},
+        "navisworks": set(),
     }
+
+    def __init__(self, max_bytes: int = 100 * 1024 * 1024):
+        if max_bytes < 1:
+            raise ValueError("AEC connector byte limit must be positive")
+        self.max_bytes = max_bytes
 
     def stage(
         self,
@@ -51,12 +56,14 @@ class AECConnectorBoundary:
         filename: str,
         media_type: str | None = None,
     ) -> ConnectorArtifact:
-        if not content:
-            raise DomainError("AEC connector output must be non-empty")
-        if not external_id.strip():
+        if not isinstance(content, bytes) or not content or len(content) > self.max_bytes:
+            raise DomainError("AEC connector output must be non-empty bytes within the size limit")
+        if not isinstance(external_id, str) or not external_id.strip() or len(external_id) > 512:
             raise DomainError("AEC connector output requires an external identifier")
         if (
-            not filename
+            not isinstance(filename, str)
+            or not filename
+            or len(filename) > 255
             or Path(filename).name != filename
             or any(char in filename for char in "/\\:")
             or any(ord(char) < 32 for char in filename)
@@ -69,6 +76,11 @@ class AECConnectorBoundary:
             )
         if host not in self._source_kind:
             raise DomainError(f"Unsupported AEC connector host: {host}")
+        if host == "navisworks":
+            raise CapabilityUnavailable(
+                "Navisworks requires a qualified native host conversion path; "
+                "no exported format is currently approved by this staging adapter"
+            )
         if suffix not in self._export_extensions[host]:
             raise DomainError(f"Unsupported {host} exported artifact format: {suffix}")
         return ConnectorArtifact(

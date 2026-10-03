@@ -1,0 +1,76 @@
+.engineering-drawing {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.engineering-drawing button,
+.engineering-drawing input,
+.engineering-drawing select {
+  font: inherit;
+}
+.engineering-drawing-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.engineering-drawing-paper {
+  overflow: auto;
+  max-height: 70vh;
+  background: #e5e7eb;
+  padding: 1rem;
+}
+.engineering-drawing-sheet {
+  position: relative;
+  background: white;
+  margin: auto;
+}
+.engineering-drawing-sheet canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.engineering-drawing-sheet svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+.engineering-diff-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.engineering-diff-pair img {
+  width: 100%;
+  border: 1px solid #94a3b8;
+}
+@media (max-width: 640px) {
+  .engineering-diff-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+.engineering-drawing {
+  --ink: #172033;
+  --ink-muted: #475569;
+  --ink-faint: #cbd5e1;
+  --paper-bright: #fff;
+  --surface-pop: #f1f5f9;
+  --cobalt: #2563eb;
+  --accent-contrast: #fff;
+  --f-body: inherit;
+  --f-mono: monospace;
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --r-1: 0.25rem;
+}
+
+/* Keep the sheet stationary while the native editor changes selection/tool controls. */
+.engineering-drawing .annotation-workbench {
+  height: 10rem;
+  overflow: auto;
+}

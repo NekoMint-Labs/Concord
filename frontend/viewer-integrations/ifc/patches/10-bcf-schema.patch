@@ -1,0 +1,11 @@
+--- a/src/lib/worker-schemas.ts
++++ b/src/lib/worker-schemas.ts
+@@ -246,6 +246,8 @@
+ // ── BCF parser worker OUT messages ────────────────────────────────────────────
+ 
+ const BcfViewpointSchema = z.object({
++  cameraKind: z.enum(['perspective','orthogonal']).optional(),
++  viewToWorldScale: z.number().optional(),
+   guid:             z.string(),
+   snapshotBase64:   z.string().optional(),
+   cameraPosition:   z.object({ x: z.number(), y: z.number(), z: z.number() }).optional(),

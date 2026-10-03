@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
-from app.adapters.engineering_results import BCFComment, BCFViewpoint
+from app.adapters.engineering_results import BCFClippingPlane, BCFComment, BCFViewpoint
 from app.domain.errors import DomainError, ProviderError
 
 if TYPE_CHECKING:
@@ -55,6 +55,20 @@ def write_viewpoint(document: "BcfXml", viewpoint: BCFViewpoint) -> None:
     else:
         visualization.perspective_camera = mdl.PerspectiveCamera(
             **camera_values, field_of_view=viewpoint.field_of_view
+        )
+    if viewpoint.clipping_planes:
+        visualization.clipping_planes = mdl.VisualizationInfoClippingPlanes(
+            clipping_plane=[
+                mdl.ClippingPlane(
+                    location=mdl.Point(
+                        x=plane.location[0], y=plane.location[1], z=plane.location[2]
+                    ),
+                    direction=mdl.Direction(
+                        x=plane.direction[0], y=plane.direction[1], z=plane.direction[2]
+                    ),
+                )
+                for plane in viewpoint.clipping_planes
+            ]
         )
     handler = VisualizationInfoHandler(visualization, snapshot=viewpoint.snapshot_png)
     topic.add_visinfo_handler(
@@ -116,6 +130,16 @@ def read_viewpoint(
         topic_type=topic.topic.topic_type or "Engineering",
         topic_status=topic.topic.topic_status or "Open",
         selected_global_ids=_selected_global_ids(visualization),
+        clipping_planes=tuple(
+            BCFClippingPlane(
+                location=_vector(plane, "location"), direction=_vector(plane, "direction")
+            )
+            for plane in (
+                visualization.clipping_planes.clipping_plane
+                if visualization.clipping_planes
+                else []
+            )
+        ),
         position=_vector(camera, "camera_view_point"),
         direction=_vector(camera, "camera_direction"),
         up=_vector(camera, "camera_up_vector"),
@@ -162,4 +186,11 @@ def validate_camera(viewpoint: BCFViewpoint):
     )
     if sum(v * v for v in cross) < 1e-12:
         raise DomainError("BCF camera direction and up vectors must not be parallel")
+    if len(viewpoint.clipping_planes) > 32 or len(viewpoint.selected_global_ids) > 10000:
+        raise DomainError("BCF viewpoint exceeds the clipping/selection limit")
+    for plane in viewpoint.clipping_planes:
+        _finite_vector(plane.location)
+        normal = _finite_vector(plane.direction)
+        if sum(axis * axis for axis in normal) == 0:
+            raise DomainError("BCF clipping plane direction must be nonzero")
     return position, direction, up

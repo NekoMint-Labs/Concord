@@ -7,7 +7,7 @@ from uuid import UUID
 
 import pytest
 from app.adapters.bcf import BCFAdapter
-from app.adapters.engineering_results import BCFComment, BCFViewpoint
+from app.adapters.engineering_results import BCFClippingPlane, BCFComment, BCFViewpoint
 from app.adapters.ifc_clash import IfcClashAdapter
 from app.adapters.ifc_fixture import generate_ifc_fixture
 from app.adapters.ifc_tester import IfcTesterAdapter
@@ -92,6 +92,7 @@ def test_bcf_round_trip_preserves_selected_guids_and_viewpoint(camera_kind):
         direction=(0.0, 1.0, -1.0),
         up=(0.0, 1.0, 1.0),
         snapshot_png=b"\x89PNG\r\n\x1a\nfixture-snapshot",
+        clipping_planes=(BCFClippingPlane(location=(1.0, -2.0, 3.5), direction=(0.0, 0.0, -1.0)),),
         camera_kind=camera_kind,
         field_of_view=45.0,
         view_to_world_scale=4.0,
@@ -121,6 +122,7 @@ def test_bcf_round_trip_preserves_selected_guids_and_viewpoint(camera_kind):
     assert restored[0].position == viewpoint.position
     assert restored[0].direction == viewpoint.direction
     assert restored[0].up == viewpoint.up
+    assert restored[0].clipping_planes == viewpoint.clipping_planes
     assert restored[0].snapshot_png == viewpoint.snapshot_png
     assert restored[0].comments == viewpoint.comments
     assert restored[0].topic_guid == viewpoint.topic_guid
@@ -338,4 +340,27 @@ def test_ifctester_rejects_invalid_xml_and_external_entities(ids_content):
             ids_content,
             source_id="structure",
             source_revision_id="R1",
+        )
+
+
+@pytest.mark.parametrize(
+    "planes",
+    [
+        (BCFClippingPlane(location=(0, 0, 0), direction=(0, 0, 0)),),
+        (BCFClippingPlane(location=(float("inf"), 0, 0), direction=(1, 0, 0)),),
+        (BCFClippingPlane(location=(0, 0, 0), direction=(1, 0, 0)),) * 33,
+    ],
+)
+def test_bcf_clipping_failure_precedes_export(planes):
+    with pytest.raises(DomainError):
+        BCFAdapter().export_viewpoint(
+            BCFViewpoint(
+                source_id="model",
+                source_revision_id="R1",
+                title="Review",
+                position=(0, 0, 3),
+                direction=(0, 0, -1),
+                up=(0, 1, 0),
+                clipping_planes=planes,
+            )
         )

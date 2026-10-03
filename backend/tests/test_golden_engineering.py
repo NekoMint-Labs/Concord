@@ -21,7 +21,7 @@ def test_golden_sources_match_committed_manifest():
     manifest = json.loads((FIXTURE / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["synthetic"] is True
     assert manifest["global_ids"] == {"beam": BEAM, "duct": DUCT}
-    assert len(manifest["sha256"]) == 17
+    assert len(manifest["sha256"]) == 19
     for filename, digest in manifest["sha256"].items():
         assert hashlib.sha256((FIXTURE / filename).read_bytes()).hexdigest() == digest
 

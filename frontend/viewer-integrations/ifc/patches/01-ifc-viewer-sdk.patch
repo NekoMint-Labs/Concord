@@ -1,0 +1,64 @@
+--- a/src/sdk/ifc-viewer-sdk.ts
++++ b/src/sdk/ifc-viewer-sdk.ts
+@@ -310,6 +310,9 @@
+   direction: Vec3
+   up?: Vec3
+   fovDeg: number
++  cameraKind?: 'perspective' | 'orthogonal'
++  viewToWorldScale?: number
++  aspect?: number
+ }
+ 
+ /** First-person walk mode. */
+@@ -732,9 +735,9 @@
+ function toArrayBuffer(bytes: ArrayBuffer | Uint8Array): ArrayBuffer {
+   if (bytes instanceof ArrayBuffer) return bytes
+   if (bytes instanceof Uint8Array) {
+-    return bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
++    return bytes.buffer instanceof ArrayBuffer && bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
+       ? bytes.buffer
+-      : bytes.slice().buffer
++      : new Uint8Array(bytes).buffer
+   }
+   throw new TypeError('IfcViewer: expected an ArrayBuffer or Uint8Array')
+ }
+@@ -1021,6 +1024,20 @@
+   }
+ 
+   /** Fetch an element's IFC data (attributes + property/quantity sets), or null. */
++  getIdsByGuids(guids: string[], modelId: string): Promise<(number | null)[]> {
++    return this.request('ifcviewer:get-ids-by-guids', { guids, modelId })
++  }
++
++  captureBcf(modelIds: string[], title: string, author: string): Promise<{bytes:ArrayBuffer;topicGuid:string;viewpointGuid:string;selected:Array<{modelId:string;globalId:string}>}> {
++    return this.request('ifcviewer:capture-bcf',{modelIds,title,author},30000)
++  }
++  reopenBcf(bytes: ArrayBuffer, modelIds: string[], topicGuid?: string, viewpointGuid?: string): Promise<{topicGuid:string;viewpointGuid:string;title:string;commentCount:number;selected:Array<{modelId:string;globalId:string}>}> {
++    return this.request('ifcviewer:reopen-bcf',{bytes,modelIds,topicGuid,viewpointGuid},30000)
++  }
++  getEngineeringDiagnostics(): Promise<{ builds: number; hits: number; writes: number; failures: number }> {
++    return this.request('ifcviewer:engineering-diagnostics')
++  }
++
+   getElement(expressId: number, modelId?: string): Promise<IfcElementData | null> {
+     return this.request<IfcElementData | null>('ifcviewer:get-element', { expressId, modelId })
+   }
+@@ -1753,6 +1770,9 @@
+     url.search = ''
+     url.hash = ''
+     url.searchParams.set('embed', '1')
++    // Concord owns source upload and navigation; keep the native properties rail.
++    url.searchParams.set('toolbar', '0')
++    url.searchParams.set('sidebar', '1')
+     const ui = this.opts.ui ?? 'minimal'
+     if (ui !== 'minimal') url.searchParams.set('ui', ui)
+     if (this.opts.validate === false) url.searchParams.set('validate', '0')
+@@ -1851,7 +1871,7 @@
+   }
+ 
+   private readonly onMessage = (e: MessageEvent): void => {
+-    if (e.source !== this.iframe.contentWindow) return
++    if (e.source !== this.iframe.contentWindow || e.origin !== this.appOrigin) return
+     const data = e.data as AnyEvent | null
+     if (!data || data.source !== 'ifc-validator' || typeof data.type !== 'string') return
+ 

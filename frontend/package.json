@@ -42,7 +42,8 @@
     "@thatopen/fragments": "^3.1.0",
     "three": "^0.184.0",
     "web-ifc": "^0.0.77",
-    "maplibre-gl": "^5.12.0"
+    "maplibre-gl": "^5.12.0",
+    "pdfjs-dist": "4.10.38"
   },
   "devDependencies": {
     "typescript": "^5.9.0",
