@@ -79,6 +79,10 @@ class FindingService:
             }
             if request.decision not in allowed[item.state]:
                 raise Conflict(f"Cannot apply {request.decision} to a {item.state} Finding")
+            if request.recheck_id is not None:
+                recheck = repo.recheck(project_id, request.recheck_id)
+                if recheck.finding_id != item.id:
+                    raise Conflict("Decision ReCheck must belong to the current Finding")
             if request.decision == "CLOSED":
                 self._check_closure(repo, project_id, item, request)
             updates: dict = {"updated_at": utcnow()}

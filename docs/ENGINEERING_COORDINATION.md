@@ -100,6 +100,11 @@ edited. `CLOSED` and `DISMISSED` Findings accept only `REOPENED`, which returns 
 changing the Finding or its append-only decision history. Reopening never reuses old
 closure authorization.
 
+Any decision supplying `recheck_id` must reference an existing ReCheck in the same
+project and Finding before any state or history is written. Missing or cross-project
+IDs return not found; cross-Finding IDs return a conflict. Non-closure decisions may
+reference historical checks; closure retains the stricter freshness/resolution rules.
+
 Confirming a proposal also checks the latest revision of every dependency source inside
 the decision transaction. If a revision arrived while the Finding was only proposed,
 the platform queues a ReCheck against that latest revision, scoped only to this Finding.
