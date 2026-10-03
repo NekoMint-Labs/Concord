@@ -1,16 +1,16 @@
-"""Internal engineering adapter results for pre-integration qualification.
+"""Internal engineering engine results, separate from platform publication records.
 
-These are adapter-local staging records, not a competing domain or publication
-contract. Map them to the A-owned contract when its foundation is merged.
+These are adapter-local outputs, not a competing domain or persistence contract.
+The IDS mapper consumes the merged canonical Evidence/publication contract.
 """
 
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import AwareDatetime, Field
 
-from app.domain.models import Model
+from app.domain.models import Model, utcnow
 
 EngineeringKind = Literal["added", "deleted", "changed", "clash", "ids_violation"]
 
@@ -71,6 +71,9 @@ class IDSViolation(Model):
 class IDSValidationResult(Model):
     source_id: str
     source_revision_id: str
+    source_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    requirements_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    validated_at: AwareDatetime = Field(default_factory=utcnow)
     engine: str
     engine_version: str
     specifications: int

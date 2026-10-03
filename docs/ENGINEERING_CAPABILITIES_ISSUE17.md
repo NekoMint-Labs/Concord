@@ -1,6 +1,6 @@
 # Issue #17 engineering capability status
 
-This branch contains Developer C's independent backend and viewer prework for Issue #17. The prework is published in Draft PR #21 on `feat/17-engineering-capabilities`. The complete Issue is **not implemented**. None of the new adapters is wired into the product API, runtime, or source publication path.
+Work for Issue #17 is tracked in Draft PR #21, whose source is the original `feat/17-engineering-capabilities` branch. The local continuation includes merged PRs #19 and #20, consumes canonical `CadTarget`, and maps real IDS violations into source-revision- and SHA-256-bound canonical `Evidence` through the trusted publisher in integration tests. This continuation has not been uploaded to PR #21. IDS validation is still not invoked by the product runtime. Issue #17 remains **incomplete**: coordinated runtime jobs, publication of other engineering outputs, product viewer composition and end-to-end acceptance are outstanding.
 
 ## Implemented and locally qualified
 
@@ -171,21 +171,26 @@ Chinese OCR is opt-in, local and lazy through Docling's RapidOCR/ONNX backend. P
 
 ## Integration dependencies and next work
 
-A's PR #19 remains the hard dependency for persistent integration. Engineering results in this branch are adapter-local staging records; they are not a second canonical domain or persistence contract. Once the foundation is merged, update this branch from `main` and:
+PRs #19 and #20 are merged. Engineering results remain adapter outputs unless a caller passes canonical publications through A's trusted `EngineeringPublisher`; the IDS result mapper is implemented and qualified with real-engine persistence/retry tests, but no runtime job currently invokes it. The remaining integration work is:
 
-1. Map actual engine outputs into A's `Change`, `Evidence`, `ViewerTarget`, derived artifact and re-check contracts; preserve both clash source revisions and source hashes.
-2. Connect restricted jobs through A's preparation/publication path with cancellation, revision fencing, byte limits and cache keys containing source hash plus engine/version.
-3. Complete the adapted Drawing interaction/editor coverage and connect PDF worker results through A's shared contracts and B's viewer seam; retain the qualified matching/alignment/word/pixel/mask/crop path.
-4. Connect the qualified isolated CAD entity-targeting adapter to canonical ViewerTarget; finish local font provisioning and cache/parse reuse. Connect the isolated mlightcad surface to B; retain explicit donor comparison limitations and the DXF-only boundary.
-5. Qualify remaining IFC importer-internal source passes, canonical BCF publication/reopening, large-model/WebGL and native packaging. Consume A's canonical ViewerTarget seam for the already isolated SDK surface and verified stable GlobalId mapping.
-6. Deliver real documented native-host connector boundaries and deterministic contract tests. Upload results through `ProjectSourceRevision` instead of treating staging validation as persistence.
-7. Add the real offline engineering document suite to the A-owned SDK CI lane after the active workflow change merges; finish the Golden viewer/reopen/cache/cleanup scenario.
+1. Coordinate with A on how dual-source clash provenance is represented. Current canonical `Evidence` binds to one source revision, while clash results must retain two source IDs, revision IDs and byte hashes. Do not publish those results until both sides can be represented without loss.
+2. Connect restricted jobs through A's preparation/publication path with cancellation, revision fencing, byte limits and cache keys containing ordered source hashes plus engine/version. IDS job configuration must also bind the requirements hash so rule changes cannot reuse an old validation result.
+3. Map the remaining engine outputs into canonical `Change`, `Evidence` and `ViewerTarget` records with verified provenance.
+4. Complete the adapted Drawing interaction/editor coverage and connect PDF worker results through A's shared contracts and B's viewer seam; retain the qualified matching/alignment/word/pixel/mask/crop path.
+5. Complete the remaining local font provisioning and cache/parse reuse for the CAD surface, whose entity-targeting adapter already consumes canonical `CadTarget`. Connect the isolated mlightcad surface to B; retain explicit donor comparison limitations and the DXF-only boundary.
+6. Qualify remaining IFC importer-internal source passes, canonical BCF publication/reopening, large-model/WebGL and native packaging. Consume A's canonical ViewerTarget seam for the already isolated SDK surface and verified stable GlobalId mapping.
+7. Deliver real documented native-host connector boundaries and deterministic contract tests. Upload results through `ProjectSourceRevision` instead of treating staging validation as persistence.
+8. Coordinate the real offline engineering document suite with the A-owned SDK CI lane; finish the Golden viewer/reopen/cache/cleanup scenario.
 
 B owns product composition. Supply narrow viewer surfaces and consume the agreed ViewerTarget seam; coordinate any minimal changes to `App.tsx` or `WorkspaceViews.tsx`. They are not modified here.
 
-Shared review points with A: optional dependencies/lock changes, BCF package licensing, capability job configuration, cache/publication mapping, packaging and SDK CI selection. PR #19 also owns the active workflow and notices changes, so those changes must be reconciled after merge. No workflow or domain/port/API/schema/bootstrap changes are made in this prework.
+Shared review points with A: optional dependencies/lock changes, BCF package licensing, capability job configuration, cache/publication mapping, packaging and SDK CI selection. PR #19 already merged the platform foundation and active workflow changes; any later workflow, dependency, notice, bootstrap or contract change must be coordinated with its current owner before editing. No workflow or domain/port/API/schema/bootstrap changes are made in this prework.
 
-## Local evidence and reproduction
+## Qualification history and reproduction
+
+The following entries record earlier runs. Use the opening status and latest
+continuation for the current integration boundary; earlier pre-merge dependency
+statements are historical.
 
 Use the committed lock and install the optional engines before qualification:
 
@@ -506,3 +511,66 @@ reused local dependency tree missing `pdfjs-dist`; TypeScript reported only thos
 two unresolved imports. No package manifest or lockfile was changed. PR #21
 remains Draft and Issue #17 remains incomplete pending the remaining integration
 and acceptance work.
+
+
+### October 3 IDS publication mapping continuation
+
+The IfcTester result now records the SHA-256 of the exact IFC byte input it
+validated. A C-owned mapper converts each structured IDS violation into the
+canonical `Evidence` shape, binding the evidence to its source revision ID,
+source hash and snapshot, retaining the IDS requirements hash, and using a BIM
+`ViewerTarget` when the violation identifies a GlobalId. The mapper rejects inconsistent violation provenance.
+This provides an adapter-to-publication boundary for IDS results; job
+registration, product invocation and the full R1/R2/R3 workflow remain open
+and require A/B integration. Real IfcTester output was published through the
+existing `EngineeringPublisher` into SQLite in a diagnostic service test;
+this does not qualify durable DBOS or the product UI. Repeating the mapping
+and publication of one immutable result preserves evidence IDs/timestamps and
+creates no duplicate records. Incorrect IFC hashes are rejected transactionally.
+Missing-applicability violations retain no invented element target, and empty
+violation lists do not generate success evidence or confirm Findings.
+
+The status and qualification entries above are chronological history. Earlier
+statements that #19 was unmerged or that all results were isolated prework do
+not describe the current local continuation.
+
+Latest discussion check: the browser confirmed #19/#20 as merged, and PR #21
+as Draft with 11 successful checks on the original `cee8cd1` head. PR #21's
+visible conversation showed no review comments; its old description still says
+#19 is open. Those remote checks do not cover this local continuation. #20's
+review explicitly retains DXF as unsupported by the native import dialog; the
+C-owned web CAD surface does not alter that desktop policy.
+
+Final verification for this continuation: 77 tests passed with zero skips,
+including real IfcTester publication/retry and incorrect-hash rollback, real
+IFC/IfcDiff/clash/Docling Golden checks, and the existing platform coordination
+regressions. The new IDS mapper has 100% statement/branch coverage (scoped to
+`engineering_result_mapping.py`, not repository-wide coverage). Repository-wide
+Ruff, changed-file formatting and adapter Pyright passed. Regenerated OpenAPI
+was compared in an ignored output directory and is unchanged. Reports remain
+under `.verification-work/`; no cache, report or generated output is published.
+
+Reproduce the focused continuation with the locked BIM/document extras:
+
+```text
+uv run --frozen --no-sync pytest -q backend/tests/test_engineering_result_mapping.py backend/tests/integration/test_ids_publication.py backend/tests/test_engineering_adapters.py backend/tests/test_engineering_limits.py backend/tests/test_golden_engineering.py backend/tests/test_engineering_coordination.py
+uv run --frozen --no-sync ruff check backend scripts
+uv run --frozen --no-sync pyright backend/app/adapters/engineering_results.py backend/app/adapters/ifc_tester.py backend/app/adapters/engineering_result_mapping.py
+```
+
+On Windows, use a new `--basetemp` beneath an existing short path when the default
+temporary directory is inaccessible or long storage paths exceed OS limits.
+The successful local run used that arrangement; the validation content was
+unchanged. Optional SDK warnings from corrupt IFC cleanup remain upstream
+warnings rather than test failures. Full repository Pyright, durable SDK CI,
+frontend/native and complete Issue acceptance are not claimed for this
+backend-only continuation.
+
+Remaining C-owned work can continue with the existing contracts: normalize other
+engine outputs, consume canonical drawing/document/BIM targets, and qualify the
+remaining viewer/connector/resource acceptance items. A/B coordination is needed
+for dual-source clash association, versioned IDS job configuration, runtime
+registration/cancellation/publication, and product composition. A proposed clash
+representation must preserve both authoritative source revisions and byte hashes
+without weakening ReCheck freshness validation; no shared-field change is made
+here.

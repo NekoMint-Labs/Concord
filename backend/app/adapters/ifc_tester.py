@@ -1,5 +1,6 @@
 """IfcTester adapter for structured IDS violations."""
 
+import hashlib
 import tempfile
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -37,6 +38,10 @@ class IfcTesterAdapter:
             or len(xml_content) > self.max_ids_bytes
         ):
             raise DomainError("IfcTester requires IFC and IDS content within its byte limits")
+        if not source_id.strip() or not source_revision_id.strip():
+            raise DomainError("IfcTester requires source and revision identifiers")
+        # Keep validation and provenance bound to the same immutable input.
+        ifc_content, xml_content = bytes(ifc_content), bytes(xml_content)
         try:
             import ifcopenshell
             from ifctester import ids
@@ -109,6 +114,8 @@ class IfcTesterAdapter:
         return IDSValidationResult(
             source_id=source_id,
             source_revision_id=source_revision_id,
+            source_hash=hashlib.sha256(ifc_content).hexdigest(),
+            requirements_hash=hashlib.sha256(xml_content).hexdigest(),
             engine="ifctester",
             engine_version=_version("ifctester"),
             specifications=total,
