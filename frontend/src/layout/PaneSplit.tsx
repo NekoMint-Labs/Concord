@@ -1,9 +1,10 @@
-import type { ReactNode, Ref } from "react";
+import { useImperativeHandle, useRef, type ReactNode, type Ref } from "react";
 import {
   Group,
   Panel,
   Separator,
   useDefaultLayout,
+  useGroupRef,
   usePanelRef,
   type GroupImperativeHandle,
   type LayoutStorage,
@@ -82,15 +83,25 @@ export function PaneSplit({
     storage: layoutStorage,
     onlySaveAfterUserInteractions: true,
   });
+  const handle = useGroupRef();
+  useImperativeHandle(groupRef, () => handle.current!, [id, orientation]);
+  const restoredGroup = useRef<string | null>(null);
   return (
     <Group
       id={id}
       className="pane-split"
       orientation={orientation}
       elementRef={elementRef}
-      groupRef={groupRef}
+      groupRef={handle}
       defaultLayout={persist ? saved.defaultLayout : undefined}
       onLayoutChanged={(layout, meta) => {
+        // v4 drops defaultLayout if initial slotted children measure zero. This
+        // callback is emitted only after measurement; restore once, not on resize.
+        if (persist && restoredGroup.current !== id) {
+          restoredGroup.current = id; // setLayout can publish another callback.
+          if (!meta.isUserInteraction && saved.defaultLayout)
+            handle.current?.setLayout(saved.defaultLayout);
+        }
         if (persist) saved.onLayoutChanged(layout, meta);
         // The library publishes percentage state before React commits pixel widths.
         if (meta.isUserInteraction && onUserLayoutChanged)

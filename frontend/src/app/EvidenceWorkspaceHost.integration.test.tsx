@@ -636,9 +636,12 @@ describe("EvidenceWorkspaceHost → C surface integration", () => {
       await expectActive("drawing");
       expectReceipt(a);
       expect(received("drawing").target).toBe(a.viewer_target);
-      expect(surfaces.mounted).toHaveBeenCalledExactlyOnceWith(
-        "drawing",
-        expect.anything(),
+      // Visible probe DOM precedes its passive mount effect after async hashing.
+      await waitFor(() =>
+        expect(surfaces.mounted).toHaveBeenCalledExactlyOnceWith(
+          "drawing",
+          expect.anything(),
+        ),
       );
       expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([
         contentUrl(),
@@ -660,8 +663,21 @@ describe("EvidenceWorkspaceHost → C surface integration", () => {
       <EvidenceWorkspaceHost project={project} evidence={a} />,
     );
     await expectActive("drawing");
+    await waitFor(() =>
+      expect(surfaces.mounted).toHaveBeenCalledExactlyOnceWith(
+        "drawing",
+        expect.objectContaining({ target: a.viewer_target }),
+      ),
+    );
     view.rerender(<EvidenceWorkspaceHost project={project} evidence={b} />);
     await expectActive("cad");
+    await waitFor(() => {
+      expect(surfaces.mounted).toHaveBeenCalledTimes(2);
+      expect(surfaces.mounted).toHaveBeenLastCalledWith(
+        "cad",
+        expect.objectContaining({ target: b.viewer_target }),
+      );
+    });
     expect(surfaces.disposed).toHaveBeenCalledExactlyOnceWith(
       "drawing",
       expect.objectContaining({ target: a.viewer_target }),

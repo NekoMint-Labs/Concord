@@ -247,6 +247,10 @@ it("discards WP, source, element, mapping and inspector context when switching c
   );
   vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
   vi.spyOn(api, "runs").mockResolvedValue([]);
+  // The retained real source pane starts these reads even with an empty catalog.
+  vi.spyOn(api, "capabilities").mockResolvedValue({ capabilities: [] });
+  vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
+  vi.spyOn(api, "baselines").mockResolvedValue([]);
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
@@ -278,10 +282,15 @@ it("discards WP, source, element, mapping and inspector context when switching c
 
   // A Finding keeps its opaque ID and no Evidence ID until one is chosen.
   fireEvent.keyDown(window, { key: "k", ctrlKey: true });
-  const search = screen.getByRole("combobox", { name: "搜索对象或操作" });
+  const command = within(
+    screen.getByRole("dialog", { name: "查找对象或操作" }),
+  );
+  const search = command.getByRole("combobox", { name: "搜索对象或操作" });
   fireEvent.change(search, { target: { value: findingA.title } });
   fireEvent.click(
-    screen.getByRole("option", { name: new RegExp(`^${findingA.title}`) }),
+    await command.findByRole("option", {
+      name: new RegExp(`^${findingA.title}`),
+    }),
   );
   const selectedFinding = screen.getByTestId("work-context");
   expect(selectedFinding).toHaveAttribute("data-finding-id", findingA.id);
@@ -289,10 +298,18 @@ it("discards WP, source, element, mapping and inspector context when switching c
   expect(selectedFinding).toHaveAttribute("data-finding-evidence", "");
   // A real evidence entry keeps its opaque Finding and Evidence IDs.
   fireEvent.keyDown(window, { key: "k", ctrlKey: true });
-  fireEvent.change(screen.getByRole("combobox", { name: "搜索对象或操作" }), {
-    target: { value: "工程依据" },
-  });
-  fireEvent.click(screen.getByRole("option", { name: /工程依据/ }));
+  const evidenceCommand = within(
+    screen.getByRole("dialog", { name: "查找对象或操作" }),
+  );
+  fireEvent.change(
+    evidenceCommand.getByRole("combobox", { name: "搜索对象或操作" }),
+    {
+      target: { value: "工程依据" },
+    },
+  );
+  fireEvent.click(
+    await evidenceCommand.findByRole("option", { name: /工程依据/ }),
+  );
   expect(screen.getByTestId("work-context")).toHaveAttribute(
     "data-finding-evidence",
     findingA.evidence_ids[0],
