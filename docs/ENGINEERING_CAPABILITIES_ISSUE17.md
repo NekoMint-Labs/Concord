@@ -1,6 +1,12 @@
 # Issue #17 engineering capability status
 
-Current work uses the fork branch `feat/17-engineering-capabilities-rebased`, based on the latest `main` with merged PRs #19 and #20. Draft PR #22 tracks this continuation. The original Draft PR #21 still tracks the pre-rebase branch; it does not contain this continuation. Integration review uses the new Draft so the original branch history is preserved without a force push. CAD and Drawing surfaces consume the generated canonical targets. Real IDS violations map into source-revision- and SHA-256-bound canonical `Evidence` through the trusted publisher in integration tests, with requirements-bound cache identity. IDS validation is still not invoked by the product runtime. The October 4 continuation adds paired clash Evidence publication, source-attribution checks, source-only BIM opening and explicit viewer failure callbacks for B's confirmed Evidence host. See `docs/EVIDENCE_VIEWER_ADAPTERS.md`. Issue #17 remains **incomplete**: coordinated runtime jobs, publication of other engineering outputs, product viewer composition and end-to-end acceptance are outstanding.
+Draft PR #22 tracks C's fork branch `feat/17-engineering-capabilities-rebased`, based on `main` with PRs #19, #20 and #23 merged. PR #21 is the preserved pre-rebase draft. The qualified adapter code head is `f5c6e64`; all eleven source/integration checks passed on that head.
+
+A's grouped ReCheck and versioned IDS seam is now consumed by `IfcClashCapability` and `IfcTesterCapability`. Four real-engine integration scenarios execute through the persisted ReCheck service with providers supplied to `build_services`. They cover paired Evidence, durable cache reuse, configuration invalidation, R3 input fencing and explicitly selected original IDS bytes. This is not default application registration: `create_app` still calls `build_services(settings)` without these providers.
+
+B's product host is available in PR #24 at `2146eaf`, under `frontend/src/app/EvidenceWorkspaceHost.tsx`. Source inspection confirms compatible Drawing/CAD/BIM/Document surface calls and revision/hash/failure handling. The combined branch has not been browser-qualified. PR #24 currently has Web/Quality failures and four merge conflicts with #22, recorded in the coordination comment on #24.
+
+Issue #17 remains **incomplete**, despite its current closed GitHub state. Default provider registration, remaining trusted output invocation/publication, native-host connectors, large-model/native qualification and combined product/Golden acceptance are outstanding. Empty clash or IDS violation output remains `NEEDS_REVIEW`; truthful positive condition Evidence has not been implemented. #22 remains Draft until acceptance and peer review are complete. Historical qualification entries below describe their own milestones and do not supersede this status.
 
 ## Implemented and locally qualified
 
@@ -175,20 +181,18 @@ Chinese OCR is opt-in, local and lazy through Docling's RapidOCR/ONNX backend. P
 
 ## Integration dependencies and next work
 
-PRs #19 and #20 are merged. Engineering results remain adapter outputs unless a caller passes canonical publications through A's trusted `EngineeringPublisher`; the IDS result mapper is implemented and qualified with real-engine persistence/retry tests, but no runtime job currently invokes it. The remaining integration work is:
+The grouped input, durable execution, IDS selection and atomic publication contracts from #23 are available. C now consumes them in real ReCheck integration tests. Engineering adapter drafts still require trusted invocation before becoming persisted domain records. Remaining work is:
 
-1. A has confirmed paired clash Evidence. C now maps and atomically publishes both source-qualified records in isolated tests. A still needs to deliver persisted grouping and complete dual-source ReCheck inputs/fencing; do not attach the pair to the current single-source provider runtime.
-2. Connect restricted jobs through A's preparation/publication path with cancellation, revision fencing, byte limits and cache keys containing ordered source hashes plus engine/version. IDS job configuration must also bind the requirements hash so rule changes cannot reuse an old validation result.
-3. Map the remaining engine outputs into canonical `Change`, `Evidence` and `ViewerTarget` records with verified provenance.
-4. Complete the adapted Drawing interaction/editor coverage and connect PDF worker results through A's shared contracts and B's viewer seam; retain the qualified matching/alignment/word/pixel/mask/crop path.
-5. Complete the remaining local font provisioning and cache/parse reuse for the CAD surface, whose entity-targeting adapter already consumes canonical `CadTarget`. Connect the isolated mlightcad surface to B; retain explicit donor comparison limitations and the DXF-only boundary.
-6. Qualify remaining IFC importer-internal source passes, canonical BCF publication/reopening, large-model/WebGL and native packaging. Consume A's canonical ViewerTarget seam for the already isolated SDK surface and verified stable GlobalId mapping.
-7. Deliver real documented native-host connector boundaries and deterministic contract tests. Upload results through `ProjectSourceRevision` instead of treating staging validation as persistence.
-8. Coordinate the real offline engineering document suite with the A-owned SDK CI lane; finish the Golden viewer/reopen/cache/cleanup scenario.
+1. Coordinate default deployment registration with A. C supplies the real `IfcClashCapability` and `IfcTesterCapability`; the application composition root must register the selected providers before recovery, preserve lightweight startup and report unavailable engines explicitly. The integration-test injection path already works.
+2. Implement truthful structured positive verification Evidence for supported conditions. Current wrappers publish detected clash/IDS failures but leave empty output reviewable; they do not emit `RESOLVED`. Preserve full pair/requirements provenance and A's current-input/closure validation.
+3. Connect PDF/CAD Change drafts and remaining derived artifacts through trusted invocation/publication. The canonical mappers exist; isolated draft normalization is not persisted product execution.
+4. Validate C's four lazy surfaces with B's actual #24 host. Resolve the four previewed conflicts in `frontend/package.json`, `THIRD_PARTY_NOTICES.md`, `docs/EVIDENCE_VIEWER_ADAPTERS.md` and `frontend/src/features/ProjectSourceRegister.test.tsx` with B. Validate the resulting manifest/lock pair, preserve both owners' changes and rerun checks on the combined tree. Source inspection is not browser acceptance.
+5. Complete remaining Drawing editor coverage, CAD font provisioning and documented comparison limitations. Qualify cache/parse reuse and viewer resource disposal under large models, including the donor IFC importer's internal passes.
+6. Deliver real documented Revit/AutoCAD/Navisworks host interfaces and deterministic contract tests. Persist accepted exports through `ProjectSourceRevision`; staging validation alone remains insufficient.
+7. Complete native packaging qualification and the integrated Golden R1/R2/R3 viewer/reopen/cache/cleanup scenario. Record engine timings, element counts and cache behavior; distinguish small Golden results from large-model throughput.
+8. Record actual combined acceptance, review outcomes and resolved discussions in the PR before requesting final approval. Green CI on the isolated C branch does not satisfy the outstanding acceptance criteria.
 
-B owns product composition. Supply narrow viewer surfaces and consume the agreed ViewerTarget seam; coordinate any minimal changes to `App.tsx` or `WorkspaceViews.tsx`. They are not modified here.
-
-Shared review points with A: optional dependencies/lock changes, BCF package licensing, capability job configuration, cache/publication mapping, packaging and SDK CI selection. PR #19 already merged the platform foundation and active workflow changes; any later workflow, dependency, notice, bootstrap or contract change must be coordinated with its current owner before editing. No workflow or domain/port/API/schema/bootstrap changes are made in this prework.
+B owns product composition; A owns shared lifecycle/composition-root changes. C continues adapters and qualification inside its boundary. Requests now concern the remaining concrete integration points, not delivery of the already-merged #23 contract. The new real provider/runtime test file was executed locally with no skips; current required SDK CI does not explicitly select that file.
 
 ## Qualification history and reproduction
 
