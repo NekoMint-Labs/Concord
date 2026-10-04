@@ -889,9 +889,28 @@ hash. The IDS wrapper requires the explicitly selected requirements source and
 revision, passes the original selected IDS bytes to IfcTester, and verifies both
 model and requirements hashes before mapping violations to canonical Evidence.
 
-Both wrappers expose the installed engine version for the durable cache identity.
-They evaluate only the documented conditions `No clashes`, `All IDS requirements
-pass`, and `No IDS violations`; unsupported condition text remains `NEEDS_REVIEW`.
-Empty output is not turned into resolution Evidence. The wrappers are adapter
-objects only; registration through the composition root and product composition
-remain owner-coordinated integration work.
+Both wrappers expose a deterministic capability version that includes the installed
+engine versions and every detection setting used by the adapter. Changing a selector,
+clash mode, tolerance, clearance, touching policy, or check-all policy therefore cannot
+reuse an incompatible durable cache entry. The wrappers validate exact role-qualified
+inputs, original-byte hashes, revision-bound BIM targets, selected IDS source/revision/hash,
+and returned Evidence scope before invoking or publishing a result.
+
+They evaluate only the documented conditions `No clashes`, `All IDS requirements pass`,
+and `No IDS violations`; unsupported condition text remains `NEEDS_REVIEW`. Empty output,
+zero IDS specifications, reserved BIM viewpoints, missing target GlobalIds, and inconsistent
+provider counts do not resolve a check. A resolved business condition still requires a
+truthful structured Evidence publication; a zero-result provider output remains reviewable.
+The wrappers are adapter objects only; registration through the composition root and product
+composition remain owner-coordinated integration work.
+
+### October 4, 2026 provider/runtime qualification continuation
+
+The C-owned capability boundary now has fail-closed request validation and deterministic
+provider-version identity. Focused qualification covers 81 boundary cases, including
+malformed groups, stale revisions, hash mismatches, target scope, IDS selection, provider
+failures and inconsistent output. The real Golden IfcClash/IfcTester integration runs through
+A's persisted ReCheck service: paired evidence publication, cache reuse, configuration
+invalidation, R3 recheck fencing, selected original IDS bytes and explicit unresolved output
+were verified in four integration scenarios. Adapter and input modules measured 99% scoped
+branch/statement coverage; this is not repository-wide coverage.

@@ -1,5 +1,8 @@
-"""Focused tests for the C-owned ReCheck capability wrappers."""
+"""Capability qualification, using deterministic results only for boundary failures."""
 
+import hashlib
+
+import pytest
 from app.adapters.engineering_capabilities import IfcClashCapability, IfcTesterCapability
 from app.adapters.engineering_results import (
     ClashParameters,
@@ -8,146 +11,144 @@ from app.adapters.engineering_results import (
     IDSValidationResult,
     IDSViolation,
 )
-from app.domain.engineering import CapabilityCheck, CapabilityCheckResult, IDSRequirementsSelection
+from app.domain.engineering import CapabilityCheck, CapabilityInput, IDSRequirementsSelection
 from app.domain.engineering_refs import BimTarget, FindingDependency
 
 GUID_A = "0JYqfQ6zP6LQxgT6eT8v1A"
 GUID_B = "1JYqfQ6zP6LQxgT6eT8v1A"
 
 
-def _request(inputs, data, *, condition="No clashes", ids=None):
+def input_for(source, revision, role, content, *, group="pair", guids=()):
+    return CapabilityInput(
+        group_id=group,
+        role=role,
+        source_id=source,
+        from_revision_id=revision,
+        source_revision_id=revision,
+        sha256=hashlib.sha256(content).hexdigest(),
+        target=None
+        if role == "requirements"
+        else BimTarget(
+            source_revision_id=revision,
+            global_ids=guids,
+        ),
+    )
+
+
+def request_for(inputs, data, *, condition="No clashes", ids=None):
+    first = inputs[0]
     return CapabilityCheck(
         project_id="project",
-        source_id=inputs[0].source_id,
-        from_revision_id=inputs[0].from_revision_id,
-        to_revision_id=inputs[0].source_revision_id,
+        source_id=first.source_id,
+        from_revision_id=first.from_revision_id,
+        to_revision_id=first.source_revision_id,
         dependency=FindingDependency(
-            source_id=inputs[0].source_id,
-            source_revision_id=inputs[0].from_revision_id,
+            source_id=first.source_id,
+            source_revision_id=first.from_revision_id,
             capability="ifc-clash" if ids is None else "ifc-ids",
             expected_condition=condition,
-            target=BimTarget(source_revision_id=inputs[0].source_revision_id),
-            group_id=inputs[0].group_id,
-            input_role=inputs[0].role,
+            target=first.target,
+            group_id=first.group_id,
+            input_role=first.role,
             requirements_kind="ids" if ids else None,
         ),
-        group_id=inputs[0].group_id,
+        group_id=first.group_id,
         inputs=tuple(inputs),
         input_bytes=tuple(data),
         ids_requirements=ids,
     )
 
 
-def _input(source, revision, role, digest, *, requirements=False):
-    from app.domain.engineering import CapabilityInput
-
-    return CapabilityInput(
-        group_id="pair",
-        role=role,
-        source_id=source,
-        from_revision_id=revision,
-        source_revision_id=revision,
-        sha256=digest,
-        target=None,
-    )
-
-
-def test_ifc_clash_capability_consumes_both_inputs_and_maps_pair():
-    class FakeClash:
-        name = "fake"
-
-        def run(self, first, second, **kwargs):
-            assert (first, second) == (b"structure", b"mep")
-            assert kwargs["source_id"] == "structure"
-            assert kwargs["comparison_source_id"] == "mep"
-            return ClashRunResult(
-                source_id="structure",
-                source_revision_id="structure-r1",
-                comparison_source_id="mep",
-                comparison_revision_id="mep-r1",
-                source_hash="a" * 64,
-                comparison_source_hash="b" * 64,
-                parameters=ClashParameters(),
-                cache_key="c" * 64,
-                engine="fake",
-                engine_version="1",
-                mode="intersection",
-                elapsed_seconds=0,
-                evidence=(
-                    EngineeringEvidence(
-                        source_id="structure",
-                        source_revision_id="structure-r1",
-                        against_source_id="mep",
-                        against_source_revision_id="mep-r1",
-                        provider="fake",
-                        engine_version="1",
-                        element_ids=(GUID_A, GUID_B),
-                        location=(1, 2, 3),
-                        fact="clash",
-                    ),
-                ),
-            )
-
+@pytest.fixture
+def clash_request():
+    data = (b"structure", b"mep")
     inputs = (
-        _input("structure", "structure-r1", "structure", "a" * 64),
-        _input("mep", "mep-r1", "mep", "b" * 64),
+        input_for("structure", "structure-r1", "structure", data[0], guids=(GUID_A,)),
+        input_for("mep", "mep-r1", "mep", data[1], guids=(GUID_B,)),
     )
-    result = IfcClashCapability(adapter=FakeClash()).check(
-        _request(inputs, (b"structure", b"mep"), condition="No clashes")
-    )
-    assert isinstance(result, CapabilityCheckResult)
-    assert result.outcome == "STILL_OPEN"
-    assert result.expected_condition_satisfied is False
-    assert {item.source_id for item in result.evidence} == {"structure", "mep"}
+    return request_for(inputs, data)
 
 
-def test_ifc_clash_unknown_condition_stays_reviewable():
+@pytest.fixture
+def ids_request():
+    data = (b"model", b"rules")
     inputs = (
-        _input("structure", "structure-r1", "structure", "a" * 64),
-        _input("mep", "mep-r1", "mep", "b" * 64),
+        input_for("model", "model-r1", "model", data[0], guids=(GUID_A,)),
+        input_for("requirements", "requirements-r1", "requirements", data[1]),
     )
-
-    class EmptyClash:
-        def run(self, first, second, **kwargs):
-            return ClashRunResult(
-                source_id="structure",
-                source_revision_id="structure-r1",
-                comparison_source_id="mep",
-                comparison_revision_id="mep-r1",
-                source_hash="a" * 64,
-                comparison_source_hash="b" * 64,
-                parameters=ClashParameters(),
-                cache_key="c" * 64,
-                engine="fake",
-                engine_version="1",
-                mode="intersection",
-                elapsed_seconds=0,
-            )
-
-    result = IfcClashCapability(adapter=EmptyClash()).check(
-        _request(inputs, (b"structure", b"mep"), condition="Clearance >= 100mm")
-    )
-    assert result.outcome == "NEEDS_REVIEW"
-    assert not result.evidence
-
-
-def test_ifc_tester_consumes_selected_original_requirements():
-    selected = IDSRequirementsSelection(
+    selection = IDSRequirementsSelection(
         project_id="project",
-        source_id="requirements",
-        revision_id="requirements-r1",
-        sha256="d" * 64,
+        source_id=inputs[1].source_id,
+        revision_id=inputs[1].source_revision_id,
+        sha256=inputs[1].sha256,
     )
+    return request_for(inputs, data, condition="No IDS violations", ids=selection)
 
-    class FakeTester:
-        def validate(self, ifc, ids, **kwargs):
-            assert (ifc, ids) == (b"model", b"rules")
-            assert kwargs == {"source_id": "model", "source_revision_id": "model-r1"}
-            return IDSValidationResult(
-                source_id="model",
-                source_revision_id="model-r1",
-                source_hash="a" * 64,
-                requirements_hash="d" * 64,
+
+class RecordingClash:
+    def __init__(self):
+        self.calls = []
+        self.transform = lambda result: result
+
+    def run(self, first, second, **kwargs):
+        self.calls.append((first, second, kwargs))
+        result = ClashRunResult(
+            source_id=kwargs["source_id"],
+            source_revision_id=kwargs["source_revision_id"],
+            comparison_source_id=kwargs["comparison_source_id"],
+            comparison_revision_id=kwargs["comparison_revision_id"],
+            source_hash=hashlib.sha256(first).hexdigest(),
+            comparison_source_hash=hashlib.sha256(second).hexdigest(),
+            parameters=ClashParameters(
+                **{
+                    k: v
+                    for k, v in kwargs.items()
+                    if k
+                    in (
+                        "selector_first",
+                        "selector_second",
+                        "tolerance",
+                        "clearance",
+                        "allow_touching",
+                        "check_all",
+                    )
+                }
+            ),
+            cache_key="c" * 64,
+            engine="fake",
+            engine_version="1",
+            mode=kwargs["mode"],
+            elapsed_seconds=0,
+            evidence=(
+                EngineeringEvidence(
+                    source_id=kwargs["source_id"],
+                    source_revision_id=kwargs["source_revision_id"],
+                    against_source_id=kwargs["comparison_source_id"],
+                    against_source_revision_id=kwargs["comparison_revision_id"],
+                    provider="fake",
+                    engine_version="1",
+                    element_ids=(GUID_A, GUID_B),
+                    location=(1, 2, 3),
+                    fact="clash",
+                ),
+            ),
+        )
+        return self.transform(result)
+
+
+class RecordingTester:
+    def __init__(self):
+        self.calls = []
+        self.transform = lambda result: result
+
+    def validate(self, ifc, ids, **kwargs):
+        self.calls.append((ifc, ids, kwargs))
+        return self.transform(
+            IDSValidationResult(
+                source_id=kwargs["source_id"],
+                source_revision_id=kwargs["source_revision_id"],
+                source_hash=hashlib.sha256(ifc).hexdigest(),
+                requirements_hash=hashlib.sha256(ids).hexdigest(),
                 engine="fake",
                 engine_version="1",
                 specifications=1,
@@ -158,43 +159,79 @@ def test_ifc_tester_consumes_selected_original_requirements():
                         specification="spec",
                         global_id=GUID_A,
                         reason="missing property",
-                        source_id="model",
-                        source_revision_id="model-r1",
+                        source_id=kwargs["source_id"],
+                        source_revision_id=kwargs["source_revision_id"],
                         engine="fake",
                         engine_version="1",
                     ),
                 ),
             )
-
-    inputs = (
-        _input("model", "model-r1", "model", "a" * 64),
-        _input("requirements", "requirements-r1", "requirements", "d" * 64),
-    )
-    result = IfcTesterCapability(adapter=FakeTester()).check(
-        _request(
-            inputs,
-            (b"model", b"rules"),
-            condition="No IDS violations",
-            ids=selected,
         )
-    )
-    assert result.outcome == "STILL_OPEN"
-    assert result.expected_condition_satisfied is False
+
+
+def test_clash_consumes_targeted_original_pair(clash_request):
+    adapter = RecordingClash()
+    result = IfcClashCapability(adapter=adapter).check(clash_request)
+    first, second, settings = adapter.calls[0]
+    assert (first, second) == clash_request.input_bytes
+    assert settings["selector_first"] == GUID_A and settings["selector_second"] == GUID_B
+    assert result.outcome == "STILL_OPEN" and result.expected_condition_satisfied is False
+    assert {item.source_id for item in result.evidence} == {"structure", "mep"}
+    for item, bound in zip(result.evidence, clash_request.inputs, strict=True):
+        assert item.source_revision_id == bound.source_revision_id
+        assert item.source_revision == bound.sha256
+
+
+def test_ids_consumes_selected_originals(ids_request):
+    adapter = RecordingTester()
+    result = IfcTesterCapability(adapter=adapter).check(ids_request)
+    assert adapter.calls == [
+        (
+            b"model",
+            b"rules",
+            {
+                "source_id": "model",
+                "source_revision_id": "model-r1",
+            },
+        )
+    ]
+    assert result.outcome == "STILL_OPEN" and result.expected_condition_satisfied is False
     assert len(result.evidence) == 1
 
 
-def test_ifc_tester_rejects_unselected_requirements():
-    selected = IDSRequirementsSelection(
-        project_id="project",
-        source_id="requirements",
-        revision_id="requirements-r1",
-        sha256="d" * 64,
+@pytest.mark.parametrize("kind", ["clash", "ids"])
+def test_unknown_conditions_never_resolve(kind, clash_request, ids_request):
+    request, adapter, provider = (
+        (clash_request, RecordingClash(), IfcClashCapability)
+        if kind == "clash"
+        else (ids_request, RecordingTester(), IfcTesterCapability)
     )
-    inputs = (
-        _input("model", "model-r1", "model", "a" * 64),
-        _input("requirements", "requirements-r2", "requirements", "d" * 64),
+    request = request.model_copy(
+        update={
+            "dependency": request.dependency.model_copy(
+                update={"expected_condition": "Clearance >= 100mm"},
+            )
+        }
     )
-    result = IfcTesterCapability(adapter=object()).check(
-        _request(inputs, (b"model", b"rules"), ids=selected)
-    )
-    assert result.outcome == "NEEDS_REVIEW"
+    result = provider(adapter=adapter).check(request)
+    assert result.outcome == "NEEDS_REVIEW" and not result.evidence
+
+
+@pytest.mark.parametrize("kind", ["clash", "ids"])
+def test_empty_engine_output_is_not_resolution(kind, clash_request, ids_request):
+    if kind == "clash":
+        adapter = RecordingClash()
+        adapter.transform = lambda result: result.model_copy(update={"evidence": ()})
+        result = IfcClashCapability(adapter=adapter).check(clash_request)
+    else:
+        adapter = RecordingTester()
+        adapter.transform = lambda result: result.model_copy(
+            update={
+                "violations": (),
+                "failed_specifications": 0,
+                "passed_specifications": 1,
+            }
+        )
+        result = IfcTesterCapability(adapter=adapter).check(ids_request)
+    assert result.outcome == "NEEDS_REVIEW" and not result.evidence
+    assert result.expected_condition_satisfied is not True
