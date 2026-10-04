@@ -225,6 +225,28 @@ export function domainLabel(set: LabelSet, value: string): string {
 }
 
 /**
+ * A source's kind in product words.
+ *
+ * The API reports the kind (`DOCUMENT`, `BIM`, …) and the product names it. The
+ * map lives here rather than in one of the two surfaces that render a kind
+ * because the Browse stage and the contextual inspector were naming the same
+ * source differently - the stage said 工程文档 while the inspector printed
+ * `DOCUMENT` - and a kind is product copy wherever it is shown. A kind the
+ * product does not know keeps the honest generic name rather than a guess.
+ */
+const SOURCE_KIND: Record<string, string> = {
+  BIM: "IFC 模型",
+  DRAWING: "工程图纸",
+  CAD: "CAD 图纸",
+  DOCUMENT: "工程文档",
+  SCHEDULE: "进度计划",
+};
+
+export function sourceKindLabel(value: string): string {
+  return SOURCE_KIND[value] ?? "工程资料";
+}
+
+/**
  * A project timestamp at the resolution a records row needs.
  *
  * Two pages now state the same dates - the baseline in force, the day a model

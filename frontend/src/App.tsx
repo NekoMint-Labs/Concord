@@ -21,6 +21,13 @@ import {
   WorkspaceNavigator,
 } from "./app/WorkspaceChrome";
 import { WorkspaceViews } from "./app/WorkspaceViews";
+import { browseNavigatorItems } from "./app/BrowseStage";
+import { projectNavigatorItems } from "./app/ProjectStage";
+import {
+  stageKey,
+  stageObject,
+  type StageObject,
+} from "./app/stageContracts";
 import type { WorkspaceTab } from "./app/destinations";
 import { useWorkspace } from "./app/useWorkspace";
 import { useWorkspaceMutation } from "./app/useWorkspaceMutation";
@@ -113,11 +120,15 @@ function ProjectApplication({
   const [navOpen, setNavOpen] = useState(true);
   const [findingId, setFindingId] = useState("");
   const [findingEvidenceId, setFindingEvidenceId] = useState<string>();
+  /* One selected engineering object for the whole workspace: the navigator sets
+   * it, the central stage renders it and the contextual inspector describes it. */
+  const [selectedObjectKey, setSelectedObjectKey] = useState("");
+  const stageSelection = stageObject(selectedObjectKey);
   const findings = useEngineeringFindings(project);
   const [commandOpen, setCommandOpen] = useState(false);
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
-  const [workOpen, setWorkOpen] = useState(false);
+  const [workOpen, setWorkOpen] = useState(true);
   const [workButtonRef, setWorkButtonRef] = useState<HTMLButtonElement | null>(
     null,
   );
@@ -217,8 +228,7 @@ function ProjectApplication({
     if (!data.state.work_packages.length) {
       setSelected("");
       return;
-    }
-    if (!data.state.work_packages.some((item) => item.id === selected)) {
+    }    if (!data.state.work_packages.some((item) => item.id === selected)) {
       let remembered: string | null = null;
       try {
         remembered = localStorage.getItem(`concord:package:${project}`);
@@ -231,6 +241,15 @@ function ProjectApplication({
       );
     }
   }, [data, project, selected]);
+
+  /* The Work destination opens on a real finding: the docked panel shows one
+   * list with one selection, and the stage already shows that Finding's
+   * Evidence. Landing on an empty panel is not a product state. */
+  useEffect(() => {
+    if (tab !== "work" || findingId) return;
+    const first = findings.data?.[0];
+    if (first) setFindingId(first.id);
+  }, [tab, findingId, findings.data]);
 
   function selectPackage(id: string) {
     if (id !== selected) {
@@ -251,14 +270,39 @@ function ProjectApplication({
     setMappingMode(false);
   }
 
+  function selectStageObject(next: StageObject | null) {
+    setSelectedObjectKey(next ? stageKey(next) : "");
+    setDetailsOpen(!!next);
+  }
+
   function navigate(next: WorkspaceTab) {
-    if (next === "sources") {
-      setProjectSourceId(
-        (id) => id || sourceCatalog.data?.[0]?.source.id || "",
-      );
+    /* A destination is a work mode with its own overview: switching modes drops
+     * the previously selected object instead of carrying a foreign surface
+     * across destinations. */
+    if (next !== tab) setSelectedObjectKey("");
+    /* Destinations are work modes. The old standalone Source / History / Work
+     * package pages are gone: those objects are selected in the navigator and
+     * rendered by the Browse and Project stages. */
+    if (next === "sources" || next === "history" || next === "browse") {
+      const first = sourceCatalog.data?.[0]?.source.id;
+      selectStageObject(first ? { kind: "source", id: first } : null);
       agent.clearScope();
       setMappingMode(false);
-      setDetailsOpen(false);
+      setTab("browse");
+      return;
+    }
+    if (next === "work-packages") {
+      selectStageObject(
+        selected ? { kind: "work-package", id: selected } : null,
+      );
+      setMappingMode(false);
+      setTab("project");
+      return;
+    }
+    if (next === "coordination") {
+      selectStageObject(
+        selected ? { kind: "work-package", id: selected } : null,
+      );
       setTab("project");
       return;
     }
@@ -267,9 +311,8 @@ function ProjectApplication({
       return;
     }
     if (next !== "bim") setMappingMode(false);
-    if (next === "work" || next === "project") agent.clearScope();
-    if (next !== tab || inspectorView === "investigation")
-      setDetailsOpen(false);
+    if (next === "work") agent.clearScope();
+    if (next !== tab || inspectorView === "investigation") setDetailsOpen(false);
     setTab(next);
   }
 
@@ -408,8 +451,11 @@ function ProjectApplication({
   const pendingFindings = (findings.data ?? []).filter(
     (finding) => finding.state === "PROPOSED",
   ).length;
-  const navigatorItems = data.state.work_packages.map((item) => ({
-    key: item.id,
+  /* The navigator is contextual: the same donor WorkspaceNavigator lists work
+   * packages on Work, engineering objects on Browse and the project's own
+   * sources/versions/packages on Project. There is no second object list. */
+  const workNavigatorItems = data.state.work_packages.map((item) => ({
+    key: `work-package:${item.id}`,
     label: demoWorkPackageName(item.id, item.name),
     file: demoAreaName(
       item.area_id,
@@ -420,25 +466,63 @@ function ProjectApplication({
       (finding) => finding.work_package_id === item.id,
     ).length,
   }));
+  const navigator =
+    tab === "browse" || tab === "history"
+      ? {
+          title: "工程对象",
+          label: "工程对象导航",
+          placeholder: "查找资料、版本或文档…",
+          empty: "当前项目还没有可浏览的工程对象。",
+          footerLabel: "在项目中查看资料",
+          onFooter: () => navigate("project"),
+          items: browseNavigatorItems({
+            data,
+            sources: sourceCatalog.data ?? [],
+            findings: findings.data,
+          }),
+        }
+      : tab === "work"
+        ? {
+            title: "工作包",
+            label: "工作包导航",
+            placeholder: "查找工作包…",
+            empty: "当前项目还没有工作包。",
+            footerLabel: "打开项目结构",
+            onFooter: () => setStructureOpen(true),
+            items: workNavigatorItems,
+          }
+        : {
+            title: "项目对象",
+            label: "项目对象导航",
+            placeholder: "查找资料、版本或工作包…",
+            empty: "当前项目还没有资料或工作包。",
+            footerLabel: "打开项目结构",
+            onFooter: () => setStructureOpen(true),
+            items: projectNavigatorItems({
+              data,
+              sources: sourceCatalog.data ?? [],
+            }),
+          };
+  const navigatorOpen = !focusMode && (navOpen || tab === "browse");
   const workSurface = {
     workspace: data,
     sources: sourceCatalog.data ?? [],
     report: agent.investigation.data,
     run: agent.currentRun.data,
     onSource: (id: string) => {
-      navigate("project");
-      setProjectSourceId(id);
+      selectStageObject({ kind: "source", id });
+      setTab("browse");
     },
     onInvestigate: investigateWork,
     onPackage: (id: string) => {
       selectPackage(id);
-      navigate("coordination");
+      selectStageObject({ kind: "work-package", id });
+      setTab("project");
     },
-    onModels: () => navigate("sources"),
+    onModels: () => navigate("browse"),
     onRecheck: () =>
       void perform(() => api.recheck(project), "重新检查已提交。"),
     onReport: () => {
-      navigate("coordination");
       setInspectorView("investigation");
       setDetailsOpen(true);
     },
@@ -475,6 +559,13 @@ function ProjectApplication({
           onOpen={() => setOpenProjectOpen(true)}
           onNavigate={() => setNavOpen((value) => !value)}
           navigationOpen={navOpen}
+          navigationLabel={
+            tab === "work"
+              ? "工作包"
+              : tab === "browse" || tab === "history"
+                ? "对象"
+                : "项目对象"
+          }
           onWork={() => setWorkOpen((value) => !value)}
           workOpen={workOpen}
           workButtonRef={setWorkButtonRef}
@@ -722,27 +813,36 @@ function ProjectApplication({
         }}
       >
         <WorkspaceNavigator
-          open={!focusMode && navOpen}
-          title="工作包"
-          label="工作包导航"
-          placeholder="查找工作包…"
-          empty="当前项目还没有工作包。"
-          emptySearch="没有匹配的工作包。"
-          footerLabel="打开项目结构"
-          items={navigatorItems}
-          current={selected}
-          onSelect={(id) => {
-            selectPackage(id);
-            navigate("coordination");
+          open={navigatorOpen}
+          title={navigator.title}
+          label={navigator.label}
+          placeholder={navigator.placeholder}
+          empty={navigator.empty}
+          emptySearch="没有匹配的对象。"
+          footerLabel={navigator.footerLabel}
+          items={navigator.items}
+          current={
+            tab === "work" ? `work-package:${selected}` : selectedObjectKey
+          }
+          onSelect={(key) => {
+            const next = stageObject(key);
+            if (next?.kind === "work-package") selectPackage(next.id);
+            if (tab === "work") {
+              setTab("project");
+              selectStageObject(next);
+              return;
+            }
+            selectStageObject(next);
+            if (tab !== "browse" && tab !== "project") setTab("project");
           }}
           onClose={() => setNavOpen(false)}
-          onFooter={() => setStructureOpen(true)}
+          onFooter={navigator.onFooter}
           dockSide={prefs.layout.sheets}
           width={prefs.layout.sheetWidth}
           dockHandle={
             <DockHandle
               dock="sheets"
-              label="工作包导航"
+              label="对象导航"
               locked={prefs.layout.locked}
               onDrag={() => {}}
               onMove={prefs.move}
@@ -814,18 +914,14 @@ function ProjectApplication({
             work={workSurface}
           />
         ) : (
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: "flex",
-              flexDirection: "column",
-              order: 0,
-            }}
+          <main
+            className="workspace-stage"
+            aria-label={surfaceLabels[tab] ?? tab}
           >
             <WorkspaceViews
-              findingEntries={findingEntries}
               onOpenFinding={openFinding}
+              stage={stageSelection}
+              onStage={selectStageObject}
               project={project}
               data={data}
               modelSource={modelSource}
@@ -842,7 +938,7 @@ function ProjectApplication({
               onSpatialIssueSelected={setSelectedSpatialIssue}
               tab={tab}
               busy={busy}
-              detailsOpen={detailsOpen}
+              detailsOpen={detailsOpen || tab === "browse" || tab === "project"}
               inspectorView={inspectorView}
               perform={perform}
               onTab={navigate}
@@ -966,7 +1062,7 @@ function ProjectApplication({
                 setTab("bim");
               }}
             />
-          </div>
+          </main>
         )}
       </div>
       {/* The donor's instrument strip (TakeoffCanvas.jsx `footer.ink-panel.ticks`),
@@ -1020,7 +1116,7 @@ function ProjectApplication({
           }}
           aria-live="polite"
         >
-          <span>{navigatorItems.length} 工作包</span>
+          <span>{workNavigatorItems.length} 工作包</span>
           <span>{(sourceCatalog.data ?? []).length} 资料</span>
         </span>
       </footer>

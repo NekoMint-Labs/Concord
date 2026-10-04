@@ -41,6 +41,32 @@
   min-width: 120px;
   height: var(--control-h);
 }
+/*
+ * The band's own controls. The search submit/clear and the import action are
+ * plain donor controls with the geometry the shell's own header buttons use.
+ * The band is a chrome plane, so they rest transparent and answer with
+ * --paper-shadow. The search form is inline in the band, not the shared toolbar.
+ */
+.workspace-stage-surface .workspace-stage-band .documents-search {
+  margin: 0;
+}
+.documents-search button {
+  flex-shrink: 0;
+  min-height: var(--ctl-m);
+  padding: 0 var(--sp-2);
+  border: var(--rule-soft);
+  border-radius: var(--r-1);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--f-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.documents-search button:hover {
+  background: var(--paper-shadow);
+}
 /* a transient import notice: part of the chrome band, closed by the plane step
    below it rather than by a rule */
 .upload-status {

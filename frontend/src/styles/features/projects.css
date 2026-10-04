@@ -214,13 +214,14 @@
   color: var(--success);
 }
 
+/* One step tighter than the shared 22px: the Project body reads as a column. */
 .revision-impact,
 .baseline-register {
-  margin-top: 22px;
+  margin-top: 14px;
 }
 
 .revision-impact {
-  padding-top: 14px;
+  padding-top: 10px;
   border-top: 1px solid var(--line);
 }
 .impact-summary {
@@ -253,7 +254,7 @@
 .existing-bindings {
   display: grid;
   gap: 5px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .evidence-register code,

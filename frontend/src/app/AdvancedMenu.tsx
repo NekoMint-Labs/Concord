@@ -10,7 +10,27 @@ import {
 import { AppDialog } from "../components/ui/AppDialog";
 import { Button } from "../components/ui/button";
 import { icon } from "../components/ui/icon";
-import { advancedTabs, type WorkspaceTab } from "./destinations";
+import type { WorkspaceTab } from "./destinations";
+
+/*
+ * The destinations this menu offers are exactly the work modes the shell can
+ * mount: the tool rail's peers. Coordination, version history, work packages and
+ * sources are no longer destinations — they are objects selected in the
+ * navigator and rendered by the Browse and Project stages — so they are not
+ * listed here.
+ */
+const destinations: readonly { id: WorkspaceTab; label: string }[] = [
+  { id: "work", label: "工作与审核" },
+  { id: "project", label: "项目资料" },
+  { id: "browse", label: "检索浏览" },
+  { id: "bim", label: "模型" },
+  { id: "documents", label: "文档" },
+  { id: "impact", label: "变更影响" },
+  { id: "packages", label: "空间问题" },
+  { id: "operations", label: "活动与运行" },
+  { id: "gis", label: "现场地图" },
+  { id: "capabilities", label: "能力诊断" },
+];
 
 /**
  * 高级: the one door to everything that is not the workflow.
@@ -63,8 +83,8 @@ export function AdvancedMenu({
         trigger={<Ellipsis {...icon} />}
         triggerClassName="icon-button advanced-menu-trigger"
       >
-        <AppMenuLabel>其他工具</AppMenuLabel>
-        {advancedTabs.map(({ id, label }) => (
+        <AppMenuLabel>工作台</AppMenuLabel>
+        {destinations.map(({ id, label }) => (
           <AppMenuItem key={id} active={tab === id} onSelect={() => onTab(id)}>
             {label}
           </AppMenuItem>

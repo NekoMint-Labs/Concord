@@ -1,5 +1,54 @@
 /* ---------- chrome: one 40px top edge across sidebar and header ---------- */
 
+/*
+ * The top chrome takes the shell's dimmest plane, and the donor's own chrome
+ * bands (`.calm-header`, `.calm-context`) are the ones being assigned here: the
+ * donor paints both with `--paper-bright`, which in the graphite look is also
+ * the navigator's, the inspector's and the Work panel's plane, so the band that
+ * says "this is the window" was the same value as every column underneath it.
+ * Chrome and the window backdrop are now one material; the docks below are a
+ * step lighter; the work plane is a step lighter again.
+ */
+.app-shell .calm-header,
+.app-shell .calm-context {
+  background: var(--surface-chrome);
+}
+
+/*
+ * The accent stays flat and small. The donor's look paints two elements with the
+ * generated identity instead of a colour: the report CTA is a cobalt gradient
+ * under the workspace glow, and the pressed tool tile is a second gradient. Both
+ * are re-stated as the flat accent the rest of the product already spends -
+ * the record button keeps the accent fill and the action ink, and the active
+ * tool tile takes the same selected tint every other selection in the product
+ * takes, so "current destination" is learned once. Selectors are two classes
+ * deeper than the donor's because every Concord sheet is imported before the
+ * vendored look (`styles.css` import order).
+ */
+.app-shell.premium-workspace .calm-header .calm-report {
+  background: var(--accent);
+  background-image: none;
+  border-color: transparent;
+  color: var(--on-primary);
+  box-shadow: none;
+}
+/* The dark look's own effect is a phosphor glow it spends on three elements
+   (the pressed tool face, the report CTA and the annotation editor's active
+   tool). The accent is flat in this pass, so the effect is switched off once
+   rather than overridden at each site that spends it. */
+.app-shell.premium-workspace[data-workspace-look="graphite"],
+.app-shell.premium-workspace[data-workspace-look="hud"] {
+  --glow: none;
+}
+.app-shell.premium-workspace
+  [data-tool-rail]
+  button[aria-pressed="true"] {
+  background: var(--tint-select) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--accent) !important;
+}
+
 .app-shell .brand,
 .app-shell .app-header,
 .app-shell .context-bar {
@@ -91,4 +140,73 @@
   min-height: 40px;
   margin-left: 0;
   padding: 0 16px 0 8px;
+}
+
+/*
+ * Chrome is a tool, not the visual subject: resting controls are labels you
+ * scan, so they sit one tier down from body ink; they come up to full ink on
+ * hover, and take the accent only when they are the current choice (pressed /
+ * expanded). The donor's own selected tint behind a pressed control is left as
+ * is - only the ink is re-assigned.
+ *
+ * The navigator's selected row is excluded: it marks itself with `aria-current`
+ * (not `aria-pressed`) and keeps its own colour, so a plain `.calm-navigator
+ * button` rule must not dim the one row that says "you are here".
+ */
+.app-shell.premium-workspace .calm-header button,
+.app-shell.premium-workspace .calm-context button,
+.app-shell.premium-workspace .calm-navigator button:not([aria-current="page"]) {
+  color: var(--muted);
+}
+.app-shell.premium-workspace .calm-header button:hover,
+.app-shell.premium-workspace .calm-context button:hover,
+.app-shell.premium-workspace .calm-navigator button:not([aria-current="page"]):hover {
+  color: var(--ink);
+}
+.app-shell.premium-workspace .calm-header button[aria-pressed="true"],
+.app-shell.premium-workspace .calm-header button[aria-expanded="true"],
+.app-shell.premium-workspace .calm-context button[aria-pressed="true"],
+.app-shell.premium-workspace .calm-context button[aria-expanded="true"],
+.app-shell.premium-workspace .calm-navigator button[aria-pressed="true"],
+.app-shell.premium-workspace .calm-navigator button[aria-expanded="true"] {
+  color: var(--accent);
+}
+
+/*
+ * The product name is the loudest text in the chrome. The donor sets it at 18px
+ * (--fs-xl), which shouts over every label beside it; --fs-l is a heading size
+ * one step down that still leads the row. Its colour is deliberately left alone.
+ */
+.app-shell.premium-workspace .calm-brand {
+  font-size: var(--fs-l);
+}
+
+/*
+ * A separator is a punctuation mark, not a rule that draws the eye: a shorter
+ * hairline divides without competing with the controls on either side. Its
+ * colour is deliberately left alone.
+ */
+.app-shell.premium-workspace .calm-separator {
+  height: var(--sp-3);
+}
+
+/*
+ * The left rail stops being nine bordered boxes shouting at once. The resting
+ * tiles drop their donor faces and become quiet labels; the current tile keeps
+ * the one selected face, so "where am I" is the single thing the rail says. The
+ * donor paints these with `!important` on the shared `[aria-pressed]` attribute,
+ * so the override must carry `!important` too; the inline style in the rail's
+ * markup is inert once this beats it.
+ */
+.app-shell.premium-workspace [data-tool-rail] button[aria-pressed="false"] {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--muted) !important;
+}
+.app-shell.premium-workspace
+  [data-tool-rail]
+  button[aria-pressed="false"]:hover {
+  background: var(--hover) !important;
+  color: var(--ink) !important;
 }

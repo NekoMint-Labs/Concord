@@ -1,10 +1,16 @@
-/* The workspace tool rail. Emits the donor's `[data-tool-rail]` contract
- * (OpenTakeoff web/src/pages/TakeoffCanvas.jsx, revision
- * 788e39bfe9c42b3260ea75e84a655e4574f9bc8c): a column of square tool faces with
- * `aria-pressed` state, styled by the vendored premiumWorkspace.css and
- * tokens.css (`.t-label`). Button faces reuse the donor's own `panelBtn`
- * inline-style vocabulary. Concord binds destinations to it; the donor's
- * measuring tools have no counterpart and are not invented here.
+/* The workspace tool rail.
+ *
+ * Donor contract: OpenTakeoff `web/src/pages/TakeoffCanvas.jsx` renders
+ * `<nav data-tool-rail>` — a column of square tool faces grouped by a mono
+ * caption, with `aria-pressed` state, styled by the vendored
+ * `premiumWorkspace.css` (`--workspace-face`, `--workspace-active-face`,
+ * `--glow`) and `tokens.css` (`.t-label`, `--ctl-l`). Concord binds its
+ * destinations to that rail; it does not invent a second navigation system.
+ *
+ * The old Concord sidebar (project / model / change / issue tree plus a
+ * work-package explorer) is gone. Destinations are work modes, not pages: the
+ * object list lives in the shell's navigator and the object itself opens in the
+ * central stage.
  */
 import {
   Activity,
@@ -23,7 +29,7 @@ import type { LucideIcon } from "lucide-react";
 import { icon } from "../components/ui/icon";
 import type { WorkspaceTab } from "./destinations";
 
-// The donor's tool-rail face (TakeoffCanvas.jsx `panelBtn`), kept verbatim.
+// The donor's rail face (TakeoffCanvas.jsx `railTile`), kept verbatim.
 const face: CSSProperties = {
   display: "flex",
   flexDirection: "column",

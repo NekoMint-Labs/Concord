@@ -46,9 +46,11 @@
   color: var(--muted);
   font-size: var(--fs-meta);
 }
+/* Top-align so a two-line row title sits against its right-hand quality chip
+   instead of being vertically centred away from it. */
 .finding-evidence-link {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   text-align: left;
   width: 100%;
@@ -60,6 +62,20 @@
   border-radius: var(--radius-sm);
   color: var(--ink);
 }
+/*
+ * An evidence row carries two lines, so it cannot be a fixed-height control.
+ *
+ * `bim-button.button` fixes the host at the standard control height, which is
+ * shorter than a title plus its provenance line, so the three rows in a section
+ * collided and the list read as one block of overlapping text - the single worst
+ * thing to scan in this panel. The row keeps the control's *minimum* and grows
+ * with its copy. Two classes are needed because the host rule is
+ * `bim-button.button`; nothing about the button's own surface or states changes.
+ */
+.finding-evidence-link.button {
+  height: auto;
+  min-height: var(--control-h);
+}
 .finding-evidence-link:hover {
   background: var(--hover);
 }
@@ -70,6 +86,7 @@
   display: block;
   font-size: var(--fs-meta);
   font-weight: 500;
+  color: var(--ink);
 }
 .finding-evidence-link small {
   display: block;
@@ -98,10 +115,10 @@
   line-height: 1.7;
 }
 .finding-decision-status {
-  color: var(--muted);
-  font-size: var(--fs-label);
-  margin-top: 12px;
-  line-height: 1.7;
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--ink-muted);
+  line-height: 1.6;
 }
 .evidence-workspace-host {
   display: flex;
@@ -180,22 +197,6 @@
 .evidence-host-footer {
   justify-content: space-between;
 }
-.finding-edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 20px;
-}
-.finding-edit-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.finding-edit-form > div {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
 @media (max-width: 1100px) {
   .finding-workbench-toolbar small {
     display: block;
@@ -224,15 +225,124 @@
   }
 }
 
-/* Human decisions stay within reach while the engineering receipt scrolls. */
-.finding-review-controls {
-  flex-shrink: 0;
-  padding: 12px 16px;
-  background: var(--surface-chrome);
-  border-top: 1px solid var(--line-soft);
+/* ── Finding receipt: a docked panel section, not a page ─────────────────────
+   The receipt reads as one scannable document rather than a stack of donor
+   fields: an 18px object title, then a real section heading, its body, and a
+   metadata tier below it. Hierarchy is carried by type, colour and vertical
+   rhythm alone - the single donor hairline per section stays and no card is
+   introduced. The receipt is the panel's own detail plane; decisions happen in
+   place inside it, never in a modal. Higher specificity than the vendored
+   .workspace-inspector, which is imported after this file. */
+.workspace-panel .finding-receipt {
+  border-top: var(--rule-soft);
+  padding: var(--space-2) var(--space-4) 0;
+  /* Beats the donor's `max-height: 45%` on .workspace-inspector - min-height
+     wins over max-height, so the dock reserves room for complete sections
+     instead of squeezing the receipt to a clipped mid-line sliver. */
+  min-height: 300px;
 }
-.finding-review-controls .finding-decision-status {
-  margin-top: 8px;
+/* The object-title step: the one 18px line in the receipt, in full ink so it
+   reads as the object being inspected rather than as a bigger section heading. */
+.workspace-panel .finding-receipt .workspace-inspector-title h2 {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+/* One clear step between sections, with the donor hairline carrying the seam. */
+.finding-receipt .finding-section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: var(--rule-soft);
+}
+.finding-receipt .finding-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+/* Section titles leave the mono-eyebrow tier for the UI face: 13px, 600, ink.
+   A step below the 18px title and a step above the 13px body it heads. */
+.finding-receipt .finding-section h3.t-label {
+  display: block;
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-ui);
+  font-size: var(--fs-action);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--ink);
+}
+/* Body scans softer than its heading: the section title is --ink, body --ink-2. */
+.finding-receipt .finding-section p {
+  margin-top: var(--space-1);
+  font-size: var(--fs-action);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+/* The explanatory one-liners are the metadata tier: small and quiet, scoped to
+   a section so they outrank the body `p` rule above. */
+.finding-receipt .finding-section .finding-help {
+  color: var(--muted-2);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
+
+/* The decision area is the receipt's own last section: it scrolls with the
+   receipt rather than becoming a separate footer surface. */
+.finding-decision-area {
+  margin-top: var(--space-4);
+  padding: var(--space-2) 0 var(--space-3);
+  border-top: var(--rule-soft);
+}
+.finding-decision-area .workspace-inspector-actions {
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+/* In-place decision strip / gap notice: compact, non-modal, donor rules. */
+.finding-decision-inline,
+.finding-gap-notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: var(--rule-soft);
+  border-radius: var(--r-1);
+  background: var(--paper-shadow);
+  color: var(--ink);
+}
+.finding-decision-inline:focus-visible,
+.finding-gap-notice:focus-visible {
+  outline: 2px solid var(--cobalt);
+  outline-offset: 2px;
+}
+.finding-decision-inline-title {
+  margin: 0;
+  font-size: var(--fs-s);
+  font-weight: 600;
+  color: var(--ink);
+}
+.finding-decision-inline-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-1);
+}
+.finding-decision-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.finding-decision-field input,
+.finding-decision-field textarea,
+.finding-decision-field select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--sp-1) var(--sp-2);
+  border: var(--rule-soft);
+  background: var(--paper-bright);
+  color: var(--ink);
+  font: inherit;
 }
 
 .explorer-preview-toggle {
@@ -421,7 +531,17 @@
   min-height: 0;
 }
 .evidence-context-surface {
-  --bim-panel--bg: var(--surface-list);
+  /*
+   * The centre of the Work composition is the work plane, not a dock.
+   *
+   * This took the local object-list plane, which in the graphite look is also
+   * the navigator's, the inspector's and the Work dock's plane - so the three
+   * columns read as one field and the evidence the reader is actually working on
+   * was the same value as the list they chose it from. The receipt inside keeps
+   * its own work-plane fill (workbench.css above), which is why this only has to
+   * name the donor panel's plane.
+   */
+  --bim-panel--bg: var(--surface-workspace);
   --bim-panel--border: none;
   border-radius: 0;
   min-height: 0;

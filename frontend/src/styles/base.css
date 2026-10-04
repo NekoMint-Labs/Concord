@@ -808,25 +808,65 @@ a {
   --hover-strong: var(--tint-select);
 }
 
+/*
+ * The graphite ladder, re-spaced.
+ *
+ * The bridge above mapped *every* structural plane onto the donor's single
+ * `--paper-bright`, so the shell backdrop, the top chrome, the navigator, the
+ * contextual inspector, the Work panel, the work plane and every content object
+ * resolved to one value: a window of three large panels around one work surface
+ * read as one flat field, and no amount of linework could say which region was
+ * which. That assignment was the error, not the palette, so it is corrected here
+ * by giving each role its own step of the *donor's own* dark vocabulary rather
+ * than by layering a second theme on top:
+ *
+ *   window backdrop / chrome bands  --status-bg    #101622  (dimmest)
+ *   navigator, inspector, Work dock --paper-bright #181e2a
+ *   the work plane                  --paper-cream  #202839  (one step up)
+ *   objects on the work plane       --surface-pop  #263349
+ *   hover                           --paper-shadow #2a3548
+ *   selected                        --tint-select  #243b62
+ *   a well cut into the work plane  --stage        #111622
+ *
+ * Measured, not eyeballed: every neighbouring pair of that ladder clears
+ * 1.08:1 (shell 1.085 / docks 1.132 / work plane 1.160 / raised 1.195), which is
+ * the point at which an area difference starts to be seen as two materials. The
+ * reward is that the work plane is now the *lightest* structural plane and the
+ * docked columns beside it are a real step darker - the reader can tell
+ * "where I am working" from "where I am choosing" with the text covered up.
+ *
+ * The text ladder is spaced against the work plane it is drawn on and keeps one
+ * step per role: --ink (12.6:1) / --ink-2 (9.3:1) / --muted (8.1:1) /
+ * --muted-2 (6.6:1). `--muted` and `--muted-2` used to resolve to the *same*
+ * donor ink, which flattened every secondary and metadata line in the product
+ * into one grey; they now take two different stops of it.
+ *
+ * `--well` is the donor's own media-well token ("PDF thumbnails and stamp
+ * previews are light media" — vendor tokens.css), and the dark look is where it
+ * earns its keep: it is the paper a drawing or a parsed document is read on,
+ * kept warm and off-white so a sheet reads as a sheet rather than as the one
+ * glaring white rectangle in a black window. It stays light in every look.
+ */
 .premium-workspace[data-workspace-look="graphite"],
 .premium-workspace[data-workspace-look="hud"] {
-  --bg-app: var(--paper-bright);
-  --surface-inset: var(--paper-shadow);
+  --bg-app: var(--status-bg);
+  --surface-chrome: var(--status-bg);
   --surface-nav: var(--paper-bright);
   --surface-detail: var(--paper-bright);
   --surface-list: var(--paper-bright);
-  --surface-chrome: var(--paper-bright);
-  --surface-workspace: var(--paper-bright);
-  --surface: var(--paper-bright);
+  --surface-workspace: var(--paper-cream);
+  --surface: var(--surface-pop);
+  --surface-inset: var(--stage);
   --surface-elevated: var(--surface-pop);
   --surface-search: var(--surface-pop);
+  --well: #f2f0ec;
   --line: var(--ink-faint);
   --line-soft: var(--ink-faint);
   --line-float: var(--ink-faint);
   --ink-2: var(--ink-soft);
-  --muted: var(--ink-muted);
+  --muted: var(--ink-secondary);
   --muted-2: var(--ink-muted);
-  --text-muted: var(--ink-muted);
+  --text-muted: var(--muted);
   --accent: var(--cobalt);
   --primary: var(--cobalt);
   --primary-hover: var(--cobalt-deep);

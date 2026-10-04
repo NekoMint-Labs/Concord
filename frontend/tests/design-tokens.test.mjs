@@ -24,6 +24,13 @@ const donorPath = join(stylesDir, "../vendor/opentakeoff/styles/tokens.css");
 const donor = readFileSync(donorPath, "utf8");
 const entryPath = join(stylesDir, "../styles.css");
 const entrySheet = readFileSync(entryPath, "utf8");
+// The dark palette the graphite look resolves against, which is where the
+// structural ladder now lives (base.css states the order; the donor owns the
+// values).
+const lookSheet = readFileSync(
+  join(stylesDir, "../vendor/opentakeoff/styles/premiumWorkspace.css"),
+  "utf8",
+);
 
 function stylesheets(dir = stylesDir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -121,32 +128,109 @@ test("the token scales keep one step per role", () => {
   }
 });
 
-test("the structural planes alias the vendored OpenTakeoff palette", () => {
-  // This assertion used to pin Concord's own plane ladder - --bg-app <
-  // --surface-nav < --surface-detail < --surface-list < --surface-chrome <
-  // --surface-workspace, each a light-but-real step from the next. The bridge at
-  // the end of base.css deliberately collapses that ladder: every structural
-  // plane is now an alias of the vendored donor's work plane, so the planes
-  // resolve to one value and a monotonic-ladder assertion no longer describes
-  // the design. What the contract holds now is the alias itself - each Concord
-  // plane must route through a donor token, and the donor sheet must own the
-  // value it points at.
-  for (const plane of planes) {
+test("the dark look spends one donor step per structural role, in order", () => {
+  // This assertion used to pin the *opposite*: the bridge at the end of base.css
+  // deliberately collapsed every structural plane onto the donor's single work
+  // plane, so the shell, the navigator, the inspector, the Work dock and the
+  // work surface all resolved to one value, and a monotonic-ladder assertion no
+  // longer described the design. That collapse was the bug - a window of three
+  // large panels around one work surface read as one flat field - so the ladder
+  // is asserted again, against the donor's own dark values, and the ordering is
+  // the contract: the work plane is the lightest structural plane, the docked
+  // columns beside it are a step darker, and the chrome is darker again.
+  const graphiteAt = lookSheet.indexOf("[data-workspace-look=graphite]");
+  assert.ok(graphiteAt !== -1, "the donor must declare a graphite look");
+  const graphiteDonor = Object.fromEntries(
+    [
+      ...lookSheet
+        .slice(graphiteAt, lookSheet.indexOf("}", graphiteAt))
+        .matchAll(/--([a-z0-9-]+):\s*(#[0-9a-f]{6})/g),
+    ].map((match) => [match[1], match[2]]),
+  );
+  const darkScope = base.slice(
+    base.indexOf('[data-workspace-look="graphite"]'),
+  );
+  const darkBlock = darkScope.slice(0, darkScope.indexOf("\n}"));
+  const darkPlane = (name) => {
+    const reference = new RegExp(
+      `--${name}:\\s*var\\(--([a-z-]+)\\);`,
+    ).exec(darkBlock);
+    assert.ok(reference, `the graphite scope must assign --${name} its own step`);
+    const value = graphiteDonor[reference[1]];
     assert.ok(
-      base.includes(`--${plane}: var(--paper-bright);`),
-      `--${plane} must alias the vendored work plane --paper-bright`,
+      value,
+      `--${name} points at --${reference[1]}, which the donor's graphite look does not declare`,
+    );
+    return value;
+  };
+  const ladder = [
+    "bg-app",
+    "surface-nav",
+    "surface-workspace",
+    "surface",
+  ];
+  for (let step = 1; step < ladder.length; step += 1) {
+    const ratio = contrast(
+      darkPlane(ladder[step - 1]),
+      darkPlane(ladder[step]),
+    );
+    assert.ok(
+      ratio >= 1.08,
+      `${ladder[step - 1]} to ${ladder[step]} is only ${ratio.toFixed(3)}:1 in the dark look; neighbouring planes must read as two materials`,
     );
   }
-  // The alias set is declared once per theme scope on purpose: var() substitutes
-  // at computed-value time, so a single :root copy would not re-resolve for a
-  // descendant `[data-workspace-look]` scope. Pin the three scopes so a future
-  // edit cannot quietly drop the light or the dark copy.
-  const bridgeCopies = base.match(/--bg-app:\s*var\(--paper-bright\);/g) ?? [];
+  // The chrome bands sit above the work plane, so they have to be the darker of
+  // the two rather than the same slab with a hairline through it.
+  assert.ok(
+    contrast(darkPlane("surface-chrome"), darkPlane("surface-workspace")) >=
+      1.08,
+    "the chrome and the work plane must be two values",
+  );
+  // Every text tier the dark look can use, against every plane it can land on.
+  for (const ink of ["ink", "ink-soft", "ink-secondary", "ink-muted"]) {
+    for (const plane of ladder) {
+      const ratio = contrast(graphiteDonor[ink], darkPlane(plane));
+      assert.ok(
+        ratio >= TEXT_FLOOR,
+        `--${ink} is ${ratio.toFixed(2)}:1 on the dark ${plane}, below the ${TEXT_FLOOR}:1 AA floor`,
+      );
+    }
+  }
+  // Paper is the one light surface, and it is deliberately not #fff.
+  assert.match(
+    darkBlock,
+    /--well:\s*#[0-9a-f]{6};/,
+    "the dark look must declare the media well a page is read on",
+  );
+  assert.ok(
+    !/--well:\s*#(?:fff|ffffff);/i.test(base),
+    "the media well must not be pure white",
+  );
+});
+
+test("the structural planes alias the vendored OpenTakeoff palette", () => {
+  // The light look (and the :root fallback) still spend the donor's light
+  // vocabulary; the alias set is declared once per theme scope on purpose,
+  // because var() substitutes at computed-value time, so a single :root copy
+  // would not re-resolve for a descendant `[data-workspace-look]` scope. Pin the
+  // three scopes so a future edit cannot quietly drop the light or the dark one.
+  const copies = base.match(/--surface-workspace:\s*var\(--[a-z-]+\);/g) ?? [];
   assert.equal(
-    bridgeCopies.length,
+    copies.length,
     3,
     "the alias bridge must be declared under :root and both [data-workspace-look] scopes",
   );
+  for (const plane of planes) {
+    const match = new RegExp(
+      `--${plane}:\\s*var\\(--([a-z-]+)\\);`,
+    ).exec(base);
+    assert.ok(match, `--${plane} must alias a donor token, never a literal`);
+    assert.match(
+      donor,
+      new RegExp(`--${match[1]}:\\s*#`),
+      `--${plane} points at --${match[1]}, which the vendored tokens.css does not declare`,
+    );
+  }
   for (const name of ["paper-bright", "paper-cream", "ink", "cobalt"]) {
     assert.match(
       donor,
@@ -162,6 +246,11 @@ test("base.css aliases Concord's surfaces, lines, text and accent onto the donor
   // donor token or the surface keeps its old grey. The alias must reference the
   // donor property (never copy a literal), and the donor must actually declare
   // the property it points at, or the alias resolves to nothing.
+  //
+  // The list below is the *light* assignment, which is also the :root fallback.
+  // The graphite look is the one the product ships in and it spends the donor's
+  // dark vocabulary instead, one role per step; its assignments are held with
+  // the ladder above rather than repeated here.
   const aliases = [
     ["bg-app", "paper-bright"],
     ["surface-inset", "paper-shadow"],
@@ -199,6 +288,25 @@ test("base.css aliases Concord's surfaces, lines, text and accent onto the donor
       `--${concord} points at --${donorName}, which the vendored tokens.css does not declare`,
     );
   }
+  // ...and the dark look has to spend more than one donor step across the
+  // structural roles, which is the whole correction: a role that resolves to the
+  // same plane as its neighbour is a role the reader cannot see.
+  const darkScope = base.slice(
+    base.indexOf('[data-workspace-look="graphite"]'),
+  );
+  const darkBlock = darkScope.slice(0, darkScope.indexOf("\n}"));
+  const steps = planes.map(
+    (plane) =>
+      new RegExp(`--${plane}:\\s*var\\(--([a-z-]+)\\);`).exec(darkBlock)?.[1],
+  );
+  assert.ok(
+    steps.every(Boolean),
+    "the graphite scope must assign every structural plane its own step",
+  );
+  assert.ok(
+    new Set(steps).size >= 3,
+    `the dark look collapses its structural planes (${steps.join(", ")}); at least three donor steps are needed for a window of panels around a work plane`,
+  );
 });
 
 test("the vendored OpenTakeoff tokens are imported by the stylesheet entry", () => {
