@@ -75,10 +75,12 @@ class ReCheckService:
                 ).encode()
             ).hexdigest()[:32]
             bound_request_id = request_id + ":" + digest
+            # Both model triggers expand to the same bound group. The trigger's
+            # revision must not create a second durable run for that input set.
             identity = str(
                 uuid5(
                     NAMESPACE_URL,
-                    f"concord:recheck:{finding.id}:{revision.id}:{finding.updated_at.isoformat()}:{bound_request_id}",
+                    f"concord:recheck:{finding.id}:{finding.updated_at.isoformat()}:{bound_request_id}",
                 )
             )
             try:

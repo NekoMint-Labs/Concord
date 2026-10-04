@@ -9,7 +9,7 @@ from app.domain.project_sources import CreateProjectSource
 from test_engineering_coordination import setup_finding
 
 
-def paired_finding(svc, admin):
+def paired_finding(svc, admin, *, requirements_kind=None):
     project, first, r1, _, publication, draft = setup_finding(svc, admin, confirm=False)
     second = svc.sources.create(project.id, CreateProjectSource(name="MEP", kind="BIM"), admin)
     s1 = svc.sources.upload(project.id, second.id, "mep.ifc", b"mep-r1", admin).revision
@@ -27,7 +27,13 @@ def paired_finding(svc, admin):
         project.id, EngineeringPublication(operation_id="paired", evidence=(evidence,))
     )
     dependencies = (
-        draft.dependencies[0].model_copy(update={"group_id": "clash-1", "input_role": "structure"}),
+        draft.dependencies[0].model_copy(
+            update={
+                "group_id": "clash-1",
+                "input_role": "structure",
+                "requirements_kind": requirements_kind,
+            }
+        ),
         FindingDependency(
             source_id=second.id,
             source_revision_id=s1.id,
@@ -36,6 +42,7 @@ def paired_finding(svc, admin):
             target=target,
             group_id="clash-1",
             input_role="mep",
+            requirements_kind=requirements_kind,
         ),
     )
     finding = svc.findings.create(
@@ -93,6 +100,49 @@ class PairedEngine:
 def checks(svc, project, finding):
     with svc.factory.open() as repo:
         return repo.rechecks(project.id, finding.id)
+
+
+def test_manual_pair_enqueues_one_run_before_any_cache_exists(services, admin, monkeypatch):
+    project, first, second, _, _, finding = paired_finding(services, admin)
+    engine = PairedEngine()
+    services.rechecks.register(engine)
+    monkeypatch.setattr(services.rechecks, "dispatch", lambda _: None)
+
+    result = services.rechecks.request(project.id, finding.id, admin, operation_id="one-pair")
+
+    assert len(result) == 1
+    assert {i.source_id for i in result[0].inputs} == {first.id, second.id}
+    with services.factory.open() as repo:
+        pending = [r for r in repo.pending_runs(project.id) if r.category == "engineering_recheck"]
+        assert [r.id for r in pending] == [result[0].id]
+        assert pending[0].status == "QUEUED"
+    assert not engine.requests
+    services.runtime.start(result[0].id)
+    assert len(engine.requests) == 1
+    assert checks(services, project, finding)[0].outcome == "RESOLVED"
+
+
+def test_manual_pair_operation_is_idempotent_before_and_after_completion(
+    services, admin, monkeypatch
+):
+    project, _, _, _, _, finding = paired_finding(services, admin)
+    engine = PairedEngine()
+    services.rechecks.register(engine)
+    monkeypatch.setattr(services.rechecks, "dispatch", lambda _: None)
+
+    first = services.rechecks.request(project.id, finding.id, admin, operation_id="retry-pair")
+    retry = services.rechecks.request(project.id, finding.id, admin, operation_id="retry-pair")
+    assert len(first) == 1 and retry == first
+    services.runtime.start(first[0].id)
+    completed = checks(services, project, finding)
+    assert (
+        services.rechecks.request(project.id, finding.id, admin, operation_id="retry-pair")
+        == completed
+    )
+    assert len(completed) == 1 and completed[0].outcome == "RESOLVED"
+    assert len(engine.requests) == 1
+    with services.factory.open() as repo:
+        assert len([a for a in repo.audits(project.id) if a.action == "RECHECK_REQUESTED"]) == 1
 
 
 @pytest.mark.parametrize("side", ["first", "second"])

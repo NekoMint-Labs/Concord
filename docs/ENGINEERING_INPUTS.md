@@ -18,6 +18,11 @@ current bound revision, hash and current target. Updating either model captures 
 latest model revisions, including the unchanged peer. One provider invocation executes
 each group, rather than one independent invocation per model.
 
+Durable run identity binds the Finding/version, operation ID and complete bound input
+set (including group/role and IDS selection), independent of which model triggered it.
+A manual ReCheck or IDS selection queues one run for the same paired inputs; retrying
+the same operation does not create another run, even before execution/cache publication.
+
 `EngineeringCapability.check(request)` receives:
 
 - `request.inputs`: the ordered group of bound inputs;

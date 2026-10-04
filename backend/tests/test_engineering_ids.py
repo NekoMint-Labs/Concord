@@ -5,7 +5,7 @@ from app.domain.engineering import FindingDecision, IDSRequirementsRequest
 from app.domain.errors import Conflict, DomainError, NotFound
 from app.domain.project_sources import CreateProjectSource
 from test_engineering_coordination import setup_finding
-from test_engineering_multisource import PairedEngine, checks
+from test_engineering_multisource import PairedEngine, checks, paired_finding
 
 
 def ids_finding(svc, admin):
@@ -37,6 +37,46 @@ def select(svc, admin, project, source, revision):
     return svc.ids_requirements.select(
         project.id, IDSRequirementsRequest(source_id=source.id, revision_id=revision.id), admin
     )
+
+
+def test_ids_selection_enqueues_each_pair_once_before_execution(services, admin, monkeypatch):
+    project, first, second, _, _, finding = paired_finding(services, admin, requirements_kind="ids")
+    engine = PairedEngine()
+    services.rechecks.register(engine)
+    rules = services.sources.create(
+        project.id, CreateProjectSource(name="Rules", kind="DOCUMENT"), admin
+    )
+    r1 = services.sources.upload(
+        project.id, rules.id, "rules.ids", b"<ids>v1</ids>", admin
+    ).revision
+    monkeypatch.setattr(services.rechecks, "dispatch", lambda _: None)
+
+    selection = select(services, admin, project, rules, r1)
+    queued = checks(services, project, finding)
+    assert len(queued) == 1
+    assert queued[0].ids_requirements == selection
+    assert {i.source_id for i in queued[0].inputs} == {first.id, second.id, rules.id}
+    assert select(services, admin, project, rules, r1) == selection
+    with services.factory.open() as repo:
+        pending = [r for r in repo.pending_runs(project.id) if r.category == "engineering_recheck"]
+        assert [r.id for r in pending] == [queued[0].id]
+        assert pending[0].status == "QUEUED"
+    assert not engine.requests
+    services.runtime.start(queued[0].id)
+    assert len(engine.requests) == 1
+    assert engine.requests[0].input_bytes[-1] == b"<ids>v1</ids>"
+
+    r2 = services.sources.upload(
+        project.id, rules.id, "rules.ids", b"<ids>v2</ids>", admin
+    ).revision
+    changed = select(services, admin, project, rules, r2)
+    all_checks = checks(services, project, finding)
+    assert len(all_checks) == 2
+    new_check = next(c for c in all_checks if c.ids_requirements == changed)
+    assert new_check.id != queued[0].id
+    services.runtime.start(new_check.id)
+    assert len(engine.requests) == 2
+    assert engine.requests[-1].input_bytes[-1] == b"<ids>v2</ids>"
 
 
 def test_selection_delivers_verified_bytes_and_new_upload_does_not_replace(services, admin):
