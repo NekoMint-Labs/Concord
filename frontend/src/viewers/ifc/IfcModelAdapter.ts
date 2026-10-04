@@ -126,6 +126,34 @@ export class IfcModelAdapter {
     this.navigationQueue = operation.catch(() => {});
     return operation;
   }
+  /** Clear a previous target for source-only opening; do not issue element navigation. */
+  clearSelection(reportRecovery = true): Promise<void> {
+    if (this.disposed)
+      return Promise.reject(new Error("IFC viewer was closed"));
+    if (this.pendingNavigation >= 16)
+      return Promise.reject(
+        new Error("Too many pending BIM navigation requests"),
+      );
+    this.pendingNavigation++;
+    const operation = this.navigationQueue.then(async () => {
+      try {
+        if (this.disposed) throw new Error("IFC viewer was closed");
+        await this.viewer.clearTargetSelection();
+        if (this.disposed) throw new Error("IFC viewer was closed");
+        if (reportRecovery) this.onNavigationError?.(null);
+      } catch (failure) {
+        if (!this.disposed)
+          this.onNavigationError?.(
+            failure instanceof Error ? failure : new Error(String(failure)),
+          );
+        throw failure;
+      } finally {
+        this.pendingNavigation--;
+      }
+    });
+    this.navigationQueue = operation.catch(() => {});
+    return operation;
+  }
   private async rejectNavigation(error: unknown): Promise<never> {
     const failure = error instanceof Error ? error : new Error(String(error));
     if (!this.disposed) {

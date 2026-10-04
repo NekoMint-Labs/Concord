@@ -1,5 +1,7 @@
 """IfcClash adapter with targeted source subsets and bounded normalized output."""
 
+import hashlib
+import json
 import logging
 import tempfile
 import time
@@ -8,7 +10,9 @@ from math import isfinite
 from pathlib import Path
 from typing import Literal, cast
 
+from app.adapters.clash_provenance import orient_clash_row
 from app.adapters.engineering_results import (
+    ClashParameters,
     ClashRunResult,
     EngineeringChange,
     EngineeringEvidence,
@@ -48,7 +52,8 @@ class IfcClashAdapter:
         if not first or not second or max(len(first), len(second)) > self.max_bytes:
             raise DomainError("IfcClash requires two non-empty IFC revisions within its byte limit")
         if not all(
-            value.strip() for value in (source_id, source_revision_id, comparison_revision_id)
+            value.strip()
+            for value in (source_id, source_revision_id, second_source_id, comparison_revision_id)
         ):
             raise DomainError("IfcClash requires source and revision identifiers")
         try:
@@ -86,11 +91,42 @@ class IfcClashAdapter:
                 clasher = Clasher(settings)
                 clasher.clash_sets = [clash_set]
                 clasher.clash()
-                rows = list(clash_set.get("clashes", {}).values())
+                rows = [
+                    orient_clash_row(
+                        row, clasher.groups["a"]["elements"], clasher.groups["b"]["elements"]
+                    )
+                    for row in clash_set.get("clashes", {}).values()
+                ]
+        except ProviderError:
+            raise
         except Exception as exc:
             raise ProviderError("IfcClash could not process the selected IFC revisions") from exc
         if len(rows) > self.max_results:
             raise DomainError("IfcClash result exceeds the configured limit")
+        source_hash = hashlib.sha256(first).hexdigest()
+        comparison_hash = hashlib.sha256(second).hexdigest()
+        parameters = ClashParameters(
+            selector_first=selector_first,
+            selector_second=selector_second,
+            tolerance=tolerance,
+            clearance=clearance,
+            allow_touching=allow_touching,
+            check_all=check_all,
+        )
+        cache_key = hashlib.sha256(
+            json.dumps(
+                [
+                    source_hash,
+                    comparison_hash,
+                    "ifcclash",
+                    engine_version,
+                    normalized_mode,
+                    parameters.model_dump(mode="json"),
+                ],
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
         changes, evidence = [], []
         for row in sorted(rows, key=lambda row: (row["a_global_id"], row["b_global_id"])):
             ids = (str(row["a_global_id"]), str(row["b_global_id"]))
@@ -130,6 +166,10 @@ class IfcClashAdapter:
             source_revision_id=source_revision_id,
             comparison_revision_id=comparison_revision_id,
             comparison_source_id=second_source_id,
+            source_hash=source_hash,
+            comparison_source_hash=comparison_hash,
+            parameters=parameters,
+            cache_key=cache_key,
             engine="ifcclash",
             engine_version=engine_version,
             mode=normalized_mode,

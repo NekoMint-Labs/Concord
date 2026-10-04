@@ -1,3 +1,4 @@
+import { useViewerFailure } from "../useViewerFailure";
 import { useEffect, useState } from "react";
 import { useDrawingAnnotations } from "./useDrawingAnnotations";
 import type { DrawingAnnotation } from "./drawingAnnotationTypes";
@@ -23,11 +24,13 @@ export default function DrawingSurface({
   target,
   onMarkups,
   onAnnotations,
+  onError,
 }: {
   source: DrawingSource;
   target?: DrawingTarget;
   onMarkups?: (markups: DrawingMarkup[]) => void;
   onAnnotations?: (annotations: DrawingAnnotation[]) => void;
+  onError?: (message: string | null) => void;
 }) {
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(1);
@@ -53,6 +56,7 @@ export default function DrawingSurface({
         failure instanceof Error ? failure.message : String(failure);
     }
   }
+  useViewerFailure(targetError || view.error || error, onError);
   const annotations = useDrawingAnnotations({
     source,
     page,

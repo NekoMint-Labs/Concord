@@ -70,3 +70,21 @@ it("reports an absent source page and malformed region without a success highlig
     "normalized drawing target region",
   );
 });
+
+it("reports target failure and recovery to the Evidence host", () => {
+  const report = vi.fn();
+  const view = render(
+    <DrawingSurface
+      source={source}
+      target={{ ...target, page: 3 }}
+      onError={report}
+    />,
+  );
+  expect(report).toHaveBeenLastCalledWith(
+    "Requested drawing page is unavailable",
+  );
+  view.rerender(
+    <DrawingSurface source={source} target={target} onError={report} />,
+  );
+  expect(report).toHaveBeenLastCalledWith(null);
+});

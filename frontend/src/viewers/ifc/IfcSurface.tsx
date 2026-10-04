@@ -1,4 +1,6 @@
+import { useViewerFailure } from "../useViewerFailure";
 import { useEffect, useRef, useState } from "react";
+import { bimSurfaceTarget } from "./ifcTarget";
 import type { IfcModelAdapter } from "./IfcModelAdapter";
 import type { IfcSource, BimTarget } from "./ifcTypes";
 import {
@@ -14,11 +16,13 @@ export default function IfcSurface({
   target,
   onReady,
   onSelection,
+  onError,
 }: {
   sources: readonly IfcSource[];
   target?: BimTarget;
   onReady?: (adapter: IfcModelAdapter) => void;
   onSelection?: (reference: BimTarget) => void;
+  onError?: (message: string | null) => void;
 }) {
   const mount = useRef<HTMLDivElement>(null);
   const callbacks = useRef({ onReady, onSelection });
@@ -26,6 +30,16 @@ export default function IfcSurface({
   const [activeAdapter, setActiveAdapter] = useState<IfcModelAdapter>();
   const [status, setStatus] = useState("Loading IFC capability…");
   const [error, setError] = useState("");
+  let targetFailure = "";
+  if (target) {
+    try {
+      bimSurfaceTarget(target, sources);
+    } catch (failure) {
+      targetFailure =
+        failure instanceof Error ? failure.message : String(failure);
+    }
+  }
+  useViewerFailure(targetFailure || error, onError);
   useEffect(() => {
     const element = mount.current;
     if (!element) return;
@@ -90,12 +104,32 @@ export default function IfcSurface({
     };
   }, [sources]);
   useEffect(() => {
-    if (activeAdapter && target)
-      void activeAdapter.navigate(target).catch(() => {});
-  }, [activeAdapter, target]);
+    if (!activeAdapter || !target) return;
+    let live = true;
+    try {
+      const navigation = bimSurfaceTarget(target, sources);
+      const operation = navigation
+        ? activeAdapter.navigate(navigation)
+        : activeAdapter.clearSelection();
+      void operation.catch((failure) => {
+        if (live)
+          setError(
+            failure instanceof Error ? failure.message : String(failure),
+          );
+      });
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure));
+      void activeAdapter.clearSelection(false).catch(() => {});
+    }
+    return () => {
+      live = false;
+    };
+  }, [activeAdapter, target, sources]);
   return (
     <section aria-label="IFC viewer">
-      <p role={error ? "alert" : "status"}>{error || status}</p>
+      <p role={targetFailure || error ? "alert" : "status"}>
+        {targetFailure || error || status}
+      </p>
       <div ref={mount} style={{ width: "100%", height: "70vh" }} />
     </section>
   );

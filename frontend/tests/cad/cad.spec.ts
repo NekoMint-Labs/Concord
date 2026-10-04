@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { CadController } from "../../src/viewers/cad/cadTypes";
+import type { CadController, CadTarget } from "../../src/viewers/cad/cadTypes";
 import { resolve } from "node:path";
 import { readFile } from "node:fs/promises";
 const fixture = (revision: string) =>
@@ -66,12 +66,17 @@ test("Golden DXF opens and compares with the mature donor", async ({
       change.kind === "modified" &&
       change.sourceRevisionId.startsWith("before:"),
   );
-  const target = {
-    sourceRevisionId: changed.sourceRevisionId,
-    sourceHash: changed.sourceHash,
-    entityId: changed.entityId,
+  const target: CadTarget = {
+    kind: "cad",
+    source_revision_id: changed.sourceRevisionId,
+    entity_id: changed.entityId,
     layer: changed.layer,
-    viewBounds: changed.location,
+    view_bounds: [
+      changed.location.minX,
+      changed.location.minY,
+      changed.location.maxX,
+      changed.location.maxY,
+    ],
   };
   const navigated = await page.evaluate(
     async (target) =>
@@ -88,7 +93,7 @@ test("Golden DXF opens and compares with the mature donor", async ({
     try {
       await (
         window as unknown as { cadSession: CadController }
-      ).cadSession.navigate({ ...target, entityId: "FFFF" });
+      ).cadSession.navigate({ ...target, entity_id: "FFFF" });
       return "unexpected success";
     } catch (error) {
       return String(error);
@@ -106,32 +111,20 @@ test("Golden DXF opens and compares with the mature donor", async ({
     }
   }, target);
   expect(wrongLayer).toContain("layer");
-  const stale = await page.evaluate(async (target) => {
-    try {
-      await (
-        window as unknown as { cadSession: CadController }
-      ).cadSession.navigate({ ...target, sourceHash: "0".repeat(64) });
-      return "unexpected success";
-    } catch (error) {
-      return String(error);
-    }
-  }, target);
-  expect(stale).toContain("hash changed");
-
   const wrongRevision = await page.evaluate(async (target) => {
     try {
       await (
         window as unknown as { cadSession: CadController }
       ).cadSession.navigate({
         ...target,
-        sourceRevisionId: "unloaded-revision-with-same-bytes",
+        source_revision_id: "unloaded-revision-with-same-bytes",
       });
       return "unexpected success";
     } catch (error) {
       return String(error);
     }
   }, target);
-  expect(wrongRevision).toContain("revision is not loaded");
+  expect(wrongRevision).toContain("is not loaded");
   const withoutLayer = await page.evaluate(async (target) => {
     const { layer: _layer, ...optionalLayerTarget } = target;
     return (
@@ -144,7 +137,7 @@ test("Golden DXF opens and compares with the mature donor", async ({
       (window as unknown as { cadSession: CadController }).cadSession.navigate({
         ...target,
         layer: null,
-        viewBounds: null,
+        view_bounds: null,
       }),
     target,
   );
@@ -153,7 +146,7 @@ test("Golden DXF opens and compares with the mature donor", async ({
     async (target) =>
       (window as unknown as { cadSession: CadController }).cadSession.navigate({
         ...target,
-        viewBounds: { minX: -100, minY: -100, maxX: -90, maxY: -90 },
+        view_bounds: [-100, -100, -90, -90],
       }),
     target,
   );
@@ -205,6 +198,28 @@ test("Golden DXF opens and compares with the mature donor", async ({
     path: "test-results/drawing/golden-cad-diff.png",
     fullPage: true,
   });
+  await page.evaluate(() =>
+    (
+      window as unknown as { setCadSourceHash: (hash: string) => void }
+    ).setCadSourceHash("0".repeat(64)),
+  );
+  await expect(page.getByTestId("viewer-failure")).toContainText(
+    "source revision hash",
+  );
+  await expect(
+    page.locator('section[aria-label="CAD viewer"] > [role="alert"]'),
+  ).toContainText("source revision hash");
+  await page.evaluate(
+    (hash) =>
+      (
+        window as unknown as { setCadSourceHash: (hash: string) => void }
+      ).setCadSourceHash(hash),
+    changed.sourceHash,
+  );
+  await expect(
+    page.locator('section[aria-label="CAD viewer"] > [role="status"]'),
+  ).toContainText("DXF opened");
+  await expect(page.getByTestId("viewer-failure")).toHaveText("none");
   await page.getByRole("button", { name: "Close viewer", exact: true }).click();
   await expect(page.locator('iframe[title="Concord DXF viewer"]')).toHaveCount(
     0,
@@ -314,12 +329,17 @@ test("native DXF snapshots yield between batches and preserve actual entity chan
     ["11FE", { minX: 30, minY: 15, maxX: 30, maxY: 16 }],
     ["11FF", { minX: 31, minY: 15, maxX: 32, maxY: 15 }],
   ] as const) {
-    const target = {
-      sourceRevisionId: revision.sourceRevisionId,
-      sourceHash: revision.sourceHash,
-      entityId,
+    const target: CadTarget = {
+      kind: "cad",
+      source_revision_id: revision.sourceRevisionId,
+      entity_id: entityId,
       layer: "STRUCTURE",
-      viewBounds,
+      view_bounds: [
+        viewBounds.minX,
+        viewBounds.minY,
+        viewBounds.maxX,
+        viewBounds.maxY,
+      ],
     };
     const reopened = await page.evaluate(async (target) => {
       const session = (window as unknown as { cadSession: CadController })

@@ -1,6 +1,6 @@
 # Issue #17 engineering capability status
 
-Current work uses the fork branch `feat/17-engineering-capabilities-rebased`, based on the latest `main` with merged PRs #19 and #20. Draft PR #22 tracks this continuation. The original Draft PR #21 still tracks the pre-rebase branch; it does not contain this continuation. Integration review uses the new Draft so the original branch history is preserved without a force push. CAD and Drawing surfaces consume the generated canonical targets. Real IDS violations map into source-revision- and SHA-256-bound canonical `Evidence` through the trusted publisher in integration tests, with requirements-bound cache identity. IDS validation is still not invoked by the product runtime. Issue #17 remains **incomplete**: coordinated runtime jobs, publication of other engineering outputs, product viewer composition and end-to-end acceptance are outstanding.
+Current work uses the fork branch `feat/17-engineering-capabilities-rebased`, based on the latest `main` with merged PRs #19 and #20. Draft PR #22 tracks this continuation. The original Draft PR #21 still tracks the pre-rebase branch; it does not contain this continuation. Integration review uses the new Draft so the original branch history is preserved without a force push. CAD and Drawing surfaces consume the generated canonical targets. Real IDS violations map into source-revision- and SHA-256-bound canonical `Evidence` through the trusted publisher in integration tests, with requirements-bound cache identity. IDS validation is still not invoked by the product runtime. The October 4 continuation adds paired clash Evidence publication, source-attribution checks, source-only BIM opening and explicit viewer failure callbacks for B's confirmed Evidence host. See `docs/EVIDENCE_VIEWER_ADAPTERS.md`. Issue #17 remains **incomplete**: coordinated runtime jobs, publication of other engineering outputs, product viewer composition and end-to-end acceptance are outstanding.
 
 ## Implemented and locally qualified
 
@@ -175,7 +175,7 @@ Chinese OCR is opt-in, local and lazy through Docling's RapidOCR/ONNX backend. P
 
 PRs #19 and #20 are merged. Engineering results remain adapter outputs unless a caller passes canonical publications through A's trusted `EngineeringPublisher`; the IDS result mapper is implemented and qualified with real-engine persistence/retry tests, but no runtime job currently invokes it. The remaining integration work is:
 
-1. Coordinate with A on how dual-source clash provenance is represented. Current canonical `Evidence` binds to one source revision, while clash results must retain two source IDs, revision IDs and byte hashes. Do not publish those results until both sides can be represented without loss.
+1. A has confirmed paired clash Evidence. C now maps and atomically publishes both source-qualified records in isolated tests. A still needs to deliver persisted grouping and complete dual-source ReCheck inputs/fencing; do not attach the pair to the current single-source provider runtime.
 2. Connect restricted jobs through A's preparation/publication path with cancellation, revision fencing, byte limits and cache keys containing ordered source hashes plus engine/version. IDS job configuration must also bind the requirements hash so rule changes cannot reuse an old validation result.
 3. Map the remaining engine outputs into canonical `Change`, `Evidence` and `ViewerTarget` records with verified provenance.
 4. Complete the adapted Drawing interaction/editor coverage and connect PDF worker results through A's shared contracts and B's viewer seam; retain the qualified matching/alignment/word/pixel/mask/crop path.
@@ -744,3 +744,77 @@ remaining output publication/providers, dual-source clash/ReCheck, versioned IDS
 native connectors, large-model/native and integrated Golden acceptance remain open.
 No shared domain/port/API/schema, workflow, dependency or B-owned composition file
 changed. #22 remains Draft and #17 remains incomplete.
+
+
+### October 4 A/B-confirmed Evidence host and clash continuation
+
+A confirmed paired Evidence in Issue #17 (comment 5977745830). One detector row
+maps to two canonical records under the same immutable operation, each retaining
+its own source ID, revision ID, full SHA-256 and single-GlobalId BIM target.
+Detection parameters and engine/version stay in the adapter result alongside both
+ordered hashes and a deterministic cache identity. The mapper creates no Finding,
+shared grouping field or closure decision. An empty run creates no resolved Evidence.
+Publication adjacency and readable detection context do not replace A's future
+persisted grouping/job-input contract; no runtime infers dependencies from fact text.
+
+Real publication qualification exposed a donor-order bug: the geometry engine can
+return its two elements in the reverse of input-group order. The adapter now
+orients rows using the donor's already-loaded, filtered source groups. Names,
+classes and contact points are oriented with the GUIDs. Missing or ambiguous
+cross-source attribution fails explicitly rather than assigning a GUID to the
+wrong source. No additional IFC parse or custom clash geometry is introduced.
+
+B identified `EvidenceWorkspaceHost.tsx` as the product seam. Four C surfaces now
+expose `onError(message | null)` so the host can associate viewer failures with the
+current Evidence. The host preserves source/revision/target context and still owns
+loading, lazy routing, its render error boundary and product presentation. No
+B-owned application composition file is changed. The host itself is absent from
+current main/C branch, so complete product integration remains pending B's branch.
+
+A's PR #22 reply (5977755190) reserves non-null BIM six-tuples for this milestone;
+it supersedes the earlier suggested position/look-at interpretation. Non-null
+viewpoints fail visibly and BCF remains the saved-camera exchange. Verified
+source-only BIM targets open without element navigation, clear previous native
+selection and reuse the loaded SDK lifetime. Prop-bound invalid-target errors
+cannot be cleared by an older native request's late recovery.
+
+Local qualification for this continuation:
+
+- 61 focused IFC/clash/provenance/publication/regression cases passed without
+  skips; the JUnit no-skip gate passed.
+- The existing required IFC SDK selection now runs ten cases, including real
+  intersection/collision/clearance source-orientation and paired-mapping tests.
+  All ten passed without skips. No workflow/dependency change was needed.
+- Real SQLite publication verifies retry idempotency and complete rollback when
+  the second source hash/revision is invalid. Either input byte change, engine
+  version change or detection-parameter change changes the adapter cache key.
+- Two new attribution/mapping modules have 100% scoped statement/branch coverage
+  across 26 unit cases. This is not repository-wide coverage.
+- Seven real IFC/BCF browser scenarios passed, including source-only opening,
+  failed target delivery to the host, explicit reserved-viewpoint errors and
+  recovery within one SDK lifetime. The small 13-element sample measured
+  1229.2 ms cold / 356.7 ms warm; this does not qualify large-model/native behavior.
+- Complete frontend suite: 445 tests passed with two workers. Typecheck, production
+  build, complete Prettier, backend/scripts Ruff and focused adapter Pyright passed.
+  Another 31 IDS/publication/platform regression cases passed. Existing SDK/deprecation
+  and build-size warnings remain; they are not new runtime failure results.
+
+A still owns formal paired job inputs, persisted grouping, revision fencing,
+versioned IDS selection and provider registration. C must consume those extensions
+when they land. B still owns the actual host/product integration. Native connector,
+large-model/native and integrated Golden acceptance remain open; #22 stays Draft.
+
+
+The expanded browser regression found CAD qualification cases still using the
+pre-canonical target fields. They now use generated CadTarget field names while
+retaining absent-entity, layer, exact-revision, null/optional-hint and reopen
+assertions. The hash-integrity assertion now changes the actual loaded source
+hash and verifies explicit failure/recovery; hashes do not belong in public targets.
+A test-harness diagnostic output was changed to a plain preformatted record so it
+does not impersonate the drawing's loading status. All sixteen Drawing/CAD browser
+cases passed after these test fixes; assertions/timeouts were not relaxed.
+
+Final browser continuation: the remaining nine IFC/Document cases passed against
+the finalized harness, giving 25 passing Drawing/CAD/IFC/Document scenarios across
+the two final runs. The latest IFC sample measured 1153.5 ms cold / 709.2 ms warm;
+cache and worker-release assertions passed independently of those timings.

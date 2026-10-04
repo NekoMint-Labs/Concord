@@ -134,3 +134,23 @@ it("rejects corrupted extraction and refuses exact selection without source prov
     "no stable source location",
   );
 });
+
+it("reports target failure and recovery to the Evidence host", async () => {
+  const report = vi.fn();
+  const view = render(
+    <DocumentSurface
+      source={source}
+      target={{ ...target, source_revision_id: "missing" }}
+      onError={report}
+    />,
+  );
+  await act(async () => {});
+  expect(report).toHaveBeenLastCalledWith(
+    "Document target source revision is not loaded",
+  );
+  view.rerender(
+    <DocumentSurface source={source} target={target} onError={report} />,
+  );
+  await act(async () => {});
+  expect(report).toHaveBeenLastCalledWith(null);
+});

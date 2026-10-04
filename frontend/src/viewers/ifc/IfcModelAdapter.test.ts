@@ -235,3 +235,39 @@ it("shows missing native user-selection identity and ignores unloaded models", a
     }),
   );
 });
+
+it("clears source-only selection after pending element navigation without issuing another navigation", async () => {
+  const { adapter, failure } = await open();
+  let release!: () => void;
+  sdk.navigateElements.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+  );
+  const navigation = adapter.navigate(target);
+  await vi.waitFor(() => expect(sdk.navigateElements).toHaveBeenCalledOnce());
+  const clearing = adapter.clearSelection();
+  expect(sdk.clearTargetSelection).not.toHaveBeenCalled();
+  release();
+  await navigation;
+  await clearing;
+  expect(sdk.clearTargetSelection).toHaveBeenCalledOnce();
+  expect(sdk.navigateElements).toHaveBeenCalledOnce();
+  expect(failure).toHaveBeenLastCalledWith(null);
+});
+it("preserves rejection state when clearing a malformed surface target", async () => {
+  const { adapter, failure } = await open();
+  await adapter.clearSelection(false);
+  expect(sdk.clearTargetSelection).toHaveBeenCalledOnce();
+  expect(failure).not.toHaveBeenCalled();
+  sdk.clearTargetSelection.mockRejectedValueOnce(
+    new Error("Native cleanup failed"),
+  );
+  await expect(adapter.clearSelection()).rejects.toThrow(
+    "Native cleanup failed",
+  );
+  expect(failure).toHaveBeenLastCalledWith(expect.any(Error));
+  adapter.dispose();
+  await expect(adapter.clearSelection()).rejects.toThrow("closed");
+});

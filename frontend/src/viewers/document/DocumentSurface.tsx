@@ -1,3 +1,4 @@
+import { useViewerFailure } from "../useViewerFailure";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   DocumentChunk,
@@ -17,11 +18,13 @@ export default function DocumentSurface({
   target,
   onReady,
   onSelection,
+  onError,
 }: {
   source: ExtractedDocument;
   target?: DocumentTarget;
   onReady?: (controller: DocumentController) => void;
   onSelection?: (reference: DocumentTarget) => void;
+  onError?: (message: string | null) => void;
 }) {
   const nodes = useRef(new Map<string, HTMLElement>());
   const controllerRef = useRef<DocumentController | undefined>(undefined);
@@ -52,6 +55,7 @@ export default function DocumentSurface({
       };
     }
   }, [source]);
+  useViewerFailure(content.error || error, onError);
   useEffect(() => {
     let live = true;
     setSelected("");

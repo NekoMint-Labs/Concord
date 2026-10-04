@@ -524,3 +524,58 @@ model.write(sys.argv[2])
   expect(parserWorkers).toEqual([]);
   await page.getByRole("button", { name: "Close viewer", exact: true }).click();
 });
+
+test("source-only BIM opening and failed targets report to the host with one native lifetime", async ({
+  page,
+}) => {
+  await page.goto("/tests/engineering-viewers.html");
+  await page
+    .getByLabel("Earlier source", { exact: true })
+    .setInputFiles(fixture());
+  const target = {
+    kind: "bim",
+    source_revision_id: "before:structure.ifc",
+    global_ids: [] as string[],
+  };
+  const setTarget = async (value: object) => {
+    await page
+      .getByLabel("BIM target", { exact: true })
+      .fill(JSON.stringify(value));
+    await page
+      .getByRole("button", { name: "Navigate BIM", exact: true })
+      .click();
+  };
+  await setTarget(target);
+  await open(page);
+  await expect(page.getByTestId("viewer-failure")).toHaveText("none");
+  const cleared = async () =>
+    page.evaluate(async () =>
+      (window as unknown as { ifcSession: IfcModelAdapter }).ifcSession.saveBcf(
+        "Source-only scope",
+        "reviewer@example.test",
+      ),
+    );
+  expect((await cleared()).selected).toEqual([]);
+  await setTarget({ ...target, global_ids: ["3M0KwyPFrBT9KwklhqZa8W"] });
+  await expect(page.getByTestId("ifc-selection")).toContainText(
+    "3M0KwyPFrBT9KwklhqZa8W",
+  );
+  await setTarget(target);
+  await expect.poll(async () => (await cleared()).selected.length).toBe(0);
+  await setTarget({ ...target, viewpoint: [1, 2, 3, 4, 5, 6] });
+  await expect(page.getByTestId("viewer-failure")).toContainText("reserved");
+  await expect(page.getByRole("alert")).toContainText("reserved");
+  await setTarget({ ...target, source_revision_id: "missing" });
+  await expect(page.getByTestId("viewer-failure")).toContainText("not loaded");
+  await setTarget(target);
+  await expect(page.getByTestId("viewer-failure")).toHaveText("none");
+  const summaries = await page.evaluate(
+    () =>
+      (window as unknown as { ifcSession: IfcModelAdapter }).ifcSession
+        .summaries,
+  );
+  expect(summaries).toHaveLength(1);
+  await expect(page.locator('iframe[title="Concord IFC viewer"]')).toHaveCount(
+    1,
+  );
+});

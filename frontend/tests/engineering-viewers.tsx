@@ -17,6 +17,10 @@ const Comparison = lazy(
 );
 function Harness() {
   const [drawingTargetText, setDrawingTargetText] = useState("");
+  const [bimTargetText, setBimTargetText] = useState("");
+  const [bimTarget, setBimTarget] =
+    useState<import("../src/viewers/ifc/ifcTypes").BimTarget>();
+  const [viewerFailure, setViewerFailure] = useState<string | null>(null);
   const [drawingTarget, setDrawingTarget] =
     useState<import("../src/viewers/drawing/drawingContract").DrawingTarget>();
   const [before, setBefore] = useState<DrawingSource>();
@@ -106,6 +110,26 @@ function Harness() {
       >
         Navigate drawing
       </button>
+      <label>
+        BIM target
+        <textarea
+          aria-label="BIM target"
+          value={bimTargetText}
+          onChange={(event) => setBimTargetText(event.target.value)}
+        />
+      </label>
+      <button
+        onClick={() => {
+          try {
+            setBimTarget(JSON.parse(bimTargetText));
+          } catch {
+            setError("Invalid BIM target JSON");
+          }
+        }}
+      >
+        Navigate BIM
+      </button>
+      <pre data-testid="viewer-failure">{viewerFailure ?? "none"}</pre>
       <button disabled={!before} onClick={() => setView("drawing")}>
         Open drawing
       </button>
@@ -194,6 +218,7 @@ function Harness() {
         {view === "document" && extracted && (
           <Document
             source={extracted}
+            onError={setViewerFailure}
             onSelection={setDocumentSelection}
             onReady={(controller) =>
               Object.assign(window, { documentSession: controller })
@@ -203,6 +228,7 @@ function Harness() {
         {view === "drawing" && before && (
           <Drawing
             source={before}
+            onError={setViewerFailure}
             target={drawingTarget}
             onAnnotations={setAnnotations}
           />
@@ -220,16 +246,25 @@ function Harness() {
           <Cad
             before={before as DrawingSource & { name: string }}
             after={after as DrawingSource & { name: string }}
+            onError={setViewerFailure}
             onComparison={setCadResult}
             onSelection={setCadSelection}
             onReady={(controller) =>
-              Object.assign(window, { cadSession: controller })
+              Object.assign(window, {
+                cadSession: controller,
+                setCadSourceHash: (hash: string) =>
+                  setBefore((source) =>
+                    source ? { ...source, sourceHash: hash } : source,
+                  ),
+              })
             }
           />
         )}
         {view === "ifc" && before && (
           <Ifc
             sources={ifcSources}
+            target={bimTarget}
+            onError={setViewerFailure}
             onSelection={setSelection}
             onReady={(adapter) => {
               Object.assign(window, { ifcSession: adapter });

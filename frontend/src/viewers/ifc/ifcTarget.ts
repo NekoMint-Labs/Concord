@@ -1,4 +1,4 @@
-import type { BimTarget } from "./ifcTypes";
+import type { BimTarget, IfcSource } from "./ifcTypes";
 /** Return a bounded snapshot; callers cannot mutate an in-flight navigation target. */
 export function snapshotBimTarget(target: BimTarget): BimTarget {
   if (
@@ -29,4 +29,25 @@ export function snapshotBimTarget(target: BimTarget): BimTarget {
     source_revision_id: target.source_revision_id,
     global_ids: [...ids],
   };
+}
+
+/** A-confirmed source-only requests open verified bytes without element navigation. */
+export function bimSurfaceTarget(
+  target: BimTarget,
+  sources: readonly IfcSource[],
+): BimTarget | undefined {
+  if (
+    !target ||
+    (target.kind !== undefined && target.kind !== "bim") ||
+    !sources.some((source) => source.revisionId === target.source_revision_id)
+  )
+    throw new Error("IFC target source revision is not loaded");
+  if (target.viewpoint != null)
+    throw new Error("BIM viewpoint is reserved; use BCF for camera exchange");
+  if (
+    target.global_ids === undefined ||
+    (Array.isArray(target.global_ids) && target.global_ids.length === 0)
+  )
+    return undefined;
+  return snapshotBimTarget(target);
 }

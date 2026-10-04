@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
   instances: [] as Array<{
     navigate: ReturnType<typeof vi.fn>;
     dispose: ReturnType<typeof vi.fn>;
+    clearSelection: ReturnType<typeof vi.fn>;
     selected: (target: unknown) => void;
     failure: (error: Error | null) => void;
   }>,
@@ -20,6 +21,9 @@ vi.mock("./IfcModelAdapter", () => ({
       this.failure(null);
       this.selected(target);
       return target;
+    });
+    clearSelection = vi.fn(async (reportRecovery = true) => {
+      if (reportRecovery) this.failure(null);
     });
     dispose = vi.fn();
     constructor(
@@ -79,8 +83,10 @@ it("loads lazily and consumes canonical initial and changed targets with one SDK
     <IfcSurface sources={sources} target={next} onSelection={selected} />,
   );
   await waitFor(() =>
-    expect(state.instances[0].navigate).toHaveBeenLastCalledWith(next),
+    expect(screen.getByRole("alert")).toHaveTextContent("not loaded"),
   );
+  expect(state.instances[0].navigate).toHaveBeenCalledOnce();
+  expect(state.instances[0].clearSelection).toHaveBeenCalledWith(false);
   expect(state.instances).toHaveLength(1);
   expect(state.instances[0].dispose).not.toHaveBeenCalled();
 });
@@ -138,4 +144,104 @@ it("rejects stale viewer assets that cannot acknowledge canonical BIM navigation
     ),
   );
   expect(state.instances).toHaveLength(0);
+});
+
+it("opens a verified source-only BIM target without requesting element navigation", async () => {
+  const sources = [await source()],
+    failure = vi.fn();
+  const view = render(
+    <IfcSurface
+      sources={sources}
+      target={{ ...target, global_ids: [] }}
+      onError={failure}
+    />,
+  );
+  await waitFor(() =>
+    expect(state.instances[0]?.clearSelection).toHaveBeenCalledOnce(),
+  );
+  expect(state.instances[0].navigate).not.toHaveBeenCalled();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  view.rerender(
+    <IfcSurface sources={sources} target={target} onError={failure} />,
+  );
+  await waitFor(() =>
+    expect(state.instances[0].navigate).toHaveBeenCalledWith(target),
+  );
+  view.rerender(
+    <IfcSurface
+      sources={sources}
+      target={{ ...target, global_ids: [] }}
+      onError={failure}
+    />,
+  );
+  await waitFor(() =>
+    expect(state.instances[0].clearSelection).toHaveBeenCalledTimes(2),
+  );
+  expect(state.instances).toHaveLength(1);
+});
+it("reports an unavailable viewer to the Evidence host", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: false })),
+  );
+  const failure = vi.fn();
+  render(<IfcSurface sources={[await source()]} onError={failure} />);
+  await waitFor(() =>
+    expect(failure).toHaveBeenLastCalledWith(
+      "The local IFC capability has not been built",
+    ),
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent("has not been built");
+});
+
+it("keeps source-only revision and non-null viewpoint failures visible to the host", async () => {
+  const sources = [await source()],
+    failure = vi.fn();
+  const view = render(
+    <IfcSurface
+      sources={sources}
+      target={{ ...target, global_ids: [], viewpoint: [1, 2, 3, 4, 5, 6] }}
+      onError={failure}
+    />,
+  );
+  await waitFor(() =>
+    expect(failure).toHaveBeenLastCalledWith(
+      "BIM viewpoint is reserved; use BCF for camera exchange",
+    ),
+  );
+  expect(state.instances[0].navigate).not.toHaveBeenCalled();
+  view.rerender(
+    <IfcSurface
+      sources={sources}
+      target={{ ...target, global_ids: [], source_revision_id: "missing" }}
+      onError={failure}
+    />,
+  );
+  await waitFor(() =>
+    expect(failure).toHaveBeenLastCalledWith(
+      "IFC target source revision is not loaded",
+    ),
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent("not loaded");
+});
+
+it("retains a reserved viewpoint error if an older native request reports late recovery", async () => {
+  const sources = [await source()],
+    report = vi.fn();
+  const view = render(
+    <IfcSurface sources={sources} target={target} onError={report} />,
+  );
+  await waitFor(() => expect(state.instances).toHaveLength(1));
+  view.rerender(
+    <IfcSurface
+      sources={sources}
+      target={{ ...target, viewpoint: [1, 2, 3, 4, 5, 6] }}
+      onError={report}
+    />,
+  );
+  act(() => state.instances[0].failure(null));
+  expect(screen.getByRole("alert")).toHaveTextContent("reserved");
+  expect(report).toHaveBeenLastCalledWith(
+    "BIM viewpoint is reserved; use BCF for camera exchange",
+  );
 });

@@ -194,3 +194,30 @@ it("navigates only the latest optional-layer target once the viewer becomes read
   });
   expect(screen.queryByRole("alert")).toBeNull();
 });
+
+it("reports target failure and recovery to the Evidence host", async () => {
+  const report = vi.fn();
+  const view = render(
+    <CadSurface before={source} target={target("31")} onError={report} />,
+  );
+  const native = await bridge(view);
+  await native.opened();
+  await waitFor(() => expect(native.requests()).toHaveLength(1));
+  await native.receive({
+    type: "error",
+    requestId: native.requests()[0].requestId,
+    message: "Entity is absent",
+  });
+  expect(report).toHaveBeenLastCalledWith("Entity is absent");
+  view.rerender(
+    <CadSurface before={source} target={target("32")} onError={report} />,
+  );
+  await waitFor(() => expect(native.requests()).toHaveLength(2));
+  const request = native.requests()[1];
+  await native.receive({
+    type: "navigated",
+    requestId: request.requestId,
+    target: request.target,
+  });
+  expect(report).toHaveBeenLastCalledWith(null);
+});

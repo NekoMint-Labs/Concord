@@ -45,11 +45,27 @@ class EngineeringEvidence(Model):
     quality: Literal["structured", "extracted", "inferred"] = "structured"
 
 
+class ClashParameters(Model):
+    """Exact C-local detection settings; shared job inputs remain platform-owned."""
+
+    selector_first: str | None = None
+    selector_second: str | None = None
+    tolerance: float = Field(default=0.0, ge=0, allow_inf_nan=False)
+    clearance: float = Field(default=0.0, ge=0, allow_inf_nan=False)
+    allow_touching: bool = False
+    check_all: bool = False
+
+
 class ClashRunResult(Model):
     source_id: str
     source_revision_id: str
     comparison_revision_id: str
     comparison_source_id: str
+    source_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    comparison_source_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    checked_at: AwareDatetime = Field(default_factory=utcnow)
+    parameters: ClashParameters
+    cache_key: str = Field(pattern=r"^[0-9a-f]{64}$")
     engine: str
     engine_version: str
     mode: Literal["intersection", "collision", "clearance"]

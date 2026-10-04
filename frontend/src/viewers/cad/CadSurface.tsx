@@ -1,3 +1,4 @@
+import { useViewerFailure } from "../useViewerFailure";
 import { useEffect, useRef, useState } from "react";
 import type {
   CadSource,
@@ -20,6 +21,7 @@ export default function CadSurface({
   onComparison,
   onSelection,
   onReady,
+  onError,
 }: {
   before: CadSource;
   after?: CadSource;
@@ -27,6 +29,7 @@ export default function CadSurface({
   onComparison?: (result: CadComparison) => void;
   onSelection?: (reference: CadTarget) => void;
   onReady?: (controller: CadController) => void;
+  onError?: (message: string | null) => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const callbacks = useRef({ onComparison, onSelection, onReady });
@@ -35,6 +38,7 @@ export default function CadSurface({
   const [activeClient, setActiveClient] = useState<CadController>();
   const [status, setStatus] = useState("Loading CAD capability…");
   const [error, setError] = useState("");
+  useViewerFailure(error, onError);
   useEffect(() => {
     const element = frame.current;
     if (!element) return;
