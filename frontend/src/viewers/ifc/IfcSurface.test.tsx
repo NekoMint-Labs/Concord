@@ -209,6 +209,7 @@ it("keeps source-only revision and non-null viewpoint failures visible to the ho
       "BIM viewpoint is reserved; use BCF for camera exchange",
     ),
   );
+  await waitFor(() => expect(state.instances).toHaveLength(1));
   expect(state.instances[0].navigate).not.toHaveBeenCalled();
   view.rerender(
     <IfcSurface
