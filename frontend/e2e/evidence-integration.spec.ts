@@ -457,7 +457,8 @@ finally:
         "navigation_failed",
       );
       const failure = {
-        drawing: "Requested drawing page is unavailable",
+        // C rejects page 999 during target validation, before looking up a PDF page.
+        drawing: "Invalid drawing target page",
         cad: "CAD entity is absent",
         bim: "IFC GlobalId is absent",
         document: "Document target location is absent",

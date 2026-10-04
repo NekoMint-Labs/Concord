@@ -247,7 +247,10 @@ async function loaded() {
     target: { value: "r" },
   });
   await screen.findByText("13 个对象匹配「r」");
-  await waitFor(() => expect(tableText("West tower HVAC · R9")).toBeVisible());
+  const versions = screen.getByRole("region", { name: "版本与比较" });
+  await waitFor(() =>
+    expect(tableText("West tower HVAC · R9", versions)).toBeVisible(),
+  );
 }
 
 it("loads project API records into all six categories and filters each category", async () => {
@@ -267,21 +270,38 @@ it("loads project API records into all six categories and filters each category"
     [project, "src-hvac"],
     [project, "src-frame"],
   ]);
-  expect(tableText("Permit notes.md")).toBeVisible();
-  expect(tableText("West tower HVAC · R9")).toBeVisible();
-  expect(tableText("East tower structure · R2 → R3")).toBeVisible();
-  expect(tableText("Duct clearance measured at 420 mm")).toBeVisible();
-  expect(tableText("B7 · Handover approval")).toBeVisible();
+  const groups = new Map(
+    categories.map(
+      ([name]) => [name, screen.getByRole("region", { name })] as const,
+    ),
+  );
+  expect(tableText("Permit notes.md", groups.get("文档"))).toBeVisible();
+  expect(
+    tableText("West tower HVAC · R9", groups.get("版本与比较")),
+  ).toBeVisible();
+  expect(
+    tableText("East tower structure · R2 → R3", groups.get("版本与比较")),
+  ).toBeVisible();
+  expect(
+    tableText("Duct clearance measured at 420 mm", groups.get("判断依据")),
+  ).toBeVisible();
+  expect(
+    tableText("B7 · Handover approval", groups.get("基线与历史")),
+  ).toBeVisible();
 
   for (const [category, count] of categories) {
-    const group = screen.getByRole("region", { name: category });
-    expect(tables(group)[0].data).toHaveLength(count);
-    await waitFor(() =>
-      expect(
-        tableRoots(group).flatMap((root) =>
-          Array.from(root.querySelectorAll("bim-table-row:not([is-header])")),
-        ),
-      ).toHaveLength(count),
+    const table = tables(groups.get(category)!)[0];
+    expect(table.data).toHaveLength(count);
+    await table.updateComplete;
+    const root = table.shadowRoot!;
+    await waitFor(
+      () =>
+        expect(
+          [root, ...tableRoots(root)].flatMap((root) =>
+            Array.from(root.querySelectorAll("bim-table-row:not([is-header])")),
+          ),
+        ).toHaveLength(count),
+      { container: root as unknown as HTMLElement },
     );
   }
   for (const [category, count] of categories) {
@@ -290,11 +310,13 @@ it("loads project API records into all six categories and filters each category"
       expect(filterTab(category)).toHaveAttribute("aria-selected", "true"),
     );
     expect(screen.getByText(`${count} 个对象匹配「r」`)).toBeVisible();
-    for (const [other] of categories) {
-      expect(Boolean(screen.queryByRole("region", { name: other }))).toBe(
-        other === category,
-      );
-    }
+    expect(screen.getByRole("region", { name: category })).toBeVisible();
+    // Assert the entire retained group set, not six repeated global role scans.
+    expect(
+      Array.from(window.document.querySelectorAll(".explorer-group"), (group) =>
+        group.getAttribute("aria-label"),
+      ),
+    ).toEqual([category]);
   }
   fireEvent.click(filterTab("全部"));
   await loaded();

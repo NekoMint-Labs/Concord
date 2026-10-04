@@ -360,7 +360,8 @@ for (const viewport of viewports) {
       await expect(host).toHaveAttribute("data-evidence-id", item.id);
       if (item.viewer_target) {
         // Pydantic canonical serialization materializes absent optional fields as null.
-        const details = host.locator("details");
+        const details = host.locator("details.evidence-technical-details");
+        await expect(details).toHaveCount(1);
         await expect(details).not.toHaveAttribute("open", "");
         await details.locator("summary").click();
         expect(
