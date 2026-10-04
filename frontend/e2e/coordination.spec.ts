@@ -6,6 +6,12 @@ import {
   type Page,
 } from "@playwright/test";
 import type { Workspace } from "../src/api/client";
+import {
+  openWorkPanel,
+  selectDonorTab,
+  toolRail,
+  workPanel,
+} from "./donor-conformance";
 
 const authorization = { Authorization: "Bearer local-demo-admin" };
 const project = "/api/projects/harbor-east";
@@ -70,7 +76,13 @@ async function expectReady(page: Page) {
  * a loaded machine, and the product is not what that timing measures.
  */
 async function openHeaderMenu(page: Page) {
-  await page.getByRole("button", { name: "高级", exact: true }).focus();
+  // 高级 now lives behind the header's 所有控件 disclosure; reveal it only when
+  // it is not already rendered.
+  const advanced = page.locator('bim-button[aria-label="高级"]');
+  if (!(await advanced.isVisible().catch(() => false))) {
+    await page.locator(".calm-context-pinned button[aria-expanded]").click();
+  }
+  await advanced.focus();
   await page.keyboard.press("Enter");
 }
 
@@ -106,8 +118,7 @@ async function selectDemoPackage(page: Page) {
 
 /** Packages open from their register; Documents from the project-record navigation. */
 async function openProjectView(page: Page, name: "工作包" | "文档") {
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
+  await toolRail(page)
     .getByRole("button", { name: "项目", exact: true })
     .click();
   if (name === "文档") {
@@ -152,20 +163,21 @@ test.beforeEach(async ({ request, page }) => {
 test("primary workspace has three intentions and surfaces a real decision", async ({
   page,
 }) => {
-  const nav = page.getByRole("navigation", { name: "主要工作区" });
-  await expect(nav.getByRole("button")).toHaveCount(3);
+  const nav = toolRail(page);
+  // The rail states three intention groups rather than three flat destinations.
+  await expect(nav.locator(".t-label")).toHaveText(["工作", "对象", "影响"]);
   await injectDemoEvent(page, /图纸 V16/);
   await expectBlocked(page);
   await nav.getByRole("button", { name: "工作", exact: true }).click();
-  const work = page.getByRole("region", { name: "工作", exact: true });
-  await work.getByRole("tab", { name: /待处理/ }).click();
+  const work = workPanel(page);
+  await openWorkPanel(page);
+  await selectDonorTab(work, /待处理/);
   const decision = work
     .locator(".workspace-row")
     .filter({ hasText: "东翼风管安装" });
   await expect(decision).toContainText("需要决定");
-  await decision
-    .getByRole("button", { name: "东翼风管安装 需要决定", exact: true })
-    .click();
+  // A Work row is the button itself now; selecting it opens the work receipt.
+  await decision.click();
   await expect(
     page.getByRole("region", { name: "所选工作事项" }),
   ).toContainText("需要决定");
@@ -338,7 +350,9 @@ test("document upload, retrieval and authenticated source download use the real 
   await document.click();
   await page.getByLabel("搜索文档").fill("unique-browser-evidence-phrase");
   await page.getByRole("search").getByRole("button", { name: "搜索" }).click();
-  await expect(page.locator(".document-chunk")).toContainText(
+  // A search returns every parsed chunk that matches, so more than one chunk can
+  // carry the phrase; the spec's intent is that the search surfaced it in a result.
+  await expect(page.locator(".document-chunk").first()).toContainText(
     "unique-browser-evidence-phrase",
   );
   await page
@@ -426,7 +440,7 @@ test("structured BIM, capability status, and run history remain usable without o
   await duct.click();
   await expect(duct).toHaveClass(/selected/);
   await page
-    .getByRole("complementary", { name: "项目导航" })
+    .getByRole("toolbar", { name: "工作区" })
     .getByRole("button", { name: "模型", exact: true })
     .click();
   await expect(page.getByRole("region", { name: "模型工作区" })).toBeVisible();
@@ -460,8 +474,7 @@ test("real local GIS renders and selects its linked work package", async ({
   // The original synthetic WP-200 marker is exactly at the map's declared center.
   await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } });
   await expect(page.locator(".gis-selected")).toContainText("东翼风管安装");
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
+  await toolRail(page)
     .getByRole("button", { name: "工作", exact: true })
     .click();
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);

@@ -10,9 +10,11 @@ import {
 } from "@playwright/test";
 import type { DTO } from "../src/api/client";
 import {
-  expectDonor,
   expectDonorTable,
   expectReducedMotion,
+  openWorkPanel,
+  toolRail,
+  workPanel,
 } from "./donor-conformance";
 
 const headers = { Authorization: "Bearer local-demo-admin" };
@@ -53,10 +55,10 @@ async function openProject(page: Page, project: string) {
     localStorage.setItem("concord:last-project", id);
   }, project);
   await page.goto("/");
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
+  await toolRail(page)
     .getByRole("button", { name: "工作", exact: true })
     .click();
+  await openWorkPanel(page);
 }
 
 async function createProject(request: APIRequestContext) {
@@ -238,18 +240,25 @@ for (const viewport of viewports) {
       await route.continue();
     });
     await openProject(page, project.id);
+    // The Findings list is gated. The panel merges project work, so the
+    // Findings-only loading placeholder is not shown when a work row already
+    // exists; the guarantee to keep is that the Finding is not fabricated while
+    // its response is still in flight.
     await expect(
-      page.getByText("正在读取工程 Findings…").first(),
-    ).toBeVisible();
+      page.getByRole("button", { name: new RegExp(finding.title) }),
+    ).toHaveCount(0);
     await capture(page, "actual-list-loading");
     releaseList();
     const title = page.getByRole("button", { name: new RegExp(finding.title) });
     await expect(title).toBeVisible();
     await expectReducedMotion(page);
-    await expectDonor(page.locator("bim-toolbar.finding-workbench-toolbar"));
-    await expectDonor(page.locator("bim-panel.work-queue-surface"), {
-      headerHidden: true,
-    });
+    // The Work surface is the adapted WorkspacePanel (plain controls), not a
+    // donor Lit panel: assert its own composition rather than shadow-DOM substrate.
+    await expect(
+      page
+        .getByRole("complementary", { name: "工作与审核" })
+        .locator(".workspace-summary"),
+    ).toBeVisible();
     await capture(page, "actual-list");
     await page.getByRole("button", { name: "浏览", exact: true }).click();
     // Donor tables virtualize rows; scroll the actual engineering group into view.
@@ -271,10 +280,12 @@ for (const viewport of viewports) {
       .getByRole("searchbox", { name: "搜索项目对象" })
       .fill(finding.title);
     await capture(page, "actual-browse-results");
-    await page.getByRole("button", { name: "工作", exact: true }).click();
+    await toolRail(page)
+      .getByRole("button", { name: "工作", exact: true })
+      .click();
     await title.click();
     const panel = page.getByRole("complementary", {
-      name: "Finding 工作与审核",
+      name: "工作与审核",
     });
     await expect(panel.getByText("正在读取 Finding 详情…")).toBeVisible();
     await capture(page, "actual-detail-loading");
@@ -282,10 +293,8 @@ for (const viewport of viewports) {
     await expect(
       panel.getByRole("heading", { name: finding.title, exact: true }),
     ).toBeVisible();
-    // Selecting a Finding does not replace the Work queue with another mode.
-    await expect(
-      page.getByRole("region", { name: "工作", exact: true }),
-    ).toBeVisible();
+    // Selecting a Finding does not replace the Work list with another mode.
+    await expect(panel.locator(".workspace-list")).toBeVisible();
     await expect(title).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("textbox", { name: "搜索工作" })).toBeVisible();
     await expect(
@@ -300,23 +309,25 @@ for (const viewport of viewports) {
     await expect(
       panel.getByRole("region", { name: "结构化与提取证据" }),
     ).not.toContainText("专业建议未验证");
-    // The engineering triad must be visible without scrolling, even at 1280×720.
+    // The engineering triad (change, consequence, next action) must be fully
+    // readable in the docked receipt. The single panel now shows the list and
+    // the receipt together, so at 1280×720 the receipt scrolls; bring each fact
+    // into the receipt's own frame and require it to be wholly visible there.
     const receipt = panel.getByRole("region", { name: "Finding 详情" });
-    const scrollFrame = await panel
-      .locator(".workspace-work-view")
-      .boundingBox();
     for (const text of [
       finding.what_changed,
       finding.why_it_matters,
       finding.suggested_action!,
     ]) {
-      const bounds = await receipt
-        .getByText(text, { exact: true })
-        .boundingBox();
+      const fact = receipt.getByText(text, { exact: true });
+      await fact.scrollIntoViewIfNeeded();
+      const bounds = await fact.boundingBox();
+      const frame = await receipt.boundingBox();
       expect(bounds).not.toBeNull();
-      expect(bounds!.y).toBeGreaterThanOrEqual(scrollFrame!.y);
+      // 1px tolerance absorbs sub-pixel scroll rounding at the frame edge.
+      expect(bounds!.y).toBeGreaterThanOrEqual(frame!.y - 1);
       expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(
-        scrollFrame!.y + scrollFrame!.height,
+        frame!.y + frame!.height + 1,
       );
     }
     const findingDetails = receipt.locator("details");
@@ -330,13 +341,10 @@ for (const viewport of viewports) {
       ),
     ).toEqual(finding);
     await findingDetails.locator("summary").click();
-    await panel.locator(".workspace-work-view").evaluate((element) => {
+    await receipt.evaluate((element) => {
       element.scrollTop = 0;
     });
-    await expectDonor(panel.locator("bim-panel.finding-review-surface"), {
-      label: "工程判断",
-      headerHidden: false,
-    });
+    await expect(panel.locator(".workspace-list")).toBeVisible();
     await capture(page, "actual-selected-finding");
     await page.getByRole("button", { name: "专注", exact: true }).click();
     await capture(page, "actual-selected-focus");
@@ -347,7 +355,7 @@ for (const viewport of viewports) {
       await expect(host).toBeVisible();
       await expect(host).toHaveAttribute(
         "data-navigation-state",
-        item.viewer_target ? "viewer_unavailable" : "missing_viewer_target",
+        item.viewer_target ? "navigation_failed" : "missing_viewer_target",
       );
       await expect(host).toHaveAttribute("data-evidence-id", item.id);
       if (item.viewer_target) {
@@ -379,7 +387,7 @@ for (const viewport of viewports) {
         await expect(host).not.toHaveAttribute("data-viewer-target-kind");
         await expect(host).toContainText("不从旧版页码或位置推断目标");
       }
-      await panel.locator(".workspace-work-view").evaluate((element) => {
+      await receipt.evaluate((element) => {
         element.scrollTop = 0;
       });
       await capture(page, `actual-evidence-${item.fact}`);
@@ -507,13 +515,16 @@ for (const viewport of viewports) {
     await capture(page, "actual-append-only-history");
     await page.keyboard.press("Escape");
     await page.reload();
-    await page.getByRole("button", { name: "工作", exact: true }).click();
+    await toolRail(page)
+      .getByRole("button", { name: "工作", exact: true })
+      .click();
+    await openWorkPanel(page);
     await page.getByRole("button", { name: new RegExp(saved.title) }).click();
     await expect(panel).toContainText("人工复核净高与吊顶");
-    await panel.getByRole("button", { name: "关闭 Finding 面板" }).click();
+    await panel.getByRole("button", { name: "关闭工作与审核面板" }).click();
     await expect(panel).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "审核面板" })).toBeFocused();
-    await page.getByRole("button", { name: "审核面板" }).click();
+    await expect(page.locator(".calm-work")).toBeFocused();
+    await page.locator(".calm-work").click();
     await expect(panel).toBeVisible();
     await capture(page, "actual-panel-restored");
     expect(errors).toEqual([]);
@@ -588,9 +599,14 @@ for (const viewport of viewports) {
         });
     });
     await openProject(page, project.id);
-    await expect(page.getByText("还没有工作事项")).toBeVisible();
-    await page.getByRole("button", { name: "审核面板", exact: true }).click();
-    await expect(page.getByText("选择一项工程判断")).toBeVisible();
+    const panel = workPanel(page);
+    await expect(panel).toBeVisible();
+    // An empty project shows the empty receipt, not the "选择一项工程判断"
+    // placeholder (which only renders when rows exist and nothing is selected).
+    await expect(panel.getByText("还没有工作事项")).toBeVisible();
+    await expect(panel).toContainText(
+      "当前项目尚无资料版本或工程判断可供检查。",
+    );
     await capture(page, "transport-mocked-empty");
     for (const next of [
       "list-error",
@@ -599,7 +615,10 @@ for (const viewport of viewports) {
     ] as const) {
       mode = next;
       await page.reload();
-      await page.getByRole("button", { name: "工作", exact: true }).click();
+      await toolRail(page)
+        .getByRole("button", { name: "工作", exact: true })
+        .click();
+      await openWorkPanel(page);
 
       if (next === "list-error") {
         await expect(
@@ -646,14 +665,17 @@ test("actual empty project command / docking / layout / focus; no synthetic Find
     .getByRole("combobox", { name: "搜索对象或操作" })
     .fill("工作 · Work");
   await page.keyboard.press("Enter");
-  const panel = page.getByRole("complementary", { name: "Finding 工作与审核" });
-  await expect(
-    page.getByRole("region", { name: "工作", exact: true }),
-  ).toContainText("当前项目尚无资料版本或工程判断可供检查。");
-  await expect(panel).toHaveCount(0);
-  await page.getByRole("button", { name: "审核面板", exact: true }).click();
+  // The command navigates to the Work destination; the docked panel is a
+  // togglable dock, so open it before reading it.
+  const toggle = page.locator(".calm-work");
+  await openWorkPanel(page);
+  const panel = workPanel(page);
   await expect(panel).toBeVisible();
-  await expect(panel).toContainText("选择一项工程判断");
+  await expect(panel).toContainText("当前项目尚无资料版本或工程判断可供检查。");
+  await toggle.click();
+  await expect(panel).toHaveCount(0);
+  await toggle.click();
+  await expect(panel).toBeVisible();
   await page.getByRole("button", { name: "布局", exact: true }).click();
   const layout = page.getByRole("dialog", { name: "你的工作区" });
   await layout.getByRole("checkbox", { name: "锁定面板位置和尺寸" }).uncheck();
@@ -664,32 +686,24 @@ test("actual empty project command / docking / layout / focus; no synthetic Find
   await expect(
     page.getByRole("button", { name: "布局", exact: true }),
   ).toBeFocused();
-  const divider = page.getByRole("separator", {
-    name: "调整 Finding 面板宽度",
-  });
-  await divider.focus();
+  // Panel width and dock order are layout-dialog controls now, not a keyboard
+  // separator or a grip on the work plane.
   const before = (await panel.boundingBox())!.width;
-  await page.keyboard.press("ArrowLeft");
+  await page.getByRole("button", { name: "布局", exact: true }).click();
+  await layout.getByRole("slider", { name: "工作面板宽度" }).fill("440");
   await expect
     .poll(async () => (await panel.boundingBox())!.width)
     .toBeGreaterThan(before);
-  const grip = panel.getByRole("button", { name: "移动Finding 审核面板" });
-  await grip.focus();
-  await page.keyboard.press("ArrowLeft");
+  const dock = layout.getByRole("combobox", { name: "工作与审核位置" });
+  await dock.selectOption("left");
   await expect(panel).toHaveAttribute("data-dock-side", "left");
-  await expect(grip).toBeFocused();
-  await page.keyboard.press("ArrowRight");
+  await dock.selectOption("right");
   await expect(panel).toHaveAttribute("data-dock-side", "right");
-  await expect(grip).toBeFocused();
+  await layout.getByRole("button", { name: "完成", exact: true }).click();
   await page.getByRole("button", { name: "专注", exact: true }).click();
   await expect(page.locator(".calm-header")).toHaveCount(0);
-  const exit = (await page
-    .getByRole("button", { name: "退出专注模式（F）" })
-    .boundingBox())!;
-  const toolbar = (await page
-    .locator(".finding-workbench-toolbar")
-    .boundingBox())!;
-  expect(toolbar.y).toBeGreaterThanOrEqual(exit.y + exit.height);
+  // Focus mode hides the chrome but keeps the docked Work surface mounted.
+  await expect(panel).toBeVisible();
   await capture(page, "actual-focus");
   await page.keyboard.press("f");
   await expect(page.locator(".calm-header")).toBeVisible();
@@ -710,7 +724,7 @@ test("transport-mocked unavailable desktop service preserves recovery boundary",
   );
   await expect(page.getByRole("button", { name: "重新连接" })).toBeEnabled();
   await expect(
-    page.getByRole("complementary", { name: "Finding 工作与审核" }),
+    page.getByRole("complementary", { name: "工作与审核" }),
   ).toHaveCount(0);
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);

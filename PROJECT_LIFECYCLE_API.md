@@ -1,28 +1,25 @@
-# A1 shared lifecycle contract
+# Project/source/revision/baseline lifecycle contract
 
-For the subsequent #18 Change/Finding/Coordination/ReCheck APIs and content-addressed
-storage/upload policy, see [Engineering coordination](docs/ENGINEERING_COORDINATION.md).
-The historical A1-only behavior below describes its original milestone; the #18
-contract adds revision-triggered ReChecks for confirmed dependent Findings.
-
-First integration slice of [Issue #9](https://github.com/NekoMint-Labs/Concord/issues/9),
-based on merged PR #8. This supplies the shared project/source/revision/baseline
-identities for #10 and #11. It does not close #9.
+This retains the durable A1 original-file contract; the milestone's initial
+integration limits are historical, not current product UI instructions. For the
+current code-derived flow see [PRODUCT_WORKFLOW](docs/PRODUCT_WORKFLOW.md); for
+subsequent import/Agent APIs see [AGENT_INTEGRATION](docs/AGENT_INTEGRATION.md), and
+for Finding/Coordination/ReCheck and content-addressed storage/upload policy see
+[ENGINEERING_COORDINATION](docs/ENGINEERING_COORDINATION.md). Generated OpenAPI
+remains the source of exact fields. Qualification is scoped in [VERIFICATION](VERIFICATION.md).
 
 ## Scope
 
 Create a real project, Area and Work Package; register a logical source; store and
 retrieve immutable original-file revisions; explicitly accept an immutable baseline.
 All records and original bytes survive backend restart. Existing demo behavior remains
-compatible. A clean pilot can run with `CCA_SEED_DEMO=false`; changing product startup,
-the project picker and demo labeling is a follow-up coordinated with #10.
+compatible. A clean pilot can run with `CCA_SEED_DEMO=false`; the current product
+startup/project picker is documented in PRODUCT_WORKFLOW, not a future A1 UI task.
 
-An upload returns `import_status: "STORED"`. This means the original file is durably
-stored and hash checked, **not** that IFC parsing, document parsing or comparison has
-completed. Attaching the existing durable capability job to a source revision, retaining
-parsed BIM snapshots, comparison/binding tools, Agent controls and Windows packaged IFC
-qualification follow this shared-contract PR. No new Agent endpoint or execution path
-is introduced here.
+An upload returns `import_status: "STORED"`: original bytes are durably stored and
+hash checked, **not** parsed or compared. Use the revision's linked import run/result
+for parsing status. Viewer opening is a separate product/C adapter seam and never
+implicitly accepts a baseline, starts an investigation or confirms a Finding.
 
 ## Endpoints
 

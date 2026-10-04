@@ -1,14 +1,14 @@
 /* Mapping is a temporary mode of the shared Model shell, not a second split. */
-.application-shell .bim-workspace.spatial-workspace.is-mapping {
+.app-shell .bim-workspace.spatial-workspace.is-mapping {
   display: flex;
   flex-direction: column;
 }
-.application-shell .bim-workspace.is-mapping > .pane-split {
+.app-shell .bim-workspace.is-mapping > .pane-split {
   flex: 1;
   min-height: 0;
   height: auto;
 }
-.application-shell .bim-workspace.is-mapping .spatial-main {
+.app-shell .bim-workspace.is-mapping .spatial-main {
   grid-template-rows: minmax(180px, 1fr) clamp(200px, 34vh, 320px);
 }
 .mapping-context-bar {
@@ -83,16 +83,13 @@
   padding: 8px;
   text-align: left;
 }
-.application-shell .bim-workspace.is-mapping .viewer-actions {
+.app-shell .bim-workspace.is-mapping .viewer-actions {
   left: 16px;
   flex-wrap: wrap;
   max-width: calc(100% - 32px);
 }
-.application-shell
-  .bim-workspace.is-mapping
-  .viewer-actions
-  button[aria-label$="候选"],
-.application-shell
+.app-shell .bim-workspace.is-mapping .viewer-actions button[aria-label$="候选"],
+.app-shell
   .bim-workspace.is-mapping
   .viewer-actions
   button[aria-label="隔离已选"] {

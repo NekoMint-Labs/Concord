@@ -36,6 +36,14 @@ export function useRunStream(
       ).then(() => {
         if (!project || !runId) return;
         return Promise.all([
+          ...[
+            "engineering-findings",
+            "engineering-finding",
+            "engineering-evidence",
+            "engineering-coordination",
+            "engineering-rechecks",
+            "sources",
+          ].map((key) => query.invalidateQueries({ queryKey: [key, project] })),
           query.invalidateQueries({
             queryKey: ["investigation-report", project, runId],
           }),

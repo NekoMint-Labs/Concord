@@ -30,8 +30,10 @@ serves the built UI when `frontend/dist` exists.
 - `frontend/src/`: web application composition, features, components, styles, and
   visualization modules.
 - `desktop/`: Tauri host and sidecar packaging support.
-- `specifications/`: approved technical specifications; consult only the sections
-  relevant to a change.
+- `specifications/`: durable technical constraints and explicitly retired handoffs;
+  start with its index, then consult only relevant sections.
+- [docs/PRODUCT_WORKFLOW.md](docs/PRODUCT_WORKFLOW.md): authoritative, code-derived
+  product behavior and links to API/viewer seams; not an acceptance claim.
 
 ## Development and verification
 
@@ -39,9 +41,12 @@ The repository commits `uv.lock`, `frontend/pnpm-lock.yaml`, and
 `desktop/src-tauri/Cargo.lock`. Use frozen/check modes for normal development and
 CI; regenerate locks only when dependencies intentionally change.
 
-The established team baseline has passed full source/integration CI and Windows
-native/manual acceptance. Current evidence and remaining platform boundaries are
-recorded in the documents below:
+Historical verified main records full source/integration CI and Windows
+native/manual acceptance. **This dirty product worktree is not that accepted baseline**:
+B's four-surface Evidence host depends on pending local PR22 C integration; IFC
+preparation currently fails its archive hash check. Local source rehearsal and
+focused tests do not establish product acceptance; VERIFICATION records actual gates. Current boundaries
+and historical evidence are separated below:
 
 - [DEVELOPMENT.md](DEVELOPMENT.md) — contributor workflow and focused checks.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow and pull request rules.
@@ -49,9 +54,13 @@ recorded in the documents below:
   boundaries.
 - [STATUS.md](STATUS.md) — current project status.
 - [TEAM_DEVELOPMENT.md](TEAM_DEVELOPMENT.md) — ownership and shared seams.
+- [docs/DOCUMENTATION_AUDIT.md](docs/DOCUMENTATION_AUDIT.md) — audit and retired UI directions.
 - [desktop/README.md](desktop/README.md) — native prerequisites and boundaries.
 
 ## Licensing
 
-No open-source license is currently granted. Do not reuse, redistribute, or assume
-license rights without written authorization.
+No open-source license is currently granted for Concord's project-owned code.
+Third-party materials retain their own licenses; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), including pending PR22 dependency
+and distribution obligations. Do not assume this repository notice grants rights
+to reuse or redistribute Concord.

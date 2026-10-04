@@ -1,5 +1,12 @@
-# Spatial issue contract gap
+# Spatial targeting boundary
 
-The current workspace response contains analysis-scoped `Constraint` and `Evidence`, not persistent issues/viewpoints. `Constraint` has no location or BCF viewpoint, and `Evidence.element_ids` may be empty. The frontend can select a blocking condition, highlight linked element GUIDs when present, and display evidence/approval, but cannot place a trustworthy world-space issue pin, preserve issue status/assignee across analysis generations, or focus a deleted element in the new revision. It must not invent coordinates or issue lifecycle state.
+The earlier pre-Finding issue/API proposal is retired. Persisted Finding,
+Coordination, ReCheck and typed ViewerTarget now exist; use
+[ENGINEERING_COORDINATION](ENGINEERING_COORDINATION.md), not a new issue architecture.
 
-A future domain/API change would need a project-owned issue identifier, title, status, priority, work-package and element links, plus an optional model-relative viewpoint (source revision, camera and marker coordinate) and a revision-aware anchor for removed geometry. Persist and expose it in `backend/app/domain/`, `backend/app/adapters/persistence/` (new migration), and `backend/app/api/` via typed schema generation (`frontend/src/api/schema.ts` is generated, not edited manually). Risk: stale pins after revision changes, incorrect coordinate systems, permissions, and divergence between analysis constraints and human issue status. Until that contract exists, the UI labels the condition as unlocated rather than pretending to pin it.
+The durable gap remains: analysis-scoped Constraints are not persistent engineering
+Findings, and GUIDs/Evidence prose do not establish world-space coordinates or a
+revision-aware pin for deleted geometry. Missing targets remain explicit limitations.
+BIM's non-null `viewpoint` is reserved/unsupported in C's canonical adapter; do not
+guess camera axes/units. BCF camera exchange does not own human Coordination state.
+See [PRODUCT_WORKFLOW](PRODUCT_WORKFLOW.md) and the [viewer seam](EVIDENCE_VIEWER_ADAPTERS.md).

@@ -1,0 +1,205 @@
+/* App-level styles. Brand tokens come from tokens.css. */
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+}
+
+/* The canvas shell is exactly one viewport and scrolls internally, never as a
+   page. Left visible, any child that pokes past an edge gives the DOCUMENT a
+   scrollbar — and with classic (always-on) scrollbars that bar takes 15px off
+   the viewport while the 100vh shell keeps its height, so the status bar's
+   bottom half slides under it. Screen only: print.css un-clips the shell. */
+@media screen {
+  .app-shell { overflow: clip; }
+}
+
+body {
+  background: var(--paper-bright);
+  color: var(--ink);
+  font-family: var(--f-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: var(--f-mono); cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+input, textarea { font-family: var(--f-body); }
+
+/* ── buttons (the global lift) ────────────────────────────────────────────── */
+
+.btn-primary,
+.btn-ghost {
+  padding: 9px 16px;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition:
+    background var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+.btn-primary { background: var(--ink); color: var(--paper-cream); border: 1px solid var(--ink); }
+.btn-primary:hover  { background: var(--cobalt-deep); border-color: var(--cobalt-deep); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-ghost  { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
+.btn-ghost:hover  { background: var(--paper-shadow); }
+.btn-ghost:active { transform: translateY(1px); }
+/* on the ink panel (the status bar) --ink is the panel's own background, so
+   the ghost takes the panel's foreground instead, in every theme */
+.ink-panel .btn-ghost { color: var(--status-fg); border-color: var(--status-fg); }
+.ink-panel .btn-ghost:hover { background: color-mix(in srgb, var(--status-fg) 18%, transparent); }
+
+.btn-primary:focus-visible,
+.btn-ghost:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.btn-primary:disabled,
+.btn-ghost:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+  background: transparent;
+  color: var(--ink-muted);
+  border-color: var(--ink-faint);
+}
+.btn-primary:disabled { background: var(--paper-shadow); }
+
+/* ── form labels & inputs ─────────────────────────────────────────────────── */
+
+.field-label {
+  font-family: var(--f-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.text-input,
+.field-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--ink-faint);
+  background: var(--paper-cream);
+  font-size: 14px;
+  color: var(--ink);
+  font-family: var(--f-body);
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.text-input:hover,
+.field-input:hover { border-color: var(--ink-muted); }
+.text-input:focus,
+.field-input:focus { outline: none; border-color: var(--cobalt); box-shadow: var(--ring); }
+
+/* ── primitives (use these instead of inline styles going forward) ────────── */
+
+.card {
+  background: var(--paper-cream);
+  border: 1px solid var(--ink-faint);
+  transition: border-color var(--t) var(--ease), box-shadow var(--t) var(--ease), transform var(--t) var(--ease);
+}
+.card.is-clickable:hover { border-color: var(--ink-muted); box-shadow: var(--shadow-1); }
+.card.is-clickable:active { transform: translateY(1px); }
+
+.panel { background: var(--paper-bright); border: 1px solid var(--ink-faint); }
+
+.row {
+  transition: background var(--t-fast) var(--ease);
+}
+.row:hover { background: var(--paper-bright); }
+
+.badge,
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border: 1px solid currentColor;
+  font-family: var(--f-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  display: inline-block;
+  background: var(--ink-muted);
+}
+.status-dot.is-live {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+/* ── skeleton loader (replaces "Loading…" text everywhere) ────────────────── */
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--paper-shadow);
+  color: transparent;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .42), transparent);
+  animation: shimmer 1.4s var(--ease) infinite;
+}
+
+/* ── motion utilities ─────────────────────────────────────────────────────── */
+
+.fade-in       { animation: fadeUp var(--t) var(--ease); }
+.fade-in-slow  { animation: fadeUp var(--t-slow) var(--ease); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .35; }
+}
+/* Source-trace flash (◎, TakeoffCanvas's `flashSource`) — a BOUNDED pulse (3
+   iterations of .85s, ~2.55s total, matched by flashSource's own one-shot
+   auto-clear timer) that settles dim on its last cycle instead of holding a
+   solid highlight. Deliberately its own keyframes rather than a reuse of
+   `pulse` above: pulse also drives the INFINITE `.status-dot.is-live` loop,
+   and giving pulse asymmetric endpoints would put a visible snap back to
+   full opacity in that dot's loop every cycle. Paired with
+   `animation-fill-mode: forwards` at the call site so the brief window
+   between the animation finishing and flashSource's timer clearing the state
+   holds this dim frame, not an opaque one. The end value is a middling .5,
+   not near-zero: under `prefers-reduced-motion` (below), the animation
+   duration collapses to ~0 and `forwards` snaps straight to the 100% frame
+   for the full ~2.6s until the timer clears it — a near-invisible end value
+   would leave reduced-motion users with no visible highlight at all, which
+   defeats the feature. .5 stays legible for both motion preferences. */
+@keyframes sourceFlashPulse {
+  0%   { opacity: 1; }
+  50%  { opacity: .35; }
+  100% { opacity: .5; }
+}
+
+/* honor the user's motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

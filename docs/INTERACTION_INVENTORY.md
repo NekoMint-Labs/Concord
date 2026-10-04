@@ -1,4 +1,9 @@
-# Concord interaction inventory — Issue #10 hardening baseline
+# Concord interaction inventory — historical Issue #10 hardening
+
+**Historical evidence only, not a current UI plan or qualification.** The tables
+below describe the #10 pre-pass and its recorded disposition, not the current B
+donor shell or pending PR22 viewers. [PRODUCT_WORKFLOW](PRODUCT_WORKFLOW.md) owns
+current behavior; [VERIFICATION](../VERIFICATION.md) owns qualification boundaries.
 
 Audited before the hardening edits on `feat/10-real-project-workspace`. `FAKE` means an affordance is visible but has no observable result; `BROKEN` means its result is incomplete, inaccessible, or inconsistent with its label.
 

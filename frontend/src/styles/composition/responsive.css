@@ -1,5 +1,5 @@
 @media (max-width: 1180px) {
-  .application-shell .project-state {
+  .app-shell .project-state {
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
   }

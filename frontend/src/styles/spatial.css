@@ -17,22 +17,6 @@
   background: var(--concord-spatial-pane);
   border-left: 1px solid var(--line-soft);
 }
-.spatial-pane-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  min-height: 45px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 600;
-}
-.spatial-pane-heading small {
-  color: var(--muted);
-  font-weight: 400;
-}
 .spatial-inspector-body {
   flex: 1;
   min-height: 0;
@@ -188,12 +172,4 @@
   display: flex;
   align-items: center;
   gap: 6px;
-}
-.source-history {
-  margin: 16px;
-  color: var(--muted);
-  font-size: 11px;
-}
-.source-history summary {
-  cursor: pointer;
 }

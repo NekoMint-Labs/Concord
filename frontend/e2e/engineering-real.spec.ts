@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, existsSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { test, expect } from "@playwright/test";
 import type { DTO } from "../src/api/client";
+import { openWorkPanel, toolRail } from "./donor-conformance";
 
 const root = resolve("..");
 const python =
@@ -116,31 +117,28 @@ finally:
     }, identity.project);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto(base);
-    await page.getByRole("button", { name: "工作", exact: true }).click();
-    const findingButton = page.getByRole("button", {
-      name: "Clearance",
-      exact: true,
-    });
-    const findingRow = page.locator(".workspace-row").filter({
-      has: findingButton,
-    });
+    await toolRail(page)
+      .getByRole("button", { name: "工作", exact: true })
+      .click();
+    await openWorkPanel(page);
+    const findingRow = page
+      .locator("div.workspace-list button.workspace-row")
+      .filter({ hasText: "Clearance" });
     await expect(findingRow).toContainText("待人工判断");
-    await findingButton.click();
+    await findingRow.click();
     const panel = page.getByRole("complementary", {
-      name: "Finding 工作与审核",
+      name: "工作与审核",
     });
     await expect(panel).toBeVisible();
-    await expect(
-      page.getByRole("region", { name: "工作", exact: true }),
-    ).toBeVisible();
-    await expect(findingButton).toHaveAttribute("aria-pressed", "true");
+    await expect(panel.locator(".workspace-list")).toBeVisible();
+    await expect(findingRow).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator("[data-evidence-id]")).toHaveAttribute(
       "data-evidence-id",
       identity.evidence,
     );
     await expect(page.locator("[data-evidence-id]")).toHaveAttribute(
       "data-navigation-state",
-      "viewer_unavailable",
+      "navigation_failed",
     );
     await panel.getByRole("button", { name: "确认", exact: true }).click();
     await page
@@ -251,8 +249,12 @@ finally:
     ).toBe("CONFIRMED");
 
     await page.reload();
+    await toolRail(page)
+      .getByRole("button", { name: "工作", exact: true })
+      .click();
+    await openWorkPanel(page);
     await expect(findingRow).toContainText("已确认");
-    await findingButton.click();
+    await findingRow.click();
     await panel.getByRole("button", { name: "关闭", exact: true }).click();
     const closureBasis = page.getByLabel("关闭依据 ReCheck", { exact: true });
     await expect(closureBasis).toHaveValue("");
@@ -305,8 +307,12 @@ finally:
       note: closureNote,
     });
     await page.reload();
+    await toolRail(page)
+      .getByRole("button", { name: "工作", exact: true })
+      .click();
+    await openWorkPanel(page);
     await expect(findingRow).toContainText("人工关闭");
-    await findingButton.click();
+    await findingRow.click();
     await expect(panel).toContainText("CLOSED");
     await page.screenshot({
       path: join(screenshots, "real-closed.png"),
@@ -357,7 +363,11 @@ finally:
       .click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await page.reload();
-    await expect(findingButton).toBeVisible();
+    await toolRail(page)
+      .getByRole("button", { name: "工作", exact: true })
+      .click();
+    await openWorkPanel(page);
+    await expect(findingRow).toBeVisible();
     await expect(findingRow).toContainText("待人工判断");
     const finalHistory = await request.get(`${url}/coordination`, { headers });
     expect(

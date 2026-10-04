@@ -33,10 +33,13 @@ Weather/GIS/vision-originated events may be enabled through the implemented capa
 - re-check result after external state changes;
 - audit history.
 
-## Required product surfaces
+## Product capabilities
+
+This is not a dashboard/layout rewrite mandate. Current OpenTakeoff-based product
+composition is `docs/PRODUCT_WORKFLOW.md`; earlier custom frontend directions are retired.
 
 - project/work-package navigation;
-- project status/readiness dashboard;
+- visible server-owned project/work-package readiness;
 - event/change workspace;
 - Impact Graph;
 - Evidence/constraint/resolution inspector;
@@ -70,7 +73,7 @@ These are no longer “future code”:
 
 - OR-Tools optimization adapter;
 - IfcOpenShell BIM adapter;
-- browser BIM viewer based on a mature BIM library (default: That Open Engine);
+- mature C-owned BIM viewer; current interfaces in `docs/EVIDENCE_VIEWER_ADAPTERS.md`;
 - Docling document parser;
 - Temporal durable-runtime adapter alongside DBOS;
 - S3-compatible object-store adapter alongside local storage;

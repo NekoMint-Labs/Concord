@@ -593,3 +593,29 @@ it.each(["RESOLVED", "STILL_OPEN", "CHANGED", "NEEDS_REVIEW"] as const)(
     expect(api.engineeringDecision).not.toHaveBeenCalled();
   },
 );
+
+it("discovers a later automatic ReCheck while Work stays open and refreshes source freshness", async () => {
+  vi.useFakeTimers();
+  let checks: ReCheck[] = [];
+  vi.mocked(api.engineeringRechecks).mockImplementation(async () => checks);
+  vi.mocked(api.run).mockResolvedValue(run("COMPLETED"));
+  cache.setQueryData(["sources", "p"], []);
+  const invalidate = vi.spyOn(cache, "invalidateQueries");
+  const view = renderHook(() => useEngineeringFinding("p", "f"), { wrapper });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(view.result.current.rechecks.data).toEqual([]);
+  checks = [recheck("NEEDS_REVIEW")];
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1201);
+  });
+  expect(view.result.current.rechecks.data?.[0].outcome).toBe("NEEDS_REVIEW");
+  expect(api.requestEngineeringRechecks).not.toHaveBeenCalled();
+  expect(invalidate).toHaveBeenCalledWith({
+    queryKey: ["sources", "p"],
+    exact: true,
+  });
+  expect(view.result.current.finding.data?.state).toBe("PROPOSED");
+  view.unmount();
+});

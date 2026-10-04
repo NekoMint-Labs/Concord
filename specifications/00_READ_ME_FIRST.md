@@ -1,37 +1,35 @@
-# READ ME FIRST — Final AI Handoff Bundle
+# Specification index
 
-This directory is the **authoritative implementation specification** for the final Construction Coordination Agent reference implementation. It intentionally contains **18 files** so it can be uploaded in one batch under a 20-file limit.
+This directory retains durable project intent and technical constraints. It is
+**not an autonomous rebuild handoff**, a report that every capability is accepted,
+or an alternative UI architecture. The original 18-file upload/execution procedure
+and final implementation prompt are retired.
 
-Do not mix this bundle with earlier baselines, bilingual human docs, or historical chat transcripts when deciding implementation behavior.
+## Authority and routing
 
-## What changed from earlier handoff drafts
+1. Explicit current user/task scope governs work; retired prompts never expand it.
+2. Read relevant durable constraints here (use [01_AGENTS](01_AGENTS.md) for routing).
+3. Exact contracts come from code/generated schemas and the newer shared contracts:
+   [project lifecycle](../PROJECT_LIFECYCLE_API.md),
+   [Agent/import](../docs/AGENT_INTEGRATION.md),
+   [engineering coordination](../docs/ENGINEERING_COORDINATION.md).
+4. [PRODUCT_WORKFLOW](../docs/PRODUCT_WORKFLOW.md) is the single authoritative
+   code-derived product behavior description; [viewer seams](../docs/EVIDENCE_VIEWER_ADAPTERS.md)
+   distinguish B composition from the pending PR22 C dependency.
+5. [STATUS](../STATUS.md) and [VERIFICATION](../VERIFICATION.md) own current state
+   and scoped evidence. Requirements and historical runs are not acceptance.
 
-Earlier drafts optimized for a first Web vertical slice and left many enhancements unimplemented. This final baseline intentionally raises the target:
+## Retained / retired
 
-- Web **and** Tauri 2 Desktop are required deliverables.
-- Planned enhancement adapters must be **implemented and tested**, even when disabled by default.
-- Local/Desktop must remain lightweight and runnable without cloud credentials or infrastructure services.
-- Server/Team and distributed profiles must be real, reproducible configurations rather than architecture-only placeholders.
+- `02`: product intent/non-goals; surface lists are capability coverage, not navigation.
+- `03`: old visual direction retired; only demo and interaction safety retained.
+- `04`–`09`, `11`–`16`: retain backend/runtime/data/security/desktop/engineering
+  constraints. Historical frontend stack/viewer mandates in `04`, `09`, `16` are
+  superseded in place; they do not authorize a new shell or removal of old viewers.
+- `10`: obsolete frontend direction retired; current seams and retained invariants only.
+- `17`: retired autonomous implementation prompt; do not execute it.
 
-The guiding rule is:
-
-> **Implement the capability; enable it only where the deployment profile needs it.**
-
-## Upload / execution procedure
-
-1. Upload all 18 Markdown files in this directory in one batch.
-2. Give the coding agent access to the target repository and a terminal/code-editing environment.
-3. Send the content of `17_FINAL_IMPLEMENTATION_PROMPT.md` as the first task instruction.
-4. Let the agent inspect the repository, read this bundle, implement, run tests/builds, repair failures, and continue until the Definition of Done is satisfied or a genuine external blocker remains.
-
-If there are up to two spare upload slots, use them for high-value UI reference images or one representative IFC/document fixture, not additional speculative design notes.
-
-## Documentation status vocabulary
-
-- **Frozen** — must not be changed without explicit user instruction.
-- **Required** — must exist in the final implementation.
-- **Default** — the implementation/profile used when no stronger requirement exists.
-- **Implemented Optional** — must be implemented and tested, but is disabled until configured/selected.
-- **External-dependent** — implementation must exist, but full live verification may require credentials or an external service; never fabricate success.
-
-There should be almost no implementation-blocking Open decisions in this final baseline.
+“Frozen”, “Required” and “Implemented Optional” in retained technical documents
+express constraints/intent, not completed qualification or permission to implement
+unrequested work. Never fabricate external-service, real-engine or native success.
+Full disposition: [DOCUMENTATION_AUDIT](../docs/DOCUMENTATION_AUDIT.md).

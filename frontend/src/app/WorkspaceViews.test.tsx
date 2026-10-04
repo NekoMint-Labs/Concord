@@ -7,7 +7,7 @@ import fixture from "../../tests/fixtures/inspector.json";
 import { api, type InvestigationReport, type Workspace } from "../api/client";
 import type { WorkspaceInspectorView } from "../features/InvestigationInspector";
 import type { WorkspaceTab } from "./destinations";
-import { useWorkspaceLayout } from "../layout/WorkspaceLayout";
+import { WorkPanel } from "../features/WorkPanel";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -64,9 +64,31 @@ it("keeps the requested Action inspector open after reviewing a report's proposa
     const [selected, setSelected] = useState("WP-100");
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [tab, setTab] = useState<WorkspaceTab>("work");
-    const prefs = useWorkspaceLayout();
     const [view, setView] = useState<WorkspaceInspectorView>("investigation");
-    return (
+    /*
+     * The shell composes Work and its destinations as siblings; this host does the
+     * same so the report-review flow still runs from the Work panel into the
+     * WorkspaceViews detail pane.
+     */
+    return tab === "work" ? (
+      <WorkPanel
+        workspace={data}
+        sources={[]}
+        onPackage={(id) => {
+          setSelected(id);
+          setDetailsOpen(false);
+        }}
+        onModels={noop}
+        onRecheck={noop}
+        onReport={() => {
+          setTab("coordination");
+          setView("investigation");
+          setDetailsOpen(true);
+        }}
+        onProject={noop}
+        report={report}
+      />
+    ) : (
       <WorkspaceViews
         project={data.state.project.id}
         data={data}
@@ -77,7 +99,6 @@ it("keeps the requested Action inspector open after reviewing a report's proposa
         onElementSelected={noop}
         onSpatialIssueSelected={noop}
         tab={tab}
-        workspaceLayout={prefs}
         busy={false}
         detailsOpen={detailsOpen}
         inspectorView={view}
@@ -118,13 +139,13 @@ it("keeps the requested Action inspector open after reviewing a report's proposa
       <Host />
     </QueryClientProvider>,
   );
-  fireEvent.click(await screen.findByRole("button", { name: "审核面板" }));
+  // The docked Work panel is open by default; no toggle click is needed.
   expect(
-    screen.getByRole("complementary", { name: "Finding 工作与审核" }),
+    await screen.findByRole("complementary", { name: "工作与审核" }),
   ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "打开报告 →" }));
   expect(
-    screen.queryByRole("complementary", { name: "Finding 工作与审核" }),
+    screen.queryByRole("complementary", { name: "工作与审核" }),
   ).not.toBeInTheDocument();
   fireEvent.click(
     await screen.findByRole("button", { name: "审查处理方案 →" }),

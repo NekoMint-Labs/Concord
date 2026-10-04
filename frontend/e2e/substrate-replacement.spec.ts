@@ -10,6 +10,7 @@ import {
   type Page,
 } from "@playwright/test";
 import type { DTO } from "../src/api/client";
+import { openWorkPanel, toolRail, workPanel } from "./donor-conformance";
 
 const headers = { Authorization: "Bearer local-demo-admin" };
 const output = resolve(
@@ -255,23 +256,18 @@ for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     const seeded = await proposeSyntheticFinding(request);
     await openProject(page, seeded.project.id);
-    await expect(
-      page.getByRole("navigation", { name: "主要工作区" }),
-    ).toBeVisible();
+    const rail = toolRail(page);
+    await expect(rail).toBeVisible();
 
-    await page.getByRole("button", { name: "工作", exact: true }).click();
-    await expect(
-      page.getByRole("region", { name: "工作", exact: true }),
-    ).toBeVisible();
+    await rail.getByRole("button", { name: "工作", exact: true }).click();
+    await openWorkPanel(page);
+    await expect(workPanel(page)).toBeVisible();
     const findingButton = page.getByRole("button", {
       name: seeded.finding.title,
-      exact: true,
     });
     await expect(findingButton).toBeVisible();
     await findingButton.click();
-    await expect(
-      page.getByRole("complementary", { name: "Finding 工作与审核" }),
-    ).toBeVisible();
+    await expect(workPanel(page)).toBeVisible();
     const selectedEvidence = page.locator(
       `[data-evidence-id="${seeded.evidence[0].id}"]`,
     );
@@ -284,25 +280,10 @@ for (const viewport of viewports) {
       "data-source-revision-id",
       seeded.evidence[0].source_revision_id!,
     );
-    await expectLitOwner(
-      page.locator("bim-toolbar.finding-workbench-toolbar"),
-      "Work toolbar",
-    );
-    await expectLitOwner(
-      page.locator("bim-tabs.workspace-tabs"),
-      "Work filter tabs",
-    );
-    await expectLitOwner(
-      page.locator("bim-text-input").first(),
-      "Work search input",
-    );
-    await expectLitOwner(page.locator("bim-button").first(), "Work action");
     await capture(page, "work-selected-finding-evidence");
 
     // The decision dialog is captured from the same selected server-owned Finding.
-    const review = page.getByRole("complementary", {
-      name: "Finding 工作与审核",
-    });
+    const review = workPanel(page);
     await clickDonorLabel(review, "确认");
     const decision = page
       .locator(".dialog-surface")
@@ -317,14 +298,14 @@ for (const viewport of viewports) {
 
     // Project panels and Browse's authoritative donor table are captured as separate
     // surfaces; no rows or engineering facts are manufactured by this suite.
-    await page.getByRole("button", { name: "项目", exact: true }).click();
+    await rail.getByRole("button", { name: "项目", exact: true }).click();
     await expectLitOwner(
       page.locator("bim-panel.project-context-surface"),
       "Project context panel",
     );
     await capture(page, "project");
 
-    await page.getByRole("button", { name: "浏览", exact: true }).click();
+    await rail.getByRole("button", { name: "浏览", exact: true }).click();
     await expect(
       page.getByRole("searchbox", { name: "搜索项目对象" }),
     ).toBeVisible();
@@ -336,7 +317,7 @@ for (const viewport of viewports) {
 
     // The real checked-in Harbor East IFC is used locally; it is not uploaded or
     // presented as a project revision by this visual-only test.
-    await page.getByRole("button", { name: "模型", exact: true }).click();
+    await rail.getByRole("button", { name: "模型", exact: true }).click();
     const ifc = resolve("..", "fixtures", "harbor-east.ifc");
     await page.getByLabel("本地 IFC 文件", { exact: true }).setInputFiles(ifc);
     await expect(
@@ -352,42 +333,28 @@ for (const viewport of viewports) {
     await capture(page, "model-real-ifc-local-preview");
 
     // Command menu and layout dialog use real application state and controls.
-    await clickDonorLabel(
-      page.locator("bim-toolbar.calm-header-actions"),
-      "查找对象或操作",
-    );
+    await page.getByRole("button", { name: "查找对象或操作" }).click();
     const commands = page.getByRole("dialog", {
       name: "查找对象或操作",
       exact: true,
     });
     await expect(commands).toBeVisible();
-    await expectLitOwner(
-      commands.locator("bim-toolbar.dialog-header"),
-      "Command dialog toolbar",
-    );
     await expect(
       commands.getByRole("combobox", { name: "搜索对象或操作" }),
     ).toBeVisible();
     await capture(page, "commands-menu");
     await page.keyboard.press("Escape");
 
-    await clickDonorLabel(
-      page.locator("bim-toolbar.calm-header-actions"),
-      "布局",
-    );
+    await page.getByRole("button", { name: "布局", exact: true }).click();
     const layout = page.getByRole("dialog", {
       name: "你的工作区",
       exact: true,
     });
     await expect(layout).toBeVisible();
-    await expectLitOwner(
-      layout.locator("bim-toolbar.dialog-header"),
-      "Layout dialog toolbar",
-    );
     await capture(page, "layout-dialog");
     await page.keyboard.press("Escape");
 
-    await page.getByRole("button", { name: "项目", exact: true }).click();
+    await rail.getByRole("button", { name: "项目", exact: true }).click();
     const sourceMenu = page.locator(".sources-object-lane");
     await clickDonorLabel(sourceMenu, "资料操作");
     // Radix retains dismissal/typeahead/focus; a real donor panel owns the menu surface.

@@ -1,9 +1,11 @@
 # Team ownership and change boundaries
 
 This is a lightweight navigation and review guide, not a replacement for
-`specifications/`. Start with `specifications/00_READ_ME_FIRST.md` and
-`specifications/01_AGENTS.md`, then read only what is relevant to the change. Use
-[VERIFICATION.md](VERIFICATION.md) for checks and qualification gates.
+durable constraints in `specifications/`. Start with its index, then read only
+what is relevant. [PRODUCT_WORKFLOW](docs/PRODUCT_WORKFLOW.md) owns current product
+behavior; retired UI prompts are not implementation authority. [STATUS](STATUS.md)
+and [VERIFICATION](VERIFICATION.md) separate historical main qualification from
+this unaccepted local integration.
 
 ## Primary ownership
 
@@ -23,7 +25,8 @@ API modules.
 ### Developer B — Product / Web / UX
 
 **Primary responsibility:** frontend application composition; workspace/navigation;
-Operations; Impact / Inspector / Timeline; product interaction; visual consistency;
+WorkPanel/FindingWorkbench/Evidence host; Operations; Impact / Inspector / run detail;
+product interaction; visual consistency;
 accessibility; demo UX.
 
 Normal boundaries include `frontend/src/App.tsx`, `frontend/src/app/`, product features
@@ -34,8 +37,11 @@ except Documents, product components, and feature/shell styles.
 **Primary responsibility:** IFC / BIM; GIS; Documents; retrieval / embeddings; OR-Tools;
 engineering providers; engineering fixtures; demo datasets.
 
-Normal boundaries include `frontend/src/viewers/`, the Documents feature and styles,
-BIM/document/vision/embedding/retrieval/optimization adapters, and engineering fixtures.
+Normal boundaries include `frontend/src/viewers/`, C's isolated viewer integrations
+and vendor adaptations, the Documents feature and styles, engineering adapters and
+fixtures. PR22's Drawing/CAD/IFC/Document surfaces are pending local dependencies of
+B's current host. B consumes canonical targets and C's callbacks; C owns native
+navigation/geometry/SDK disposal. See [the viewer seam](docs/EVIDENCE_VIEWER_ADAPTERS.md).
 
 ## GitHub workflow
 
@@ -84,6 +90,7 @@ Coordinate before changing these shared seams:
 
 - `frontend/src/App.tsx`
 - `frontend/src/app/WorkspaceViews.tsx`
+- `frontend/src/app/EvidenceWorkspaceHost.tsx` and C's surface input/error contracts
 - `backend/app/bootstrap.py`
 - `backend/app/domain/**`
 - `backend/app/ports/**`
@@ -111,10 +118,11 @@ commands and never hand-edit them.
   approval-owner stream. `useWorkspaceMutation` owns serialization and cache
   reconciliation. The root retains project/package/constraint selection and event
   orchestration; do not add a global store for a panel.
-- In `frontend/src/viewers/`, `useIFCViewer` owns one SDK lifetime, listeners, workers,
-  camera controls, and cleanup. `useBIMSource` owns local source selection, explicit
-  project import, and generation-fenced reopening. Matching TSX files own presentation.
-  Keep viewer imports inside the existing lazy boundary.
+- Existing BIM/GIS views retain their lifecycle hooks: `useIFCViewer` owns the
+  existing SDK lifetime and `useBIMSource` owns source/import/reopen fencing. They
+  are not PR22's new `IfcSurface` runtime. The Evidence host lazily composes C's
+  four surfaces; keep SDK types and geometry out of B and generated domain DTOs.
+  Missing assets/targets or `onError(null)` must not be presented as successful navigation.
 - In the backend, `capability_work.py` prepares drafts outside a project write
   transaction; `capability_jobs.py` coordinates run fencing and publication. Do not move
   slow SDK/model work under the write lock or publish from preparation.
@@ -124,10 +132,12 @@ commands and never hand-edit them.
 - `backend/app/api/runs.py` composes run, SSE, and action route modules. Policy and
 effects remain in application services. `bootstrap.py` is the composition root;
 capability construction receives its startup `ExitStack` for cleanup.
-- `frontend/src/styles.css` is the single import entry. Shared resets/tokens and
-  primitives live in `styles/base.css` and `styles/components.css`; feature sheets own
-  their selectors. Preserve responsive overrides and check cascade effects when moving
-  rules.
+- `frontend/src/styles.css` is the single import entry. Pinned B OpenTakeoff CSS
+  under `src/vendor/opentakeoff/` owns shell/chrome/Work presentation; `base.css`
+  bridges existing tokens. Remaining ThatOpen panels/tables/toolbars/viewport are
+  components, not an alternative shell. Feature sheets retain their selectors.
+  Preserve donor provenance, responsive behavior and cascade order; do not edit
+  verbatim donor copies casually. C's Drawing donor has separate provenance.
 
 ## PR and review policy
 

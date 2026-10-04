@@ -388,8 +388,14 @@ export const api = {
 };
 
 /** Binary downloads remain authenticated; bearer secrets are never put in URLs. */
-export async function readSource(path: string): Promise<Blob> {
-  const response = await fetch(apiUrl(path), { headers: requestHeaders() });
+export async function readSource(
+  path: string,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  const response = await fetch(apiUrl(path), {
+    headers: requestHeaders(),
+    ...(signal ? { signal } : {}),
+  });
   if (!response.ok) throw new APIError(response.status, "来源文件不可用");
   return response.blob();
 }

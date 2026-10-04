@@ -18,6 +18,13 @@ const stylesDir = fileURLToPath(new URL("../src/styles", import.meta.url));
 const basePath = join(stylesDir, "base.css");
 const base = readFileSync(basePath, "utf8");
 
+// The workspace look is vendored, not authored here: the OpenTakeoff donor
+// tokens sheet owns the values, and base.css aliases Concord's names onto it.
+const donorPath = join(stylesDir, "../vendor/opentakeoff/styles/tokens.css");
+const donor = readFileSync(donorPath, "utf8");
+const entryPath = join(stylesDir, "../styles.css");
+const entrySheet = readFileSync(entryPath, "utf8");
+
 function stylesheets(dir = stylesDir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
@@ -89,14 +96,6 @@ const planes = [
   "surface-workspace",
 ];
 
-/**
- * The approved shell uses thin separators and very close near-white planes, so
- * ordering matters more than a dramatic contrast jump. A 1.008 step is enough to
- * prevent two neighbouring tokens from collapsing to the same value while the
- * separator and spacing carry the structural boundary.
- */
-const PLANE_STEP = 1.008;
-
 /** Text may not fall below this on any plane it is allowed to land on. */
 const TEXT_FLOOR = 4.5;
 
@@ -122,30 +121,99 @@ test("the token scales keep one step per role", () => {
   }
 });
 
-test("the structural planes are ordered by recession and stay distinguishable", () => {
-  // The approved near-white shell uses a light value step together with one
-  // separator and spacing; this contract prevents plane order from drifting.
-  const values = planes.map((name) => luminance(hexToken(name)));
-  for (let index = 1; index < values.length; index += 1) {
-    const ratio = contrast(
-      hexToken(planes[index]),
-      hexToken(planes[index - 1]),
-    );
+test("the structural planes alias the vendored OpenTakeoff palette", () => {
+  // This assertion used to pin Concord's own plane ladder - --bg-app <
+  // --surface-nav < --surface-detail < --surface-list < --surface-chrome <
+  // --surface-workspace, each a light-but-real step from the next. The bridge at
+  // the end of base.css deliberately collapses that ladder: every structural
+  // plane is now an alias of the vendored donor's work plane, so the planes
+  // resolve to one value and a monotonic-ladder assertion no longer describes
+  // the design. What the contract holds now is the alias itself - each Concord
+  // plane must route through a donor token, and the donor sheet must own the
+  // value it points at.
+  for (const plane of planes) {
     assert.ok(
-      ratio >= PLANE_STEP,
-      `${planes[index]} to ${planes[index - 1]} is ${ratio.toFixed(3)}:1, below the ${PLANE_STEP}:1 plane step`,
+      base.includes(`--${plane}: var(--paper-bright);`),
+      `--${plane} must alias the vendored work plane --paper-bright`,
     );
   }
-  const workspace = luminance(hexToken("surface-workspace"));
+  // The alias set is declared once per theme scope on purpose: var() substitutes
+  // at computed-value time, so a single :root copy would not re-resolve for a
+  // descendant `[data-workspace-look]` scope. Pin the three scopes so a future
+  // edit cannot quietly drop the light or the dark copy.
+  const bridgeCopies = base.match(/--bg-app:\s*var\(--paper-bright\);/g) ?? [];
   assert.equal(
-    workspace,
-    Math.max(...values),
-    "the work plane must be the lightest structural plane on screen",
+    bridgeCopies.length,
+    3,
+    "the alias bridge must be declared under :root and both [data-workspace-look] scopes",
   );
-  assert.equal(
-    luminance(hexToken("bg-app")),
-    Math.min(...values),
-    "the window backdrop must be the dimmest structural plane",
+  for (const name of ["paper-bright", "paper-cream", "ink", "cobalt"]) {
+    assert.match(
+      donor,
+      new RegExp(`--${name}:\\s*#`),
+      `the vendored tokens.css must declare --${name}`,
+    );
+  }
+});
+
+test("base.css aliases Concord's surfaces, lines, text and accent onto the donor palette", () => {
+  // The two vocabularies do not overlap - Concord names versus donor names - so
+  // every Concord token that carries a palette value has to be re-pointed at a
+  // donor token or the surface keeps its old grey. The alias must reference the
+  // donor property (never copy a literal), and the donor must actually declare
+  // the property it points at, or the alias resolves to nothing.
+  const aliases = [
+    ["bg-app", "paper-bright"],
+    ["surface-inset", "paper-shadow"],
+    ["surface-nav", "paper-bright"],
+    ["surface-detail", "paper-bright"],
+    ["surface-list", "paper-bright"],
+    ["surface-chrome", "paper-bright"],
+    ["surface-workspace", "paper-bright"],
+    ["surface", "paper-bright"],
+    ["surface-elevated", "surface-pop"],
+    ["surface-search", "surface-pop"],
+    ["line", "ink-faint"],
+    ["line-soft", "ink-faint"],
+    ["line-float", "ink-faint"],
+    ["ink-2", "ink-soft"],
+    ["muted", "ink-muted"],
+    ["muted-2", "ink-muted"],
+    ["text-muted", "ink-muted"],
+    ["accent", "cobalt"],
+    ["primary", "cobalt"],
+    ["primary-hover", "cobalt-deep"],
+    ["on-primary", "accent-contrast"],
+    ["focus", "cobalt"],
+    ["hover", "paper-shadow"],
+    ["hover-strong", "tint-select"],
+  ];
+  for (const [concord, donorName] of aliases) {
+    assert.ok(
+      base.includes(`--${concord}: var(--${donorName});`),
+      `base.css must alias --${concord} onto the donor token --${donorName}`,
+    );
+    assert.match(
+      donor,
+      new RegExp(`--${donorName}:\\s*#`),
+      `--${concord} points at --${donorName}, which the vendored tokens.css does not declare`,
+    );
+  }
+});
+
+test("the vendored OpenTakeoff tokens are imported by the stylesheet entry", () => {
+  // The alias bridge only resolves because the donor sheet is loaded, and it only
+  // wins where the two define the same property because it is imported after
+  // base.css. styles.css has to keep that order.
+  const lines = entrySheet.split("\n").map((line) => line.trim());
+  const baseAt = lines.indexOf('@import "./styles/base.css";');
+  const donorAt = lines.findIndex((line) =>
+    /^@import "\.\/vendor\/opentakeoff\/styles\/tokens\.css";$/.test(line),
+  );
+  assert.ok(baseAt !== -1, "styles.css must still import base.css");
+  assert.ok(
+    donorAt > baseAt,
+    "styles.css must import the vendored OpenTakeoff tokens after base.css so the donor palette wins",
   );
 });
 

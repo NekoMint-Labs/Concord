@@ -9,9 +9,6 @@
  * white fill reads as a card on a page, which is the shape this direction
  * removed everywhere else.
  */
-.audit-list {
-  background: transparent;
-}
 .profile-summary {
   padding: var(--space-3);
   background: var(--surface-chrome);
@@ -33,20 +30,6 @@
   max-width: 400px;
   line-height: 1.6;
   color: var(--muted);
-}
-.audit-list > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  /* no horizontal inset: the row rules are the only separation, so the text
-     lines up with the table and the heading above it */
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--line-soft);
-  font-size: var(--fs-label);
-}
-.audit-list strong {
-  font-size: var(--fs-label);
-  font-weight: 500;
 }
 .operations-workspace {
   display: flex;

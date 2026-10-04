@@ -73,3 +73,22 @@ test("non-JSON proxy errors become readable API errors", async () => {
   );
   assert.equal(requestHeaders().Authorization, "Bearer contract-only-secret");
 });
+
+
+test("revision-byte reads stay authenticated and support disposal cancellation", async () => {
+  const { readSource } = await import("../src/api/client.ts");
+  const abort = new AbortController();
+  const path = "/api/projects/p/sources/s/revisions/r/content";
+  globalThis.fetch = async (url, init) => {
+    assert.equal(url, path);
+    assert.equal(init.headers.Authorization, "Bearer contract-only-secret");
+    assert.equal(init.signal, abort.signal);
+    return new Response("exact revision bytes");
+  };
+  assert.equal(await (await readSource(path, abort.signal)).text(), "exact revision bytes");
+  abort.abort();
+  globalThis.fetch = async (_url, init) => {
+    init.signal.throwIfAborted();
+  };
+  await assert.rejects(readSource(path, abort.signal), { name: "AbortError" });
+});

@@ -1,11 +1,11 @@
 # Agent and revision-import integration (Issue #9)
 
-This follows PR #12's immutable source/baseline contracts. Platform work is developed
-and reviewed on top of that contract branch without waiting for its merge. The
-follow-up declares its dependency so maintainers can merge in order. Issue #10 owns
-the startup/workspace UI, and Issue #11 owns persisted revision BIM snapshots,
-normalized IFC comparisons and source-level WP bindings; their joint acceptance
-is separate from review of this platform contribution.
+This retains the Issue #9 Agent/import API contract and its historical platform
+qualification. The opening branch dependencies and later native results are milestone
+history, not current B/C acceptance. [PRODUCT_WORKFLOW](PRODUCT_WORKFLOW.md) owns
+current startup/product behavior; [ENGINEERING_COORDINATION](ENGINEERING_COORDINATION.md)
+owns later Finding/ReCheck semantics. [VERIFICATION](../VERIFICATION.md) scopes all
+qualification: the dirty B shell and pending PR22 viewers have no final acceptance.
 
 ## Interaction APIs
 
@@ -150,14 +150,15 @@ the original upload, not parsing success: use the linked run/result for that.
 Import does not accept a baseline or create WP bindings. Historic per-revision
 BIM indexes and comparisons remain C's responsibility.
 
-## Desktop and verification
+## Desktop and historical platform verification
 
 The desktop profile starts without demo seeding and defaults to IfcOpenShell.
 `uv sync --frozen --group dev --extra desktop` includes the IFC SDK, and the
 sidecar build includes it without `--feature` or `CCA_BIM` switches. Existing
 demo regression scripts now opt into their synthetic data explicitly. Local
 development's existing demo default is retained; the product desktop default is
-empty. B's startup/project selection UI is needed to complete that product flow.
+empty. B's startup/project selection behavior is now described in PRODUCT_WORKFLOW;
+that implemented UI does not establish acceptance of the pending PR22 integration.
 The HTTP host explicitly serves module workers as JavaScript and WASM as
 `application/wasm`, independent of Windows file-type associations.
 

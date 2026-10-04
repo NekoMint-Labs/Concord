@@ -64,14 +64,6 @@
   overflow-wrap: anywhere;
   font-size: var(--fs-meta);
 }
-.sources-history {
-  margin-top: var(--space-5);
-  font-size: var(--fs-meta);
-}
-.sources-history > summary {
-  color: var(--muted);
-  cursor: pointer;
-}
 .sources-history .baseline-register {
   margin-top: var(--space-3);
 }
