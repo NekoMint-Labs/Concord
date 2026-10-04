@@ -5,6 +5,7 @@ import tempfile
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
+from app.adapters.engineering_cache import ids_cache_key
 from app.adapters.engineering_results import IDSValidationResult, IDSViolation
 from app.domain.errors import CapabilityUnavailable, DomainError, ProviderError
 
@@ -111,13 +112,22 @@ class IfcTesterAdapter:
             raise
         except Exception as exc:
             raise ProviderError("IfcTester could not validate the selected IFC revision") from exc
+        engine_version = _version("ifctester")
+        source_hash = hashlib.sha256(ifc_content).hexdigest()
+        requirements_hash = hashlib.sha256(xml_content).hexdigest()
         return IDSValidationResult(
             source_id=source_id,
             source_revision_id=source_revision_id,
-            source_hash=hashlib.sha256(ifc_content).hexdigest(),
-            requirements_hash=hashlib.sha256(xml_content).hexdigest(),
+            source_hash=source_hash,
+            requirements_hash=requirements_hash,
+            cache_key=ids_cache_key(
+                source_hash=source_hash,
+                requirements_hash=requirements_hash,
+                engine="ifctester",
+                engine_version=engine_version,
+            ),
             engine="ifctester",
-            engine_version=_version("ifctester"),
+            engine_version=engine_version,
             specifications=total,
             passed_specifications=total - failed - skipped,
             skipped_specifications=skipped,

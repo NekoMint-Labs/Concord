@@ -74,6 +74,8 @@ class IDSValidationResult(Model):
     source_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     requirements_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     validated_at: AwareDatetime = Field(default_factory=utcnow)
+    # Optional for hand-built adapter fixtures; real IfcTester results populate it.
+    cache_key: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     engine: str
     engine_version: str
     specifications: int

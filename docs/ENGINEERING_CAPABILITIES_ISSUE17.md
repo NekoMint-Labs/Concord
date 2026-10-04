@@ -574,3 +574,28 @@ registration/cancellation/publication, and product composition. A proposed clash
 representation must preserve both authoritative source revisions and byte hashes
 without weakening ReCheck freshness validation; no shared-field change is made
 here.
+
+### October 4 IDS cache identity continuation
+
+The engineering adapter now derives a stable cache identity for each bounded
+calculation. Canonical serialization sorts parameter-map keys, preserves the
+order of source hashes because paired inputs have distinct roles, and rejects
+non-finite JSON values. IDS identities include the exact requirements-document
+SHA-256 in addition to the IFC source hash, engine name and engine version; a
+requirements-file change therefore cannot reuse an earlier validation result.
+The `cache_key` is optional on hand-built result fixtures for compatibility, but
+real `IfcTesterAdapter` results populate it from the validated bytes and engine
+metadata. This key remains an adapter-boundary identity. It is not a replacement
+for A's persisted derived-artifact key or publication contract.
+
+Validation for this continuation: 45 focused backend tests passed, including the
+new canonicalization, ordered-source, requirements-hash, non-finite-parameter and
+real IfcTester cache-identity checks. Existing adapter, IDS mapping and SQLite
+publication tests passed in the same run; only the repository's existing FastAPI
+and Starlette deprecation warnings were reported.
+
+The remaining integration points are unchanged. A still owns versioned job
+configuration, cancellation/run fencing, durable cache/publication and re-check
+integration. The dual-source clash evidence shape requires agreement with A, and
+B still owns the BIM ViewerTarget product composition. No domain, port, API,
+schema, bootstrap, workflow or dependency files were changed here.
