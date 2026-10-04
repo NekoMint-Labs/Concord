@@ -12,12 +12,12 @@ completed product composition.
 Import only the active surface through a lazy boundary. Do not mount inactive
 viewers hidden in the DOM or import SDKs into the product host.
 
-| Target kind | Lazy surface | Source input | Target prop |
-| --- | --- | --- | --- |
-| `drawing` | `viewers/drawing/DrawingSurface` | `source: DrawingSource` | Generated `DrawingTarget` |
-| `cad` | `viewers/cad/CadSurface` | `before: CadSource`, optional `after` for comparison | Generated `CadTarget` |
-| `bim` | `viewers/ifc/IfcSurface` | Stable `sources: readonly IfcSource[]` | Generated `BimTarget` |
-| `document` | `viewers/document/DocumentSurface` | `source: ExtractedDocument` | Generated `DocumentTarget` |
+| Target kind | Lazy surface                       | Source input                                         | Target prop                |
+| ----------- | ---------------------------------- | ---------------------------------------------------- | -------------------------- |
+| `drawing`   | `viewers/drawing/DrawingSurface`   | `source: DrawingSource`                              | Generated `DrawingTarget`  |
+| `cad`       | `viewers/cad/CadSurface`           | `before: CadSource`, optional `after` for comparison | Generated `CadTarget`      |
+| `bim`       | `viewers/ifc/IfcSurface`           | Stable `sources: readonly IfcSource[]`               | Generated `BimTarget`      |
+| `document`  | `viewers/document/DocumentSurface` | `source: ExtractedDocument`                          | Generated `DocumentTarget` |
 
 The host retains `Evidence.id`, `source_id`, `source_revision_id`, integrity hash
 (`source_revision`) and `viewer_target`. Resolve the requested persisted revision
@@ -116,3 +116,25 @@ raw donor output and warnings with the artifact; canonical `Change` has no
 limitations field. Empty output does not authorize a Finding or ReCheck decision.
 The isolated Golden browser harness qualifies this mapping; product invocation
 and persistent publication have not been delivered.
+
+## PDF Change normalization
+
+`viewers/drawing/pdfChangeMapping.mapPdfChanges` converts a validated PDF
+comparison into page-level canonical `Change` drafts for the later viewer host.
+The adapter carries the complete ordered revision/hash pair and immutable
+operation context supplied by the trusted caller. A modified page points to the
+later revision; inserted and removed pages point to their own revision. Visual,
+page-order, page-size and page-presence aspects are explicit, and changed boxes
+are mapped from the cropped/aligned raster into normalized full-page coordinates.
+
+`pdfChangeValidation` rejects stale or mismatched engine identities, incomplete
+page assignments, invalid source dimensions, crop contradictions, non-finite or
+out-of-bounds regions, contradictory statistics and oversized results. The mapper
+keeps raw artifacts outside the canonical `Change` and never writes Evidence,
+Findings or ReCheck state. It therefore remains a C-owned adapter qualification,
+not A's trusted dual-source runtime or B's `EvidenceWorkspaceHost` integration.
+
+The PDF surface exposes the generated `DrawingTarget` for reopening a mapped
+page. A missing revision or navigation failure must remain visible through the
+surface error callback; the harness clears the prior diff status before opening
+the mapped target so an old comparison result cannot appear to be a new one.

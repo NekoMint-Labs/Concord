@@ -1,8 +1,18 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { resolve } from "node:path";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import type { PdfCanonicalChange } from "../../src/viewers/drawing/pdfChangeMapping";
+async function mappedChanges(page: Page): Promise<PdfCanonicalChange[]> {
+  return page.evaluate(() =>
+    (
+      window as unknown as {
+        mapPdfComparison: () => Promise<PdfCanonicalChange[]>;
+      }
+    ).mapPdfComparison(),
+  );
+}
 const fixture = (revision: string, file = "structural-drawing.pdf") =>
   resolve("../fixtures/coordination-project", revision, file);
 async function sources(page: Page, later = fixture("R2")) {
@@ -58,6 +68,35 @@ test("Golden PDF comparison runs off-thread, caches and releases workers", async
   expect(first.cacheHit).toBe(false);
   expect(first.pages[0].boxes).toBeGreaterThan(0);
   expect(first.pages[0].words).toBeGreaterThan(0);
+  const changes = await mappedChanges(page);
+  expect(changes).toHaveLength(1);
+  expect(changes[0]).toMatchObject({
+    kind: "changed",
+    project_id: "qualification-project",
+    source_id: "qualification-pdf",
+    from_revision_id: "before:structural-drawing.pdf",
+    to_revision_id: "after:structural-drawing.pdf",
+    subject: {
+      kind: "drawing",
+      page: 1,
+      source_revision_id: "after:structural-drawing.pdf",
+    },
+  });
+  expect(
+    changes[0].subject.kind === "drawing" && changes[0].subject.normalized_bbox,
+  ).toHaveLength(4);
+  writeFileSync(
+    resolve("../.verification-work/pdf-golden-changes.json"),
+    JSON.stringify(changes),
+  );
+  console.log(
+    "PDF Golden comparison timings",
+    JSON.stringify({
+      elapsedMs: first.elapsedMs,
+      changedPixels: first.changedPixels,
+      target: changes[0].subject,
+    }),
+  );
   const state = await page.evaluate(
     () =>
       (
@@ -73,6 +112,7 @@ test("Golden PDF comparison runs off-thread, caches and releases workers", async
   const second = await compare(page);
   expect(second.cacheHit).toBe(true);
   expect(second.changedPixels).toBe(first.changedPixels);
+  expect(await mappedChanges(page)).toEqual(changes);
   expect(
     await page.evaluate(
       () =>
@@ -85,6 +125,21 @@ test("Golden PDF comparison runs off-thread, caches and releases workers", async
     path: "test-results/drawing/golden-pdf-diff.png",
     fullPage: true,
   });
+  await page.evaluate(
+    (target) =>
+      (
+        window as unknown as {
+          reopenPdfChange: (target: PdfCanonicalChange["subject"]) => void;
+        }
+      ).reopenPdfChange(target),
+    changes[0].subject,
+  );
+  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.getByLabel("Requested source region")).toBeVisible();
+  await expect(page.getByTestId("viewer-failure")).toHaveText("none");
+  await page
+    .getByRole("region", { name: "Drawing viewer", exact: true })
+    .screenshot({ path: "test-results/drawing/mapped-pdf-change.png" });
 });
 test("unchanged source produces zero difference", async ({ page }) => {
   await sources(page, fixture("R1"));
@@ -92,6 +147,7 @@ test("unchanged source produces zero difference", async ({ page }) => {
   expect(result.changedPixels).toBe(0);
   expect(result.added).toEqual([]);
   expect(result.deleted).toEqual([]);
+  expect(await mappedChanges(page)).toEqual([]);
 });
 test("full-page mask suppresses pixel and word highlights", async ({
   page,
@@ -117,11 +173,15 @@ test("full-page mask suppresses pixel and word highlights", async ({
   expect(result.changedPixels).toBe(0);
   expect(result.pages[0].words).toBe(0);
   expect(result.pages[0].boxes).toBe(0);
+  expect(await mappedChanges(page)).toEqual([]);
 });
 test("crop and inserted pages are explicit", async ({ page }) => {
   await sources(page, fixture("R1", "specification.pdf"));
   const result = await compare(page);
   expect(result.added).toHaveLength(1);
+  expect(
+    (await mappedChanges(page)).filter((change) => change.kind === "added"),
+  ).toHaveLength(1);
   await sources(page);
   await page.getByLabel("Diff options").fill(
     JSON.stringify({

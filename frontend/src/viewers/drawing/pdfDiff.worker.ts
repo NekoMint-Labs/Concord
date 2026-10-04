@@ -10,6 +10,7 @@ import type {
   DrawingSource,
   PdfDiffArtifact,
   PdfDiffOptions,
+  PdfSheetSize,
 } from "./pdfDiffTypes";
 const post = self.postMessage as (message: unknown) => void;
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -62,9 +63,27 @@ self.onmessage = async ({
       throw new Error("PDF diff is limited to 100 pages per source");
     const engine = new PDFDiffViewer({}, { ...options, workerSrc: workerUrl });
     const mappings = await engine._findPageMappings(before, after);
+    const sizes = async (
+      document: pdfjs.PDFDocumentProxy,
+    ): Promise<PdfSheetSize[]> => {
+      const pages: PdfSheetSize[] = [];
+      for (let number = 1; number <= document.numPages; number++) {
+        const page = await document.getPage(number);
+        const { width, height } = page.getViewport({ scale: 1 });
+        if (
+          ![width, height].every(
+            (value) => Number.isFinite(value) && value > 0 && value <= 100000,
+          )
+        )
+          throw new Error("PDF source page dimensions are unsupported");
+        pages.push({ width, height });
+      }
+      return pages;
+    };
     const artifact: PdfDiffArtifact = {
       engine: PDF_DIFF_ENGINE,
       sourceHashes: [hashes[0], hashes[1]],
+      sourcePages: await Promise.all([sizes(before), sizes(after)]),
       options,
       pages: [],
       addedPages: [],

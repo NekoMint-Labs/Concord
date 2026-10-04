@@ -4,14 +4,14 @@ Current work uses the fork branch `feat/17-engineering-capabilities-rebased`, ba
 
 ## Implemented and locally qualified
 
-| Area | Delivered boundary | Evidence |
-| --- | --- | --- |
-| Documents | Existing Docling adapter extended to Office/XLSX, structured CSV, and opt-in image OCR. Table cells retain sheet/group ancestry, row/column addresses, spans, header flags, original source hash, and donor location. | Real Golden XLSX: 22 cells from two sheets. Real DOCX: instruction paragraphs and table cells. Boundary and archive tests. |
-| Targeted clash | Published IfcClash 0.8.5 runs intersection/collision/clearance and donor selectors. Results retain both source identities/revisions, GlobalIds, location, engine version and timing. Byte/result limits reject overflow. | Real intersection story: R1 = 0 clashes, R2 = 1, R3 = 0. Real collision and clearance tests. |
-| IDS | Published IfcTester 0.8.5 produces structured violations and specification counts. Schema-skipped specifications are separated from passes. Missing required applicability is reported as a violation. | Real naming failure, missing required element, schema skip, and Golden discipline checks. |
-| BCF | Published bcf-client 0.8.5 transports BCF 2.1 viewpoints with selected GlobalIds, perspective/orthogonal cameras, snapshot bytes, clipping planes, topic/viewpoint IDs and comments. | Exact camera, snapshot and comment round trips; invalid camera/archive tests. |
+| Area           | Delivered boundary                                                                                                                                                                                                            | Evidence                                                                                                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Documents      | Existing Docling adapter extended to Office/XLSX, structured CSV, and opt-in image OCR. Table cells retain sheet/group ancestry, row/column addresses, spans, header flags, original source hash, and donor location.         | Real Golden XLSX: 22 cells from two sheets. Real DOCX: instruction paragraphs and table cells. Boundary and archive tests.                                                |
+| Targeted clash | Published IfcClash 0.8.5 runs intersection/collision/clearance and donor selectors. Results retain both source identities/revisions, GlobalIds, location, engine version and timing. Byte/result limits reject overflow.      | Real intersection story: R1 = 0 clashes, R2 = 1, R3 = 0. Real collision and clearance tests.                                                                              |
+| IDS            | Published IfcTester 0.8.5 produces structured violations and specification counts. Schema-skipped specifications are separated from passes. Missing required applicability is reported as a violation.                        | Real naming failure, missing required element, schema skip, and Golden discipline checks.                                                                                 |
+| BCF            | Published bcf-client 0.8.5 transports BCF 2.1 viewpoints with selected GlobalIds, perspective/orthogonal cameras, snapshot bytes, clipping planes, topic/viewpoint IDs and comments.                                          | Exact camera, snapshot and comment round trips; invalid camera/archive tests.                                                                                             |
 | Golden sources | Nineteen original synthetic files (including standard perspective/orthogonal BCF sources), committed with SHA-256 manifest. Deterministic IFC identities, Office metadata, PDF metadata, DXF ordering and archive timestamps. | IFC schema validation, real imports/IfcDiff, targeted clash, Docling extraction; all 19 sources reproduced byte-for-byte (the two BCF archives are separately qualified). |
-| Startup | Adapter module imports do not initialize or import engineering SDKs. New capability rows report dependency presence while disabled. | A subprocess verifies that IFC/BCF/Docling/OCR engines remain absent after adapter imports. |
+| Startup        | Adapter module imports do not initialize or import engineering SDKs. New capability rows report dependency presence while disabled.                                                                                           | A subprocess verifies that IFC/BCF/Docling/OCR engines remain absent after adapter imports.                                                                               |
 
 IfcDiff remains at 0.8.5. The existing GUID-aware normalization/workaround and That Open Engine viewer are preserved. Golden IFC comparison verifies the changed beam/duct geometry; it does not claim that upstream relationship comparison has no additional noise.
 
@@ -345,7 +345,6 @@ and whitespace checks passed. Focused native staging Pyright reported zero
 errors. The cached page-2 native text screenshot was inspected. These results
 do not supersede the full-repository check limitations above.
 
-
 ### October 3 native fragment ModelTree continuation
 
 Cold ModelTree preparation now consumes native fragment hierarchy, metadata,
@@ -396,7 +395,6 @@ samples were IFC 1011.8 ms cold / 364.2 ms warm and Drawing 1415.1 ms cold /
 126.4 ms warm; parser/index diagnostic assertions passed. Previously recorded
 full-repository Pyright/formatting and native/license limitations remain.
 
-
 ### October 3 CAD render-data reuse
 
 - Thirty-seven focused snapshot/worker lifecycle tests passed, including six
@@ -435,9 +433,7 @@ that `Evidence.source_revision` must carry the source SHA-256 while
 `source_revision_id` remains the formal engineering revision identity. Persistent
 mapping waits for A's contract/runtime seam. Issue #17 is not ready to be marked complete.
 
-
 Connector boundary continuation on October 3, 2026: the staging adapter now exposes deterministic host capability descriptors and rejects unknown hosts before extension policy evaluation. Twenty connector tests and nineteen resource-limit tests passed with a repository-local temporary directory; Ruff and changed-file Pyright passed after formatting.
-
 
 ### October 3 CAD cache invalidation continuation
 
@@ -468,7 +464,6 @@ composition file is changed. Frontend dependencies were restored offline with
 pnpm 10.17.1 and the existing frozen lockfile. GitHub API review metadata could
 not be refreshed because its TLS certificate did not match api.github.com.
 The review/merge state must be rechecked before shared integration proceeds.
-
 
 ### October 3 CAD navigation and cleanup continuation
 
@@ -515,7 +510,6 @@ reused local dependency tree missing `pdfjs-dist`; TypeScript reported only thos
 two unresolved imports. No package manifest or lockfile was changed. PR #21
 remains Draft and Issue #17 remains incomplete pending the remaining integration
 and acceptance work.
-
 
 ### October 3 IDS publication mapping continuation
 
@@ -604,7 +598,6 @@ integration. The dual-source clash evidence shape requires agreement with A, and
 B still owns the BIM ViewerTarget product composition. No domain, port, API,
 schema, bootstrap, workflow or dependency files were changed here.
 
-
 ### October 4 canonical DrawingTarget continuation
 
 `DrawingSurface.target` now consumes the generated `DrawingTarget`, matching the
@@ -639,7 +632,6 @@ It does not change product composition, generated schemas, dependencies, shared
 contracts or runtime ownership. Canonical BIM/Document targets, remaining engine output
 publication and the integration/acceptance items listed above remain outstanding.
 
-
 ### October 4 required SDK lane correction
 
 The first #22 backend CI run exposed a test placement error: the real IfcTester
@@ -659,7 +651,6 @@ An isolated frozen environment matching the lightweight backend lane (models/tel
 without BIM) ran the four cache unit tests successfully and explicitly skipped the
 optional real IfcTester test. That skip is not engine qualification; the separate
 BIM-enabled seven-test required suite and no-skip gate provide that evidence.
-
 
 ### October 4 canonical DocumentTarget continuation
 
@@ -691,7 +682,6 @@ C can proceed with GlobalId navigation without inventing a shared camera meaning
 This continuation changes no generated schema, shared contract, dependency,
 workflow or B-owned product composition. Canonical BIM navigation and the other
 remaining #17 acceptance items are still open; #22 remains Draft.
-
 
 ### October 4 canonical BIM GlobalId navigation continuation
 
@@ -746,7 +736,6 @@ remaining output publication/providers, dual-source clash/ReCheck, versioned IDS
 native connectors, large-model/native and integrated Golden acceptance remain open.
 No shared domain/port/API/schema, workflow, dependency or B-owned composition file
 changed. #22 remains Draft and #17 remains incomplete.
-
 
 ### October 4 A/B-confirmed Evidence host and clash continuation
 
@@ -806,7 +795,6 @@ versioned IDS selection and provider registration. C must consume those extensio
 when they land. B still owns the actual host/product integration. Native connector,
 large-model/native and integrated Golden acceptance remain open; #22 stays Draft.
 
-
 The expanded browser regression found CAD qualification cases still using the
 pre-canonical target fields. They now use generated CadTarget field names while
 retaining absent-entity, layer, exact-revision, null/optional-hint and reopen
@@ -862,3 +850,31 @@ remain available to that caller; a `Change` has no limitations field. B still
 owns host mounting. PDF normalization, formal dual-source ReCheck/IDS runtime,
 native connectors, large-model/native acceptance and the integrated Golden
 scenario remain outstanding. #17 is incomplete and #22 remains Draft.
+
+### October 4 canonical PDF Change continuation
+
+The C-owned PDF adapter now normalizes the pinned `pdf-diff-viewer` result into
+page-level canonical `Change` drafts. Mapping preserves the ordered before/after
+revision IDs and full SHA-256 source hashes, records the detector engine/version
+and immutable operation identity, and emits explicit page-presence, page-order,
+page-size and visual-difference aspects. Modified pages target the later source
+revision; added and deleted pages target the corresponding revision. PDF boxes
+are converted from cropped/aligned raster coordinates into bounded normalized
+page coordinates using the full source page dimensions.
+
+The mapper validates the complete page partition, engine/version, revision/hash
+pair, options, page dimensions, crop bounds, assignments, raster statistics,
+regions, and publication limits before producing output. It retains no PDF bytes,
+overlays or donor objects in the canonical record. Mapping is deterministic for
+an identical operation and artifact, but it remains an adapter draft: it does not
+invoke A's trusted dual-source ReCheck runtime, persist an Evidence record, or
+make a Finding/closure decision. B's `EvidenceWorkspaceHost` product mounting
+is also outside this change.
+
+The focused mapping, validation and snapshot suite passes 73 tests with scoped
+module coverage previously measured at 100% for statements, branches, functions
+and lines. The existing Golden PDF browser scenario produced the expected
+canonical Change; the follow-up reopen assertion also clears stale comparison
+status in the test harness. Full local browser/typecheck reruns remain dependent
+on restoring the project PDF/browser dependency tree after an interrupted local
+install. CI must requalify the complete branch before review.

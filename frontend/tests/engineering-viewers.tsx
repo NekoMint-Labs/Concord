@@ -1,6 +1,8 @@
 import { lazy, Suspense, useState, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { sha256 } from "../src/viewers/drawing/pdfDiffValidation";
+import { mapPdfChanges } from "../src/viewers/drawing/pdfChangeMapping";
+import type { DrawingTarget } from "../src/viewers/drawing/drawingContract";
 import { mapCadChanges } from "../src/viewers/cad/cadChangeMapping";
 import { comparePdfRevisions } from "../src/viewers/drawing/pdfDiffAdapter";
 import type {
@@ -24,6 +26,7 @@ function Harness() {
   const [viewerFailure, setViewerFailure] = useState<string | null>(null);
   const [drawingTarget, setDrawingTarget] =
     useState<import("../src/viewers/drawing/drawingContract").DrawingTarget>();
+  const [drawingSource, setDrawingSource] = useState<DrawingSource>();
   const [before, setBefore] = useState<DrawingSource>();
   const [after, setAfter] = useState<DrawingSource>();
   const [view, setView] = useState("none");
@@ -59,6 +62,7 @@ function Harness() {
     if (side === "before") setBefore(source);
     else setAfter(source);
     setView("none");
+    setDrawingSource(undefined);
     setResult(undefined);
   };
   return (
@@ -131,7 +135,13 @@ function Harness() {
         Navigate BIM
       </button>
       <pre data-testid="viewer-failure">{viewerFailure ?? "none"}</pre>
-      <button disabled={!before} onClick={() => setView("drawing")}>
+      <button
+        disabled={!before}
+        onClick={() => {
+          setDrawingSource(undefined);
+          setView("drawing");
+        }}
+      >
         Open drawing
       </button>
       <button
@@ -228,7 +238,7 @@ function Harness() {
         )}
         {view === "drawing" && before && (
           <Drawing
-            source={before}
+            source={drawingSource ?? before}
             onError={setViewerFailure}
             target={drawingTarget}
             onAnnotations={setAnnotations}
@@ -240,7 +250,34 @@ function Harness() {
             before={before}
             after={after}
             options={options}
-            onResult={setResult}
+            onResult={(comparison) => {
+              setResult(comparison);
+              Object.assign(window, {
+                mapPdfComparison: () =>
+                  mapPdfChanges(comparison, {
+                    projectId: "qualification-project",
+                    sourceId: "qualification-pdf",
+                    operationId: "golden-pdf-comparison",
+                    before,
+                    after,
+                    observedAt: "2026-10-04T09:00:00.000Z",
+                  }),
+                reopenPdfChange: (target: DrawingTarget) => {
+                  const source = [before, after].find(
+                    (source) => source.revisionId === target.source_revision_id,
+                  );
+                  if (!source)
+                    throw new Error(
+                      "Mapped PDF target revision is unavailable",
+                    );
+                  setResult(undefined);
+                  setViewerFailure(null);
+                  setDrawingSource(source);
+                  setDrawingTarget(target);
+                  setView("drawing");
+                },
+              });
+            }}
           />
         )}
         {view === "cad" && before && (

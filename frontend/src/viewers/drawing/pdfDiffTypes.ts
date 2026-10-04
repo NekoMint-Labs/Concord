@@ -41,9 +41,15 @@ export interface PdfDiffPage {
   alignment: { dx: number; dy: number };
   similarity?: number;
 }
+/** Full page viewports at scale 1, before crop/padding/alignment. */
+export interface PdfSheetSize {
+  width: number;
+  height: number;
+}
 export interface PdfDiffArtifact {
   engine: string;
   sourceHashes: [string, string];
+  sourcePages: [PdfSheetSize[], PdfSheetSize[]];
   options: Required<PdfDiffOptions>;
   pages: PdfDiffPage[];
   addedPages: number[];
@@ -57,4 +63,4 @@ export interface PdfDiffResult {
   cacheHit: boolean;
 }
 export const PDF_DIFF_ENGINE =
-  "pdf-diff-viewer@96af1ce5caa0b27b3b4a2e14ef3c16aed0842170/pdfjs@4.10.38/concord-worker-v1";
+  "pdf-diff-viewer@96af1ce5caa0b27b3b4a2e14ef3c16aed0842170/pdfjs@4.10.38/concord-worker-v2";

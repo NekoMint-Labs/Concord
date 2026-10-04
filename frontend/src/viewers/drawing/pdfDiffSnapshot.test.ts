@@ -43,6 +43,10 @@ it("binds verification, worker input and cache to the same immutable bytes and o
               engine: PDF_DIFF_ENGINE,
               sourceHashes: [input.before.sourceHash, input.after.sourceHash],
               options: normalizeOptions(input.options),
+              sourcePages: [
+                [{ width: 10, height: 10 }],
+                [{ width: 10, height: 10 }],
+              ],
               pages: [],
               addedPages: [],
               deletedPages: [],

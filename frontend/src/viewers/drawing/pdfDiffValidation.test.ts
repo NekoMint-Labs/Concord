@@ -91,6 +91,7 @@ describe("PDF worker boundary", () => {
     const artifact = {
       engine: PDF_DIFF_ENGINE,
       options: normalizeOptions(),
+      sourcePages: [[], []] as [[], []],
       sourceHashes: ["a", "b"] as [string, string],
       pages: [],
       addedPages: [],
