@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { CadController, CadTarget } from "../../src/viewers/cad/cadTypes";
 import { resolve } from "node:path";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+import type { CanonicalChange } from "../../src/viewers/cad/cadChangeMapping";
 const fixture = (revision: string) =>
   resolve(
     "../fixtures/coordination-project",
@@ -10,7 +11,7 @@ const fixture = (revision: string) =>
   );
 test("Golden DXF opens and compares with the mature donor", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.addInitScript(() => {
     Object.assign(window, { cadTimings: [] });
     window.addEventListener("concord-cad-timing", (event) => {
@@ -61,6 +62,46 @@ test("Golden DXF opens and compares with the mature donor", async ({
         change.sourceRevisionId && change.sourceHash.length === 64,
     ),
   ).toBe(true);
+  const normalized = await page.evaluate(async () =>
+    (
+      window as unknown as {
+        mapCadComparison: () => Promise<CanonicalChange[]>;
+      }
+    ).mapCadComparison(),
+  );
+  expect(normalized.length).toBeGreaterThan(0);
+  expect(normalized).toHaveLength(
+    result.changes.filter(
+      (change: { kind: string; sourceRevisionId: string }) =>
+        change.kind !== "modified" ||
+        change.sourceRevisionId.startsWith("after:"),
+    ).length,
+  );
+  expect(
+    normalized.every(
+      (change) =>
+        change.project_id === "qualification-project" &&
+        change.source_id === "qualification-cad" &&
+        change.from_revision_id === "before:structural-drawing.dxf" &&
+        change.to_revision_id === "after:structural-drawing.dxf" &&
+        change.subject.kind === "cad" &&
+        change.subject.source_revision_id.startsWith(
+          change.kind === "deleted" ? "before:" : "after:",
+        ),
+    ),
+  ).toBe(true);
+  const retry = await page.evaluate(async () =>
+    (
+      window as unknown as {
+        mapCadComparison: () => Promise<CanonicalChange[]>;
+      }
+    ).mapCadComparison(),
+  );
+  expect(retry).toEqual(normalized);
+  await writeFile(
+    testInfo.outputPath("canonical-cad-changes.json"),
+    JSON.stringify(normalized, null, 2),
+  );
   const changed = result.changes.find(
     (change: { kind: string; sourceRevisionId: string }) =>
       change.kind === "modified" &&

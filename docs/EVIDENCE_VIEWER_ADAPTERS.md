@@ -88,3 +88,31 @@ presentation and integrated Golden acceptance. C supplies the tested surfaces,
 canonical navigation and failure callbacks. A supplies the formal dual-source
 clash/ReCheck and selected IDS requirements fields and their durable fencing.
 These coordination confirmations do not constitute final review approval.
+
+## CAD comparison normalization
+
+`viewers/cad/cadChangeMapping.mapCadChanges(comparison, context)` returns the
+existing generated `Change[]` as drafts. `CadSurface.onComparison` retains its
+C-owned result type and now supplies ordered `revisionIds` and `sourceHashes`,
+including for empty output. No SDK types or new canonical contracts are exposed.
+
+The trusted caller supplies project/source IDs, an immutable operation ID,
+`before`/`after` revision/hash identities and a stable UTC `observedAt`. An
+optional `rawArtifactKey` must identify the caller's retained artifact; the mapper
+does not persist one. Input identities must match the result exactly. Do not
+supply a new timestamp or operation identity for a retry. Native source buffers
+are not required by mapping.
+
+A reciprocal modified pair becomes one `changed` record targeting the later
+revision; added records target the later revision and deleted records the earlier
+one. Targets retain layer and finite native extents where available, including
+zero-width LINE/POINT bounds. Contradictory provenance/pairs, duplicate handles
+and oversized publications throw explicitly. The caller must surface that
+failure rather than presenting partial output.
+
+The mapper verifies adapter consistency, not persisted ownership or runtime
+freshness. A's trusted publisher and execution path retain those checks. Keep
+raw donor output and warnings with the artifact; canonical `Change` has no
+limitations field. Empty output does not authorize a Finding or ReCheck decision.
+The isolated Golden browser harness qualifies this mapping; product invocation
+and persistent publication have not been delivered.

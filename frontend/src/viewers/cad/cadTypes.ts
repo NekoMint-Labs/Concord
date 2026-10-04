@@ -1,6 +1,9 @@
 import type { components } from "../../api/schema";
 import type { DrawingSource } from "../drawing/pdfDiffTypes";
 
+export const CAD_ENGINE =
+  "mlightcad@250533a861e9fa1feca739b6783286ed4e91674a/data-model@1.15.1/concord-snapshots-v2";
+
 export type CadTarget = components["schemas"]["CadTarget"];
 export type CadSource = DrawingSource & { name: string };
 export interface CadChangeCandidate {
@@ -16,6 +19,8 @@ export interface CadChangeCandidate {
 }
 export interface CadComparison {
   engine: string;
+  revisionIds: [string, string];
+  sourceHashes: [string, string];
   changes: CadChangeCandidate[];
   warnings: string[];
 }

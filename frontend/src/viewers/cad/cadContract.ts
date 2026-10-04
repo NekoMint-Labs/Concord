@@ -1,8 +1,10 @@
 import type { CadNavigation, CadSource, CadTarget } from "./cadTypes";
 import { validateCadTarget } from "./cadValidation";
 
+type CadSourceIdentity = Pick<CadSource, "revisionId" | "sourceHash">;
+
 function loadedSource(
-  sources: readonly (CadSource | undefined)[],
+  sources: readonly (CadSourceIdentity | undefined)[],
   revisionId: string,
 ) {
   const source = sources.find(
@@ -14,7 +16,7 @@ function loadedSource(
 
 export function toCadNavigation(
   target: CadTarget,
-  sources: readonly (CadSource | undefined)[],
+  sources: readonly (CadSourceIdentity | undefined)[],
 ): CadNavigation {
   if (target.kind != null && target.kind !== "cad")
     throw new Error("Viewer target is not a CAD target");
@@ -43,7 +45,7 @@ export function toCadNavigation(
 
 export function toCadTarget(
   navigation: CadNavigation,
-  sources: readonly (CadSource | undefined)[],
+  sources: readonly (CadSourceIdentity | undefined)[],
 ): CadTarget {
   const source = loadedSource(sources, navigation.sourceRevisionId);
   validateCadTarget(navigation);

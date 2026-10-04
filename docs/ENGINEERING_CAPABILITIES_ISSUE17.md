@@ -48,8 +48,10 @@ The C-owned lazy surfaces now include:
   locked Three 0.172.0 runtime. The original diff widget is vendored; its donor
   matching/classification logic is preserved through a recorded snapshot seam
   and invoked in a worker over the native render database's derived data. Only DXF is accepted; no DWG converter is installed/registered.
-  Model-space results are normalized to adapter-local, revision/hash-bound
-  candidates. These are not persisted canonical Changes.
+  Model-space results retain adapter-local, revision/hash-bound candidates.
+  `mapCadChanges` now validates the complete pair and produces generated canonical
+  `Change` drafts. These are not persisted Changes; trusted publication and
+  product invocation remain outstanding.
 
 CAD messages require the active iframe, matching origin and a generation token.
 The local build marker prevents a missing viewer from opening the main product
@@ -818,3 +820,37 @@ Final browser continuation: the remaining nine IFC/Document cases passed against
 the finalized harness, giving 25 passing Drawing/CAD/IFC/Document scenarios across
 the two final runs. The latest IFC sample measured 1153.5 ms cold / 709.2 ms warm;
 cache and worker-release assertions passed independently of those timings.
+
+### October 4 canonical CAD Change continuation
+
+The C-owned `mapCadChanges` consumes the existing generated `Change` contract;
+no shared field, runtime registration, write endpoint or product composition is
+added. The independent CAD adapter now reports both ordered revision IDs and
+SHA-256 hashes even for unchanged results. Mapping requires the supported pinned
+engine, project/source/operation context and a stable UTC observation time.
+
+The mature donor emits both sides of a modified entity. Mapping verifies
+reciprocal handles and consistent changed fields, then emits one `changed` record
+with the later revision's target. Additions target the later revision; deletions
+retain the earlier revision's entity/layer/native bounds. Ambiguous, duplicate,
+stale and contradictory candidates fail. The 1,000-Change publication bound is
+enforced after pair reduction. No source bytes or native database are copied
+during mapping. IDs and observation time remain stable on an identical retry.
+
+Qualification: 36 new mapping cases, 481 total frontend tests, and four real CAD
+browser scenarios passed. The actual Golden donor output produced one canonical
+structural-drawing Change; its JSON was accepted by the unchanged backend Pydantic
+`Change` contract. The real comparison retained zero extra source parses, native
+navigation, warm snapshot reuse and disposal checks. Supplemental isolated V8
+coverage for the mapping module measured 100% statements/branches/functions;
+this is not repository-wide coverage. The first concurrent full frontend run
+hit the existing BimMappingWorkspace 5-second timeout; a complete one-worker
+rerun passed without changing tests or timeouts.
+
+This completes isolated CAD output normalization only. A still owns a trusted
+invocation/publication path which validates persisted project/source revisions
+and original bytes. The raw comparison artifact and its donor limitations must
+remain available to that caller; a `Change` has no limitations field. B still
+owns host mounting. PDF normalization, formal dual-source ReCheck/IDS runtime,
+native connectors, large-model/native acceptance and the integrated Golden
+scenario remain outstanding. #17 is incomplete and #22 remains Draft.

@@ -9,6 +9,8 @@ export function normalizeCadResult(
 ): CadComparison {
   return {
     engine: CAD_ENGINE,
+    revisionIds: [before.revisionId, after.revisionId],
+    sourceHashes: [before.sourceHash, after.sourceHash],
     changes: [...result.added, ...result.deleted, ...result.modified].map(
       (hit) => {
         const source = hit.side === "left" ? before : after;

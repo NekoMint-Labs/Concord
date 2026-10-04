@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { sha256 } from "../src/viewers/drawing/pdfDiffValidation";
+import { mapCadChanges } from "../src/viewers/cad/cadChangeMapping";
 import { comparePdfRevisions } from "../src/viewers/drawing/pdfDiffAdapter";
 import type {
   DrawingSource,
@@ -247,7 +248,21 @@ function Harness() {
             before={before as DrawingSource & { name: string }}
             after={after as DrawingSource & { name: string }}
             onError={setViewerFailure}
-            onComparison={setCadResult}
+            onComparison={(comparison) => {
+              setCadResult(comparison);
+              if (!after) throw new Error("CAD comparison has no later source");
+              Object.assign(window, {
+                mapCadComparison: () =>
+                  mapCadChanges(comparison, {
+                    projectId: "qualification-project",
+                    sourceId: "qualification-cad",
+                    operationId: "golden-cad-comparison",
+                    before,
+                    after,
+                    observedAt: "2026-10-04T09:00:00.000Z",
+                  }),
+              });
+            }}
             onSelection={setCadSelection}
             onReady={(controller) =>
               Object.assign(window, {
