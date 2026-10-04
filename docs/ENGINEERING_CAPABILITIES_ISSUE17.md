@@ -1,6 +1,6 @@
 # Issue #17 engineering capability status
 
-Current work uses the fork branch `feat/17-engineering-capabilities-rebased`, based on the latest `main` with merged PRs #19 and #20. The original Draft PR #21 still tracks the pre-rebase branch; it does not contain this continuation. Integration review uses a new Draft so the original branch history is preserved without a force push. CAD and Drawing surfaces consume the generated canonical targets. Real IDS violations map into source-revision- and SHA-256-bound canonical `Evidence` through the trusted publisher in integration tests, with requirements-bound cache identity. IDS validation is still not invoked by the product runtime. Issue #17 remains **incomplete**: coordinated runtime jobs, publication of other engineering outputs, product viewer composition and end-to-end acceptance are outstanding.
+Current work uses the fork branch `feat/17-engineering-capabilities-rebased`, based on the latest `main` with merged PRs #19 and #20. Draft PR #22 tracks this continuation. The original Draft PR #21 still tracks the pre-rebase branch; it does not contain this continuation. Integration review uses the new Draft so the original branch history is preserved without a force push. CAD and Drawing surfaces consume the generated canonical targets. Real IDS violations map into source-revision- and SHA-256-bound canonical `Evidence` through the trusted publisher in integration tests, with requirements-bound cache identity. IDS validation is still not invoked by the product runtime. Issue #17 remains **incomplete**: coordinated runtime jobs, publication of other engineering outputs, product viewer composition and end-to-end acceptance are outstanding.
 
 ## Implemented and locally qualified
 
@@ -636,3 +636,24 @@ This continuation changes only C's Drawing adapter, viewer tests and status docu
 It does not change product composition, generated schemas, dependencies, shared
 contracts or runtime ownership. Canonical BIM/Document targets, remaining engine output
 publication and the integration/acceptance items listed above remain outstanding.
+
+
+### October 4 required SDK lane correction
+
+The first #22 backend CI run exposed a test placement error: the real IfcTester
+cache-identity test lived in the lightweight unit module, whose lane deliberately
+does not install the optional BIM pack. The test is now in the existing real SDK
+integration module, selected by the required `ifcopenshell` lane's `-k ifc` command.
+Its original cache-identity assertion and Golden bytes are preserved. Optional
+package absence is explicit in the lightweight profile; the required SDK lane's
+`assert_junit.py` continues to reject skipped qualification tests. No workflow,
+dependency, production adapter or shared-contract changes were made for this fix.
+
+Local correction verification: the unchanged required IFC lane command ran all seven
+selected real SDK tests successfully, including IfcTester cache identity; the
+no-skip JUnit gate passed. The four dependency-light cache unit tests also passed.
+
+An isolated frozen environment matching the lightweight backend lane (models/telemetry,
+without BIM) ran the four cache unit tests successfully and explicitly skipped the
+optional real IfcTester test. That skip is not engine qualification; the separate
+BIM-enabled seven-test required suite and no-skip gate provide that evidence.

@@ -9,8 +9,10 @@ from app.adapters.bim_ifc import IfcOpenShellBIMProvider, LocalIFCImporter
 from app.adapters.demo import StructuredBIMProvider
 from app.adapters.demo_ids import DUCT_GUID, TRAY_GUID, WALL_GUID
 from app.adapters.documents_docling import DoclingDocumentParser
+from app.adapters.engineering_cache import ids_cache_key
 from app.adapters.ifc_diff import OfficialIfcDiffEngine
 from app.adapters.ifc_fixture import generate_ifc_fixture
+from app.adapters.ifc_tester import IfcTesterAdapter
 from app.adapters.resolver_ortools import ORToolsResolver
 from app.adapters.scheduling_fixture import coordination_fixture
 from app.domain.errors import CapabilityUnavailable, ProviderError
@@ -186,3 +188,20 @@ def test_real_docling_pdf_preserves_physical_pages_and_rejects_truncation():
     assert all(chunk.location and chunk.parser == "docling-local-no-ocr" for chunk in chunks)
     with pytest.raises(ProviderError):
         DoclingDocumentParser(max_pages=1).parse(content, path.name)
+
+
+def test_ifctester_result_exposes_requirements_aware_cache_identity():
+    pytest.importorskip("ifcopenshell")
+    pytest.importorskip("ifctester")
+    fixture = Path(__file__).resolve().parents[3] / "fixtures" / "coordination-project"
+    ifc = (fixture / "R1" / "structure.ifc").read_bytes()
+    ids = (fixture / "R1" / "requirements.ids").read_bytes()
+    result = IfcTesterAdapter().validate(
+        ifc, ids, source_id="structure", source_revision_id="R1"
+    )
+    assert result.cache_key == ids_cache_key(
+        source_hash=result.source_hash,
+        requirements_hash=result.requirements_hash,
+        engine=result.engine,
+        engine_version=result.engine_version,
+    )

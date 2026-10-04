@@ -1,8 +1,5 @@
-from pathlib import Path
-
 import pytest
 from app.adapters.engineering_cache import engineering_cache_key, ids_cache_key
-from app.adapters.ifc_tester import IfcTesterAdapter
 
 
 def test_engineering_cache_key_is_canonical_for_mapping_order():
@@ -42,18 +39,3 @@ def test_engineering_cache_key_rejects_non_finite_parameters():
             engine_version="0.8.5",
             parameters={"tolerance": float("nan")},
         )
-
-
-def test_ifctester_result_exposes_requirements_aware_cache_identity():
-    fixture = Path(__file__).resolve().parents[2] / "fixtures" / "coordination-project"
-    ifc = (fixture / "R1" / "structure.ifc").read_bytes()
-    ids = (fixture / "R1" / "requirements.ids").read_bytes()
-    result = IfcTesterAdapter().validate(
-        ifc, ids, source_id="structure", source_revision_id="R1"
-    )
-    assert result.cache_key == ids_cache_key(
-        source_hash=result.source_hash,
-        requirements_hash=result.requirements_hash,
-        engine=result.engine,
-        engine_version=result.engine_version,
-    )
