@@ -323,23 +323,20 @@ test("native donor text highlighting remains aligned after zoom", async ({
     fullPage: true,
   });
 });
-test("drawing navigation is revision-bound and survives close and reopen", async ({
+test("canonical drawing navigation is revision-bound and survives zoom, close and reopen", async ({
   page,
 }) => {
   const path = fixture("R1", "specification.pdf");
-  const sourceHash = createHash("sha256")
-    .update(readFileSync(path))
-    .digest("hex");
   await sources(page, path);
   await page.getByLabel("Earlier source", { exact: true }).setInputFiles(path);
   await expect(page.getByTestId("source-state")).toHaveText("Ready");
   await page.getByRole("button", { name: "Open drawing", exact: true }).click();
   await expect(page.getByRole("status")).toHaveCount(0);
   const target = {
-    sourceRevisionId: "before:specification.pdf",
-    sourceHash,
+    kind: "drawing",
+    source_revision_id: "before:specification.pdf",
     page: 2,
-    region: { x: 30, y: 45, width: 250, height: 30 },
+    normalized_bbox: [0.05, 0.06, 0.47, 0.1],
   };
   await page
     .getByLabel("Drawing target", { exact: true })
@@ -352,6 +349,26 @@ test("drawing navigation is revision-bound and survives close and reopen", async
   ).toHaveValue("2");
   await expect(page.getByRole("status")).toHaveCount(0);
   await expect(page.getByLabel("Requested source region")).toBeVisible();
+  const region = page.getByLabel("Requested source region");
+  const coordinates = await region
+    .locator("rect")
+    .evaluate((rect) =>
+      ["x", "y", "width", "height"].map((name) => rect.getAttribute(name)),
+    );
+  await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveCount(0);
+  expect(
+    await region
+      .locator("rect")
+      .evaluate((rect) =>
+        ["x", "y", "width", "height"].map((name) => rect.getAttribute(name)),
+      ),
+  ).toEqual(coordinates);
+  await page
+    .getByRole("region", { name: "Drawing viewer", exact: true })
+    .screenshot({
+      path: "test-results/drawing/canonical-drawing-target.png",
+    });
   await page.getByRole("button", { name: "Close viewer", exact: true }).click();
   await page.getByRole("button", { name: "Open drawing", exact: true }).click();
   await expect(page.getByRole("status")).toHaveCount(0);
@@ -361,7 +378,9 @@ test("drawing navigation is revision-bound and survives close and reopen", async
   await expect(page.getByLabel("Requested source region")).toBeVisible();
   await page
     .getByLabel("Drawing target", { exact: true })
-    .fill(JSON.stringify({ ...target, sourceHash: "b".repeat(64) }));
+    .fill(
+      JSON.stringify({ ...target, source_revision_id: "missing-revision" }),
+    );
   await page
     .getByRole("button", { name: "Navigate drawing", exact: true })
     .click();

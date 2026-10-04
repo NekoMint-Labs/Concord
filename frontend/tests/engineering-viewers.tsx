@@ -18,9 +18,7 @@ const Comparison = lazy(
 function Harness() {
   const [drawingTargetText, setDrawingTargetText] = useState("");
   const [drawingTarget, setDrawingTarget] =
-    useState<
-      import("../src/viewers/drawing/drawingNavigation").DrawingNavigation
-    >();
+    useState<import("../src/viewers/drawing/drawingContract").DrawingTarget>();
   const [before, setBefore] = useState<DrawingSource>();
   const [after, setAfter] = useState<DrawingSource>();
   const [view, setView] = useState("none");

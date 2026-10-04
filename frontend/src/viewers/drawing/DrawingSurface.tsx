@@ -13,8 +13,8 @@ import type {
   DrawingPoint,
   DrawingTool,
 } from "./drawingInteraction";
-import { validateDrawingNavigation } from "./drawingNavigation";
-import type { DrawingNavigation } from "./drawingNavigation";
+import { validateDrawingTarget, toDrawingNavigation } from "./drawingContract";
+import type { DrawingTarget } from "./drawingContract";
 import type { DrawingSource } from "./pdfDiffTypes";
 import "./drawing.css";
 /** C's engineering surface. B controls workspace composition and persisted navigation. */
@@ -25,7 +25,7 @@ export default function DrawingSurface({
   onAnnotations,
 }: {
   source: DrawingSource;
-  target?: DrawingNavigation;
+  target?: DrawingTarget;
   onMarkups?: (markups: DrawingMarkup[]) => void;
   onAnnotations?: (annotations: DrawingAnnotation[]) => void;
 }) {
@@ -40,17 +40,14 @@ export default function DrawingSurface({
   const [annotationMessage, setAnnotationMessage] = useState("");
   const view = useDrawingDocument(source, page, zoom);
   let targetError = "";
+  let navigation: ReturnType<typeof toDrawingNavigation> | undefined;
   if (target) {
     try {
-      validateDrawingNavigation(source, target);
-      if (
-        !view.status &&
-        page === target.page &&
-        target.region &&
-        (target.region.x + target.region.width > view.dimensions.width ||
-          target.region.y + target.region.height > view.dimensions.height)
-      )
-        throw new Error("Drawing target region is outside the source sheet");
+      validateDrawingTarget(source, target);
+      if (view.pages && target.page > view.pages)
+        throw new Error("Requested drawing page is unavailable");
+      if (!view.status && !view.error && page === target.page)
+        navigation = toDrawingNavigation(target, source, view.dimensions);
     } catch (failure) {
       targetError =
         failure instanceof Error ? failure.message : String(failure);
@@ -78,14 +75,15 @@ export default function DrawingSurface({
   useEffect(() => {
     if (target) {
       try {
-        validateDrawingNavigation(source, target);
+        validateDrawingTarget(source, target);
       } catch {
         return;
       }
+      if (!view.pages || target.page > view.pages) return;
       setPage(target.page);
       setPoints([]);
     }
-  }, [source, target]);
+  }, [source, target, view.pages]);
   useEffect(() => {
     setPoints([]);
     setError("");
@@ -232,8 +230,8 @@ export default function DrawingSurface({
           />
           {annotations.layer}
           {!targetError &&
-            target?.region &&
-            target.page === page &&
+            navigation?.region &&
+            navigation.page === page &&
             !view.status && (
               <svg
                 viewBox={`0 0 ${view.dimensions.width} ${view.dimensions.height}`}
@@ -241,10 +239,10 @@ export default function DrawingSurface({
                 aria-label="Requested source region"
               >
                 <rect
-                  x={target.region.x}
-                  y={target.region.y}
-                  width={target.region.width}
-                  height={target.region.height}
+                  x={navigation.region.x}
+                  y={navigation.region.y}
+                  width={navigation.region.width}
+                  height={navigation.region.height}
                   fill="none"
                   stroke="#b91c1c"
                   strokeWidth="3"

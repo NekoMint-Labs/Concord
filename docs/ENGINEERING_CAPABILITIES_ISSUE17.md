@@ -1,6 +1,6 @@
 # Issue #17 engineering capability status
 
-Work for Issue #17 is tracked in Draft PR #21, whose source is the original `feat/17-engineering-capabilities` branch. The local continuation includes merged PRs #19 and #20, consumes canonical `CadTarget`, and maps real IDS violations into source-revision- and SHA-256-bound canonical `Evidence` through the trusted publisher in integration tests. This continuation has not been uploaded to PR #21. IDS validation is still not invoked by the product runtime. Issue #17 remains **incomplete**: coordinated runtime jobs, publication of other engineering outputs, product viewer composition and end-to-end acceptance are outstanding.
+Current work uses the fork branch `feat/17-engineering-capabilities-rebased`, based on the latest `main` with merged PRs #19 and #20. The original Draft PR #21 still tracks the pre-rebase branch; it does not contain this continuation. Integration review uses a new Draft so the original branch history is preserved without a force push. CAD and Drawing surfaces consume the generated canonical targets. Real IDS violations map into source-revision- and SHA-256-bound canonical `Evidence` through the trusted publisher in integration tests, with requirements-bound cache identity. IDS validation is still not invoked by the product runtime. Issue #17 remains **incomplete**: coordinated runtime jobs, publication of other engineering outputs, product viewer composition and end-to-end acceptance are outstanding.
 
 ## Implemented and locally qualified
 
@@ -56,13 +56,15 @@ The local build marker prevents a missing viewer from opening the main product
 fallback page. Missing assets, engine failures and timeouts are explicit.
 Leaving the surface destroys the iframe lifetime and terminates its workers.
 
-`DrawingSurface` now accepts a local revision/hash-bound navigation target.
-Stale identity, invalid page/region and out-of-sheet regions fail explicitly.
+`DrawingSurface` now accepts the generated canonical `DrawingTarget`.
+Source revision IDs bind navigation; verified hashes remain inside the viewer.
+Normalized regions are converted using the requested sheet's dimensions.
+Stale identity, invalid or unavailable pages and invalid regions fail explicitly.
 Native text highlighting retains donor page-space quads across zoom. Source
 bytes are copied before asynchronous hash verification, and PDF comparison
 options are snapshotted before cache/worker dispatch. Caller mutation cannot
 make verification, comparison and published revision identities disagree.
-These local navigation values are not a second canonical ViewerTarget contract.
+Internal page-space navigation values do not redefine the canonical ViewerTarget contract.
 
 Drawing preparation now opens one PDF loading task per cache miss, materializes
 all bounded pages into native donor rasters/text quads, and destroys the parser
@@ -95,9 +97,9 @@ scan-only page identity can be ambiguous. The worker follows OpenTakeoff's
 DOM-less SVG-filter limitation and reports it.
 
 B's product shell is unchanged. The isolated qualification harness supplies real
-bytes; it does not prove product upload/publication or canonical ViewerTarget
-reopening. Isolated CAD entity targeting and BCF viewpoint reopening are qualified; canonical
-ViewerTarget publication/reopening still depends on A.
+bytes; it does not prove product upload/publication or product-level ViewerTarget
+reopening. Isolated CAD entity targeting and BCF viewpoint reopening are qualified; product-level
+ViewerTarget publication/reopening still requires A/B integration.
 
 ### IFC Viewer Online
 
@@ -599,3 +601,38 @@ configuration, cancellation/run fencing, durable cache/publication and re-check
 integration. The dual-source clash evidence shape requires agreement with A, and
 B still owns the BIM ViewerTarget product composition. No domain, port, API,
 schema, bootstrap, workflow or dependency files were changed here.
+
+
+### October 4 canonical DrawingTarget continuation
+
+`DrawingSurface.target` now consumes the generated `DrawingTarget`, matching the
+merged platform contract. A normalized `x0,y0,x1,y1` box is converted into page-space
+coordinates using the requested sheet's actual dimensions. The active verified source
+supplies the byte hash internally; B needs only the canonical revision identity.
+Wrong revisions, malformed/out-of-range boxes and unavailable pages report explicit
+navigation failures, without showing a success region or navigating to an absent page.
+Zoom and close/reopen retain the normalized target; donor annotation and measurement
+behavior is unchanged. The isolated harness now uses the formal target as well.
+
+Validation on October 4, 2026:
+
+- 395 root frontend tests passed with two workers. The earlier default-concurrency run
+  recorded 394 passes and one timeout in the unchanged BIM mapping pressure test; the
+  bounded-concurrency full rerun passed without changing assertions or timeouts.
+- Twenty new contract/surface tests cover revision identity, geometry conversion,
+  nullable/page-only targets, malformed regions, absent pages and explicit errors.
+- Three real browser cases passed: canonical DrawingTarget reopening, corrupt-parser
+  failure/worker exit, and multi-page cached reopening without a second parser worker.
+  The canonical case also verifies zoom-stable coordinates and records a rendered image.
+- Seventy-four engineering/cache/IDS/publication/coordination backend tests passed;
+  complete backend/scripts Ruff and changed-adapter Pyright passed. Existing
+  FastAPI/Starlette and corrupt-IFC cleanup warnings remain SDK warnings.
+- Complete frontend typecheck, production build and Prettier checks passed. The
+  missing local PDF.js dependency was restored with a frozen install. Local Windows
+  CRLF-only formatting warnings were resolved by restoring canonical LF checkout bytes;
+  no formatting changes to other members' source files appear in the commit.
+
+This continuation changes only C's Drawing adapter, viewer tests and status document.
+It does not change product composition, generated schemas, dependencies, shared
+contracts or runtime ownership. Canonical BIM/Document targets, remaining engine output
+publication and the integration/acceptance items listed above remain outstanding.
