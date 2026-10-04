@@ -347,14 +347,15 @@ export function Documents({
       </header>
       <div className="document-filters" aria-label="文档类型">
         {(["all", "text", "pdf"] as const).map((type) => (
-          <button
+          <Button
+            variant="ghost"
             type="button"
             key={type}
             aria-pressed={fileType === type}
             onClick={() => setFileType(type)}
           >
             {type === "all" ? "全部文件" : type === "pdf" ? "PDF" : "文本"}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="pane-body">
@@ -366,7 +367,8 @@ export function Documents({
           (frontend/src/components/ui/icon.ts states the rule).
         */}
         {listed?.map((doc) => (
-          <button
+          <Button
+            variant="ghost"
             className={current === doc.id ? "selected" : ""}
             onClick={() => {
               setSelected(doc.id);
@@ -380,7 +382,7 @@ export function Documents({
                 {new Date(doc.created_at).toLocaleDateString("zh-CN")}
               </small>
             </span>
-          </button>
+          </Button>
         ))}
         {!!documents.data?.length && !listed?.length && (
           <p className="quiet-message">

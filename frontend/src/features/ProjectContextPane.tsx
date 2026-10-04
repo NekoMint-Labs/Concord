@@ -1,3 +1,4 @@
+import { Button } from "../components/ui/button";
 import type { Workspace } from "../api/client";
 import type { ProjectContext } from "../app/useProjectContext";
 import type { WorkspaceTab } from "../app/destinations";
@@ -48,14 +49,15 @@ export function ProjectContextPane({
       <section aria-label="项目记录">
         <nav aria-label="项目内容">
           {links.map((link) => (
-            <button
+            <Button
+              variant="ghost"
               type="button"
               key={link.tab}
               onClick={() => onTab(link.tab)}
             >
               <strong>{link.title}</strong>
               <small>{link.description}</small>
-            </button>
+            </Button>
           ))}
         </nav>
       </section>
@@ -65,13 +67,18 @@ export function ProjectContextPane({
             <section aria-label="项目文件">
               <h2>
                 项目文件 <span>{documents.length}</span>
-                <button type="button" onClick={() => onTab("documents")}>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => onTab("documents")}
+                >
                   全部 →
-                </button>
+                </Button>
               </h2>
               <div className="project-files">
                 {documents.slice(0, 4).map((document) => (
-                  <button
+                  <Button
+                    variant="ghost"
                     type="button"
                     key={document.id}
                     onClick={() =>
@@ -86,7 +93,7 @@ export function ProjectContextPane({
                     <time dateTime={document.created_at}>
                       {shortDate(document.created_at)}
                     </time>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </section>
@@ -95,9 +102,13 @@ export function ProjectContextPane({
             <section aria-label="基线记录">
               <h2>
                 基线记录 <span>{baselines.length}</span>
-                <button type="button" onClick={() => onTab("history")}>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => onTab("history")}
+                >
                   全部 →
-                </button>
+                </Button>
               </h2>
               <div className="project-baselines">
                 {[...baselines]
@@ -120,7 +131,8 @@ export function ProjectContextPane({
               <h2>最近活动</h2>
               <div className="project-activity">
                 {activity.map((event) => (
-                  <button
+                  <Button
+                    variant="ghost"
                     type="button"
                     key={event.id}
                     onClick={() => onPackage(event.work_package_id)}
@@ -138,7 +150,7 @@ export function ProjectContextPane({
                     <time dateTime={event.observed_at}>
                       {shortDate(event.observed_at)}
                     </time>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </section>

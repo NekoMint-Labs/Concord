@@ -1,3 +1,4 @@
+import { ThatOpenTextInput } from "../components/ThatOpenUI";
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { api, type Workspace } from "../api/client";
@@ -167,7 +168,8 @@ export function Inspector({
                 <ul className="constraint-list">
                   {constraints.map((item) => (
                     <li key={item.id}>
-                      <button
+                      <Button
+                        variant="ghost"
                         className={
                           item.id === activeConstraint?.id ? "selected" : ""
                         }
@@ -180,18 +182,19 @@ export function Inspector({
                           {demoConstraintText(item.kind, item.description)}
                         </strong>
                         <small>{item.evidence_ids.length} 项判断依据</small>
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>
               )}
               {constraints.length > 0 && (
-                <button
+                <Button
+                  variant="ghost"
                   className="text-button inline-more"
                   onClick={() => onView("evidence")}
                 >
                   查看判断依据
-                </button>
+                </Button>
               )}
               {wp && (
                 <AppDisclosure
@@ -290,7 +293,7 @@ export function Inspector({
                     {proposal.risk >= 4 && !approved && !rejected && (
                       <label className="form-label">
                         强确认：输入 APPROVE R4
-                        <input
+                        <ThatOpenTextInput
                           aria-label="R4 强确认"
                           value={confirmation}
                           onChange={(event) =>
@@ -303,7 +306,7 @@ export function Inspector({
                     {!rejected && (
                       <label className="form-label">
                         拒绝原因（可选）
-                        <input
+                        <ThatOpenTextInput
                           aria-label="拒绝原因（可选）"
                           maxLength={500}
                           value={rejectionReason}

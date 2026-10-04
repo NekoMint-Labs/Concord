@@ -64,7 +64,8 @@ export function Operations({
               ["vision", "现场图像", "安全图像观察"],
               ["retrieval", "文档检索", "派生向量索引"],
             ].map(([id, label, hint]) => (
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 key={id}
                 className={tool === id ? "selected" : ""}
@@ -74,7 +75,7 @@ export function Operations({
               >
                 <strong>{label}</strong>
                 <small>{hint}</small>
-              </button>
+              </Button>
             ))}
           </nav>
 

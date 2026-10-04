@@ -18,6 +18,7 @@ import {
 import { ProjectSourceRegister } from "./ProjectSourceRegister";
 import { SourceContextPane } from "./SourceContextPane";
 import { AddSourcesDialog } from "./CreateSourceDialog";
+import { donorButton, donorText } from "../../tests/donor-dom";
 
 // Test ingestion/confirmation behavior; Radix portal mechanics are owned by the primitive.
 vi.mock("../components/ui/AppDialog", () => ({
@@ -112,19 +113,25 @@ it("selects a logical source and confirms the complete version set without a REA
   const create = vi
     .spyOn(api, "createBaseline")
     .mockResolvedValue({ ...baseline, id: "b2", sequence: 2 });
-  mount(
+  const { container } = mount(
     <ProjectSourceRegister
       project="project"
       sourceId="model"
       onSelectSource={select}
     />,
   );
-  const row = await screen.findByRole("button", {
-    name: /East model.*最新.*R2.*基线.*R1/,
-  });
+  await waitFor(() =>
+    expect(donorButton("打开 East model", container)).toBeDefined(),
+  );
+  expect(donorText("R2", container)).toBeDefined();
+  expect(donorText("R1", container)).toBeDefined();
+  const row = donorButton("打开 East model", container)!;
+  expect(row).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(row);
   expect(select).toHaveBeenCalledWith("model");
-  expect(await screen.findByText("Invalid IFC header")).toBeVisible();
+  await waitFor(() =>
+    expect(donorText("Invalid IFC header", container)).toBeVisible(),
+  );
   expect(screen.queryByRole("button", { name: "确认新基线" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "基线记录与操作" }));
   fireEvent.click(screen.getByRole("button", { name: "确认新基线" }));
@@ -447,7 +454,14 @@ it("opens explicitly focused revision actions and authenticates/retries download
   const blob = createUrl.mock.calls[0][0];
   expect(blob.size).toBe(12);
   expect(blob.type).toBe("text/plain;charset=utf-8");
-  expect(await blob.text()).toBe("original IFC");
+  // jsdom File lacks Blob.text(); use its native browser reader to verify bytes.
+  const text = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+  expect(text).toBe("original IFC");
   await waitFor(() => expect(within(revision).queryByRole("alert")).toBeNull());
 });
 
@@ -608,4 +622,19 @@ it("leads with the latest comparison, truthful unlinked impact and one existing 
     within(latestRevision).getByRole("button", { name: "查看模型" }),
   );
   expect(openModel).toHaveBeenCalledExactlyOnceWith("model", "r2");
+});
+
+it("allows an unbroken source name to wrap inside the donor cell instead of being hard clipped", async () => {
+  const name = "LongUnbrokenSourceName".repeat(12);
+  vi.mocked(api.sourceStatuses).mockResolvedValue([
+    { ...status, source: { ...status.source, name } },
+  ]);
+  const { container } = mount(
+    <ProjectSourceRegister project="project" onSelectSource={vi.fn()} />,
+  );
+  await waitFor(() => expect(donorText(name, container)).toBeDefined());
+  const identity = donorText(name, container)!.closest("div")!;
+  expect(identity.style.minWidth).toBe("0");
+  expect(identity.style.overflowWrap).toBe("anywhere");
+  expect(identity.querySelector("strong")).toHaveTextContent(name);
 });

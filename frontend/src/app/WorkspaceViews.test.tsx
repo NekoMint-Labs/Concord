@@ -6,6 +6,8 @@ import { EmptyWorkPackages, WorkspaceViews } from "./WorkspaceViews";
 import fixture from "../../tests/fixtures/inspector.json";
 import { api, type InvestigationReport, type Workspace } from "../api/client";
 import type { WorkspaceInspectorView } from "../features/InvestigationInspector";
+import type { WorkspaceTab } from "./destinations";
+import { useWorkspaceLayout } from "../layout/WorkspaceLayout";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -23,6 +25,7 @@ it("keeps the requested Action inspector open after reviewing a report's proposa
   vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
   vi.spyOn(api, "documents").mockResolvedValue([]);
   vi.spyOn(api, "baselines").mockResolvedValue([]);
+  vi.spyOn(api, "engineeringFindings").mockResolvedValue([]);
   const data = structuredClone(fixture.waiting) as unknown as Workspace;
   const report: InvestigationReport = {
     run_id: "investigation",
@@ -59,7 +62,9 @@ it("keeps the requested Action inspector open after reviewing a report's proposa
   const noop = () => {};
   function Host() {
     const [selected, setSelected] = useState("WP-100");
-    const [detailsOpen, setDetailsOpen] = useState(true);
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [tab, setTab] = useState<WorkspaceTab>("work");
+    const prefs = useWorkspaceLayout();
     const [view, setView] = useState<WorkspaceInspectorView>("investigation");
     return (
       <WorkspaceViews
@@ -71,12 +76,13 @@ it("keeps the requested Action inspector open after reviewing a report's proposa
         selectedSpatialIssue=""
         onElementSelected={noop}
         onSpatialIssueSelected={noop}
-        tab="work"
+        tab={tab}
+        workspaceLayout={prefs}
         busy={false}
         detailsOpen={detailsOpen}
         inspectorView={view}
         perform={async () => {}}
-        onTab={noop}
+        onTab={setTab}
         onSelected={(id) => {
           setSelected(id);
           setDetailsOpen(false);
@@ -112,6 +118,14 @@ it("keeps the requested Action inspector open after reviewing a report's proposa
       <Host />
     </QueryClientProvider>,
   );
+  fireEvent.click(await screen.findByRole("button", { name: "审核面板" }));
+  expect(
+    screen.getByRole("complementary", { name: "Finding 工作与审核" }),
+  ).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "打开报告 →" }));
+  expect(
+    screen.queryByRole("complementary", { name: "Finding 工作与审核" }),
+  ).not.toBeInTheDocument();
   fireEvent.click(
     await screen.findByRole("button", { name: "审查处理方案 →" }),
   );

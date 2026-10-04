@@ -1,3 +1,4 @@
+import { ThatOpenTextInput } from "../components/ThatOpenUI";
 import { useState, type FormEvent } from "react";
 import { ChevronRight } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -77,7 +78,8 @@ export function NewProjectDialog({
             onChange={(event) => setDescription(event.target.value)}
           />
         </label>
-        <button
+        <Button
+          variant="ghost"
           type="button"
           className="advanced-settings-toggle"
           aria-expanded={advanced}
@@ -86,7 +88,7 @@ export function NewProjectDialog({
         >
           <ChevronRight aria-hidden="true" />
           高级设置
-        </button>
+        </Button>
         {advanced && (
           <div className="advanced-settings" id="new-project-advanced">
             <label className="form-label">
@@ -145,14 +147,16 @@ export function OpenProjectDialog({
     >
       <label className="form-label">
         搜索项目
-        <input
+        <ThatOpenTextInput
+          aria-label="搜索项目"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
       </label>
       <div className="project-chooser" role="list">
         {matches.map((item) => (
-          <button
+          <Button
+            variant="ghost"
             key={item.id}
             type="button"
             className={item.id === current ? "selected" : ""}
@@ -168,7 +172,7 @@ export function OpenProjectDialog({
                 : item.timezone}
             </span>
             {item.id === "harbor-east" && <small>演示 / 示例</small>}
-          </button>
+          </Button>
         ))}
         {!matches.length && <p className="quiet-message">没有匹配项目。</p>}
       </div>

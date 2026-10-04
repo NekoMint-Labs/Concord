@@ -169,31 +169,6 @@
   }
 }
 
-.sidebar-label-action,
-.package-nav-row {
-  display: flex;
-  align-items: center;
-}
-
-.sidebar-label-action {
-  justify-content: space-between;
-}
-
-.sidebar-label-action button,
-.candidate-heading button,
-.source-suggestion button {
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.package-nav-row {
-  align-items: stretch;
-  flex-direction: column;
-}
-
 .sources-workspace,
 .mapping-workspace {
   min-height: 0;
@@ -223,8 +198,7 @@
 .source-detail-heading,
 .impact-heading,
 .mapping-controls > header,
-.agent-surface > header,
-.candidate-heading {
+.agent-surface > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -335,15 +309,6 @@
   gap: 4px;
 }
 
-.source-suggestion {
-  grid-column: 1 / -1;
-  margin: 1px 0 0;
-  padding: 5px 8px;
-  border-left: 2px solid var(--warn-line);
-  color: var(--muted);
-  font-size: var(--fs-meta);
-}
-
 .revision-impact,
 .baseline-register {
   margin-top: 22px;
@@ -446,14 +411,6 @@
   gap: 4px;
   color: var(--muted);
   font-size: 11.5px;
-}
-
-.candidate-heading {
-  justify-content: flex-start;
-}
-
-.candidate-heading strong {
-  margin-right: auto;
 }
 
 .candidate-list {

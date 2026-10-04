@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { html, nothing } from "lit";
+import { ThatOpenDataTable } from "../components/ThatOpenDataTable";
+import { useRef, useState } from "react";
+import { ThatOpenPanelSection } from "../components/ThatOpenUI";
 import type { AgentRun, DTO } from "../api/client";
 import { AppDialog } from "../components/ui/AppDialog";
 import { Button } from "../components/ui/button";
@@ -30,6 +33,7 @@ export function ProjectSourceRegister({
   const data = useProjectSources(project, sourceId, onRun);
   const processing = useSourceProcessing(project, data.revisionCatalog, onRun);
   const [addOpen, setAddOpen] = useState(false);
+  const actionsRef = useRef<HTMLButtonElement>(null);
   const [baselineEntries, setBaselineEntries] = useState<
     DTO<"BaselineEntry">[] | null
   >(null);
@@ -41,189 +45,179 @@ export function ProjectSourceRegister({
   const missing = statuses.filter((item) => !item.latest_revision_id);
 
   return (
-    <section className="sources-object-lane" aria-label="项目资料">
-      {!!(statuses.length || baselines.length) && (
-        <section aria-label="当前基线" className="sources-baseline-line">
-          <span>
-            当前基线{" "}
-            <strong>{baseline ? `B${baseline.sequence}` : "尚未确认"}</strong>
-          </span>
-          <AppDisclosure label="基线记录与操作" className="sources-support">
+    <section aria-label="项目资料">
+      <ThatOpenPanelSection
+        className="sources-object-lane"
+        label={`${statuses.length} 份`}
+        fixed
+        headerActions={
+          <AppMenu label="资料操作" triggerRef={actionsRef}>
+            <AppMenuItem onSelect={() => setAddOpen(true)}>
+              添加资料
+            </AppMenuItem>
+          </AppMenu>
+        }
+      >
+        <h2 slot="header-start">资料</h2>
+        {!!(statuses.length || baselines.length) && (
+          <section aria-label="当前基线" className="sources-baseline-line">
+            <span>
+              当前基线{" "}
+              <strong>{baseline ? `B${baseline.sequence}` : "尚未确认"}</strong>
+            </span>
+            <AppDisclosure label="基线记录与操作" className="sources-support">
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={
+                  data.sources.isPending ||
+                  data.sources.isError ||
+                  data.baselines.isPending ||
+                  data.baselines.isError ||
+                  !latestBaselineEntries(statuses).length
+                }
+                onClick={() => {
+                  data.acceptBaseline.reset();
+                  setBaselineEntries(latestBaselineEntries(statuses));
+                }}
+              >
+                确认新基线
+              </Button>
+              {!!baselines.length && (
+                <BaselineHistory
+                  baselines={baselines}
+                  statuses={statuses}
+                  revisions={data.revisionCatalog}
+                />
+              )}
+            </AppDisclosure>
+          </section>
+        )}
+        {data.sources.isPending && (
+          <p role="status" className="quiet-message">
+            正在读取资料…
+          </p>
+        )}
+        {(data.sources.error || data.catalogError || data.baselines.error) && (
+          <div role="alert" className="sources-error">
+            {data.sources.error?.message ||
+              data.catalogError?.message ||
+              data.baselines.error?.message}
             <Button
               size="sm"
               variant="ghost"
-              disabled={
-                data.sources.isPending ||
-                data.sources.isError ||
-                data.baselines.isPending ||
-                data.baselines.isError ||
-                !latestBaselineEntries(statuses).length
-              }
               onClick={() => {
-                data.acceptBaseline.reset();
-                setBaselineEntries(latestBaselineEntries(statuses));
+                void data.sources.refetch();
+                void data.baselines.refetch();
+                void data.refetchCatalog();
               }}
             >
-              确认新基线
+              重新读取
             </Button>
-            {!!baselines.length && (
-              <BaselineHistory
-                baselines={baselines}
-                statuses={statuses}
-                revisions={data.revisionCatalog}
-              />
-            )}
-          </AppDisclosure>
-        </section>
-      )}
-      <header className="sources-register-heading">
-        <h2>资料</h2>
-        <AppMenu label="资料操作">
-          <AppMenuItem onSelect={() => setAddOpen(true)}>添加资料</AppMenuItem>
-        </AppMenu>
-      </header>
-      {data.sources.isPending && (
-        <p role="status" className="quiet-message">
-          正在读取资料…
-        </p>
-      )}
-      {(data.sources.error || data.catalogError || data.baselines.error) && (
-        <div role="alert" className="sources-error">
-          {data.sources.error?.message ||
-            data.catalogError?.message ||
-            data.baselines.error?.message}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              void data.sources.refetch();
-              void data.baselines.refetch();
-              void data.refetchCatalog();
+          </div>
+        )}
+        {!!statuses.length && (
+          <ThatOpenDataTable
+            aria-label="项目资料表"
+            className="sources-register-table"
+            columns={[
+              { name: "资料", width: "minmax(160px, 1fr)" },
+              { name: "最新", width: "90px" },
+              { name: "基线", width: "90px" },
+              { name: "状态", width: "minmax(160px, 1fr)" },
+              { name: "操作", width: "64px" },
+            ]}
+            hiddenColumns={["编号"]}
+            data={statuses.map((item) => ({
+              id: item.source.id,
+              data: {
+                资料: item.source.name,
+                最新: sourceRevisionLabel(
+                  data.revisionCatalog,
+                  item.source.id,
+                  item.latest_revision_id,
+                ),
+                基线: sourceRevisionLabel(
+                  data.revisionCatalog,
+                  item.source.id,
+                  item.accepted_revision_id,
+                ),
+                状态: item.source.id,
+                编号: item.source.id,
+                操作: item.source.id,
+              },
+            }))}
+            dataTransform={{
+              资料: (value, row) =>
+                html`<div style="min-width: 0; overflow-wrap: anywhere;">
+                  <strong>${value}</strong><br /><small
+                    >${statuses.find((item) => item.source.id === row.编号)?.source.kind === "BIM" ? "IFC 模型" : "工程文档"}</small
+                  >
+                </div>`,
+              操作: (value, row) =>
+                html`<bim-button
+                  label="打开"
+                  aria-label=${`打开 ${row.资料}`}
+                  .active=${sourceId === value}
+                  aria-pressed=${String(sourceId === value)}
+                  @click=${() => onSelectSource(String(value))}
+                ></bim-button>`,
+              状态: (value) => {
+                const item = statuses.find(
+                  (source) => source.source.id === value,
+                )!;
+                const state = item.latest_revision_id
+                  ? processing.states.get(item.latest_revision_id)
+                  : undefined;
+                const error =
+                  state?.error || state?.readError || state?.run?.error;
+                const retryable =
+                  !!item.latest_revision_id &&
+                  state &&
+                  !state.loading &&
+                  !state.readError &&
+                  !state.starting &&
+                  (!!state.error ||
+                    !state.run ||
+                    ["FAILED", "CANCELLED", "EXPIRED"].includes(
+                      state.run.status,
+                    ));
+                return html`
+                  ${!item.latest_revision_id || state?.run?.status !== "COMPLETED" || error ? html`<span>${item.latest_revision_id ? processingLabel(state) : "尚未上传"}</span>` : nothing}
+                  ${item.has_pending_revision || !item.accepted_revision_id ? html`<small>${item.has_pending_revision ? (item.accepted_revision_id ? "有新版本待检查 · 基线未变" : "首次版本待确认") : "尚未确认基线"}</small>` : nothing}
+                  ${error ? html`<p role="alert">${error}</p>` : nothing}
+                  ${state?.run && error ? html`<small>处理记录 ${state.run.id}</small>` : nothing}
+                  ${state?.readError ? html`<bim-button label="重新读取处理状态" @click=${() => void processing.refetch(item.latest_revision_id!)}></bim-button>` : nothing}
+                  ${retryable ? html`<bim-button label=${state.error || state.run ? "重试处理" : "开始处理"} @click=${() => processing.retry.mutate({ source: item.source.id, revision: item.latest_revision_id! })}></bim-button>` : nothing}
+                `;
+              },
             }}
-          >
-            重新读取
-          </Button>
-        </div>
-      )}
-      <ul className="sources-register-list">
-        {statuses.map((item) => {
-          const state = item.latest_revision_id
-            ? processing.states.get(item.latest_revision_id)
-            : undefined;
-          const error = state?.error || state?.readError || state?.run?.error;
-          const retryable =
-            !!item.latest_revision_id &&
-            state &&
-            !state.loading &&
-            !state.readError &&
-            !state.starting &&
-            (!!state.error ||
-              !state.run ||
-              ["FAILED", "CANCELLED", "EXPIRED"].includes(state.run.status));
-          return (
-            <li key={item.source.id}>
-              <button
-                type="button"
-                className="sources-register-select"
-                aria-pressed={sourceId === item.source.id}
-                onClick={() => onSelectSource(item.source.id)}
-              >
-                <span className="sources-register-name object-identity">
-                  <strong>{item.source.name}</strong>
-                  <small className="object-kind">
-                    {item.source.kind === "BIM" ? "IFC 模型" : "工程文档"}
-                  </small>
-                </span>
-                <span className="sources-register-versions">
-                  <small>最新</small>
-                  <span className="mono">
-                    {sourceRevisionLabel(
-                      data.revisionCatalog,
-                      item.source.id,
-                      item.latest_revision_id,
-                    )}
-                  </span>
-                  <small>基线</small>
-                  <span className="mono">
-                    {sourceRevisionLabel(
-                      data.revisionCatalog,
-                      item.source.id,
-                      item.accepted_revision_id,
-                    )}
-                  </span>
-                </span>
-                <span
-                  className={`sources-register-status${item.has_pending_revision ? " is-pending" : ""}`}
-                >
-                  {(!item.latest_revision_id ||
-                    state?.run?.status !== "COMPLETED" ||
-                    error) && (
-                    <span>
-                      {item.latest_revision_id
-                        ? processingLabel(state)
-                        : "尚未上传"}
-                    </span>
-                  )}
-                  {(item.has_pending_revision ||
-                    !item.accepted_revision_id) && (
-                    <small>
-                      {item.has_pending_revision
-                        ? item.accepted_revision_id
-                          ? "有新版本待检查 · 基线未变"
-                          : "首次版本待确认"
-                        : "尚未确认基线"}
-                    </small>
-                  )}
-                </span>
-              </button>
-              {(error || retryable) && (
-                <div className="sources-register-recovery">
-                  {error && (
-                    <p role="alert" className="sources-error">
-                      {error}
-                    </p>
-                  )}
-                  {state?.run && error && (
-                    <small>处理记录 {state.run.id}</small>
-                  )}
-                  {state?.readError && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        void processing.refetch(item.latest_revision_id!)
-                      }
-                    >
-                      重新读取处理状态
-                    </Button>
-                  )}
-                  {retryable && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        processing.retry.mutate({
-                          source: item.source.id,
-                          revision: item.latest_revision_id!,
-                        })
-                      }
-                    >
-                      {state.error || state.run ? "重试处理" : "开始处理"}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {!data.sources.isPending && !data.sources.isError && !statuses.length && (
-        <p className="quiet-message sources-register-empty workspace-empty">
-          还没有资料。添加 IFC
-          或当前服务支持的工程文档；每份资料单独保留版本与原文件。
-        </p>
-      )}
+          />
+        )}
+
+        {!data.sources.isPending &&
+          !data.sources.isError &&
+          !statuses.length && (
+            <p className="quiet-message sources-register-empty workspace-empty">
+              还没有资料。添加 IFC
+              或当前服务支持的工程文档；每份资料单独保留版本与原文件。
+            </p>
+          )}
+        {data.capabilities.error && (
+          <p className="quiet-message">
+            无法读取文档解析能力，目前只提供 IFC。
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => void data.capabilities.refetch()}
+            >
+              重试能力检查
+            </Button>
+          </p>
+        )}
+      </ThatOpenPanelSection>
       <AddSourcesDialog
+        returnFocusRef={actionsRef}
         open={addOpen}
         onOpenChange={setAddOpen}
         sources={statuses}
@@ -232,17 +226,6 @@ export function ProjectSourceRegister({
         onUpload={(input) => data.upload.mutateAsync(input)}
         onUploaded={onSelectSource}
       />
-      {data.capabilities.error && (
-        <p className="quiet-message">
-          无法读取文档解析能力，目前只提供 IFC。
-          <button
-            type="button"
-            onClick={() => void data.capabilities.refetch()}
-          >
-            重试能力检查
-          </button>
-        </p>
-      )}
       <AppDialog
         open={baselineEntries !== null}
         onOpenChange={(open) => {

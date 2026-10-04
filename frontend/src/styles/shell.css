@@ -188,24 +188,8 @@
  * the shared `--control-h`, which is what keeps the hit area honest.
  */
 .project-trigger {
-  display: flex;
-  align-items: center;
-  gap: var(--icon-gap);
   width: 100%;
   height: 32px;
-  padding: 0 6px 0 8px;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--ink);
-  font-size: var(--fs-action);
-  font-weight: 500;
-  text-align: left;
-  transition: background var(--motion-fast) var(--ease);
-}
-.project-trigger:hover,
-.project-trigger[data-state="open"] {
-  background: var(--hover);
 }
 /*
  * The mark is a navigation cue and nothing more: one restrained building for the
@@ -581,23 +565,7 @@
 .crumb-sep {
   color: var(--muted-2);
 }
-.local-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  flex-shrink: 0;
-  min-height: 42px;
-  margin-left: auto;
-  padding-left: 10px;
-  border-left: 1px solid var(--line-soft);
-  background: color-mix(in srgb, var(--surface-detail) 52%, transparent);
-}
-.local-actions > .button {
-  color: var(--ink-2);
-}
-.advanced-menu-trigger {
-  color: var(--muted);
-}
+
 /*
  * The work surface is the left pane of the workspace split, and the detail pane
  * is the right one (frontend/src/layout/PaneSplit.tsx). A split keeps a minimum
@@ -1331,24 +1299,20 @@
 }
 
 /* Work is a scanable queue, not a second dashboard. */
-.work-list,
-.project-home {
+.work-list {
   padding: 28px 36px;
   overflow: auto;
   height: 100%;
   color: var(--ink);
 }
-.work-list > header,
-.project-home > header {
+.work-list > header {
   margin-bottom: 26px;
 }
-.work-list h1,
-.project-home h1 {
+.work-list h1 {
   margin: 4px 0 6px;
   font-size: 22px;
 }
-.work-list header p,
-.project-home header p {
+.work-list header p {
   margin: 0;
   color: var(--muted);
 }
@@ -1394,31 +1358,6 @@
 .work-row button {
   flex-shrink: 0;
 }
-.project-home nav {
-  max-width: 760px;
-  border-top: 1px solid var(--line-soft);
-}
-.project-home nav button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 16px 4px;
-  border: 0;
-  border-bottom: 1px solid var(--line-soft);
-  background: transparent;
-  color: var(--ink);
-  text-align: left;
-  cursor: pointer;
-}
-.project-home nav button:hover,
-.project-home .work-row:hover {
+.work-row:hover {
   background: var(--hover);
-}
-.project-home nav button span:nth-child(2) {
-  color: var(--muted);
-  margin-left: auto;
-}
-.project-home nav button span:last-child {
-  color: var(--muted);
 }

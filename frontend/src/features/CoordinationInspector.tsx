@@ -54,14 +54,15 @@ export function CoordinationInspector({
           ["sources", "工程记录"],
           ["resources", "现场资源"],
         ].map(([id, label]) => (
-          <button
+          <Button
+            variant="ghost"
             type="button"
             key={id}
             className={tab === id ? "active" : ""}
             onClick={() => onTab(id as CoordinationInspectorTab)}
           >
             {label}
-          </button>
+          </Button>
         ))}
       </nav>
       <div className="overview-inspector-body">

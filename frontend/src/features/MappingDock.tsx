@@ -216,7 +216,8 @@ export function MappingDock({
                   }
                 />
               )}
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 aria-pressed={activeId === item.global_id}
                 onClick={() => onActivate(item.global_id)}
@@ -226,14 +227,15 @@ export function MappingDock({
                   {item.ifc_class} · {item.storey || "无楼层"} ·{" "}
                   {item.space || "无空间"}
                 </small>
-              </button>
+              </Button>
             </div>
           ))}
         </div>
         {inspectionMode && (
           <section className="existing-bindings" aria-label="比较变更构件">
             {changes.map((change) => (
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 key={change.global_id}
                 aria-pressed={activeId === change.global_id}
@@ -257,14 +259,15 @@ export function MappingDock({
                       ? "目标版本无几何（历史变更保留）"
                       : "目标版本不可渲染"}
                 </span>
-              </button>
+              </Button>
             ))}
           </section>
         )}
         <section className="existing-bindings">
           <span className="fact-label">现有绑定</span>
           {existing.map((item) => (
-            <button
+            <Button
+              variant="ghost"
               type="button"
               key={item.binding.id}
               aria-pressed={activeId === item.binding.global_id}
@@ -282,7 +285,7 @@ export function MappingDock({
                     ? "当前版本缺失（保留历史绑定）"
                     : "版本尚未导入"}
               </span>
-            </button>
+            </Button>
           ))}
           {!existing.length && <p className="quiet-message">尚未确认绑定。</p>}
         </section>

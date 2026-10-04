@@ -30,7 +30,8 @@ export function WorkPackageDirectory({
       </header>
       <div className="work-rows">
         {data.state.work_packages.map((wp) => (
-          <button
+          <Button
+            variant="ghost"
             type="button"
             className="work-row"
             key={wp.id}
@@ -38,7 +39,7 @@ export function WorkPackageDirectory({
           >
             <strong>{demoWorkPackageName(wp.id, wp.name)}</strong>
             <span>{demoDiscipline(wp.discipline)} · 查看详情 →</span>
-          </button>
+          </Button>
         ))}
       </div>
       {!data.state.work_packages.length && (

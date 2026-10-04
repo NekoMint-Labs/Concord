@@ -1,9 +1,27 @@
 import { randomUUID } from "node:crypto";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { mkdirSync } from "node:fs";
+import { resolve } from "node:path";
+import { expectDonor } from "./donor-conformance";
+
+const screenshots = resolve(
+  "..",
+  ".verification-work",
+  process.env.CONCORD_VISUAL_DIR ?? "desktop-workspace",
+);
+async function capture(page: Page, name: string) {
+  mkdirSync(screenshots, { recursive: true });
+  const { width, height } = page.viewportSize()!;
+  await page.screenshot({
+    path: resolve(screenshots, `empty-${name}-${width}x${height}.png`),
+    animations: "disabled",
+  });
+}
 
 const headers = { Authorization: "Bearer local-demo-admin" };
 for (const viewport of [
-  { width: 1600, height: 900 },
+  { width: 1920, height: 1080 },
+  { width: 1440, height: 900 },
   { width: 1280, height: 720 },
 ]) {
   test(`product navigation and empty states at ${viewport.width}×${viewport.height}`, async ({
@@ -11,6 +29,7 @@ for (const viewport of [
     request,
   }) => {
     await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     const response = await request.post("/api/projects", {
@@ -29,9 +48,28 @@ for (const viewport of [
     await expect(
       page.getByRole("heading", { name: "还没有工作事项" }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "工作", exact: true }),
+    ).toContainText("当前项目尚无资料版本或工程判断可供检查。");
+    await expectDonor(page.locator("bim-panel.work-queue-surface"), {
+      headerHidden: true,
+    });
+    await capture(page, "work");
     await page.getByRole("button", { name: "打开项目 →", exact: true }).click();
     await expect(page.getByRole("region", { name: "项目管理" })).toBeVisible();
-    await nav.getByRole("button", { name: "模型", exact: true }).click();
+    await expectDonor(page.locator("bim-panel.project-primary"), {
+      label: "项目",
+      headerHidden: false,
+    });
+    await expectDonor(page.locator("bim-panel-section.project-state-surface"), {
+      label: "当前状态",
+      fixed: true,
+    });
+    await capture(page, "project");
+    await page
+      .getByRole("complementary", { name: "项目导航" })
+      .getByRole("button", { name: "模型", exact: true })
+      .click();
     await expect(
       page.getByRole("heading", { name: "模型上下文" }),
     ).toBeVisible();
@@ -39,6 +77,7 @@ for (const viewport of [
       page.getByText("当前项目还没有模型", { exact: true }),
     ).toBeVisible();
     await expect(page.locator(".spatial-context")).toHaveCount(0);
+    await capture(page, "model");
     await page
       .getByRole("button", { name: "添加项目模型 →", exact: true })
       .click();
@@ -54,15 +93,22 @@ for (const viewport of [
     ).toHaveAttribute("aria-current", "page");
     await expect(explorer.getByRole("searchbox")).toBeVisible();
     await expect(explorer.getByRole("list")).toHaveCount(0);
-    await expect(explorer.getByRole("navigation")).toHaveCount(0);
+    await expect(
+      explorer.getByRole("navigation", { name: "浏览对象类型" }),
+    ).toBeVisible();
+    await capture(page, "browse");
     await explorer.getByRole("searchbox").fill("不存在的工程对象");
     await expect(
       explorer.getByRole("heading", { name: "没有匹配的项目对象" }),
     ).toBeVisible();
+    await capture(page, "browse-search");
     await explorer.getByRole("button", { name: "清除搜索与筛选" }).click();
     await expect(explorer.getByRole("searchbox")).toHaveValue("");
     await nav.getByRole("button", { name: "项目", exact: true }).click();
-    await page.getByRole("navigation", { name: "项目内容" }).getByRole("button", { name: /^文档/ }).click();
+    await page
+      .getByRole("navigation", { name: "项目内容" })
+      .getByRole("button", { name: /^文档/ })
+      .click();
     await expect(
       page.getByRole("heading", { name: "尚未导入文档", exact: true }),
     ).toBeVisible();
@@ -79,10 +125,13 @@ for (const viewport of [
       .click();
     await expect(page.getByText(/尚未确认项目基线/)).toBeVisible();
     await page.getByRole("button", { name: "打开项目 →", exact: true }).click();
-    await page.getByRole("button", { name: "设置", exact: true }).click();
+    const settings = page.getByRole("button", { name: "设置", exact: true });
+    await settings.focus();
+    await page.keyboard.press("Enter");
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(settings).toBeFocused();
     await page.getByRole("button", { name: "高级", exact: true }).focus();
     await page.keyboard.press("Enter");
     await expect(

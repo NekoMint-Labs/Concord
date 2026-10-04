@@ -49,6 +49,7 @@ export function PaneSplit({
   children,
   groupRef,
   elementRef,
+  onUserLayoutChanged,
 }: {
   id: string;
   persist?: boolean;
@@ -56,6 +57,8 @@ export function PaneSplit({
   children: ReactNode;
   groupRef?: Ref<GroupImperativeHandle>;
   elementRef?: Ref<HTMLDivElement>;
+  /** A donor layout preference can capture final pixel sizes after real user resize only. */
+  onUserLayoutChanged?: () => void;
 }) {
   /*
    * Only a layout the *user* set is remembered.
@@ -87,7 +90,12 @@ export function PaneSplit({
       elementRef={elementRef}
       groupRef={groupRef}
       defaultLayout={persist ? saved.defaultLayout : undefined}
-      onLayoutChanged={persist ? saved.onLayoutChanged : undefined}
+      onLayoutChanged={(layout, meta) => {
+        if (persist) saved.onLayoutChanged(layout, meta);
+        // The library publishes percentage state before React commits pixel widths.
+        if (meta.isUserInteraction && onUserLayoutChanged)
+          requestAnimationFrame(onUserLayoutChanged);
+      }}
     >
       {children}
     </Group>
@@ -172,7 +180,15 @@ export function PaneDivider({
   label = "调整面板宽度",
   ...rest
 }: SeparatorProps & { label?: string }) {
-  return <Separator aria-label={label} className="pane-divider" {...rest} />;
+  // v4 caches separator-to-panel mappings at registration. Re-register after unlocking.
+  return (
+    <Separator
+      key={rest.disabled ? "disabled" : "enabled"}
+      aria-label={label}
+      className="pane-divider"
+      {...rest}
+    />
+  );
 }
 
 /**

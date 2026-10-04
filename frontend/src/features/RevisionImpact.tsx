@@ -201,7 +201,8 @@ export function RevisionImpact({
         <div className="affected-packages">
           <span className="fact-label">受影响工作包</span>
           {packages.map((item) => (
-            <button
+            <Button
+              variant="ghost"
               type="button"
               key={item.work_package_id}
               onClick={() =>
@@ -221,7 +222,7 @@ export function RevisionImpact({
                 )}
               </strong>
               <span>{item.changes.length} 个变更构件 · 在 BIM 中查看</span>
-            </button>
+            </Button>
           ))}
         </div>
       ) : (

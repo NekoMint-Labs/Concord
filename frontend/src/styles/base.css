@@ -1,6 +1,6 @@
 /*
  * Quiet Precision: neutral structural planes, readable engineering text, and a
- * single blue accent for navigation, selection, focus and primary actions.
+ * single petrol accent for navigation, selection, focus and primary actions.
  * Status colours describe real state; elevation belongs only to floating UI.
  * The existing semantic tokens below keep every workspace on one palette.
  */
@@ -88,6 +88,35 @@
      read as objects sitting on a region rather than as another region */
   --surface: #fff;
 
+  /* ThatOpen token bridge: donor components inherit Concord's light, dense
+     engineering palette rather than introducing a second theme. */
+  --bim-ui_bg-base: var(--bg-app);
+  --bim-ui_bg-contrast-10: var(--surface-inset);
+  --bim-ui_bg-contrast-20: var(--line-soft);
+  --bim-ui_bg-contrast-30: var(--hover);
+  --bim-ui_bg-contrast-40: var(--line-control-soft);
+  --bim-ui_bg-contrast-50: var(--muted);
+  --bim-ui_bg-contrast-60: var(--ink-2);
+  --bim-ui_bg-contrast-70: var(--ink-2);
+  --bim-ui_bg-contrast-80: var(--ink);
+  --bim-ui_bg-contrast-90: var(--ink);
+  --bim-ui_bg-contrast-100: var(--ink);
+  --bim-ui_main-base: var(--accent);
+  --bim-ui_main-contrast: var(--surface);
+  --bim-ui_accent-base: var(--accent);
+  --bim-ui_accent-contrast: var(--surface);
+  --bim-ui_danger-base: var(--concord-danger-text);
+  --bim-ui_danger-contrast: var(--surface);
+  --bim-ui_warning-base: var(--concord-warning-text);
+  --bim-ui_warning-contrast: var(--surface);
+  --bim-ui_success-base: var(--success);
+  --bim-ui_success-contrast: var(--surface);
+  --bim-ui_info-base: var(--accent);
+  --bim-ui_info-contrast: var(--surface);
+  --bim-ui_size-base: var(--fs-label);
+  --bim-ui_size-lg: var(--fs-body);
+  --bim-ui_size-2xs: 3px;
+  --bim-ui_size-4xs: 2px;
   /*
    * Lines. Four values, one job each, and the job is written on the token so a
    * new rule can pick the right one instead of reaching for the nearest grey.
@@ -198,15 +227,15 @@
   --scrim: rgba(20, 23, 27, 0.4);
 
   /* Accent is reserved for position, focus and primary action. */
-  --accent: #2866de;
+  --accent: #2b6671;
   /* A persistent selected row has a distinct surface, not a hover colour. */
-  --accent-muted: rgba(47, 111, 242, 0.12);
+  --accent-muted: rgba(43, 102, 113, 0.12);
   /* Stronger only for matches highlighted inside running text. */
-  --accent-strong: rgba(47, 111, 242, 0.2);
+  --accent-strong: rgba(43, 102, 113, 0.2);
 
   /* Primary controls share the accent identity and carry white action text. */
-  --primary: #2866de;
-  --primary-hover: #2159c6;
+  --primary: #2b6671;
+  --primary-hover: #235660;
   --on-primary: #fff;
 
   /*
@@ -409,9 +438,9 @@
 
   /* Concord feature roles resolve here so selection, status and shell materials
      remain consistent across Work, Model and Project. */
-  --concord-accent: #2866de;
-  --concord-accent-strong: #2159c6;
-  --concord-accent-tint: #eaf1ff;
+  --concord-accent: #2b6671;
+  --concord-accent-strong: #235660;
+  --concord-accent-tint: #eaf2f3;
   --concord-action-hover: #edf2f5;
   --concord-shell-surface: #f2f4f8;
   --concord-shell-divider: #e4e6e9;
@@ -420,9 +449,9 @@
   --concord-divider: #e7e9ec;
   --concord-brand-mark: #1f262d;
   --concord-nav-text: #3e4852;
-  --concord-nav-selection: #e5edfc;
-  --concord-nav-active: #2159c6;
-  --concord-row-rail: #2866de;
+  --concord-nav-selection: #e4eff0;
+  --concord-nav-active: #235660;
+  --concord-row-rail: #2b6671;
   --concord-float-edge: #d9dde1;
   --concord-float-shadow: #1f262d1f;
   --concord-stage-chip: #ffffffeb;
@@ -460,8 +489,8 @@
   --concord-context-active: #253241;
   --concord-table-label: #657381;
   --concord-table-value: #495563;
-  --concord-table-action: #2866de;
-  --concord-row-selected: #eaf1ff;
+  --concord-table-action: #2b6671;
+  --concord-row-selected: #eaf2f3;
   --concord-warning-surface: #fff4e4;
   --concord-warning-text: #8f5e18;
   --concord-danger-surface: #fcebea;
@@ -476,12 +505,12 @@
   --concord-issue-shadow: #24354323;
   --concord-issue-text: #37424e;
   --concord-toolbar-shadow: #27354330;
-  --concord-toolbar-active: #2866de;
+  --concord-toolbar-active: #2b6671;
   --concord-disabled-tab: #9aa4ad;
   --concord-ready-surface: #eaf4ee;
   --concord-ready-text: #2f6b4f;
   --concord-comparison-border: #eef1f4;
-  --concord-comparison-surface: #eaf1ff;
+  --concord-comparison-surface: #eaf2f3;
   --concord-comparison-text: #5f6d7c;
   --concord-issue-icon: #b5473f;
   --concord-issue-body: #45515d;
@@ -503,11 +532,11 @@
   --concord-document-list: #f9fafc;
   --concord-list-heading: #364251;
   --concord-document-filter: #596b7b;
-  --concord-document-active: #2866de;
+  --concord-document-active: #2b6671;
   --concord-document-filter-active: #e9eff2;
   --concord-document-row-border: #e5eaf0;
-  --concord-document-selected: #eaf1ff;
-  --concord-document-selected-border: #a7bfe8;
+  --concord-document-selected: #eaf2f3;
+  --concord-document-selected-border: #9bbfc3;
   --concord-document-icon: #596b7a;
   --concord-document-preview: #f3f5f8;
   --concord-document-header-icon: #596b7a;
@@ -515,7 +544,7 @@
   --concord-document-sheet-shadow: #27333f0a;
   --concord-metadata-label: #687684;
   --concord-worktab-text: #596b7a;
-  --concord-worktab-active: #2866de;
+  --concord-worktab-active: #2b6671;
   --concord-package-description: #687785;
   --concord-package-issue: #b5473f;
   --concord-package-meta: #70808b;
@@ -638,9 +667,9 @@ button {
  * on purpose: they carry their own bottom rule, and a translate would drag that
  * rule down with the pointer and read as layout jitter rather than as a press.
  */
-.button:not(:disabled):active,
+button.button:not(:disabled):active,
 .import-button:not(:disabled):active,
-.icon-button:not(:disabled):active {
+button.icon-button:not(:disabled):active {
   transform: translateY(1px);
 }
 button svg {

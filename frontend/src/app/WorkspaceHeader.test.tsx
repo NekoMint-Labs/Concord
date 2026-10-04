@@ -29,7 +29,7 @@ it("navigates the project breadcrumb while keeping the area read-only", () => {
   expect(project).toHaveFocus();
   fireEvent.click(project);
   expect(onNavigate).toHaveBeenLastCalledWith("project");
-  expect(screen.getByText("东翼风管安装")).toBeVisible();
+  expect(screen.getByRole("button", { name: "东翼风管安装" })).toBeVisible();
   expect(screen.getByText("L02 东翼")).toBeVisible();
   expect(
     screen.queryByRole("button", { name: "L02 东翼" }),
@@ -152,7 +152,9 @@ it("uses the selected model object's relation, not the remembered work package, 
   );
   const view = render(node(linked.element_ids[0]));
   const breadcrumb = screen.getByRole("navigation", { name: "当前位置" });
-  expect(breadcrumb).toHaveTextContent("东翼风管安装");
+  expect(
+    within(breadcrumb).getByRole("button", { name: "东翼风管安装" }),
+  ).toBeVisible();
   expect(breadcrumb).not.toHaveTextContent("结构交接");
   for (const element of ["unlinked-element", ""]) {
     view.rerender(node(element));

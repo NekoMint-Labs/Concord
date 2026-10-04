@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { api, type DTO } from "../api/client";
+import { donorText } from "../../tests/donor-dom";
 import { WorkPackageModelContext } from "./WorkPackageModelContext";
 
 vi.mock("../viewers/IFCViewer", () => ({
@@ -50,7 +51,9 @@ it("uses the authenticated project IFC and names linked elements without exposin
   expect(
     await screen.findByText("IFC viewer: project-import.ifc"),
   ).toBeVisible();
-  expect(screen.getByText("Beam 01")).toBeVisible();
+  await waitFor(() =>
+    expect(donorText("Beam 01", document.body)).toBeVisible(),
+  );
   expect(screen.queryByText("gid-1")).toBeNull();
   expect(screen.getByText("1 个关联构件受到影响")).toBeVisible();
   cache.clear();
@@ -131,7 +134,9 @@ it("shows confirmed project bindings on the work package even when the legacy el
       />
     </QueryClientProvider>,
   );
-  expect(await screen.findByText("Supply duct")).toBeVisible();
+  await waitFor(() =>
+    expect(donorText("Supply duct", document.body)).toBeVisible(),
+  );
   expect(screen.getByRole("heading", { name: "1 个关联构件" })).toBeVisible();
   expect(
     screen.queryByText("当前工作包尚未关联 BIM 构件。"),
@@ -215,7 +220,9 @@ it("keeps a deleted confirmed component visible as an affected work-package chan
     </QueryClientProvider>,
   );
   expect(await screen.findByText("1 个关联构件受到影响")).toBeVisible();
-  expect(screen.getByText("此版本已删除的构件")).toBeVisible();
+  await waitFor(() =>
+    expect(donorText("此版本已删除的构件", document.body)).toBeVisible(),
+  );
   expect(screen.getByText(/新版本待审核/)).toBeVisible();
   cache.clear();
 });
@@ -327,8 +334,12 @@ it("keeps identical GUIDs in different models distinct and hands the selected so
       />
     </QueryClientProvider>,
   );
-  expect(await screen.findByText("mep component")).toBeVisible();
-  expect(await screen.findByText("structure component")).toBeVisible();
+  await waitFor(() =>
+    expect(donorText("mep component", document.body)).toBeVisible(),
+  );
+  await waitFor(() =>
+    expect(donorText("structure component", document.body)).toBeVisible(),
+  );
   expect(screen.getByRole("heading", { name: "2 个关联构件" })).toBeVisible();
   expect(screen.queryByText("Wrong legacy name")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /structure component/ }));

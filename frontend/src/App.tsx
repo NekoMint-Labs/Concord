@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link2, PenLine } from "lucide-react";
+import { Focus, Link2, PenLine } from "lucide-react";
 import { api, isDesktop, setToken, type DTO } from "./api/client";
 import { Button } from "./components/ui/button";
 import { icon } from "./components/ui/icon";
@@ -27,7 +27,23 @@ import { ConcordAgent } from "./features/ConcordAgent";
 import { ContextRunProgress } from "./features/ContextRunProgress";
 import { useConcordAgent } from "./features/useConcordAgent";
 import type { BimMappingContext } from "./features/BimMappingWorkspace";
-import { demoWorkPackageName } from "./ui/demo/demoPresentation";
+import {
+  demoProjectName,
+  demoWorkPackageName,
+} from "./ui/demo/demoPresentation";
+import { WorkspaceChrome, WorkspaceCommandMenu } from "./app/WorkspaceChrome";
+import { findingStateLabels } from "./features/FindingWorkbench";
+import { useEngineeringFindings } from "./features/useEngineeringFindings";
+import type { ExplorerEntry } from "./features/ProjectExplorer";
+import {
+  useWorkspaceLayout,
+  WorkspaceLayoutDialog,
+} from "./layout/WorkspaceLayout";
+import {
+  getFocusMode,
+  onFocusModeChange,
+  toggleFocusMode,
+} from "./layout/focusMode";
 
 export function App() {
   const lifecycle = useProjectLifecycle();
@@ -66,6 +82,47 @@ function ProjectApplication({
   const [mappingMode, setMappingMode] = useState(false);
   const [mappingContext, setMappingContext] = useState<BimMappingContext>();
   const [navOpen, setNavOpen] = useState(true);
+  const [findingId, setFindingId] = useState("");
+  const [findingEvidenceId, setFindingEvidenceId] = useState<string>();
+  const findings = useEngineeringFindings(project);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [layoutOpen, setLayoutOpen] = useState(false);
+  const prefs = useWorkspaceLayout();
+  const [focusMode, setFocusMode] = useState(getFocusMode);
+  useEffect(() => onFocusModeChange(setFocusMode), []);
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || document.querySelector('[role="dialog"]'))
+        return;
+      if (
+        event
+          .composedPath()
+          .some(
+            (target) =>
+              target instanceof HTMLElement &&
+              (target.matches(
+                "input, textarea, select, [contenteditable=true]",
+              ) ||
+                target.isContentEditable),
+          )
+      )
+        return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen(true);
+      } else if (
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === "f"
+      ) {
+        event.preventDefault();
+        toggleFocusMode();
+      }
+    };
+    window.addEventListener("keydown", keydown);
+    return () => window.removeEventListener("keydown", keydown);
+  }, []);
   const navPanel = usePanelRef();
   useEffect(() => {
     if (!navOpen)
@@ -174,6 +231,26 @@ function ProjectApplication({
     setTab(next);
   }
 
+  function openFinding(id: string, evidenceId?: string) {
+    setFindingId(id);
+    setFindingEvidenceId(evidenceId);
+    navigate("work");
+    const finding = findings.data?.find((item) => item.id === id);
+    const dependency = finding?.dependencies[0];
+    if (dependency)
+      agent.sourceContext(
+        dependency.source_id,
+        dependency.source_revision_id,
+        undefined,
+        undefined,
+        undefined,
+        dependency.target.kind === "bim"
+          ? (dependency.target.global_ids ?? [])
+          : [],
+      );
+    setDetailsOpen(false);
+  }
+
   function createEvent(event: DTO<"ProjectEvent-Input">) {
     selectPackage(event.work_package_id);
     navigate("coordination");
@@ -248,137 +325,184 @@ function ProjectApplication({
       </>
     );
 
+  const findingEntries: ExplorerEntry[] = (findings.data ?? []).flatMap(
+    (finding) => [
+      {
+        target: { kind: "finding" as const, id: finding.id },
+        title: finding.title,
+        meta: finding.what_changed,
+        type: "工程判断",
+        state: findingStateLabels[finding.state],
+        search: `${finding.id} ${finding.work_package_id} ${finding.what_changed}`,
+      },
+      ...finding.evidence_ids.map((id): ExplorerEntry => ({
+        target: { kind: "finding", id: finding.id, evidenceId: id },
+        title: "工程依据",
+        meta: finding.title,
+        type: "工程依据",
+        search: id,
+      })),
+    ],
+  );
   return (
     <div
       className={`application-shell${navOpen ? "" : " is-nav-collapsed"}`}
       aria-busy={busy}
     >
-      <PaneSplit id="shell">
-        <Pane
-          id="sidebar-pane"
-          className="sidebar-pane pane-stack"
-          panelRef={navPanel}
-          collapsible
-          collapsedSize="0px"
-          defaultSize="88px"
-          minSize="80px"
-          maxSize="104px"
-          onResize={(size) => setNavOpen(size.inPixels > 0)}
-        >
-          <ProjectSidebar
-            data={data}
-            project={project}
-            projects={lifecycle.projects.data}
-            recent={lifecycle.recent}
-            sources={sourceCatalog.data ?? []}
-            selected={selected}
-            tab={tab}
-            collapsed={!navOpen}
-            onCollapse={() => {
-              navPanel.current?.collapse();
-              setNavOpen(false);
-            }}
-            onProject={lifecycle.openProject}
-            onOpenDemo={() => lifecycle.openDemo.mutate()}
-            onNewProject={() => setNewProjectOpen(true)}
-            onOpenProject={() => setOpenProjectOpen(true)}
-            onProjectSettings={() => setSettingsOpen(true)}
-            onStructure={() => setStructureOpen(true)}
-            onSelect={(id) => {
-              selectPackage(id);
-              navigate("coordination");
-            }}
-            onTab={navigate}
-          />
-        </Pane>
-        <PaneDivider label="调整导航宽度" disabled={!navOpen} />
+      <PaneSplit id={focusMode ? "shell-focus" : "shell"}>
+        {!focusMode && (
+          <>
+            <Pane
+              id="sidebar-pane"
+              className="sidebar-pane pane-stack"
+              panelRef={navPanel}
+              collapsible
+              collapsedSize="0px"
+              defaultSize="88px"
+              minSize="80px"
+              maxSize="104px"
+              onResize={(size) => setNavOpen(size.inPixels > 0)}
+            >
+              <ProjectSidebar
+                data={data}
+                project={project}
+                projects={lifecycle.projects.data}
+                recent={lifecycle.recent}
+                sources={sourceCatalog.data ?? []}
+                selected={selected}
+                tab={tab}
+                collapsed={!navOpen}
+                onCollapse={() => {
+                  navPanel.current?.collapse();
+                  setNavOpen(false);
+                }}
+                onProject={lifecycle.openProject}
+                onOpenDemo={() => lifecycle.openDemo.mutate()}
+                onNewProject={() => setNewProjectOpen(true)}
+                onOpenProject={() => setOpenProjectOpen(true)}
+                onProjectSettings={() => setSettingsOpen(true)}
+                onStructure={() => setStructureOpen(true)}
+                onSelect={(id) => {
+                  selectPackage(id);
+                  navigate("coordination");
+                }}
+                onTab={navigate}
+              />
+            </Pane>
+            <PaneDivider label="调整导航宽度" disabled={!navOpen} />
+          </>
+        )}
         <Pane className="main-pane pane-stack">
           <main className="main-shell">
-            <WorkspaceHeader
-              data={data}
-              wp={wp}
-              modelElementId={
-                tab === "bim" && !mappingMode
-                  ? localIfc
-                    ? ""
-                    : selectedElement
-                  : undefined
-              }
-              tab={tab}
-              navCollapsed={!navOpen}
-              onToggleNav={() => {
-                navPanel.current?.expand();
-                setNavOpen(true);
-              }}
-              onNavigate={navigate}
-            >
-              {wp && tab === "coordination" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => setEventDialog(true)}
-                >
-                  <PenLine {...icon} />
-                  记录变更
+            {focusMode ? (
+              <div className="workbench-focus-return">
+                <Button variant="secondary" size="sm" onClick={toggleFocusMode}>
+                  <Focus {...icon} />
+                  退出专注模式（F）
                 </Button>
-              )}
-              {wp && tab === "bim" && !mappingMode && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={!!localIfcFile || !projectModels.length}
-                  title={
-                    localIfcFile
-                      ? "本地 IFC 仅用于预览；添加到项目并处理后才能关联"
-                      : !projectModels.length
-                        ? "请先添加并处理项目 IFC 模型"
+              </div>
+            ) : (
+              <WorkspaceChrome
+                title={demoProjectName(project, data.state.project.name)}
+                onSearch={() => setCommandOpen(true)}
+                onFocus={toggleFocusMode}
+                onLayout={() => setLayoutOpen(true)}
+                context={
+                  <WorkspaceHeader
+                    data={data}
+                    wp={wp}
+                    modelElementId={
+                      tab === "bim" && !mappingMode
+                        ? localIfc
+                          ? ""
+                          : selectedElement
                         : undefined
-                  }
-                  onClick={() => {
-                    setMappingContext(undefined);
-                    setMappingMode(true);
-                  }}
-                >
-                  <Link2 {...icon} />
-                  关联 BIM
-                </Button>
-              )}
-              <ConcordAgent
-                key={project}
-                project={project}
-                context={agent.context}
-                currentRun={agent.contextualRun}
-                report={agent.contextualReport}
-                onRun={agent.rememberRun}
-                onInvestigate={(instruction, context) =>
-                  agent.startInvestigation(instruction, context)
+                    }
+                    tab={tab}
+                    navCollapsed={!navOpen}
+                    onToggleNav={() => {
+                      navPanel.current?.expand();
+                      setNavOpen(true);
+                    }}
+                    onNavigate={navigate}
+                  >
+                    {wp && tab === "coordination" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => setEventDialog(true)}
+                      >
+                        <PenLine {...icon} />
+                        记录变更
+                      </Button>
+                    )}
+                    {wp && tab === "bim" && !mappingMode && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={!!localIfcFile || !projectModels.length}
+                        title={
+                          localIfcFile
+                            ? "本地 IFC 仅用于预览；添加到项目并处理后才能关联"
+                            : !projectModels.length
+                              ? "请先添加并处理项目 IFC 模型"
+                              : undefined
+                        }
+                        onClick={() => {
+                          setMappingContext(undefined);
+                          setMappingMode(true);
+                        }}
+                      >
+                        <Link2 {...icon} />
+                        关联 BIM
+                      </Button>
+                    )}
+                    <ConcordAgent
+                      key={project}
+                      project={project}
+                      finding={
+                        tab === "work" && !!findingId
+                          ? findings.data?.find((item) => item.id === findingId)
+                          : undefined
+                      }
+                      context={agent.context}
+                      currentRun={agent.contextualRun}
+                      report={agent.contextualReport}
+                      onRun={agent.rememberRun}
+                      onInvestigate={(instruction, context) =>
+                        agent.startInvestigation(instruction, context)
+                      }
+                      onOpenReport={() => {
+                        if (tab === "work") navigate("coordination");
+                        setInspectorView("investigation");
+                        setDetailsOpen(true);
+                      }}
+                    />
+                    <AdvancedMenu
+                      tab={tab}
+                      onTab={navigate}
+                      project={project}
+                      busy={busy}
+                      profile={profile.data}
+                      createEvent={createEvent}
+                      onReset={() => {
+                        setSelectedConstraint("");
+                        setDetailsOpen(false);
+                        setTab("work");
+                        void perform(api.reset, "演示项目已重置。");
+                      }}
+                    />
+                  </WorkspaceHeader>
                 }
-                onOpenReport={() => {
-                  setInspectorView("investigation");
-                  setDetailsOpen(true);
-                }}
               />
-              <AdvancedMenu
-                tab={tab}
-                onTab={navigate}
-                project={project}
-                busy={busy}
-                profile={profile.data}
-                createEvent={createEvent}
-                onReset={() => {
-                  setSelectedConstraint("");
-                  setDetailsOpen(false);
-                  setTab("work");
-                  void perform(api.reset, "演示项目已重置。");
-                }}
-              />
-            </WorkspaceHeader>
+            )}{" "}
             {(error || agent.error || lifecycle.openDemo.error) && (
               <div className="alert" role="alert">
                 {error || agent.error || lifecycle.openDemo.error?.message}
                 <AppTooltip label="关闭提示">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => {
                       setError("");
                       agent.clearError();
@@ -387,11 +511,16 @@ function ProjectApplication({
                     aria-label="关闭提示"
                   >
                     ×
-                  </button>
+                  </Button>
                 </AppTooltip>
               </div>
             )}
             <WorkspaceViews
+              workspaceLayout={prefs}
+              findingId={findingId}
+              findingEvidenceId={findingEvidenceId}
+              findingEntries={findingEntries}
+              onOpenFinding={openFinding}
               project={project}
               data={data}
               modelSource={
@@ -579,6 +708,70 @@ function ProjectApplication({
           selectPackage(id);
           navigate("coordination");
         }}
+      />
+      <WorkspaceLayoutDialog
+        open={layoutOpen}
+        onClose={() => setLayoutOpen(false)}
+        prefs={prefs}
+      />
+      <WorkspaceCommandMenu
+        open={commandOpen}
+        onClose={() => setCommandOpen(false)}
+        actions={[
+          ...(
+            [
+              ["work", "工作 · Work"],
+              ["project", "项目 · Project"],
+              ["browse", "浏览 · Browse"],
+              ["bim", "打开模型工作区"],
+              ["documents", "打开文档工作区"],
+            ] as const
+          ).map(([id, label]) => ({
+            id,
+            label,
+            group: "工作台",
+            run: () => navigate(id),
+          })),
+          ...findingEntries.map((entry) => ({
+            id: `finding-${entry.target.id}-${entry.target.kind === "finding" ? (entry.target.evidenceId ?? "") : ""}`,
+            label: entry.title,
+            group: entry.type,
+            run: () => {
+              if (entry.target.kind === "finding")
+                openFinding(entry.target.id, entry.target.evidenceId);
+            },
+          })),
+          {
+            id: "layout",
+            label: "工作台布局偏好",
+            group: "仅保存在本机",
+            run: () => setLayoutOpen(true),
+          },
+          {
+            id: "focus",
+            label: "切换专注模式",
+            shortcut: "F",
+            run: toggleFocusMode,
+          },
+          ...data.state.work_packages.map((item) => ({
+            id: `package-${item.id}`,
+            label: demoWorkPackageName(item.id, item.name),
+            group: "工作包",
+            run: () => {
+              selectPackage(item.id);
+              navigate("coordination");
+            },
+          })),
+          ...(sourceCatalog.data ?? []).map((item) => ({
+            id: `source-${item.source.id}`,
+            label: item.source.name,
+            group: "资料",
+            run: () => {
+              navigate("project");
+              setProjectSourceId(item.source.id);
+            },
+          })),
+        ]}
       />
       <AppToaster />
     </div>

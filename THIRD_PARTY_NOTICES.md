@@ -75,3 +75,36 @@ explicit.
 - License: MIT, https://github.com/twentyhq/twenty/blob/413ae94b2e7c226b174d22d8bd3deedddc6bbf88/packages/twenty-ui/LICENSE
 - Use: visual reference for compact spacing and table density
 - Modification: no Twenty application code, component, or token value was copied
+
+## ThatOpen UI component donor
+
+- Project: `@thatopen/ui` from ThatOpen/engine_ui-components
+- Source revision: `c998a4a49ff9b2fa09ef67eb91d36067e7897f2f` (donor checkout used for the migration audit)
+- Source: https://github.com/ThatOpen/engine_ui-components/tree/c998a4a49ff9b2fa09ef67eb91d36067e7897f2f/packages/core
+- Package: `@thatopen/ui@3.4.14`, installed as a frontend runtime dependency
+- License: MIT; upstream license: https://github.com/ThatOpen/engine_ui-components/blob/c998a4a49ff9b2fa09ef67eb91d36067e7897f2f/LICENSE.md; distributed copy: `frontend/public/licenses/ThatOpen-UI-MIT.txt`
+- Adopted components: `bim-grid`, `bim-toolbar`, `bim-panel`, `bim-panel-section`, `bim-table`, and `bim-viewport`. Registration is initialized once through `Manager.init("", false)` in `frontend/src/main.tsx`; Concord retains its own reduced-motion policy rather than donor load animations.
+- Concord integration: `frontend/src/components/ThatOpenUI.tsx` and `ThatOpenDataTable.tsx`; WorkspaceHeader/WorkspaceChrome/AppDialog toolbars; WorkList/FindingWorkbench/EvidenceWorkspaceHost panels and grid; ProjectHome/ProjectOverview/ProjectSourceRegister panels and sections; ProjectExplorer tables; ModelWorkspaceView viewport host; WorkspaceState panels; token bridge in `frontend/src/styles/base.css`.
+- Modifications: thin React adapters assign Lit properties through element refs, retain header-action events through stable slot portals, and append a reduced-motion override to TableRow static styles before Lit finalization; Concord retains its domain data, routing, query identities, viewer ownership, palette, typography, and interaction semantics. No donor branding, estimating semantics, fonts, or palette were copied.
+
+## OpenTakeoff workbench donor
+
+- Project: OpenTakeoff, Copyright 2026 Kentucky AI and the OpenTakeoff contributors
+- Source revision: `60c82e34b389384401a083cefeb9389f89fbaae1`
+- Source: https://github.com/Kentucky-ai/opentakeoff/tree/60c82e34b389384401a083cefeb9389f89fbaae1
+- License: Apache-2.0; distributed copy: `frontend/public/licenses/OpenTakeoff-APACHE-2.0.txt`
+- Upstream NOTICE: retained in `frontend/public/licenses/OpenTakeoff-NOTICE.txt`
+- Directly ported/adapted: `web/src/lib/workspaceLayout.js`, `web/src/lib/focusMode.js`, `web/src/components/WorkspaceLayout.jsx`, `web/src/components/WorkspaceChrome.jsx`, `web/src/components/WorkspacePanel.jsx`, and applicable `workspaceChrome.css` / `workspacePanel.css` rules.
+- Concord files: `frontend/src/layout/workspaceLayout.ts`, `WorkspaceLayout.tsx`, `focusMode.ts`; `frontend/src/app/WorkspaceChrome.tsx`; `frontend/src/features/FindingWorkbench.tsx`; `frontend/src/styles/workbench.css`.
+- Modifications: TypeScript, Chinese localization, Concord navigation and fixture Finding/evidence data, existing Concord UI primitives/Panes/motion/tokens. Removed estimating, quantities, pricing, premium and alternative appearance concepts. Panel resizing remains in Concord's existing `PaneSplit` rather than a competing resize mechanism.
+- No upstream fonts/tokens, engineering parsers, viewer runtime or donor-specific domain contracts are installed or copied. Fixtures never enter project persistence.
+
+- Issue #16 content-conformance pass additionally inspected current donor revision `788e39bfe9c42b3260ea75e84a655e4574f9bc8c`: `WorkspacePanel.jsx`, `workspacePanel.css`, `WorkspaceChrome.jsx`, `workspaceChrome.css`, `WorkspaceLayout.jsx`, and `lib/workspaceLayout.js`. Adapted its filters → compact rows → selected-object inspector → receipt-note/progressive-disclosure composition for engineering Findings, Evidence and separate Coordination/ReCheck records. Existing shell/layout ports remain based on the revision above; no estimating-domain code or new viewer runtime was added.
+
+## Lit runtime
+
+- Package: `lit@3.3.1`, the same version used by `@thatopen/ui@3.4.14`
+- Source: https://github.com/lit/lit
+- License: BSD-3-Clause; distributed copy: `frontend/public/licenses/Lit-BSD-3-Clause.txt`
+- Use: the native `css` tagged template to extend the donor shadow-root reduced-motion policy, without copying its implementation
+- Modification: none to Lit; no separate Lit application, state owner or component family is introduced

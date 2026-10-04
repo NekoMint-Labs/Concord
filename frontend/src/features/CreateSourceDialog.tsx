@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type RefObject } from "react";
 import type { DTO, ProjectSourceStatus } from "../api/client";
 import { AppDialog } from "../components/ui/AppDialog";
 import { AppSelect } from "../components/ui/AppSelect";
@@ -28,6 +28,7 @@ export type AddSourcesDialogProps = {
     label: string;
   }) => Promise<DTO<"RevisionUploadResult">>;
   onUploaded?: (sourceId: string) => void;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 };
 
 export function AddSourcesDialog({
@@ -39,6 +40,7 @@ export function AddSourcesDialog({
   onCreate,
   onUpload,
   onUploaded,
+  returnFocusRef,
 }: AddSourcesDialogProps) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [busy, setBusy] = useState(false);
@@ -99,6 +101,7 @@ export function AddSourcesDialog({
 
   return (
     <AppDialog
+      returnFocusRef={returnFocusRef}
       open={open}
       onOpenChange={(next) => {
         if (!busy) onOpenChange(next);

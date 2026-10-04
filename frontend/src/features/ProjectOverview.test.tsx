@@ -1,12 +1,22 @@
 import { useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { Manager, Panel, PanelSection, Table } from "@thatopen/ui";
+import { donorButton, donorText } from "../../tests/donor-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
 import { api, type ProjectSourceStatus, type Workspace } from "../api/client";
 import { ProjectHome } from "../app/ProjectHome";
 import type { ProjectContext } from "../app/useProjectContext";
 import { ProjectContextPane } from "./ProjectContextPane";
+
+Manager.init("", false);
 
 // These tests own disclosure placement and destinations; Radix popup mechanics are primitive/browser-covered.
 vi.mock("../components/ui/AppMenu", () => ({
@@ -84,7 +94,7 @@ function mount(workspace: Workspace, sources: ProjectSourceStatus[] = []) {
   return { ...view, onTab, onPackage, onStructure };
 }
 
-it("keeps the current-state, baseline, sources and package sequence without duplicate inventories", async () => {
+it("keeps state, the source header and baseline, then packages without duplicate inventories", async () => {
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
   const { container, onTab, onPackage } = mount(workspace, [model]);
   const state = screen.getByRole("region", { name: "当前状态" });
@@ -101,15 +111,15 @@ it("keeps the current-state, baseline, sources and package sequence without dupl
   const sourcesHeading = screen.getByRole("heading", { name: "资料" });
   const ledger = screen.getByRole("region", { name: "工作包状态" });
   expect(
-    state.compareDocumentPosition(baseline) & Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
-  expect(
-    baseline.compareDocumentPosition(sourcesHeading) &
+    state.compareDocumentPosition(sourcesHeading) &
       Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   expect(
-    sourcesHeading.compareDocumentPosition(ledger) &
+    sourcesHeading.compareDocumentPosition(baseline) &
       Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    baseline.compareDocumentPosition(ledger) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   expect(
     container.querySelector(".project-state-footer"),
@@ -121,12 +131,16 @@ it("keeps the current-state, baseline, sources and package sequence without dupl
   fireEvent.click(screen.getByRole("button", { name: "项目操作" }));
   fireEvent.click(await screen.findByRole("menuitem", { name: "项目设置" }));
   expect(onTab).toHaveBeenLastCalledWith("settings");
-  expect(within(ledger).getAllByRole("listitem")).toHaveLength(
-    workspace.state.work_packages.length,
-  );
+  const packageTable = ledger.querySelector<Table>("bim-table")!;
+  expect(packageTable.data).toHaveLength(workspace.state.work_packages.length);
   const wp = workspace.state.work_packages[0];
+  await waitFor(() =>
+    expect(
+      donorButton(`打开 ${packageTable.data[0].data.工作包}`, ledger),
+    ).toBeDefined(),
+  );
   fireEvent.click(
-    within(ledger).getByRole("button", { name: new RegExp(wp.id) }),
+    donorButton(`打开 ${packageTable.data[0].data.工作包}`, ledger)!,
   );
   expect(onPackage).toHaveBeenCalledExactlyOnceWith(wp.id);
   const records = screen.getByRole("navigation", { name: "项目内容" });
@@ -134,7 +148,9 @@ it("keeps the current-state, baseline, sources and package sequence without dupl
   expect(onTab).toHaveBeenLastCalledWith("documents");
   fireEvent.click(within(records).getByRole("button", { name: /历史/ }));
   expect(onTab).toHaveBeenLastCalledWith("history");
-  fireEvent.click(await screen.findByRole("button", { name: /MEP.*最新/ }));
+  await waitFor(() => expect(donorButton("打开 MEP", container)).toBeDefined());
+  expect(donorText("MEP", container)).toBeDefined();
+  fireEvent.click(donorButton("打开 MEP", container)!);
   expect(
     await screen.findByRole("complementary", { name: "资料上下文" }),
   ).toBeVisible();
@@ -217,4 +233,65 @@ it("keeps document previews behind disclosure without changing exact-document na
   fireEvent.click(screen.getByRole("button", { name: /Drawing.pdf/ }));
   expect(onTab).toHaveBeenCalledExactlyOnceWith("documents");
   expect(onDocument).toHaveBeenCalledOnce();
+});
+
+it("projects engineering content into visible donor panel and section headers", async () => {
+  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
+  const { container, onTab } = mount(workspace, [model]);
+  await screen.findByRole("region", { name: "当前基线" });
+  const panel = container.querySelector<Panel>("bim-panel.project-primary")!;
+  const context = container.querySelector<Panel>(
+    "bim-panel.project-context-surface",
+  )!;
+  const sections = [
+    ...container.querySelectorAll<PanelSection>("bim-panel-section"),
+  ];
+  await Promise.all(
+    [panel, context, ...sections].map((element) => element.updateComplete),
+  );
+  expect(panel.headerHidden).toBe(false);
+  expect(
+    panel.shadowRoot!.querySelector(".header bim-label"),
+  ).toHaveTextContent("项目");
+  expect(panel.querySelector("h1")!.closest("[slot]")).toHaveAttribute(
+    "slot",
+    "header-start",
+  );
+  expect(context.headerHidden).toBe(false);
+  expect(
+    context.shadowRoot!.querySelector(".header bim-label"),
+  ).toHaveTextContent("项目记录");
+  expect(sections.map((section) => section.label).filter(Boolean)).toEqual([
+    "当前状态",
+    "1 份",
+    `${workspace.state.work_packages.length} 个`,
+  ]);
+  for (const section of sections.filter((section) => section.label)) {
+    expect(section.fixed).toBe(true);
+    expect(section.collapsed).not.toBe(true);
+    expect(section.shadowRoot!.querySelector(".header")).not.toBeNull();
+    expect(
+      section
+        .shadowRoot!.querySelector<HTMLSlotElement>("slot:not([name])")!
+        .assignedElements().length,
+    ).toBeGreaterThan(0);
+  }
+  expect(screen.getByRole("heading", { name: "资料" })).toHaveAttribute(
+    "slot",
+    "header-start",
+  );
+  expect(screen.getByRole("heading", { name: "工作包" })).toHaveAttribute(
+    "slot",
+    "header-start",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "查看全部 →" }));
+  expect(onTab).toHaveBeenLastCalledWith("work-packages");
+  await waitFor(() => expect(donorButton("打开 MEP", container)).toBeDefined());
+  fireEvent.click(donorButton("打开 MEP", container)!);
+  await screen.findByRole("complementary", { name: "资料上下文" });
+  await waitFor(() => expect(context.label).toBe("资料上下文"));
+  await context.updateComplete;
+  expect(
+    context.shadowRoot!.querySelector(".header bim-label"),
+  ).toHaveTextContent("资料上下文");
 });

@@ -347,7 +347,8 @@ function ModelContext({
           </header>
           <div className="linked-element-list">
             {rows.map((row, index) => (
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 key={row.key}
                 className={active?.key === row.key ? "selected" : ""}
@@ -382,7 +383,7 @@ function ModelContext({
                   className={`element-signal${row.affected ? " is-affected" : ""}`}
                   aria-label={row.affected ? "受影响" : "未受影响"}
                 />
-              </button>
+              </Button>
             ))}
             {!rows.length && (
               <div className="linked-element-empty">

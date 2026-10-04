@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { api, type DTO, type Workspace } from "./api/client";
 import fixture from "../tests/fixtures/inspector.json";
@@ -14,6 +14,7 @@ import type { ComponentProps } from "react";
 import type { WorkspaceViews } from "./app/WorkspaceViews";
 import { WorkList } from "./features/WorkList";
 import { SourceContextPane } from "./features/SourceContextPane";
+import { findDonorControl } from "../tests/donor-dom";
 
 vi.mock("./app/WorkspaceViews", () => ({
   WorkspaceViews: (props: ComponentProps<typeof WorkspaceViews>) => (
@@ -27,6 +28,9 @@ vi.mock("./app/WorkspaceViews", () => ({
         data-element={props.selectedElement}
         data-tab={props.tab}
         data-source={props.mappingContext?.sourceId}
+        data-finding-id={props.findingId}
+        data-finding-evidence={props.findingEvidenceId ?? ""}
+        data-finding-entries={JSON.stringify(props.findingEntries ?? [])}
         data-history-report={props.report?.answer.summary ?? ""}
         data-history-revision={props.investigationContext.revisionId ?? ""}
         data-history-work-package={
@@ -45,6 +49,17 @@ vi.mock("./app/WorkspaceViews", () => ({
         Inspect source impact
       </button>
       <button onClick={() => props.onDetailsOpen(true)}>Open inspector</button>
+      {props.findingEntries?.map((entry) => (
+        <button
+          key={`${entry.target.id}-${entry.title}`}
+          onClick={() => {
+            if (entry.target.kind === "finding")
+              props.onOpenFinding?.(entry.target.id, entry.target.evidenceId);
+          }}
+        >
+          {entry.title}
+        </button>
+      ))}
       {props.tab === "work" && (
         <WorkList
           workspace={props.data}
@@ -126,6 +141,37 @@ vi.mock("./app/ProjectSidebar", () => ({
   ),
 }));
 
+beforeEach(() => {
+  vi.spyOn(api, "engineeringFindings").mockResolvedValue([]);
+});
+
+const finding = (
+  project: string,
+  id: string,
+  title: string,
+): DTO<"Finding"> => ({
+  id,
+  project_id: project,
+  state: "PROPOSED",
+  snapshot_id: "snapshot-2",
+  work_package_id: "work-4",
+  title,
+  conclusion: "Measured conflict",
+  what_changed: "Duct moved",
+  why_it_matters: "Clearance",
+  evidence_ids: [`${id}-evidence`],
+  reasoning_summary: "Measured",
+  confidence: 0.9,
+  limitations: [],
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  impact: null,
+  change_ids: [],
+  dependencies: [],
+  suggested_action: "Review",
+  suggested_discipline: "MEP",
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
   localStorage.clear();
@@ -144,6 +190,19 @@ it("discards WP, source, element, mapping and inspector context when switching c
   b.state.work_packages = [
     { ...a.state.work_packages[0], id: "new-package", name: "新项目工作包" },
   ];
+  const findingA = finding(
+    "project-a",
+    "opaque-finding-a",
+    "Project A engineering finding",
+  );
+  const findingB = finding(
+    "project-b",
+    "opaque-finding-b",
+    "Project B engineering finding",
+  );
+  vi.mocked(api.engineeringFindings).mockImplementation(async (project) =>
+    project === "project-a" ? [findingA] : [findingB],
+  );
   localStorage.setItem("concord:last-project", a.state.project.id);
   vi.spyOn(api, "projects").mockResolvedValue([
     a.state.project,
@@ -178,6 +237,33 @@ it("discards WP, source, element, mapping and inspector context when switching c
   expect(context).toHaveAttribute("data-mapping", "true");
   expect(context).toHaveAttribute("data-source", "old-source");
   expect(context).toHaveAttribute("data-inspector", "true");
+  await screen.findByText(findingA.title, { selector: "button" });
+  fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+  const search = screen.getByRole("combobox", { name: "搜索对象或操作" });
+  fireEvent.change(search, { target: { value: findingA.title } });
+  fireEvent.click(
+    screen.getByRole("option", { name: new RegExp(`^${findingA.title}`) }),
+  );
+  expect(context).toHaveAttribute("data-finding-id", findingA.id);
+  expect(context).toHaveAttribute("data-tab", "work");
+  expect(context).toHaveAttribute("data-finding-evidence", "");
+  // A real evidence entry keeps its opaque Finding and Evidence IDs.
+  fireEvent.click(screen.getByRole("button", { name: "工程依据" }));
+  expect(context).toHaveAttribute("data-finding-id", findingA.id);
+  expect(context).toHaveAttribute(
+    "data-finding-evidence",
+    findingA.evidence_ids[0],
+  );
+  expect(context).toHaveAttribute("data-inspector", "false");
+  // Restore non-empty main context before switching: Finding navigation itself clears mapping.
+  fireEvent.click(
+    screen.getByRole("button", { name: "Inspect source impact" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Open inspector" }));
+  expect(context).toHaveAttribute("data-mapping", "true");
+  expect(context).toHaveAttribute("data-source", "old-source");
+  expect(context).toHaveAttribute("data-element", "old-element");
+  expect(context).toHaveAttribute("data-inspector", "true");
   fireEvent.click(screen.getByRole("button", { name: "切换项目" }));
   await waitFor(() =>
     expect(screen.getByTestId("context")).toHaveAttribute(
@@ -192,6 +278,32 @@ it("discards WP, source, element, mapping and inspector context when switching c
   expect(fresh).toHaveAttribute("data-mapping", "false");
   expect(fresh).toHaveAttribute("data-element", "");
   expect(fresh).not.toHaveAttribute("data-source");
+  expect(fresh).toHaveAttribute("data-finding-id", "");
+  expect(fresh).toHaveAttribute("data-finding-evidence", "");
+  await waitFor(() =>
+    expect(fresh).toHaveAttribute(
+      "data-finding-entries",
+      expect.stringContaining(findingB.title),
+    ),
+  );
+  expect(fresh).not.toHaveAttribute(
+    "data-finding-entries",
+    expect.stringContaining(findingA.id),
+  );
+  expect(
+    screen.queryByRole("button", { name: findingA.title }),
+  ).not.toBeInTheDocument();
+  // The output records props; actions are sibling native buttons in this mock.
+  fireEvent.click(
+    within(fresh.parentElement!).getByText(findingB.title, {
+      selector: "button",
+    }),
+  );
+  expect(fresh).toHaveAttribute("data-finding-id", findingB.id);
+  expect(fresh).toHaveAttribute("data-tab", "work");
+  expect(api.engineeringFindings).toHaveBeenCalledWith("project-a");
+  expect(api.engineeringFindings).toHaveBeenCalledWith("project-b");
+  cache.clear();
 });
 
 it.each([
@@ -337,7 +449,7 @@ it.each([
       fireEvent.click(
         await screen.findByRole("button", { name: /MEP model 有新版本/ }),
       );
-      const peek = screen.getByRole("complementary", { name: "所选工作事项" });
+      const peek = screen.getByRole("region", { name: "所选工作事项" });
       expect(peek).toHaveTextContent("R1 → R2");
       fireEvent.click(within(peek).getByRole("button", { name: "处理新版本" }));
     } else {
@@ -411,3 +523,47 @@ it.each([
     cache.clear();
   },
 );
+
+it("keeps focus and command shortcuts out of donor shadow text inputs", async () => {
+  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
+  vi.spyOn(api, "projects").mockResolvedValue([workspace.state.project]);
+  vi.spyOn(api, "profile").mockResolvedValue(
+    {} as Awaited<ReturnType<typeof api.profile>>,
+  );
+  vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
+  vi.spyOn(api, "runs").mockResolvedValue([]);
+  localStorage.setItem("concord:last-project", workspace.state.project.id);
+  const cache = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  cache.setQueryData(["workspace", workspace.state.project.id], workspace);
+  render(
+    <QueryClientProvider client={cache}>
+      <App />
+    </QueryClientProvider>,
+  );
+  const input = await findDonorControl("textbox", "搜索工作");
+  expect(input.getRootNode()).toBeInstanceOf(ShadowRoot);
+  for (const options of [
+    { key: "f" },
+    { key: "F" },
+    { key: "k", ctrlKey: true },
+    { key: "k", metaKey: true },
+  ]) {
+    const event = new KeyboardEvent("keydown", {
+      ...options,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    fireEvent(input, event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(localStorage.getItem("concord_canvas_focus")).not.toBe("1");
+    expect(
+      screen.queryByRole("dialog", { name: "查找对象或操作" }),
+    ).not.toBeInTheDocument();
+  }
+  fireEvent.keyDown(window, { key: "f" });
+  expect(localStorage.getItem("concord_canvas_focus")).toBe("1");
+  cache.clear();
+});

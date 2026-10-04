@@ -1,7 +1,14 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import {
+  useRef,
+  type ReactElement,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { icon } from "./icon";
+import { ThatOpenToolbar } from "../ThatOpenUI";
+import { Button } from "./button";
 
 /**
  * A modal dialog. It replaces the hand-written one in the event composer, which
@@ -25,6 +32,8 @@ export function AppDialog({
   children,
   className,
   closeLabel = "关闭",
+  trigger,
+  returnFocusRef,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,20 +43,62 @@ export function AppDialog({
   children: ReactNode;
   className?: string;
   closeLabel?: string;
+  /** Keep native Radix trigger/focus restoration for locally opened dialogs. */
+  trigger?: ReactElement;
+  /** A menu-launched modal returns to the persistent menu trigger. */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
+  const returnFocus = useRef<HTMLElement | null>(null);
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      {trigger && <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>}
       <Dialog.Portal>
         {/* the overlay is the scrim *and* the centring grid, so the dialog is a
             child of it rather than a second fixed layer guessing at the same
             centre */}
         <Dialog.Overlay className="modal-backdrop">
           <Dialog.Content
+            onEscapeKeyDown={(event) => {
+              // Escape first dismisses an open donor popup, not its parent modal.
+              if (
+                event
+                  .composedPath()
+                  .some(
+                    (node) =>
+                      node instanceof HTMLElement &&
+                      node.tagName === "BIM-DROPDOWN" &&
+                      (node as HTMLElement & { visible: boolean }).visible,
+                  )
+              )
+                event.preventDefault();
+            }}
+            onOpenAutoFocus={() => {
+              if (!trigger) {
+                const active = document.activeElement;
+                const menu = active?.closest('[role="menu"]');
+                const triggerId = menu?.getAttribute("aria-labelledby");
+                // A menu-launched modal must return to the persistent trigger,
+                // never to a menu item that disappears as the dialog opens.
+                returnFocus.current =
+                  returnFocusRef?.current ??
+                  (triggerId
+                    ? document.getElementById(triggerId)
+                    : active instanceof HTMLElement
+                      ? active
+                      : null);
+              }
+            }}
+            onCloseAutoFocus={(event) => {
+              if (!trigger && returnFocus.current?.isConnected) {
+                event.preventDefault();
+                returnFocus.current.focus();
+              }
+            }}
             className={
               className ? `dialog-surface ${className}` : "dialog-surface"
             }
           >
-            <header className="dialog-header">
+            <ThatOpenToolbar className="dialog-header" aria-label={title}>
               <div className="dialog-heading">
                 {eyebrow}
                 <Dialog.Title>{title}</Dialog.Title>
@@ -55,10 +106,16 @@ export function AppDialog({
                   <Dialog.Description>{description}</Dialog.Description>
                 )}
               </div>
-              <Dialog.Close className="icon-button" aria-label={closeLabel}>
-                <X {...icon} />
+              <Dialog.Close asChild>
+                <Button
+                  variant="ghost"
+                  className="icon-button"
+                  aria-label={closeLabel}
+                >
+                  <X {...icon} />
+                </Button>
               </Dialog.Close>
-            </header>
+            </ThatOpenToolbar>
             {children}
           </Dialog.Content>
         </Dialog.Overlay>

@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
+import { findDonorControl } from "../../tests/donor-dom";
 import { api, type Workspace } from "../api/client";
 import { Inspector, type InspectorView } from "./Inspector";
 
@@ -58,30 +59,30 @@ const approved = { ...waiting, approvals: [fixture.approval] } as Workspace;
 afterEach(() => vi.restoreAllMocks());
 
 describe("evidence-backed action controls", () => {
-  it("requires exact R4 confirmation and never offers unapproved execution", () => {
+  it("requires exact R4 confirmation and never offers unapproved execution", async () => {
     render(action(waiting));
     expect(screen.getByText(/执行前需要批准/)).toBeVisible();
     expect(
       screen.getByRole("button", { name: "执行并重新检查" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
     const approve = screen.getByRole("button", { name: "批准 R4" });
-    expect(approve).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("R4 强确认"), {
+    expect(approve).toHaveAttribute("aria-disabled", "true");
+    fireEvent.input(await findDonorControl("textbox", "R4 强确认"), {
       target: { value: "approve r4" },
     });
-    expect(approve).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("R4 强确认"), {
+    expect(approve).toHaveAttribute("aria-disabled", "true");
+    fireEvent.input(await findDonorControl("textbox", "R4 强确认"), {
       target: { value: "APPROVE R4" },
     });
-    expect(approve).toBeEnabled();
+    expect(approve).not.toHaveAttribute("aria-disabled", "true");
   });
 
-  it("sends strong confirmation only for the selected proposal", () => {
+  it("sends strong confirmation only for the selected proposal", async () => {
     const request = vi
       .spyOn(api, "approve")
       .mockResolvedValue(fixture.approval as Workspace["approvals"][number]);
     render(action(waiting));
-    fireEvent.change(screen.getByLabelText("R4 强确认"), {
+    fireEvent.input(await findDonorControl("textbox", "R4 强确认"), {
       target: { value: "APPROVE R4" },
     });
     fireEvent.click(screen.getByRole("button", { name: "批准 R4" }));
@@ -89,9 +90,9 @@ describe("evidence-backed action controls", () => {
     expect(request).toHaveBeenCalledWith(proposal.id, true, "APPROVE R4");
   });
 
-  it("clears typed consent when a new proposal replaces the old one", () => {
+  it("clears typed consent when a new proposal replaces the old one", async () => {
     const { rerender } = render(action(waiting));
-    fireEvent.change(screen.getByLabelText("R4 强确认"), {
+    fireEvent.input(await findDonorControl("textbox", "R4 强确认"), {
       target: { value: "APPROVE R4" },
     });
     const next = {
@@ -102,8 +103,13 @@ describe("evidence-backed action controls", () => {
       })),
     };
     rerender(action(next));
-    expect(screen.getByLabelText("R4 强确认")).toHaveValue("");
-    expect(screen.getByRole("button", { name: "批准 R4" })).toBeDisabled();
+    await waitFor(async () =>
+      expect(await findDonorControl("textbox", "R4 强确认")).toHaveValue(""),
+    );
+    expect(screen.getByRole("button", { name: "批准 R4" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
   });
 
   it("allows execution only after approval", () => {
@@ -113,7 +119,10 @@ describe("evidence-backed action controls", () => {
       queued: true,
     });
     render(action(approved));
-    expect(screen.getByRole("button", { name: "已批准" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "已批准" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     fireEvent.click(screen.getByRole("button", { name: "执行并重新检查" }));
     expect(request).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledWith(proposal.id);
@@ -131,10 +140,13 @@ describe("evidence-backed action controls", () => {
         busy={busy}
       />,
     );
-    expect(screen.getByRole("button", { name: "已批准" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "已批准" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     expect(
       screen.getByRole("button", { name: "执行并重新检查" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   it("renders evidence as text rather than executing document markup", () => {
@@ -156,7 +168,7 @@ it.each(["CANCELLED", "EXPIRED", "FAILED", "COMPLETED"] as const)(
     render(action({ ...approved, analysis_run: owner }));
     expect(
       screen.getByRole("button", { name: "执行并重新检查" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
   },
 );
 
@@ -173,7 +185,9 @@ it("uses the analysis owner rather than an unrelated completed upload", () => {
       },
     }),
   );
-  expect(screen.getByRole("button", { name: "执行并重新检查" })).toBeEnabled();
+  expect(
+    screen.getByRole("button", { name: "执行并重新检查" }),
+  ).not.toHaveAttribute("aria-disabled", "true");
 });
 
 it("lists only blocking constraints as blocker reasons", () => {
@@ -243,13 +257,15 @@ it("rejects an unrelated WAITING_APPROVAL owner even at the same generation", ()
       run: { ...approved.run!, id: "unrelated-run" },
     }),
   );
-  expect(screen.getByRole("button", { name: "执行并重新检查" })).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "执行并重新检查" }),
+  ).toHaveAttribute("aria-disabled", "true");
   expect(
     screen.getByText("执行方式：模拟执行（不会修改外部系统）"),
   ).toBeVisible();
 });
 
-it("persists a scoped rejection and gives it precedence over an old approval", () => {
+it("persists a scoped rejection and gives it precedence over an old approval", async () => {
   const audit = {
     ...waiting.audit[0],
     id: "rejection-audit",
@@ -263,15 +279,23 @@ it("persists a scoped rejection and gives it precedence over an old approval", (
   };
   const reject = vi.spyOn(api, "reject").mockResolvedValue(audit);
   const { rerender } = render(action(waiting));
-  fireEvent.change(screen.getByLabelText("拒绝原因（可选）"), {
+  fireEvent.input(await findDonorControl("textbox", "拒绝原因（可选）"), {
     target: { value: "需要现场复核" },
   });
   fireEvent.click(screen.getByRole("button", { name: /^拒绝$/ }));
   expect(reject).toHaveBeenCalledWith(proposal.id, "需要现场复核");
   rerender(action({ ...approved, audit: [...waiting.audit, audit] }));
-  expect(screen.getByRole("button", { name: "已拒绝" })).toBeDisabled();
-  expect(screen.getByRole("button", { name: "批准 R4" })).toBeDisabled();
-  expect(screen.getByRole("button", { name: "执行并重新检查" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "已拒绝" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  expect(screen.getByRole("button", { name: "批准 R4" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  expect(
+    screen.getByRole("button", { name: "执行并重新检查" }),
+  ).toHaveAttribute("aria-disabled", "true");
   expect(screen.getByText(/既有阻塞事实保留/)).toBeVisible();
   expect(screen.queryByLabelText("R4 强确认")).toBeNull();
 });

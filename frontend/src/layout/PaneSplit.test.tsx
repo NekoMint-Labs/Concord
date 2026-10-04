@@ -147,3 +147,21 @@ it("takes the divider out of the tab order while its pane is collapsed", () => {
   expect(divider).toHaveAttribute("aria-disabled", "true");
   expect(divider).not.toHaveAttribute("tabindex");
 });
+
+it("re-registers a divider when unlocked so the v4 keyboard panel map can be rebuilt", () => {
+  const content = (locked: boolean) => (
+    <PaneSplit id="lock-cycle">
+      <Pane defaultSize="360px">Work</Pane>
+      <PaneDivider label="审核宽度" disabled={locked} />
+      <Pane>Host</Pane>
+    </PaneSplit>
+  );
+  const view = render(content(true));
+  const locked = screen.getByRole("separator", { name: "审核宽度" });
+  expect(locked).toHaveAttribute("aria-disabled", "true");
+  view.rerender(content(false));
+  const unlocked = screen.getByRole("separator", { name: "审核宽度" });
+  expect(unlocked).not.toBe(locked);
+  expect(unlocked).toHaveAttribute("tabindex", "0");
+  expect(locked.isConnected).toBe(false);
+});
