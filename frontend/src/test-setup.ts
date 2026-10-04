@@ -28,6 +28,27 @@ if (!globalThis.IntersectionObserver) {
 }
 
 /*
+ * jsdom implements the `<dialog>` element but not its modal methods. The donor
+ * chrome drives a native `<dialog>` (`showModal`/`close`), so reflect the open
+ * state onto the element: Testing Library only sees an open dialog.
+ */
+if (typeof HTMLDialogElement !== "undefined") {
+  if (!HTMLDialogElement.prototype.showModal)
+    HTMLDialogElement.prototype.showModal = function showModal() {
+      this.open = true;
+    };
+  if (!HTMLDialogElement.prototype.close)
+    HTMLDialogElement.prototype.close = function close() {
+      this.open = false;
+    };
+}
+
+// The donor command menu keeps the highlighted row in view; jsdom has no layout.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => undefined;
+}
+
+/*
  * jsdom has no `matchMedia`, no `ResizeObserver`, and no rendering: an
  * animation there never completes, so a test that asserted a fade would be
  * asserting the environment rather than the product.

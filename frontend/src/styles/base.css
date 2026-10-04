@@ -727,3 +727,558 @@ a {
     animation-iteration-count: 1 !important;
   }
 }
+
+/*
+ * ── OpenTakeoff token-alias bridge ──────────────────────────────────────────
+ *
+ * Concord's palette and the vendored OpenTakeoff workspace palette are two
+ * different vocabularies. `frontend/src/vendor/opentakeoff/styles/tokens.css`
+ * is imported *after* this file, so wherever the two sheets declare the same
+ * custom property the donor wins - but that only covers the names they share.
+ * Concord's own surface, line, text and accent names are not among them, so
+ * without this bridge every Concord surface would keep its old grey palette
+ * while the donor components switched to the workspace look. These declarations
+ * re-point the Concord names onto the donor palette (values are `var()`
+ * references, never copied literals), and that is why every Concord surface now
+ * adopts the workspace look, resolved per scope.
+ *
+ * The alias set is declared three times on purpose. `var()` is substituted at
+ * computed-value time: an alias declared once on `:root` resolves against the
+ * `:root` donor values and does *not* re-resolve for a descendant scope. The
+ * vendor's `premiumWorkspace.css` re-declares the donor tokens per
+ * `[data-workspace-look]`, so a single frozen `:root` copy would ignore the
+ * workspace look entirely. Each scope therefore carries its own copy; because
+ * the values are references they resolve against whatever the donor tokens are
+ * inside that scope. This section only *adds* declarations - every earlier
+ * declaration in this file is untouched, and the later alias wins by source
+ * order within the same selector.
+ */
+
+:root {
+  --bg-app: var(--paper-bright);
+  --surface-inset: var(--paper-shadow);
+  --surface-nav: var(--paper-bright);
+  --surface-detail: var(--paper-bright);
+  --surface-list: var(--paper-bright);
+  --surface-chrome: var(--paper-bright);
+  --surface-workspace: var(--paper-bright);
+  --surface: var(--paper-bright);
+  --surface-elevated: var(--surface-pop);
+  --surface-search: var(--surface-pop);
+  --line: var(--ink-faint);
+  --line-soft: var(--ink-faint);
+  --line-float: var(--ink-faint);
+  --ink-2: var(--ink-soft);
+  --muted: var(--ink-muted);
+  --muted-2: var(--ink-muted);
+  --text-muted: var(--ink-muted);
+  --accent: var(--cobalt);
+  --primary: var(--cobalt);
+  --primary-hover: var(--cobalt-deep);
+  --on-primary: var(--accent-contrast);
+  --focus: var(--cobalt);
+  --hover: var(--paper-shadow);
+  --hover-strong: var(--tint-select);
+}
+
+.premium-workspace[data-workspace-look="light"] {
+  --bg-app: var(--paper-bright);
+  --surface-inset: var(--paper-shadow);
+  --surface-nav: var(--paper-bright);
+  --surface-detail: var(--paper-bright);
+  --surface-list: var(--paper-bright);
+  --surface-chrome: var(--paper-bright);
+  --surface-workspace: var(--paper-bright);
+  --surface: var(--paper-bright);
+  --surface-elevated: var(--surface-pop);
+  --surface-search: var(--surface-pop);
+  --line: var(--ink-faint);
+  --line-soft: var(--ink-faint);
+  --line-float: var(--ink-faint);
+  --ink-2: var(--ink-soft);
+  --muted: var(--ink-muted);
+  --muted-2: var(--ink-muted);
+  --text-muted: var(--ink-muted);
+  --accent: var(--cobalt);
+  --primary: var(--cobalt);
+  --primary-hover: var(--cobalt-deep);
+  --on-primary: var(--accent-contrast);
+  --focus: var(--cobalt);
+  --hover: var(--paper-shadow);
+  --hover-strong: var(--tint-select);
+}
+
+.premium-workspace[data-workspace-look="graphite"],
+.premium-workspace[data-workspace-look="hud"] {
+  --bg-app: var(--paper-bright);
+  --surface-inset: var(--paper-shadow);
+  --surface-nav: var(--paper-bright);
+  --surface-detail: var(--paper-bright);
+  --surface-list: var(--paper-bright);
+  --surface-chrome: var(--paper-bright);
+  --surface-workspace: var(--paper-bright);
+  --surface: var(--paper-bright);
+  --surface-elevated: var(--surface-pop);
+  --surface-search: var(--surface-pop);
+  --line: var(--ink-faint);
+  --line-soft: var(--ink-faint);
+  --line-float: var(--ink-faint);
+  --ink-2: var(--ink-soft);
+  --muted: var(--ink-muted);
+  --muted-2: var(--ink-muted);
+  --text-muted: var(--ink-muted);
+  --accent: var(--cobalt);
+  --primary: var(--cobalt);
+  --primary-hover: var(--cobalt-deep);
+  --on-primary: var(--accent-contrast);
+  --focus: var(--cobalt);
+  --hover: var(--paper-shadow);
+  --hover-strong: var(--tint-select);
+}
+
+/*
+ * ── Concord palette + ThatOpen bridge, re-scoped ────────────────────────────
+ *
+ * The block above re-points Concord's *structural* names (surfaces, lines, text
+ * and the accent) onto the donor palette. Two families were left behind and are
+ * closed here, re-declared in the same three scopes for the same reason: `var()`
+ * substitutes at computed-value time, so an alias declared once on `:root`
+ * freezes against the `:root` donor values and never re-resolves inside a
+ * descendant `[data-workspace-look]` scope.
+ *
+ *   (a) The `--concord-*` feature palette, declared earlier as literal light hex.
+ *   (b) The ThatOpen `--bim-ui_*` bridge, declared once on `:root`, which froze
+ *       at the light value before it was inherited into the shell.
+ *
+ * Every value below is a `var()` reference into the donor vocabulary; none is a
+ * copied literal (the donor sheet is imported after this one, so the donor owns
+ * the value and each scope resolves it). Mapping is by role:
+ *   - base/structural planes (shell, header, nav, element, count, control)  → --paper-bright
+ *   - raised fills (chips, filled controls, status cards)                   → --surface-pop
+ *   - selected/active fills (selection, tint, active filter)                → --tint-select
+ *   - plain hover                                                           → --paper-shadow
+ *   - working/stage planes (workspace, model, viewer)                       → --stage
+ *   - dividers, edges, hairlines                                            → --ink-faint
+ *   - text                                                                  → --ink / --ink-secondary / --ink-muted
+ *   - the single accent (accent, action, rail, brand, active)               → --cobalt / --cobalt-deep
+ *   - status marks                                                          → --c-positive / --c-warning / --c-danger
+ *
+ * Left alone on purpose: the eight `--concord-*-shadow` tokens
+ * (float, control, viewer, label, issue, toolbar, filter, document-sheet).
+ * They are drop-shadow colours, not part of the plane/text/accent vocabulary,
+ * and the donor exposes no shadow token to map them onto.
+ *
+ * `--bim-ui_bg-*` keep their existing Concord references and now resolve per
+ * scope. Two names they reference were not yet in the bridge and are added here:
+ * `--line-control-soft` (a control hairline → --ink-faint) and `--success`
+ * (the positive status → --c-positive).
+ */
+
+:root {
+  --concord-accent: var(--cobalt);
+  --concord-accent-strong: var(--cobalt-deep);
+  --concord-accent-tint: var(--tint-select);
+  --concord-action-hover: var(--paper-shadow);
+  --concord-shell-surface: var(--paper-bright);
+  --concord-shell-divider: var(--ink-faint);
+  --concord-ink: var(--ink);
+  --concord-muted: var(--ink-muted);
+  --concord-divider: var(--ink-faint);
+  --concord-brand-mark: var(--cobalt);
+  --concord-nav-text: var(--ink-secondary);
+  --concord-nav-selection: var(--tint-select);
+  --concord-nav-active: var(--cobalt-deep);
+  --concord-row-rail: var(--cobalt);
+  --concord-float-edge: var(--ink-faint);
+  --concord-stage-chip: var(--surface-pop);
+  --concord-nav-divider: var(--ink-faint);
+  --concord-area-label: var(--ink-muted);
+  --concord-header-surface: var(--paper-bright);
+  --concord-header-divider: var(--ink-faint);
+  --concord-header-label: var(--ink-muted);
+  --concord-header-control: var(--paper-bright);
+  --concord-dark-ink: var(--ink);
+  --concord-ready-mark: var(--c-positive);
+  --concord-workspace-surface: var(--stage);
+  --concord-model-surface: var(--stage);
+  --concord-viewer-stage: var(--stage);
+  --concord-context-divider: var(--ink-faint);
+  --concord-inspector-title: var(--ink);
+  --concord-inspector-subtitle: var(--ink-muted);
+  --concord-inspector-divider: var(--ink-faint);
+  --concord-tab-label: var(--ink-secondary);
+  --concord-tab-active: var(--ink);
+  --concord-count-surface: var(--paper-bright);
+  --concord-quiet-metadata: var(--ink-muted);
+  --concord-element-surface: var(--paper-bright);
+  --concord-element-icon: var(--ink-muted);
+  --concord-element-kind: var(--ink-muted);
+  --concord-fact-label: var(--ink-muted);
+  --concord-fact-value: var(--ink);
+  --concord-row-hover: var(--paper-shadow);
+  --concord-amber-mark: var(--c-warning);
+  --concord-red-mark: var(--c-danger);
+  --concord-technical-text: var(--ink-muted);
+  --concord-context-label: var(--ink-muted);
+  --concord-control-surface: var(--paper-bright);
+  --concord-context-tab: var(--ink-secondary);
+  --concord-context-active: var(--ink);
+  --concord-table-label: var(--ink-muted);
+  --concord-table-value: var(--ink);
+  --concord-table-action: var(--cobalt);
+  --concord-row-selected: var(--tint-select);
+  --concord-warning-surface: var(--surface-pop);
+  --concord-warning-text: var(--c-warning);
+  --concord-danger-surface: var(--surface-pop);
+  --concord-danger-text: var(--c-danger);
+  --concord-empty-text: var(--ink-muted);
+  --concord-viewer-text: var(--ink-secondary);
+  --concord-issue-border: var(--ink-faint);
+  --concord-issue-surface: var(--surface-pop);
+  --concord-issue-text: var(--ink);
+  --concord-toolbar-active: var(--cobalt);
+  --concord-disabled-tab: var(--ink-muted);
+  --concord-ready-surface: var(--surface-pop);
+  --concord-ready-text: var(--c-positive);
+  --concord-comparison-border: var(--ink-faint);
+  --concord-comparison-surface: var(--tint-select);
+  --concord-comparison-text: var(--ink-muted);
+  --concord-issue-icon: var(--c-danger);
+  --concord-issue-body: var(--ink-secondary);
+  --concord-blocking-text: var(--c-danger);
+  --concord-issue-action: var(--cobalt);
+  --concord-filter-count: var(--ink-muted);
+  --concord-investigation-tab: var(--ink-muted);
+  --concord-investigation-active: var(--ink);
+  --concord-investigation-count: var(--paper-bright);
+  --concord-investigation-status: var(--ink-secondary);
+  --concord-section-divider: var(--ink-faint);
+  --concord-document-status: var(--ink-muted);
+  --concord-document-meta: var(--ink-muted);
+  --concord-eyebrow: var(--ink-muted);
+  --concord-document-divider: var(--ink-faint);
+  --concord-document-input: var(--paper-bright);
+  --concord-document-region: var(--paper-bright);
+  --concord-document-list: var(--paper-bright);
+  --concord-list-heading: var(--ink);
+  --concord-document-filter: var(--ink-secondary);
+  --concord-document-active: var(--cobalt);
+  --concord-document-filter-active: var(--tint-select);
+  --concord-document-row-border: var(--ink-faint);
+  --concord-document-selected: var(--tint-select);
+  --concord-document-selected-border: var(--ink-faint);
+  --concord-document-icon: var(--ink-secondary);
+  --concord-document-preview: var(--paper-bright);
+  --concord-document-header-icon: var(--ink-secondary);
+  --concord-document-sheet-border: var(--ink-faint);
+  --concord-metadata-label: var(--ink-muted);
+  --concord-worktab-text: var(--ink-secondary);
+  --concord-worktab-active: var(--cobalt);
+  --concord-package-description: var(--ink-muted);
+  --concord-package-issue: var(--c-danger);
+  --concord-package-meta: var(--ink-muted);
+  --concord-spatial-pane: var(--paper-bright);
+
+  --line-control-soft: var(--ink-faint);
+  --success: var(--c-positive);
+  --bim-ui_bg-base: var(--bg-app);
+  --bim-ui_bg-contrast-10: var(--surface-inset);
+  --bim-ui_bg-contrast-20: var(--line-soft);
+  --bim-ui_bg-contrast-30: var(--hover);
+  --bim-ui_bg-contrast-40: var(--line-control-soft);
+  --bim-ui_bg-contrast-50: var(--muted);
+  --bim-ui_bg-contrast-60: var(--ink-2);
+  --bim-ui_bg-contrast-70: var(--ink-2);
+  --bim-ui_bg-contrast-80: var(--ink);
+  --bim-ui_bg-contrast-90: var(--ink);
+  --bim-ui_bg-contrast-100: var(--ink);
+  --bim-ui_main-base: var(--accent);
+  --bim-ui_main-contrast: var(--surface);
+  --bim-ui_accent-base: var(--accent);
+  --bim-ui_accent-contrast: var(--surface);
+  --bim-ui_danger-base: var(--concord-danger-text);
+  --bim-ui_danger-contrast: var(--surface);
+  --bim-ui_warning-base: var(--concord-warning-text);
+  --bim-ui_warning-contrast: var(--surface);
+  --bim-ui_success-base: var(--success);
+  --bim-ui_success-contrast: var(--surface);
+  --bim-ui_info-base: var(--accent);
+  --bim-ui_info-contrast: var(--surface);
+  --bim-ui_size-base: var(--fs-label);
+  --bim-ui_size-lg: var(--fs-body);
+  --bim-ui_size-2xs: 3px;
+  --bim-ui_size-4xs: 2px;
+}
+
+.premium-workspace[data-workspace-look="light"] {
+  --concord-accent: var(--cobalt);
+  --concord-accent-strong: var(--cobalt-deep);
+  --concord-accent-tint: var(--tint-select);
+  --concord-action-hover: var(--paper-shadow);
+  --concord-shell-surface: var(--paper-bright);
+  --concord-shell-divider: var(--ink-faint);
+  --concord-ink: var(--ink);
+  --concord-muted: var(--ink-muted);
+  --concord-divider: var(--ink-faint);
+  --concord-brand-mark: var(--cobalt);
+  --concord-nav-text: var(--ink-secondary);
+  --concord-nav-selection: var(--tint-select);
+  --concord-nav-active: var(--cobalt-deep);
+  --concord-row-rail: var(--cobalt);
+  --concord-float-edge: var(--ink-faint);
+  --concord-stage-chip: var(--surface-pop);
+  --concord-nav-divider: var(--ink-faint);
+  --concord-area-label: var(--ink-muted);
+  --concord-header-surface: var(--paper-bright);
+  --concord-header-divider: var(--ink-faint);
+  --concord-header-label: var(--ink-muted);
+  --concord-header-control: var(--paper-bright);
+  --concord-dark-ink: var(--ink);
+  --concord-ready-mark: var(--c-positive);
+  --concord-workspace-surface: var(--stage);
+  --concord-model-surface: var(--stage);
+  --concord-viewer-stage: var(--stage);
+  --concord-context-divider: var(--ink-faint);
+  --concord-inspector-title: var(--ink);
+  --concord-inspector-subtitle: var(--ink-muted);
+  --concord-inspector-divider: var(--ink-faint);
+  --concord-tab-label: var(--ink-secondary);
+  --concord-tab-active: var(--ink);
+  --concord-count-surface: var(--paper-bright);
+  --concord-quiet-metadata: var(--ink-muted);
+  --concord-element-surface: var(--paper-bright);
+  --concord-element-icon: var(--ink-muted);
+  --concord-element-kind: var(--ink-muted);
+  --concord-fact-label: var(--ink-muted);
+  --concord-fact-value: var(--ink);
+  --concord-row-hover: var(--paper-shadow);
+  --concord-amber-mark: var(--c-warning);
+  --concord-red-mark: var(--c-danger);
+  --concord-technical-text: var(--ink-muted);
+  --concord-context-label: var(--ink-muted);
+  --concord-control-surface: var(--paper-bright);
+  --concord-context-tab: var(--ink-secondary);
+  --concord-context-active: var(--ink);
+  --concord-table-label: var(--ink-muted);
+  --concord-table-value: var(--ink);
+  --concord-table-action: var(--cobalt);
+  --concord-row-selected: var(--tint-select);
+  --concord-warning-surface: var(--surface-pop);
+  --concord-warning-text: var(--c-warning);
+  --concord-danger-surface: var(--surface-pop);
+  --concord-danger-text: var(--c-danger);
+  --concord-empty-text: var(--ink-muted);
+  --concord-viewer-text: var(--ink-secondary);
+  --concord-issue-border: var(--ink-faint);
+  --concord-issue-surface: var(--surface-pop);
+  --concord-issue-text: var(--ink);
+  --concord-toolbar-active: var(--cobalt);
+  --concord-disabled-tab: var(--ink-muted);
+  --concord-ready-surface: var(--surface-pop);
+  --concord-ready-text: var(--c-positive);
+  --concord-comparison-border: var(--ink-faint);
+  --concord-comparison-surface: var(--tint-select);
+  --concord-comparison-text: var(--ink-muted);
+  --concord-issue-icon: var(--c-danger);
+  --concord-issue-body: var(--ink-secondary);
+  --concord-blocking-text: var(--c-danger);
+  --concord-issue-action: var(--cobalt);
+  --concord-filter-count: var(--ink-muted);
+  --concord-investigation-tab: var(--ink-muted);
+  --concord-investigation-active: var(--ink);
+  --concord-investigation-count: var(--paper-bright);
+  --concord-investigation-status: var(--ink-secondary);
+  --concord-section-divider: var(--ink-faint);
+  --concord-document-status: var(--ink-muted);
+  --concord-document-meta: var(--ink-muted);
+  --concord-eyebrow: var(--ink-muted);
+  --concord-document-divider: var(--ink-faint);
+  --concord-document-input: var(--paper-bright);
+  --concord-document-region: var(--paper-bright);
+  --concord-document-list: var(--paper-bright);
+  --concord-list-heading: var(--ink);
+  --concord-document-filter: var(--ink-secondary);
+  --concord-document-active: var(--cobalt);
+  --concord-document-filter-active: var(--tint-select);
+  --concord-document-row-border: var(--ink-faint);
+  --concord-document-selected: var(--tint-select);
+  --concord-document-selected-border: var(--ink-faint);
+  --concord-document-icon: var(--ink-secondary);
+  --concord-document-preview: var(--paper-bright);
+  --concord-document-header-icon: var(--ink-secondary);
+  --concord-document-sheet-border: var(--ink-faint);
+  --concord-metadata-label: var(--ink-muted);
+  --concord-worktab-text: var(--ink-secondary);
+  --concord-worktab-active: var(--cobalt);
+  --concord-package-description: var(--ink-muted);
+  --concord-package-issue: var(--c-danger);
+  --concord-package-meta: var(--ink-muted);
+  --concord-spatial-pane: var(--paper-bright);
+
+  --line-control-soft: var(--ink-faint);
+  --success: var(--c-positive);
+  --bim-ui_bg-base: var(--bg-app);
+  --bim-ui_bg-contrast-10: var(--surface-inset);
+  --bim-ui_bg-contrast-20: var(--line-soft);
+  --bim-ui_bg-contrast-30: var(--hover);
+  --bim-ui_bg-contrast-40: var(--line-control-soft);
+  --bim-ui_bg-contrast-50: var(--muted);
+  --bim-ui_bg-contrast-60: var(--ink-2);
+  --bim-ui_bg-contrast-70: var(--ink-2);
+  --bim-ui_bg-contrast-80: var(--ink);
+  --bim-ui_bg-contrast-90: var(--ink);
+  --bim-ui_bg-contrast-100: var(--ink);
+  --bim-ui_main-base: var(--accent);
+  --bim-ui_main-contrast: var(--surface);
+  --bim-ui_accent-base: var(--accent);
+  --bim-ui_accent-contrast: var(--surface);
+  --bim-ui_danger-base: var(--concord-danger-text);
+  --bim-ui_danger-contrast: var(--surface);
+  --bim-ui_warning-base: var(--concord-warning-text);
+  --bim-ui_warning-contrast: var(--surface);
+  --bim-ui_success-base: var(--success);
+  --bim-ui_success-contrast: var(--surface);
+  --bim-ui_info-base: var(--accent);
+  --bim-ui_info-contrast: var(--surface);
+  --bim-ui_size-base: var(--fs-label);
+  --bim-ui_size-lg: var(--fs-body);
+  --bim-ui_size-2xs: 3px;
+  --bim-ui_size-4xs: 2px;
+}
+
+.premium-workspace[data-workspace-look="graphite"],
+.premium-workspace[data-workspace-look="hud"] {
+  --concord-accent: var(--cobalt);
+  --concord-accent-strong: var(--cobalt-deep);
+  --concord-accent-tint: var(--tint-select);
+  --concord-action-hover: var(--paper-shadow);
+  --concord-shell-surface: var(--paper-bright);
+  --concord-shell-divider: var(--ink-faint);
+  --concord-ink: var(--ink);
+  --concord-muted: var(--ink-muted);
+  --concord-divider: var(--ink-faint);
+  --concord-brand-mark: var(--cobalt);
+  --concord-nav-text: var(--ink-secondary);
+  --concord-nav-selection: var(--tint-select);
+  --concord-nav-active: var(--cobalt-deep);
+  --concord-row-rail: var(--cobalt);
+  --concord-float-edge: var(--ink-faint);
+  --concord-stage-chip: var(--surface-pop);
+  --concord-nav-divider: var(--ink-faint);
+  --concord-area-label: var(--ink-muted);
+  --concord-header-surface: var(--paper-bright);
+  --concord-header-divider: var(--ink-faint);
+  --concord-header-label: var(--ink-muted);
+  --concord-header-control: var(--paper-bright);
+  --concord-dark-ink: var(--ink);
+  --concord-ready-mark: var(--c-positive);
+  --concord-workspace-surface: var(--stage);
+  --concord-model-surface: var(--stage);
+  --concord-viewer-stage: var(--stage);
+  --concord-context-divider: var(--ink-faint);
+  --concord-inspector-title: var(--ink);
+  --concord-inspector-subtitle: var(--ink-muted);
+  --concord-inspector-divider: var(--ink-faint);
+  --concord-tab-label: var(--ink-secondary);
+  --concord-tab-active: var(--ink);
+  --concord-count-surface: var(--paper-bright);
+  --concord-quiet-metadata: var(--ink-muted);
+  --concord-element-surface: var(--paper-bright);
+  --concord-element-icon: var(--ink-muted);
+  --concord-element-kind: var(--ink-muted);
+  --concord-fact-label: var(--ink-muted);
+  --concord-fact-value: var(--ink);
+  --concord-row-hover: var(--paper-shadow);
+  --concord-amber-mark: var(--c-warning);
+  --concord-red-mark: var(--c-danger);
+  --concord-technical-text: var(--ink-muted);
+  --concord-context-label: var(--ink-muted);
+  --concord-control-surface: var(--paper-bright);
+  --concord-context-tab: var(--ink-secondary);
+  --concord-context-active: var(--ink);
+  --concord-table-label: var(--ink-muted);
+  --concord-table-value: var(--ink);
+  --concord-table-action: var(--cobalt);
+  --concord-row-selected: var(--tint-select);
+  --concord-warning-surface: var(--surface-pop);
+  --concord-warning-text: var(--c-warning);
+  --concord-danger-surface: var(--surface-pop);
+  --concord-danger-text: var(--c-danger);
+  --concord-empty-text: var(--ink-muted);
+  --concord-viewer-text: var(--ink-secondary);
+  --concord-issue-border: var(--ink-faint);
+  --concord-issue-surface: var(--surface-pop);
+  --concord-issue-text: var(--ink);
+  --concord-toolbar-active: var(--cobalt);
+  --concord-disabled-tab: var(--ink-muted);
+  --concord-ready-surface: var(--surface-pop);
+  --concord-ready-text: var(--c-positive);
+  --concord-comparison-border: var(--ink-faint);
+  --concord-comparison-surface: var(--tint-select);
+  --concord-comparison-text: var(--ink-muted);
+  --concord-issue-icon: var(--c-danger);
+  --concord-issue-body: var(--ink-secondary);
+  --concord-blocking-text: var(--c-danger);
+  --concord-issue-action: var(--cobalt);
+  --concord-filter-count: var(--ink-muted);
+  --concord-investigation-tab: var(--ink-muted);
+  --concord-investigation-active: var(--ink);
+  --concord-investigation-count: var(--paper-bright);
+  --concord-investigation-status: var(--ink-secondary);
+  --concord-section-divider: var(--ink-faint);
+  --concord-document-status: var(--ink-muted);
+  --concord-document-meta: var(--ink-muted);
+  --concord-eyebrow: var(--ink-muted);
+  --concord-document-divider: var(--ink-faint);
+  --concord-document-input: var(--paper-bright);
+  --concord-document-region: var(--paper-bright);
+  --concord-document-list: var(--paper-bright);
+  --concord-list-heading: var(--ink);
+  --concord-document-filter: var(--ink-secondary);
+  --concord-document-active: var(--cobalt);
+  --concord-document-filter-active: var(--tint-select);
+  --concord-document-row-border: var(--ink-faint);
+  --concord-document-selected: var(--tint-select);
+  --concord-document-selected-border: var(--ink-faint);
+  --concord-document-icon: var(--ink-secondary);
+  --concord-document-preview: var(--paper-bright);
+  --concord-document-header-icon: var(--ink-secondary);
+  --concord-document-sheet-border: var(--ink-faint);
+  --concord-metadata-label: var(--ink-muted);
+  --concord-worktab-text: var(--ink-secondary);
+  --concord-worktab-active: var(--cobalt);
+  --concord-package-description: var(--ink-muted);
+  --concord-package-issue: var(--c-danger);
+  --concord-package-meta: var(--ink-muted);
+  --concord-spatial-pane: var(--paper-bright);
+
+  --line-control-soft: var(--ink-faint);
+  --success: var(--c-positive);
+  --bim-ui_bg-base: var(--bg-app);
+  --bim-ui_bg-contrast-10: var(--surface-inset);
+  --bim-ui_bg-contrast-20: var(--line-soft);
+  --bim-ui_bg-contrast-30: var(--hover);
+  --bim-ui_bg-contrast-40: var(--line-control-soft);
+  --bim-ui_bg-contrast-50: var(--muted);
+  --bim-ui_bg-contrast-60: var(--ink-2);
+  --bim-ui_bg-contrast-70: var(--ink-2);
+  --bim-ui_bg-contrast-80: var(--ink);
+  --bim-ui_bg-contrast-90: var(--ink);
+  --bim-ui_bg-contrast-100: var(--ink);
+  --bim-ui_main-base: var(--accent);
+  --bim-ui_main-contrast: var(--surface);
+  --bim-ui_accent-base: var(--accent);
+  --bim-ui_accent-contrast: var(--surface);
+  --bim-ui_danger-base: var(--concord-danger-text);
+  --bim-ui_danger-contrast: var(--surface);
+  --bim-ui_warning-base: var(--concord-warning-text);
+  --bim-ui_warning-contrast: var(--surface);
+  --bim-ui_success-base: var(--success);
+  --bim-ui_success-contrast: var(--surface);
+  --bim-ui_info-base: var(--accent);
+  --bim-ui_info-contrast: var(--surface);
+  --bim-ui_size-base: var(--fs-label);
+  --bim-ui_size-lg: var(--fs-body);
+  --bim-ui_size-2xs: 3px;
+  --bim-ui_size-4xs: 2px;
+}

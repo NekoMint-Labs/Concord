@@ -34,7 +34,16 @@ export function supportedSourceFormats(
     if (parser.implementation === "LightweightDocumentParser")
       formats.push(".txt", ".md");
     if (parser.implementation === "Docling")
-      formats.push(".pdf", ".docx", ".pptx", ".txt", ".md", ".html");
+      formats.push(
+        ".pdf",
+        ".docx",
+        ".pptx",
+        ".xlsx",
+        ".csv",
+        ".txt",
+        ".md",
+        ".html",
+      );
   }
   return formats;
 }
@@ -125,6 +134,9 @@ export function useProjectSources(
       cache.invalidateQueries({ queryKey: ["baselines", project] }),
       cache.invalidateQueries({ queryKey: ["workspace", project] }),
       cache.invalidateQueries({ queryKey: ["agent-notices", project] }),
+      cache.invalidateQueries({ queryKey: ["engineering-findings", project] }),
+      cache.invalidateQueries({ queryKey: ["engineering-finding", project] }),
+      cache.invalidateQueries({ queryKey: ["engineering-rechecks", project] }),
     ]);
   const createSource = useMutation({
     mutationFn: (input: DTO<"CreateProjectSource">) =>

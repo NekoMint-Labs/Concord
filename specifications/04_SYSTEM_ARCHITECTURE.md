@@ -70,7 +70,7 @@ The final codebase contains default and advanced implementations behind stable b
 | DB | SQLite local | PostgreSQL server |
 | Resolution | SimpleResolver | ORToolsResolver |
 | BIM | StructuredBIMProvider | IfcOpenShellBIMProvider |
-| BIM UI | structured/2D relationship views | That Open Engine 3D viewer |
+| BIM UI | existing C-owned BIM browsing | C-owned IFC evidence surface; current seams in `docs/EVIDENCE_VIEWER_ADAPTERS.md` |
 | Documents | lightweight parser | Docling parser |
 | Files | LocalFileStore | S3-compatible FileStore |
 | Observability | structured JSON logs | OpenTelemetry |

@@ -1,30 +1,16 @@
 /* ---------- chrome: one 40px top edge across sidebar and header ---------- */
 
-.application-shell .brand,
-.application-shell .app-header,
-.application-shell .context-bar {
+.app-shell .brand,
+.app-shell .app-header,
+.app-shell .context-bar {
   height: 40px;
   min-height: 40px;
 }
-.application-shell .brand {
-  padding: 0 8px 0 16px;
-  gap: 8px;
-}
-.application-shell .brand-mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  font-size: 10.5px;
-}
-.application-shell .brand-name strong {
-  font-size: 13.5px;
-  letter-spacing: -0.01em;
-}
-.application-shell .breadcrumb strong,
-.application-shell .breadcrumb button {
+.app-shell .breadcrumb strong,
+.app-shell .breadcrumb button {
   color: var(--ink);
 }
-.application-shell .workspace-location::before {
+.app-shell .workspace-location::before {
   margin-right: 6px;
   color: var(--line);
   font-weight: 400;
@@ -34,66 +20,66 @@
    takes the technical face for the same reason a revision does on 项目: B1, R2
    and V17 are identifiers an engineer compares across the header, the ledger and
    the table, and they read as one datum only if they are set the same way. */
-.application-shell .header-versions strong {
+.app-shell .header-versions strong {
   color: var(--ink);
   font-family: var(--font-mono);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.application-shell .header-versions .version-pending {
+.app-shell .header-versions .version-pending {
   color: var(--concord-warning-text);
 }
-.application-shell .header-versions > span,
-.application-shell .header-versions > span:not(:nth-child(2)) {
+.app-shell .header-versions > span,
+.app-shell .header-versions > span:not(:nth-child(2)) {
   padding: 0;
   border-radius: 0;
   background: none;
   color: var(--muted);
 }
-.application-shell .header-versions .version-current {
+.app-shell .header-versions .version-current {
   color: var(--ink-2);
 }
-.application-shell .header-versions > span:nth-child(3) {
+.app-shell .header-versions > span:nth-child(3) {
   color: var(--concord-warning-text);
 }
-.application-shell .header-versions i {
+.app-shell .header-versions i {
   width: 6px;
   height: 6px;
   margin-right: 6px;
 }
-.application-shell .local-actions bim-button {
+.app-shell .local-actions bim-button {
   height: 26px;
 }
 
 /* Top chrome is a location readout, not a second navigation system. */
-.application-shell .app-header {
+.app-shell .app-header {
   border-bottom: 1px solid var(--line-soft);
   background: var(--surface-workspace);
 }
-.application-shell .context-bar {
+.app-shell .context-bar {
   gap: 16px;
   padding: 0 20px;
 }
-.application-shell .breadcrumb {
+.app-shell .breadcrumb {
   color: var(--muted);
   gap: 7px;
   font-size: 12px;
 }
-.application-shell .workspace-location {
+.app-shell .workspace-location {
   margin-left: 6px;
   padding-left: 0;
   border-left: 0;
   color: var(--ink);
   font-weight: 500;
 }
-.application-shell .header-versions {
+.app-shell .header-versions {
   gap: 16px;
   color: var(--muted);
   font-size: var(--fs-label);
   margin-left: auto;
 }
 /* One donor toolbar integration owner; Radix/React retain action semantics. */
-.application-shell bim-toolbar.local-actions {
+.app-shell bim-toolbar.local-actions {
   --bim-toolbar--bgc: transparent;
   --bim-toolbar--border: none;
   --bim-toolbar--bdrs: 0;

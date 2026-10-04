@@ -9,7 +9,7 @@ import {
 import { afterEach, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
 import { api, type DTO, type Workspace } from "../api/client";
-import { WorkList } from "./WorkList";
+import { WorkPanel } from "./WorkPanel";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -52,7 +52,7 @@ function renderList(
 ) {
   return render(
     <QueryClientProvider client={cache()}>
-      <WorkList
+      <WorkPanel
         workspace={workspace}
         sources={[]}
         onPackage={vi.fn()}
@@ -60,7 +60,6 @@ function renderList(
         onRecheck={vi.fn()}
         onReport={vi.fn()}
         onProject={vi.fn()}
-        onTab={vi.fn()}
       />
     </QueryClientProvider>,
   );
@@ -71,12 +70,13 @@ it("combines opaque Finding IDs and project decisions in one queue", async () =>
   vi.spyOn(api, "documents").mockResolvedValue([]);
   vi.spyOn(api, "engineeringFindings").mockResolvedValue([
     finding("finding/opaque-73"),
-    finding("finding-done", "CONFIRMED"),
+    finding("finding-done", "CLOSED"),
   ]);
   const onFindingSelect = vi.fn();
+  const onSelectionChange = vi.fn();
   render(
     <QueryClientProvider client={cache()}>
-      <WorkList
+      <WorkPanel
         workspace={structuredClone(fixture.waiting) as unknown as Workspace}
         sources={[]}
         onPackage={vi.fn()}
@@ -84,8 +84,8 @@ it("combines opaque Finding IDs and project decisions in one queue", async () =>
         onRecheck={vi.fn()}
         onReport={vi.fn()}
         onProject={vi.fn()}
-        onTab={vi.fn()}
         onFindingSelect={onFindingSelect}
+        onSelectionChange={onSelectionChange}
       />
     </QueryClientProvider>,
   );
@@ -101,16 +101,12 @@ it("combines opaque Finding IDs and project decisions in one queue", async () =>
   expect(
     screen.getByRole("button", { name: /Finding finding\/opaque-73/ }),
   ).toHaveAttribute("aria-pressed", "true");
+  expect(onSelectionChange).toHaveBeenLastCalledWith({
+    kind: "finding",
+    id: "finding/opaque-73",
+  });
 
-  const tabs = document.querySelector("bim-tabs")!;
-  await waitFor(() =>
-    expect(tabs.shadowRoot?.querySelector("[role=tab]")).toBeDefined(),
-  );
-  fireEvent.click(
-    within(tabs.shadowRoot as unknown as HTMLElement).getByRole("tab", {
-      name: "已处理",
-    }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "已处理" }));
   expect(
     screen.getByRole("button", { name: /Finding finding-done/ }),
   ).toBeVisible();
@@ -128,7 +124,7 @@ it("keeps a selected work receipt in place and routes its authoritative action",
   const onPackage = vi.fn();
   render(
     <QueryClientProvider client={cache()}>
-      <WorkList
+      <WorkPanel
         workspace={workspace}
         sources={[]}
         onPackage={onPackage}
@@ -136,7 +132,6 @@ it("keeps a selected work receipt in place and routes its authoritative action",
         onRecheck={vi.fn()}
         onReport={vi.fn()}
         onProject={vi.fn()}
-        onTab={vi.fn()}
       />
     </QueryClientProvider>,
   );
@@ -165,16 +160,9 @@ it("uses donor controls for search and bounded paging", async () => {
   fireEvent.click(screen.getByRole("button", { name: /东翼风管安装/ }));
   expect(screen.getByRole("region", { name: "所选工作事项" })).toBeVisible();
 
-  const host = document.querySelector("bim-text-input")!;
-  expect(host).toBeInstanceOf(customElements.get("bim-text-input")!);
-  await waitFor(() =>
-    expect(host.shadowRoot?.querySelector("input")).toBeDefined(),
-  );
-  const search = within(host.shadowRoot as unknown as HTMLElement).getByRole(
-    "textbox",
-    { name: "搜索工作" },
-  );
-  fireEvent.input(search, { target: { value: "结构交接" } });
+  const search = screen.getByRole("textbox", { name: "搜索工作" });
+  expect(search).toBeInstanceOf(HTMLInputElement);
+  fireEvent.change(search, { target: { value: "结构交接" } });
   await waitFor(() => {
     expect(screen.getByRole("button", { name: /结构交接/ })).toBeVisible();
     expect(
@@ -185,7 +173,7 @@ it("uses donor controls for search and bounded paging", async () => {
     "显示 1 项 · 共 1 项匹配",
   );
   expect(screen.queryByRole("region", { name: "所选工作事项" })).toBeNull();
-  fireEvent.input(search, { target: { value: "" } });
+  fireEvent.change(search, { target: { value: "" } });
   await waitFor(() => {
     expect(
       screen.getByRole("region", { name: "所选工作事项" }),
@@ -209,15 +197,40 @@ it("retries failed Findings reads without replacing the project queue", async ()
     "Findings service unavailable",
   );
   const retry = screen.getByRole("button", { name: "重试读取 Findings" });
-  expect(retry).toBeInstanceOf(customElements.get("bim-button")!);
+  expect(retry).toBeInstanceOf(HTMLButtonElement);
   expect(retry).toBeEnabled();
   expect(screen.getByRole("button", { name: /东翼风管安装/ })).toBeVisible();
   fireEvent.click(retry);
 
   expect(
-    await screen.findByRole("button", { name: "Finding recovered" }),
+    await screen.findByRole("button", { name: /Finding recovered/ }),
   ).toBeVisible();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   expect(read).toHaveBeenCalledTimes(2);
   expect(read).toHaveBeenLastCalledWith("harbor-east");
+});
+
+it("keeps confirmed but unresolved Findings in pending work, never the handled filter", async () => {
+  vi.spyOn(api, "baselines").mockResolvedValue([]);
+  vi.spyOn(api, "documents").mockResolvedValue([]);
+  vi.spyOn(api, "engineeringFindings").mockResolvedValue([
+    finding("unresolved-confirmed", "CONFIRMED"),
+    finding("human-closed", "CLOSED"),
+  ]);
+  renderList();
+  await screen.findByRole("button", { name: /Finding unresolved-confirmed/ });
+  fireEvent.click(screen.getByRole("button", { name: "已处理" }));
+  expect(
+    screen.queryByRole("button", { name: /Finding unresolved-confirmed/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /Finding human-closed/ }),
+  ).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: /^待处理/ }));
+  expect(
+    screen.getByRole("button", { name: /Finding unresolved-confirmed/ }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: /Finding human-closed/ }),
+  ).not.toBeInTheDocument();
 });

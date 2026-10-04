@@ -1,5 +1,5 @@
 /* Project is a state workspace, an object register and an attached context pane. */
-.application-shell .project-home:has(.project-workspace) {
+.app-shell .project-home:has(.project-workspace) {
   width: 100%;
   max-width: none;
   height: 100%;
@@ -7,7 +7,7 @@
   padding: 0;
   overflow: hidden;
 }
-.application-shell .project-workspace {
+.app-shell .project-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(280px, 22vw, 340px);
   width: 100%;
@@ -15,8 +15,8 @@
   min-height: 0;
 }
 /* Donor panels own the pane surface, header band and scrolling content. */
-.application-shell .project-primary,
-.application-shell .project-context-surface {
+.app-shell .project-primary,
+.app-shell .project-context-surface {
   display: block;
   min-width: 0;
   min-height: 0;
@@ -27,11 +27,11 @@
   --bim-panel--border: 0;
   --bim-panel--fz: 12px;
 }
-.application-shell .project-context-surface {
+.app-shell .project-context-surface {
   --bim-panel--bg: var(--surface-detail);
 }
-.application-shell .project-state-surface,
-.application-shell .project-ledger-surface {
+.app-shell .project-state-surface,
+.app-shell .project-ledger-surface {
   display: block;
   min-width: 0;
   --bim-panel-section--bg: var(--surface-list);
@@ -39,71 +39,46 @@
   --bim-panel-section--bdrs: 0;
   --bim-panel-section--fz: 12px;
 }
-.application-shell .project-state-surface {
+.app-shell .project-state-surface {
   margin: 8px 8px 0;
   --bim-panel-section--bg: var(--surface-inset);
 }
-.application-shell .project-ledger-surface h2 {
+.app-shell .project-ledger-surface h2 {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
 }
-.application-shell .project-ledger-open {
+.app-shell .project-ledger-open {
   padding: 2px 4px;
   font-size: 12px;
 }
-.application-shell .project-overview-head {
+.app-shell .project-overview-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   min-width: 0;
   margin: 0;
 }
-.application-shell .project-overview-head h1 {
+.app-shell .project-overview-head h1 {
   margin: 0;
   overflow: hidden;
   font-size: 15px;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.application-shell .project-state {
+.app-shell .project-state {
   margin: 0;
   border: 0;
 }
-.application-shell .project-state-flow {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px 32px;
-  padding: 8px 0;
-  font-size: 13.5px;
-  line-height: 1.6;
-}
-.application-shell .project-state-baseline,
-.application-shell .project-state-readiness {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 6px 8px;
-  min-width: 0;
-}
-.application-shell .project-state-baseline > span,
-.application-shell .project-state-readiness > span,
-.application-shell .project-state-baseline small,
-.application-shell .project-state-flow > .state-arrow {
-  color: var(--muted);
-  font-size: 13px;
-}
-.application-shell .project-state-baseline strong,
-.application-shell .project-state-readiness strong {
-  color: var(--ink);
-  font-size: 13.5px;
-  font-weight: 600;
-}
-.application-shell .project-state-readiness strong.is-attention {
+.app-shell .project-state-baseline,
+.app-shell .project-state-baseline > span,
+.app-shell .project-state-readiness > span,
+.app-shell .project-state-baseline small,
+.app-shell .project-state-baseline strong,
+.app-shell .project-state-readiness strong.is-attention {
   color: var(--concord-warning-text);
 }
-.application-shell .project-state-footer {
+.app-shell .project-state-footer {
   display: flex;
   align-items: baseline;
   justify-content: flex-start;
@@ -113,39 +88,39 @@
   font-size: 13.5px;
   line-height: 1.6;
 }
-.application-shell .project-state-footer p {
+.app-shell .project-state-footer p {
   margin: 0;
   color: var(--ink-2);
 }
-.application-shell .project-state-footer p > span {
+.app-shell .project-state-footer p > span {
   color: var(--muted);
 }
-.application-shell .project-state-footer > span {
+.app-shell .project-state-footer > span {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-.application-shell .project-main {
+.app-shell .project-main {
   display: grid;
   gap: 8px;
   min-width: 0;
   margin: 8px;
 }
-.application-shell .project-ledger {
+.app-shell .project-ledger {
   min-width: 0;
 }
-.application-shell .project-package-table {
+.app-shell .project-package-table {
   --bim-table-row--min-h: 58px;
   min-width: 0;
   width: 100%;
 }
-.application-shell .project-main > section:not(.project-ledger) > h2 {
+.app-shell .project-main > section:not(.project-ledger) > h2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin: 0 0 10px;
   font-size: 14px;
 }
-.application-shell .project-side {
+.app-shell .project-side {
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -157,7 +132,7 @@
   font-size: 13px;
   line-height: 1.6;
 }
-.application-shell .project-side h2 {
+.app-shell .project-side h2 {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -169,36 +144,36 @@
   line-height: 1.5;
   letter-spacing: 0;
 }
-.application-shell .project-side h2 > span {
+.app-shell .project-side h2 > span {
   color: var(--muted);
   font-size: 12px;
   font-weight: 400;
 }
-.application-shell .project-side .quiet-message {
+.app-shell .project-side .quiet-message {
   margin: 0;
   color: var(--muted);
   font-size: 12.5px;
   line-height: 1.6;
 }
-.application-shell .project-side nav {
+.app-shell .project-side nav {
   margin: 0;
   padding: 0;
   list-style: none;
   max-width: none;
   border: 0;
 }
-.application-shell .project-files bim-button,
-.application-shell .project-activity bim-button {
+.app-shell .project-files bim-button,
+.app-shell .project-activity bim-button {
   width: 100%;
 }
-.application-shell .project-files bim-button > span,
-.application-shell .project-activity bim-button > span {
+.app-shell .project-files bim-button > span,
+.app-shell .project-activity bim-button > span {
   display: grid;
   gap: 4px;
   min-width: 0;
 }
-.application-shell .project-files strong,
-.application-shell .project-activity strong {
+.app-shell .project-files strong,
+.app-shell .project-activity strong {
   overflow: hidden;
   color: var(--ink);
   font-size: 13.5px;
@@ -207,15 +182,15 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.application-shell .project-files time,
-.application-shell .project-activity time,
-.application-shell .project-activity small {
+.app-shell .project-files time,
+.app-shell .project-activity time,
+.app-shell .project-activity small {
   color: var(--muted);
   flex-shrink: 0;
   font-size: 12.5px;
   white-space: nowrap;
 }
-.application-shell .project-baselines > div {
+.app-shell .project-baselines > div {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
@@ -224,28 +199,28 @@
   color: var(--ink-2);
   font-size: 12px;
 }
-.application-shell .project-baselines > div > span:nth-child(2) {
+.app-shell .project-baselines > div > span:nth-child(2) {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.application-shell .project-baselines .mono {
+.app-shell .project-baselines .mono {
   font-weight: 500;
 }
-.application-shell .project-baselines time {
+.app-shell .project-baselines time {
   color: var(--muted);
   font-size: 12px;
 }
-.application-shell .project-side nav bim-button {
+.app-shell .project-side nav bim-button {
   width: 100%;
 }
-.application-shell .project-side nav strong {
+.app-shell .project-side nav strong {
   flex-shrink: 0;
   color: var(--ink);
   font-size: 13px;
   font-weight: 500;
 }
-.application-shell .project-side nav small {
+.app-shell .project-side nav small {
   min-width: 0;
   overflow: hidden;
   color: var(--muted);
@@ -254,21 +229,21 @@
   text-overflow: ellipsis;
 }
 @container workspace (max-width: 950px) {
-  .application-shell .project-workspace {
+  .app-shell .project-workspace {
     grid-template-columns: minmax(0, 1fr) 280px;
   }
-  .application-shell .project-side {
+  .app-shell .project-side {
     padding-inline: 16px;
   }
 }
 
-.application-shell .project-state > h2 {
+.app-shell .project-state > h2 {
   margin: 0 0 6px;
   font-size: 16px;
   font-weight: 600;
   color: var(--ink);
 }
-.application-shell .project-state-reason {
+.app-shell .project-state-reason {
   margin: 0 0 8px;
   max-width: 700px;
   color: var(--ink-2);
@@ -276,31 +251,30 @@
   line-height: 1.7;
 }
 
-.application-shell .project-context-surface > aside {
+.app-shell .project-context-surface > aside {
   padding: 12px;
   gap: 12px;
   border: 0;
   background: transparent;
   overflow: visible;
 }
-.application-shell .project-context-surface:not(:has(> aside)) {
+.app-shell .project-context-surface:not(:has(> aside)) {
   display: none;
 }
 
 /* An empty project has no sidebar inventory. */
-.application-shell
-  .project-workspace:not(:has(> .project-context-surface > aside)) {
+.app-shell .project-workspace:not(:has(> .project-context-surface > aside)) {
   grid-template-columns: minmax(0, 1fr);
 }
-.application-shell .project-support > .disclosure-body {
+.app-shell .project-support > .disclosure-body {
   overflow: visible;
 }
-.application-shell .project-support .disclosure-inner {
+.app-shell .project-support .disclosure-inner {
   display: grid;
   gap: 20px;
 }
 
-.application-shell .project-empty-record-links {
+.app-shell .project-empty-record-links {
   display: flex;
   gap: 20px;
   margin: 8px;

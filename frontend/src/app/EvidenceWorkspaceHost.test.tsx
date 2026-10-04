@@ -11,7 +11,7 @@ function evidenceWith(target: Evidence["viewer_target"]): Evidence {
     snapshot_id: "snapshot-16",
     provider: "engineering-provider",
     source_id: "source-16",
-    source_revision_id: "revision-16",
+    source_revision_id: target?.source_revision_id ?? "revision-16",
     source_revision: "sha256-original-bytes",
     observed_at: "2026-03-22T10:15:00Z",
     work_package_id: "work-package-16",
@@ -318,3 +318,21 @@ it.each(targets)(
     ).toEqual(target);
   },
 );
+
+it("rejects an Evidence/ViewerTarget revision mismatch rather than choosing either revision", () => {
+  const evidence = {
+    ...evidenceWith(targets[0].target),
+    source_revision_id: "another-revision",
+  };
+  const fetch = vi.spyOn(globalThis, "fetch");
+  render(<EvidenceWorkspaceHost project="project-16" evidence={evidence} />);
+  expect(screen.getByRole("region")).toHaveAttribute(
+    "data-navigation-state",
+    "revision_mismatch",
+  );
+  expect(screen.getByRole("status")).toHaveTextContent("来源版本不一致");
+  expect(fetch).not.toHaveBeenCalled();
+  expect(
+    JSON.parse(screen.getByLabelText("Exact viewer target").textContent!),
+  ).toEqual(evidence.viewer_target);
+});

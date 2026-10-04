@@ -213,10 +213,6 @@
      changes length does not move it */
   margin-left: auto;
 }
-.pane-header-note {
-  color: var(--muted-2);
-  font-size: var(--fs-label);
-}
 /*
  * The count is the header's own annotation, not its far edge.
  *
@@ -230,12 +226,6 @@
  */
 .pane-header .count {
   margin-left: 0;
-}
-.pane-header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-left: auto;
 }
 /* a pane header that also navigates: the identity row sits above the switch */
 .pane-header.is-stacked {

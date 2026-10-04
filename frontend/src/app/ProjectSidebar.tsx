@@ -1,211 +1,146 @@
+/* The workspace tool rail. Emits the donor's `[data-tool-rail]` contract
+ * (OpenTakeoff web/src/pages/TakeoffCanvas.jsx, revision
+ * 788e39bfe9c42b3260ea75e84a655e4574f9bc8c): a column of square tool faces with
+ * `aria-pressed` state, styled by the vendored premiumWorkspace.css and
+ * tokens.css (`.t-label`). Button faces reuse the donor's own `panelBtn`
+ * inline-style vocabulary. Concord binds destinations to it; the donor's
+ * measuring tools have no counterpart and are not invented here.
+ */
 import {
-  Search,
-  Building2,
-  ChevronsUpDown,
-  FolderOpen,
-  Home,
-  PanelLeftClose,
+  Activity,
   Box,
-  Plus,
+  FileText,
+  FolderTree,
+  GitCompareArrows,
+  Home,
+  Map,
+  Search,
   Settings2,
+  ShieldCheck,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
-import type { DTO, ProjectSourceStatus, Workspace } from "../api/client";
-import {
-  AppMenu,
-  AppMenuItem,
-  AppMenuLabel,
-  AppMenuSeparator,
-} from "../components/ui/AppMenu";
-import { AppTooltip } from "../components/ui/AppTooltip";
-import { Button } from "../components/ui/button";
 import { icon } from "../components/ui/icon";
-import { demoProjectName } from "../ui/demo/demoPresentation";
 import type { WorkspaceTab } from "./destinations";
 
-const workspaceLinks: {
-  tab: WorkspaceTab;
-  label: string;
-  icon: LucideIcon;
-}[] = [
-  { tab: "work", label: "工作", icon: Home },
-  { tab: "project", label: "项目", icon: Building2 },
-  { tab: "browse", label: "浏览", icon: Search },
+// The donor's tool-rail face (TakeoffCanvas.jsx `panelBtn`), kept verbatim.
+const face: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 2,
+  width: 34,
+  minHeight: 34,
+  padding: "5px 0 4px",
+  border: "1px solid var(--ink-faint)",
+  background: "var(--paper-bright)",
+  color: "var(--ink)",
+  cursor: "pointer",
+  fontWeight: 600,
+  lineHeight: 1,
+};
+
+const group: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: "var(--sp-1)",
+  width: "100%",
+};
+
+type RailItem = { tab: WorkspaceTab; label: string; icon: LucideIcon };
+
+const groups: { caption: string; items: RailItem[] }[] = [
+  {
+    caption: "工作",
+    items: [
+      { tab: "work", label: "工作", icon: Home },
+      { tab: "project", label: "项目", icon: FolderTree },
+      { tab: "browse", label: "浏览", icon: Search },
+    ],
+  },
+  {
+    caption: "对象",
+    items: [
+      { tab: "bim", label: "模型", icon: Box },
+      { tab: "documents", label: "文档", icon: FileText },
+    ],
+  },
+  {
+    caption: "影响",
+    items: [
+      { tab: "impact", label: "变更", icon: GitCompareArrows },
+      { tab: "packages", label: "问题", icon: ShieldCheck },
+    ],
+  },
 ];
 
 export function ProjectSidebar({
-  project,
-  projects,
-  recent = [],
   tab = "work",
-  collapsed = false,
-  onCollapse,
-  onProject,
-  onNewProject,
-  onOpenProject,
-  onOpenDemo,
-  onProjectSettings,
   onTab,
+  onProjectSettings,
 }: {
-  data: Workspace;
-  project: string;
-  projects: DTO<"Project">[] | undefined;
-  recent?: DTO<"Project">[];
-  sources?: ProjectSourceStatus[];
-  selected: string;
   tab?: WorkspaceTab;
-  collapsed?: boolean;
-  onCollapse: () => void;
-  onProject: (id: string) => void;
-  onNewProject?: () => void;
-  onOpenProject?: () => void;
-  onOpenDemo?: () => void;
+  onTab: (tab: WorkspaceTab) => void;
   onProjectSettings?: () => void;
-  onStructure?: () => void;
-  onSelect: (id: string) => void;
-  onTab?: (tab: WorkspaceTab) => void;
 }) {
-  const storedName =
-    projects?.find((item) => item.id === project)?.name ?? project;
-  const current = demoProjectName(project, storedName);
-  const demo = project === "harbor-east";
-  const otherProjects = projects
-    ?.filter(
-      (item) =>
-        item.id !== project &&
-        !recent.some((recentItem) => recentItem.id === item.id),
-    )
-    .slice(0, 5);
-
+  const button = (item: RailItem) => {
+    const Face = item.icon;
+    return (
+      <button
+        key={item.tab}
+        type="button"
+        aria-pressed={tab === item.tab}
+        aria-label={item.label}
+        title={item.label}
+        style={face}
+        onClick={() => onTab(item.tab)}
+      >
+        <Face {...icon} />
+        <span style={{ fontSize: "var(--fs-2xs)" }}>{item.label}</span>
+      </button>
+    );
+  };
   return (
-    <aside className="sidebar" aria-label="项目导航" inert={collapsed}>
-      <header className="sidebar-header">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            C
-          </span>
-          <span className="brand-name">
-            <strong>Concord</strong>
-          </span>
-          <AppTooltip label="收起侧栏" side="right">
-            <Button
-              variant="ghost"
-              className="icon-button"
-              aria-label="收起侧栏"
-              onClick={onCollapse}
-            >
-              <PanelLeftClose {...icon} />
-            </Button>
-          </AppTooltip>
+    <>
+      {groups.map((entry) => (
+        <div key={entry.caption} style={group}>
+          <span className="t-label">{entry.caption}</span>
+          {entry.items.map(button)}
         </div>
-        <div className="project-picker">
-          <AppMenu
-            label="切换项目"
-            align="start"
-            triggerClassName="project-trigger"
-            trigger={
-              <>
-                <Building2 className="project-mark" {...icon} />
-                <span className="project-name">
-                  <strong>{current}</strong>
-                </span>
-                <ChevronsUpDown className="project-chevron" {...icon} />
-              </>
-            }
-          >
-            <AppMenuLabel>当前项目</AppMenuLabel>
-            <AppMenuItem active onSelect={() => onProject(project)}>
-              {current}
-              {demo && " · 示例项目"}
-            </AppMenuItem>
-            {recent.some((item) => item.id !== project) && (
-              <>
-                <AppMenuSeparator />
-                <AppMenuLabel>最近项目</AppMenuLabel>
-                {recent
-                  .filter((item) => item.id !== project)
-                  .map((item) => (
-                    <AppMenuItem
-                      key={item.id}
-                      onSelect={() => onProject(item.id)}
-                    >
-                      {demoProjectName(item.id, item.name)}
-                      {item.id === "harbor-east" && " · 示例项目"}
-                    </AppMenuItem>
-                  ))}
-              </>
-            )}
-            {!!otherProjects?.length && (
-              <>
-                <AppMenuSeparator />
-                <AppMenuLabel>其他项目</AppMenuLabel>
-                {otherProjects.map((item) => (
-                  <AppMenuItem
-                    key={item.id}
-                    onSelect={() => onProject(item.id)}
-                  >
-                    {demoProjectName(item.id, item.name)}
-                    {item.id === "harbor-east" && " · 示例项目"}
-                  </AppMenuItem>
-                ))}
-              </>
-            )}
-            <AppMenuSeparator />
-            <AppMenuItem onSelect={() => onNewProject?.()}>
-              <Plus {...icon} /> 新建项目
-            </AppMenuItem>
-            <AppMenuItem onSelect={() => onOpenProject?.()}>
-              <FolderOpen {...icon} /> 打开项目…
-            </AppMenuItem>
-            <AppMenuItem onSelect={() => onOpenDemo?.()}>
-              <FolderOpen {...icon} /> 打开示例项目
-            </AppMenuItem>
-            <AppMenuItem onSelect={() => onProjectSettings?.()}>
-              <Settings2 {...icon} /> 项目设置
-            </AppMenuItem>
-          </AppMenu>
-        </div>
-      </header>
-
-      <div className="sidebar-content">
-        <nav className="sidebar-primary" aria-label="主要工作区">
-          {workspaceLinks.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Button
-                key={item.tab}
-                className={tab === item.tab ? "active" : ""}
-                aria-current={tab === item.tab ? "page" : undefined}
-                aria-label={item.label}
-                onClick={() => {
-                  onTab?.(item.tab);
-                }}
-              >
-                <Icon {...icon} />
-                {item.label}
-              </Button>
-            );
-          })}
-        </nav>
-        <div className="sidebar-browse">
-          <Button
-            className={tab === "bim" ? "active" : ""}
-            aria-label="模型"
-            aria-current={tab === "bim" ? "page" : undefined}
-            onClick={() => {
-              onTab?.("bim");
-            }}
-          >
-            <Box {...icon} />
-            模型
-          </Button>
-        </div>
+      ))}
+      <div style={{ ...group, marginTop: "auto" }}>
+        <button
+          type="button"
+          aria-label="活动与运行"
+          title="活动与运行"
+          aria-pressed={tab === "operations"}
+          style={face}
+          onClick={() => onTab("operations")}
+        >
+          <Activity {...icon} />
+        </button>
+        <button
+          type="button"
+          aria-label="现场地图"
+          title="现场地图"
+          aria-pressed={tab === "gis"}
+          style={face}
+          onClick={() => onTab("gis")}
+        >
+          <Map {...icon} />
+        </button>
+        <button
+          type="button"
+          aria-label="设置"
+          title="项目设置"
+          style={face}
+          onClick={() => onProjectSettings?.()}
+        >
+          <Settings2 {...icon} />
+        </button>
       </div>
-      <div className="sidebar-footer">
-        <Button onClick={() => onProjectSettings?.()}>
-          <Settings2 {...icon} /> 设置
-        </Button>
-      </div>
-    </aside>
+    </>
   );
 }

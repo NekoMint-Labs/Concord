@@ -67,7 +67,9 @@ A single machine dev compose/profile may be used to prove these integrations; pr
 
 ## Frozen final technology decisions
 
-Frontend: React + Vite + TypeScript + Tailwind + shadcn/ui + React Flow + TanStack Query.
+Frontend: React/Vite/TypeScript + TanStack Query; OpenTakeoff-based product shell
+with existing primitives/ThatOpen surfaces. The old shadcn-shell mandate is retired.
+Current composition: `docs/PRODUCT_WORKFLOW.md`; versions: frontend manifest/lock.
 
 Backend: Python + FastAPI + Pydantic + SQLAlchemy 2 + Alembic.
 
@@ -81,7 +83,8 @@ Persistence: SQLite local/desktop; PostgreSQL server/team.
 
 Optimization: SimpleResolver default + OR-Tools implemented.
 
-BIM: Structured provider default + IfcOpenShell implemented; That Open Engine for Web/Desktop BIM viewer.
+BIM backend: Structured provider default + IfcOpenShell. C owns viewers; current
+interfaces are `docs/EVIDENCE_VIEWER_ADAPTERS.md`, not this historical donor mandate.
 
 Documents: lightweight parser + Docling implemented.
 
@@ -111,4 +114,5 @@ Always check current official APIs/versions before coding; do not pin stale vers
 
 ## Remaining non-blocking unknowns
 
-Only environment/release-specific choices remain open, such as exact product branding, final signing certificates, real enterprise vendor credentials/contracts, production cloud topology, and exact model identifiers. These must not block building the complete reference implementation.
+Current integration and release blockers belong to `STATUS.md`/`VERIFICATION.md`.
+This historical profile plan is not completion evidence or authority to expand scope.

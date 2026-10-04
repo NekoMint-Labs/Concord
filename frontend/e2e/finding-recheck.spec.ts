@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import type { DTO } from "../src/api/client";
-import { expectDonor } from "./donor-conformance";
+import { openWorkPanel, toolRail } from "./donor-conformance";
 
 const headers = { Authorization: "Bearer local-demo-admin" };
 const screenshots = resolve(
@@ -338,7 +338,7 @@ for (const viewport of viewports) {
       localStorage.setItem("concord:last-project", id);
     }, project.id);
     const panel = page.getByRole("complementary", {
-      name: "Finding 工作与审核",
+      name: "工作与审核",
     });
     const dialog = page.getByRole("dialog", {
       name: "协调 / ReCheck",
@@ -346,22 +346,20 @@ for (const viewport of viewports) {
     });
     async function openReview() {
       await page.goto("/");
-      await page
-        .getByRole("navigation", { name: "主要工作区" })
+      await toolRail(page)
         .getByRole("button", { name: "工作", exact: true })
         .click();
+      await openWorkPanel(page);
       await page
         .getByRole("button", { name: new RegExp(finding.title) })
         .click();
       await expect(
-        page.getByRole("region", { name: "工作", exact: true }),
+        page.getByRole("complementary", { name: "工作与审核" }),
       ).toBeVisible();
       await expect(
         page.getByRole("button", { name: new RegExp(finding.title) }),
       ).toHaveAttribute("aria-pressed", "true");
-      await expectDonor(panel.locator("bim-panel.finding-review-surface"), {
-        label: "工程判断",
-      });
+      await expect(panel.locator(".workspace-list")).toBeVisible();
       await panel
         .getByRole("button", { name: "协调 / 复核", exact: true })
         .click();
@@ -464,7 +462,7 @@ for (const viewport of viewports) {
     const host = page.locator(`[data-evidence-id="${evidence.id}"]`);
     await expect(host).toHaveAttribute(
       "data-navigation-state",
-      "viewer_unavailable",
+      "navigation_failed",
     );
     const receipt = JSON.parse(
       (await host.getByLabel("Exact viewer target").textContent())!,

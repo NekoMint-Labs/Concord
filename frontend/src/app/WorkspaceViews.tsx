@@ -1,7 +1,5 @@
 import { lazy, Suspense } from "react";
-import { FindingWorkbench } from "../features/FindingWorkbench";
 import type { ExplorerEntry } from "../features/ProjectExplorer";
-import type { useWorkspaceLayout } from "../layout/WorkspaceLayout";
 
 import { ProjectExplorer } from "../features/ProjectExplorer";
 import { scopeFor } from "../features/agentContext";
@@ -9,7 +7,6 @@ import { ViewerBoundary } from "../components/ViewerBoundary";
 import { WorkspaceState } from "../components/WorkspaceState";
 import { Pane, PaneSplit } from "../layout/PaneSplit";
 import { condensedFor, usePaneWidth } from "../layout/paneBudget";
-import { WorkList } from "../features/WorkList";
 import { ChangeExplorer } from "../features/ChangeExplorer";
 import { IssueExplorer } from "../features/IssueExplorer";
 import { Documents } from "../features/Documents";
@@ -29,11 +26,11 @@ const GISWorkspace = lazy(() => import("../viewers/GISWorkspace"));
 export { EmptyWorkPackages } from "./WorkPackageDirectory";
 export type { WorkspaceTab } from "./destinations";
 
-/** Navigation owns destinations; this component only composes the selected work surface. */
+/** Navigation owns destinations; this component only composes the selected work surface.
+ * The Work destination is not composed here: its docked panel must be a sibling of
+ * the workspace rail and navigator, so `FindingWorkbench` is mounted by App inside
+ * `[data-canvas-workspace]` (the donor's composition). */
 type FindingWorkspaceProps = {
-  workspaceLayout?: ReturnType<typeof useWorkspaceLayout>;
-  findingId?: string;
-  findingEvidenceId?: string;
   findingEntries?: ExplorerEntry[];
   onOpenFinding?: (id: string, evidenceId?: string) => void;
 };
@@ -65,9 +62,6 @@ export function WorkspaceViews(
     onInvestigateSource,
     onInspectImpact,
     onInvestigateWork,
-    workspaceLayout,
-    findingId = "",
-    findingEvidenceId,
     findingEntries = [],
     onOpenFinding,
   } = props;
@@ -87,43 +81,6 @@ export function WorkspaceViews(
   const width = usePaneWidth();
   const condensed = condensedFor(width, detailsOpen);
   const stackedInspector = detailsOpen && width <= 1120;
-  const workQueue = (
-    <WorkList
-      workspace={data}
-      sources={modelSources}
-      report={report}
-      run={run}
-      onSource={(id) => openSource({ kind: "source", id })}
-      onInvestigate={
-        onInvestigateWork ??
-        ((context) => {
-          onSourceContext?.(
-            context.sourceId,
-            context.revisionId,
-            context.revisionLabel,
-            context.fromRevisionId,
-            context.fromRevisionLabel,
-          );
-          onInvestigateSource?.(
-            context.sourceId,
-            context.revisionId,
-            context.fromRevisionId,
-          );
-        })
-      }
-      onPackage={openWorkPackage}
-      onModels={() => onTab("sources")}
-      onRecheck={onRecheck}
-      onReport={() => {
-        onTab("coordination");
-        openInvestigation();
-      }}
-      onProject={() => onTab("project")}
-      onTab={onTab}
-      selectedFindingId={findingId}
-      onFindingSelect={(id) => onOpenFinding?.(id)}
-    />
-  );
   return (
     <>
       {/*
@@ -152,21 +109,6 @@ export function WorkspaceViews(
               }
             >
               <>
-                {tab === "work" &&
-                  (workspaceLayout ? (
-                    <FindingWorkbench
-                      prefs={workspaceLayout}
-                      key={project}
-                      project={project}
-                      selectedId={findingId}
-                      sources={modelSources}
-                      evidenceId={findingEvidenceId}
-                      onSelect={(id) => onOpenFinding?.(id)}
-                      queue={workQueue}
-                    />
-                  ) : (
-                    workQueue
-                  ))}
                 {tab === "browse" && (
                   <ProjectExplorer
                     workspace={data}

@@ -409,17 +409,6 @@
   content: "";
 }
 
-.investigation-step {
-  z-index: 1;
-  width: 9px;
-  height: 9px;
-  margin-top: 3px;
-  border: 2px solid var(--surface);
-  border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 0 1px var(--success);
-}
-
 .investigation-trace strong,
 .investigation-trace small {
   display: block;

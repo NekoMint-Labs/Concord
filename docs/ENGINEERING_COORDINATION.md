@@ -1,5 +1,11 @@
 # Revision-aware coordination contract (#18)
 
+This is the durable shared API/publication contract, not proof that all engineering
+providers/viewers are connected. Current product behavior is in
+[PRODUCT_WORKFLOW](PRODUCT_WORKFLOW.md), the B/C handoff in
+[EVIDENCE_VIEWER_ADAPTERS](EVIDENCE_VIEWER_ADAPTERS.md), and qualification boundaries
+in [VERIFICATION](../VERIFICATION.md). PR22 C remains a pending local dependency.
+
 The platform owns revision identities, normalized publication, persisted Findings,
 Coordination, ReChecks, and durable execution. Engineering adapters own detection and
 measurement; product UI consumes these contracts. No detector or viewer SDK type enters

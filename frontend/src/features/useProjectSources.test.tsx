@@ -105,7 +105,17 @@ it("advertises only installed parser formats, never drawings or spreadsheets", (
   expect(supportedSourceFormats([parser])).toEqual([".ifc", ".txt", ".md"]);
   expect(
     supportedSourceFormats([{ ...parser, implementation: "Docling" }]),
-  ).toEqual([".ifc", ".pdf", ".docx", ".pptx", ".txt", ".md", ".html"]);
+  ).toEqual([
+    ".ifc",
+    ".pdf",
+    ".docx",
+    ".pptx",
+    ".xlsx",
+    ".csv",
+    ".txt",
+    ".md",
+    ".html",
+  ]);
   expect(
     supportedSourceFormats([
       {

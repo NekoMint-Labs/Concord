@@ -1,50 +1,95 @@
-# Issue #16 substrate replacement map
+# Issue #16: product UI is the OpenTakeoff workspace
 
-## Scope and baseline (before implementation)
+## What this is
 
-Current working tree on `feat/16-product-workspace`, including untracked production files; not merely HEAD. Existing changes are preserved. Baseline recorded in `.verification-work/issue-16-substrate-replacement/baseline.json`: **13,218 CSS lines**, **14,118 production TSX lines** in `app/components/features/layout` (tests and fixtures excluded). Vendor output is excluded. Production, tests and documentation are counted separately.
+Scope: current B donor provenance, not an active migration plan or acceptance.
+[PRODUCT_WORKFLOW](PRODUCT_WORKFLOW.md) owns behavior and [STATUS](../STATUS.md)
+owns the stopped, unaccepted local integration. C's four viewer surfaces remain a
+pending PR22 dependency; their [handoff](EVIDENCE_VIEWER_ADAPTERS.md) is separate from
+the B shell. C Drawing uses OpenTakeoff `60c82e…`, **not** B's `788e39b…`.
 
-Previous implementation was a **partial donor migration**: donor containers existed, while Concord/native buttons, inputs, menus, two Work search/selection models and a large custom stylesheet substrate remained. This document specifies replacements, not claims of completion.
+The Concord product UI is OpenTakeoff's own workspace frontend, adopted as the
+baseline and renamed. It is not a redesign, not a reference, and not a port of
+individual widgets onto the previous Concord shell.
 
-## Replacement/deletion map
+- Donor: https://github.com/Kentucky-ai/opentakeoff
+- Fixed revision: `788e39bfe9c42b3260ea75e84a655e4574f9bc8c`
+- License: Apache-2.0 (`frontend/public/licenses/OpenTakeoff-APACHE-2.0.txt`,
+  upstream NOTICE at `frontend/public/licenses/OpenTakeoff-NOTICE.txt`)
+- Vendored files and digests: `frontend/src/vendor/opentakeoff/README.md`
 
-| Existing owner | Classification | Replacement / retained responsibility |
-|---|---|---|
-| `components/ui/button.tsx`, native ordinary buttons | REPLACE / KEEP FORM SEMANTICS | Real `bim-button` for ordinary actions. Native buttons remain inside real forms because donor buttons are not form-associated; native file controls and protected viewer internals are explicit exceptions. |
-| Native ordinary search/text/number inputs | REPLACE / KEEP FORM SEMANTICS | Donor inputs for ordinary query controls, with React value/property binding and donor DOM event listeners. Retain native form fields, secret/file/date/checkbox/radio inputs and unsupported constraints; donor inputs cannot provide native validation or FormData. |
-| `AppSelect` | REPLACE / BRIDGE | Donor dropdown/options where semantics match; controlled donor values are arrays. The real shadow combobox owns naming and focus; the adapter blocks disabled interaction and waits for asynchronous options. Rich labels are normalized to donor option text. Form-associated selectors remain native exceptions. |
-| `AppMenu` | TEMPORARILY BRIDGE | Radix retains application menu semantics, roving focus, typeahead, dismissal and durable focus restoration. Donor contextual floating dialog is not an equivalent application menu. Donor controls own qualified trigger presentation; do not introduce a second modal/keyboard engine. |
-| `AppDisclosure` | REPLACE / BRIDGE | `bim-panel-section` within donor panels; retain the free-standing accessibility/animation bridge where a donor panel section cannot preserve focusable content and lifecycle. |
-| `AppPopover`, `AppTooltip` | REPLACE / TEMPORARILY BRIDGE | Donor tooltip anchored inside its stable trigger where qualified; Radix remains for the general popover gap. No ordinary competing control visual family. |
-| `AppDialog` | KEEP / REPLACE VISUAL | Radix modality, escape, focus trap and return focus stay; donor toolbar/panel/buttons/inputs own presentation. |
-| `PaneSplit`, `WorkspaceLayout`, `workspaceLayout`, `focusMode` | TEMPORARILY BRIDGE | Keep resize/keyboard separator, persistence, dock/focus behavior. `bim-grid` owns area presentation; one resize/persistence engine, not two. |
-| `WorkspaceChrome`, `WorkspaceHeader`, `ProjectSidebar` | REPLACE VISUAL / KEEP STATE | Donor toolbars/buttons/menus; React navigation, command execution, run state and project scope remain. |
-| `EngineeringFindingList` independent search | DELETE / MERGE | One Work query/filter across Findings and project work; one count and one selected key. |
-| `WorkList` custom rows, `useWorkSelection` + `WorkPeek` independent detail | REPLACE / MERGE | OpenTakeoff WorkspacePanel work/review structure: heading, summary, filters, compact list, bounded paging, selected receipt, action/footer. One persistent selected-item model; no competing peek. |
-| `FindingWorkbench` bespoke parallel composition | REPLACE | Actual WorkspacePanel composition adapted to Concord facts + donor grid/panel/toolbar/tabs/controls; Finding receipt/mutation logic retained. |
-| `FindingFollowUp`, `EvidenceWorkspaceHost` | KEEP DOMAIN / REPLACE VISUAL | Persisted decision/ReCheck/Evidence data, quality distinctions, exact targets and unavailable states; compact donor sections. No invented viewer capability. |
-| `WorkspaceDetailPane` | KEEP OUTSIDE WORK | Existing coordination/investigation/action inspectors stay where needed; Work does not mount a second competing inspector. |
-| `ProjectOverview`, `ProjectSourceRegister`, `ProjectHome` | REPLACE VISUAL | Dense donor panels/sections/tables; retain source lifecycle/actions and explicit readiness/source/Finding distinction. |
-| `ProjectExplorer` | KEEP DATA / REPLACE CONTROLS | Donor retrieval table, query and filters; opaque identifiers searchable but technical provenance secondary. |
-| `ModelWorkspaceView` | KEEP VIEWER / REPLACE CHROME | Donor viewport/toolbar/buttons around existing viewer. No viewer algorithm or engine edits. |
-| `styles/ui.css`, duplicated custom controls and page presentation in composition/styles | DELETE / REDUCE | Delete replaced visual owners; keep layout, focus, semantic status, viewer geometry and required dialog modality only. |
-| `styles/workbench.css` Concord donor-look overrides | DELETE / REDUCE | Keep minimal donor integration/layout, docking and domain semantics. No donor lookalike control family. |
-| `styles/base.css` extensive visual commentary and token system | REDUCE | Small light neutral/teal/CJK donor token bridge; semantic compatibility aliases only for retained domain/viewer surfaces. |
+## 1. Donor files kept as-is
 
-## API qualification corrections
+Copied byte-identical (unmodified) into `frontend/src/vendor/opentakeoff/` and
+imported at the end of `frontend/src/styles.css`, so they own the workspace look:
 
-The initial replacement plan above was corrected after inspecting the installed donor APIs. `bim-button` and donor inputs are not native form-associated controls. `bim-context-menu` is a floating native modal dialog, not an application-menu keyboard implementation. `bim-tabs` owns panel visibility and is not a substitute for React routing. Local single-choice categories use donor `bim-selector`; React routing remains authoritative for workspace navigation. These gaps are explicit retained bridges, not claims of full donor parity.
+| Vendored file | Donor path |
+| --- | --- |
+| `styles/tokens.css` | `web/src/styles/tokens.css` |
+| `styles/app.css` | `web/src/styles/app.css` |
+| `styles/premiumWorkspace.css` | `web/src/styles/premiumWorkspace.css` |
+| `components/workspaceChrome.css` | `web/src/components/workspaceChrome.css` |
+| `components/workspacePanel.css` | `web/src/components/workspacePanel.css` |
 
-Project package and source register rows are now donor tables with stable domain IDs and real `bim-button` row actions. React keeps exact callback targets and selected IDs; donor buttons expose both visual active state and `aria-pressed`. Table-cell status colours use inherited semantic variables because the donor cells are in shadow DOM, not Concord row skins.
+Ported with type annotations only: `brand/icons.tsx` (`brand/icons.jsx`),
+`lib/ui.ts` (`lib/ui.js`), `lib/keys.ts` (`lib/keys.ts`).
 
-## Donor references and boundaries
+## 2. Donor files ported with product edits
 
-ThatOpen source checkout `/tmp/engine_ui-components`, revision `c998a4a49ff9b2fa09ef67eb91d36067e7897f2f`, installed package **3.4.14**. Read actual core implementations and Grid, Panel, Toolbar, Tabs, Table, Table/Searching, ContextMenu and ModelsList examples. OBC ModelsList is not a second authoritative project/model source; map Concord records into donor tables instead.
+| Concord file | Donor source | Change |
+| --- | --- | --- |
+| `src/app/WorkspaceChrome.tsx` | `components/WorkspaceChrome.jsx` | Chinese copy, Concord slots (`conditionControl` = work package, `history` = Re-check, `aids` = model/document, `panelTools` unused, no Quantities/Takeoffs/Premium) |
+| `src/app/ProjectSidebar.tsx` | donor tool rail (`[data-tool-rail]`, `TakeoffCanvas.jsx`) | Concord destinations instead of measuring tools |
+| `src/features/WorkPanel.tsx` | `components/WorkspacePanel.jsx` | Findings + project work instead of measurements; donor heading/summary/tabs/query/filter/list/row/receipt/footer kept |
+| `src/layout/WorkspaceLayout.tsx` | `components/WorkspaceLayout.jsx` | native `<dialog>` markup kept; Concord dock set (tools/sheets/work), no quantity/counter/palette toggles |
+| `src/layout/workspaceLayout.ts` | `lib/workspaceLayout.js` | Concord dock set and storage key; defaults, bounds, saved-arrangement cap kept |
+| `src/layout/focusMode.ts` | `lib/focusMode.js` | Concord storage key/event name; donor behaviour and compact breakpoint kept |
+| `src/App.tsx` | donor shell composition (`TakeoffCanvas.jsx` `app-shell workspace-calm premium-workspace` → `calm-header`/`calm-context` → `[data-canvas-workspace]` → `footer.ink-panel.ticks`) | Concord routing, queries, dialogs and data |
 
-OpenTakeoff target **`788e39bfe9c42b3260ea75e84a655e4574f9bc8c8`**. `WorkspacePanel.jsx` structure/behavior is the source for Work, not merely its stylesheet. Takeoff geometry, measurement quantities, actors and accuracy semantics are not imported. `TakeoffCanvas.jsx` and `premiumWorkspace.css` are not production code sources. Existing adapted WorkspaceLayout/Chrome/focus behavior remains.
+## 3. Removed (donor business that was never Concord's)
 
-React owns routing, queries, callbacks, domain data, project fences, authoritative mutations and lifecycle. Lit owns adopted controls and visual surfaces. No backend, database, migration, DBOS, desktop architecture, detection, processing or `frontend/src/viewers/**` changes. No commits, pushes or PRs.
+Not copied into B's shell: flooring, measurements, takeoff quantities,
+bidding, estimating, OCR engines, geometry/takeoff engines, condition business,
+report business, agent takeoff logic, `TakeoffCanvas.jsx` and the
+takeoff-specific `premiumWorkspace` rules. Deleted from Concord because the
+vendored donor files now own their selectors: the `workbench.css` imitation port
+(`.calm-*` / `.workspace-*` duplicates, −482 lines), the old 88px sidebar shell
+CSS, `WorkspaceHeader.tsx` (breadcrumb/version/local-action toolbar, replaced by
+the header and context slots), and 186 CSS rules whose classes no longer exist in
+the product.
 
-## Verification policy
+## 4. ThatOpen (`@thatopen/ui`) — only where the donor has nothing
 
-Fresh typecheck/test/transport/lint/build/Chromium/IFC/real Finding-ReCheck/real-project checks and screenshot evidence are reported separately from historical logs. Passing tests do not prove visual donor conformance or production-engine certification. Native packaged Tauri, Windows WebView2 and macOS WKWebView qualification require their respective environments and must never be called passed from Linux browser results.
+Remaining uses include ModelWorkspaceView's `bim-viewport`; ProjectSourceRegister,
+ProjectExplorer, ProjectOverview and Capabilities tables/sections/panels; ProjectHome,
+WorkspaceState and EvidenceWorkspaceHost panels; AppMenu panels/AppDisclosure sections;
+and AppDialog's `bim-toolbar`. The shell and WorkPanel use donor markup/CSS, not a
+ThatOpen grid. The retained grid wrapper is not a production shell. Exact attribution
+is in [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md).
+
+## 5. Token bridge
+
+`frontend/src/styles/base.css` ends with a token-alias bridge that maps Concord's
+existing token names onto the vendored donor palette. It is declared three times
+(`:root`, `.premium-workspace[data-workspace-look="light"]`,
+`.premium-workspace[data-workspace-look="graphite|hud"]`) because `var()`
+substitutes at computed-value time and a single `:root` copy would freeze at the
+light value. This is the only new CSS: it declares no visuals, only aliases, and
+is what makes every existing Concord surface adopt the workspace look.
+
+## 6. Known gaps (reported, not invented)
+
+- No donor equivalent for the canvas sheet-tab strip (`[data-sheet-tabs]`) or the
+  selected-object property editor (`.calm-property-editor`); Concord has neither.
+- No donor equivalent for a project/browse data table. The donor's only table
+  vocabulary is the inline-styled table in `components/RevisionsPanel.jsx`; the
+  Concord data surfaces therefore keep their existing tables and only adopt the
+  palette through the token bridge.
+- The donor's Pin control, All-controls topbar and quantities counter have no
+  Concord counterpart.
+
+React owns routing, queries, callbacks and reconciliation; the backend owns
+authoritative mutations/domain state. Lit/ThatOpen supplies remaining components,
+not a competing shell. This map describes B shell adoption only; B's host now
+requests C viewers, whose modules/assets/dependencies are pending locally. It does
+not claim completed viewer/runtime integration or final tests.

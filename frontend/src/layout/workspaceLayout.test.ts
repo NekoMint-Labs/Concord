@@ -1,5 +1,4 @@
 import { createElement } from "react";
-import { findDonorControl } from "../../tests/donor-dom";
 import {
   act,
   cleanup,
@@ -39,6 +38,7 @@ it("clamps and rounds the work width, rejecting non-finite values and unknown do
   for (const workWidth of [NaN, Infinity, "400"]) {
     expect(normalizeLayout({ workWidth })).toEqual(DEFAULT_LAYOUT);
   }
+  /* The donor's `takeoffs` dock has no Concord counterpart; it is dropped. */
   expect(
     normalizeLayout({
       work: "left",
@@ -49,7 +49,14 @@ it("clamps and rounds the work width, rejecting non-finite values and unknown do
       look: "hud",
       sheetWidth: 300,
     }),
-  ).toEqual({ work: "left", locked: false, workWidth: 360 });
+  ).toEqual({
+    ...DEFAULT_LAYOUT,
+    locked: false,
+    sheets: "right",
+    work: "left",
+    sheetWidth: 300,
+    look: "hud",
+  });
   expect(normalizeLayout({ work: "bottom", locked: "false" })).toEqual(
     DEFAULT_LAYOUT,
   );
@@ -93,7 +100,11 @@ it("falls back on invalid preferences and normalizes only eight valid named layo
   expect(prefs.saved).toHaveLength(8);
   expect(prefs.saved[0].name).toHaveLength(40);
   expect(prefs.saved[0].name.startsWith("0")).toBe(true);
-  expect(prefs.saved[0].layout).toEqual({ ...DEFAULT_LAYOUT, work: "left" });
+  expect(prefs.saved[0].layout).toEqual({
+    ...DEFAULT_LAYOUT,
+    work: "left",
+    tools: "right",
+  });
   expect(prefs).not.toHaveProperty("project");
 });
 
@@ -101,7 +112,13 @@ it("prevents locked moves and normalizes an unlocked move", () => {
   expect(moveDock(DEFAULT_LAYOUT, "work", "left")).toEqual(DEFAULT_LAYOUT);
   expect(
     moveDock({ locked: false, workWidth: 999, look: "hud" }, "work", "left"),
-  ).toEqual({ locked: false, work: "left", workWidth: 480 });
+  ).toEqual({
+    ...DEFAULT_LAYOUT,
+    locked: false,
+    work: "left",
+    workWidth: 480,
+    look: "hud",
+  });
 });
 
 it("keeps the newest eight named snapshots, replaces duplicates, and persists browser-only preferences", () => {
@@ -131,7 +148,12 @@ it("keeps the newest eight named snapshots, replaces duplicates, and persists br
   expect(result.current.saved).toHaveLength(8);
   expect(result.current.saved[7]).toEqual({
     name: "布局1",
-    layout: { locked: false, work: "left", workWidth: 480 },
+    layout: {
+      ...DEFAULT_LAYOUT,
+      locked: false,
+      work: "left",
+      workWidth: 480,
+    },
   });
   act(() => {
     result.current.remove("布局2");
@@ -177,7 +199,12 @@ it.each([false, true])(
     act(() => first.result.current.update({ locked: false, workWidth: 999 }));
     act(() => first.result.current.move("work", "left"));
     act(() => first.result.current.save("会话布局"));
-    const layout = { locked: false, work: "left", workWidth: 480 };
+    const layout = {
+      ...DEFAULT_LAYOUT,
+      locked: false,
+      work: "left",
+      workWidth: 480,
+    };
     const saved = [{ name: "会话布局", layout }];
     first.unmount();
 
@@ -201,7 +228,13 @@ it.each([false, true])(
 it("retains dock keyboard moves, cancellation and locked visibility", () => {
   const onMove = vi.fn();
   const onDrag = vi.fn();
-  const props = { label: "工作面板", locked: false, onMove, onDrag };
+  const props = {
+    dock: "work" as const,
+    label: "工作面板",
+    locked: false,
+    onMove,
+    onDrag,
+  };
   const { rerender } = render(createElement(DockHandle, props));
   const handle = screen.getByRole("button", { name: "移动工作面板" });
   fireEvent.keyDown(handle, { key: "ArrowLeft" });
@@ -240,11 +273,11 @@ it("uses the Concord dialog with locked position and size controls", async () =>
   expect(
     screen
       .getByRole("checkbox", { name: "锁定面板位置和尺寸" })
-      .closest(".calm-layout-scroll"),
-  ).not.toBeNull();
+      .closest(".calm-layout-dialog"),
+  ).toBe(dialog);
   expect(
-    await findDonorControl("combobox", "工作与审查面板位置"),
-  ).toHaveAttribute("aria-disabled", "true");
+    screen.getByRole("combobox", { name: "工作与审核位置" }),
+  ).toBeDisabled();
   expect(screen.getByRole("slider", { name: "工作面板宽度" })).toBeDisabled();
   fireEvent.click(screen.getByRole("checkbox", { name: "锁定面板位置和尺寸" }));
   rerender(
@@ -254,10 +287,10 @@ it("uses the Concord dialog with locked position and size controls", async () =>
       prefs: result.current,
     }),
   );
-  await waitFor(async () =>
+  await waitFor(() =>
     expect(
-      await findDonorControl("combobox", "工作与审查面板位置"),
-    ).toHaveAttribute("aria-disabled", "false"),
+      screen.getByRole("combobox", { name: "工作与审核位置" }),
+    ).not.toBeDisabled(),
   );
   fireEvent.click(screen.getByRole("button", { name: "关闭布局设置" }));
   expect(onClose).toHaveBeenCalledOnce();

@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
-import { WorkspaceCommandMenu } from "./WorkspaceChrome";
+import { WorkspaceChrome, WorkspaceCommandMenu } from "./WorkspaceChrome";
 
 it("retains donor command filtering, active-descendant navigation and disabled action fencing", () => {
   const run = vi.fn();
@@ -37,4 +37,48 @@ it("retains donor command filtering, active-descendant navigation and disabled a
   fireEvent.keyDown(search, { key: "ArrowDown" });
   expect(search).not.toHaveAttribute("aria-activedescendant");
   expect(screen.getByText(/没有匹配项/)).toBeVisible();
+});
+
+it("carries the current project, surface and navigation toggle in its own header", () => {
+  const onNavigate = vi.fn();
+  const onWork = vi.fn();
+  render(
+    <WorkspaceChrome
+      title="A 栋项目"
+      subtitle="模型 · 东翼风管安装"
+      onOpen={() => {}}
+      onNavigate={onNavigate}
+      navigationOpen
+      onWork={onWork}
+      workOpen={false}
+      pending={2}
+      running={false}
+      onReport={() => {}}
+      onFocus={() => {}}
+      onControls={() => {}}
+      controlsOpen={false}
+      onSearch={() => {}}
+      conditionControl={<span>东翼风管安装</span>}
+    />,
+  );
+
+  const header = screen.getByRole("banner");
+  expect(within(header).getByText("A 栋项目")).toBeVisible();
+  expect(within(header).getByText("模型 · 东翼风管安装")).toBeVisible();
+
+  // The navigation toggle replaces the old sidebar collapse control.
+  const navigate = within(header).getByRole("button", { name: "资料" });
+  expect(navigate).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(navigate);
+  expect(onNavigate).toHaveBeenCalledOnce();
+
+  // Work stays in the header, expanded state and pending count are its own.
+  const work = within(header).getByRole("button", { name: /工作/ });
+  expect(work).toHaveAttribute("aria-expanded", "false");
+  expect(work).toHaveTextContent("2");
+  fireEvent.click(work);
+  expect(onWork).toHaveBeenCalledOnce();
+
+  // The current location and work package live in the context band.
+  expect(screen.getByText("东翼风管安装")).toBeVisible();
 });

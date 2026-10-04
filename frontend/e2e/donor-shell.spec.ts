@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
-import { expectDonor } from "./donor-conformance";
+import { expectDonor, toolRail } from "./donor-conformance";
 
 for (const viewport of [
   { width: 1920, height: 1080 },
@@ -26,8 +26,7 @@ for (const viewport of [
       localStorage.setItem("concord:last-project", id);
     }, project.id);
     await page.goto("/");
-    await page
-      .getByRole("navigation", { name: "主要工作区" })
+    await toolRail(page)
       .getByRole("button", { name: "项目", exact: true })
       .click();
     const actions = page.getByRole("button", { name: "资料操作", exact: true });
@@ -60,7 +59,6 @@ for (const viewport of [
     await expect(actions).toBeFocused();
     const search = page.getByRole("button", {
       name: "查找对象或操作",
-      exact: true,
     });
     await search.click();
     const command = page.getByRole("dialog", {

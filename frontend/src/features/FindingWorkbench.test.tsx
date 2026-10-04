@@ -8,9 +8,9 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { useState, type ReactNode } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { api, APIError, type DTO } from "../api/client";
+import { api, APIError, type DTO, type Workspace } from "../api/client";
 import { useWorkspaceLayout } from "../layout/WorkspaceLayout";
 import { FindingWorkbench } from "./FindingWorkbench";
 import { engineeringKeys } from "./useEngineeringFindings";
@@ -190,6 +190,7 @@ beforeEach(() => {
   ]);
   vi.spyOn(api, "run").mockResolvedValue(makeRun());
   vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
+  vi.spyOn(api, "comparisons").mockResolvedValue([]);
   vi.spyOn(api, "requestEngineeringRechecks").mockResolvedValue([]);
   vi.spyOn(api, "engineeringDecision").mockImplementation(
     async (project, id, input) => {
@@ -231,18 +232,38 @@ function setup({
   project = "project-a",
   selectedId = "finding/opaque-73",
   sources = [source],
-  queue,
 }: {
   project?: string;
   selectedId?: string;
   sources?: DTO<"ProjectSourceStatus">[];
-  queue?: ReactNode;
 } = {}) {
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
   caches.push(cache);
   const onSelect = vi.fn();
+  const work = (project: string) => ({
+    workspace: {
+      state: {
+        project: { id: project, name: "Project" },
+        work_packages: [],
+        areas: [],
+      },
+      analysis: null,
+      events: [],
+      proposals: [],
+      audit: [],
+      stale: false,
+      analysis_run: null,
+      run: null,
+    } as unknown as Workspace,
+    sources,
+    onPackage: vi.fn(),
+    onModels: vi.fn(),
+    onRecheck: vi.fn(),
+    onReport: vi.fn(),
+    onProject: vi.fn(),
+  });
   function Host({
     project,
     evidenceId,
@@ -252,19 +273,36 @@ function setup({
   }) {
     const prefs = useWorkspaceLayout();
     const [id, setId] = useState(selectedId);
+    const [open, setOpen] = useState(true);
+    const workButtonRef = useRef<HTMLButtonElement>(null);
     return (
-      <FindingWorkbench
-        project={project}
-        selectedId={id}
-        evidenceId={evidenceId}
-        onSelect={(next) => {
-          onSelect(next);
-          setId(next);
-        }}
-        prefs={prefs}
-        sources={sources}
-        queue={queue}
-      />
+      <>
+        {/* The header owns the Work toggle now; the panel only reports close. */}
+        <button
+          ref={workButtonRef}
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen(true)}
+        >
+          审核面板
+        </button>
+        <FindingWorkbench
+          project={project}
+          open={open}
+          onClose={() => {
+            setOpen(false);
+            workButtonRef.current?.focus();
+          }}
+          selectedId={id}
+          evidenceId={evidenceId}
+          onSelect={(next) => {
+            onSelect(next);
+            setId(next);
+          }}
+          prefs={prefs}
+          work={work(project)}
+        />
+      </>
     );
   }
   const tree = (project: string, evidenceId?: string) => (
@@ -320,7 +358,7 @@ function submit(dialog: HTMLElement, note = "Engineer verified sources") {
 
 it("loads the canonical list, selects opaque IDs, and fences detail/evidence on project switch", async () => {
   findings.push(makeFinding("finding-b", "project-b"));
-  const { onSelect, switchProject } = setup({ selectedId: "" });
+  const { onSelect, switchProject } = setup({ selectedId: "", sources: [] });
   expect(screen.getByText("正在读取工程 Findings…")).toBeInTheDocument();
   fireEvent.click(
     await screen.findByRole("button", {
@@ -333,7 +371,6 @@ it("loads the canonical list, selects opaque IDs, and fences detail/evidence on 
     "project-a",
     "finding-other",
   );
-  fireEvent.click(screen.getByText(/工程判断列表 ·/));
   expect(
     screen.getByRole("button", { name: /Clearance conflict finding-other/ }),
   ).toHaveAttribute("aria-pressed", "true");
@@ -355,9 +392,9 @@ it("loads the canonical list, selects opaque IDs, and fences detail/evidence on 
 
 it("shows an empty project without manufacturing demo findings", async () => {
   findings = [];
-  setup({ selectedId: "" });
+  setup({ selectedId: "", sources: [] });
   expect(
-    await screen.findByText(/当前项目尚无工程 Finding/),
+    await screen.findByText(/当前项目尚无资料版本或工程判断/),
   ).toBeInTheDocument();
   expect(api.engineeringFinding).not.toHaveBeenCalled();
   expect(api.engineeringEvidence).not.toHaveBeenCalled();
@@ -856,17 +893,16 @@ it("drops a removed selection and its cached receipt rather than selecting anoth
 it("supports panel Escape/focus return without switching Work modes", async () => {
   setup();
   await loaded();
-  fireEvent.keyDown(
-    screen.getByRole("complementary", { name: "Finding 工作与审核" }),
-    { key: "Escape" },
-  );
+  fireEvent.keyDown(screen.getByRole("complementary", { name: "工作与审核" }), {
+    key: "Escape",
+  });
   expect(
-    screen.queryByRole("complementary", { name: "Finding 工作与审核" }),
+    screen.queryByRole("complementary", { name: "工作与审核" }),
   ).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "审核面板" })).toHaveFocus();
   fireEvent.click(screen.getByRole("button", { name: "审核面板" }));
   expect(
-    screen.getByRole("complementary", { name: "Finding 工作与审核" }),
+    screen.getByRole("complementary", { name: "工作与审核" }),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "返回工作列表" }),
@@ -906,7 +942,7 @@ it("lets dialog Escape return to the review panel without submitting a human dec
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
   );
   expect(
-    screen.getByRole("complementary", { name: "Finding 工作与审核" }),
+    screen.getByRole("complementary", { name: "工作与审核" }),
   ).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "忽略" })).toHaveFocus();
   expect(api.engineeringDecision).not.toHaveBeenCalled();
@@ -934,10 +970,6 @@ it("uses one selected-object inspector: change, impact and next action precede E
       within(technical).getByLabelText("Exact Finding record").textContent!,
     ),
   ).toEqual(findings[0]);
-  expect(
-    document.querySelector<HTMLDetailsElement>(".finding-list-disclosure")!
-      .open,
-  ).toBe(false);
   expect(within(inspector).getByText(findings[0].what_changed)).toBeVisible();
   expect(within(inspector).getByText(findings[0].why_it_matters)).toBeVisible();
   expect(
@@ -945,24 +977,27 @@ it("uses one selected-object inspector: change, impact and next action precede E
   ).toBeVisible();
 });
 
-it("keeps the canonical Work queue mounted beside evidence and docked review", async () => {
-  setup({
-    queue: (
-      <section aria-label="Canonical Work queue">
-        Project work and Findings
-      </section>
-    ),
-  });
+it("keeps one Work list and one search beside the selected receipt and evidence", async () => {
+  setup();
   await loaded();
-  expect(
-    screen.getByRole("region", { name: "Canonical Work queue" }),
-  ).toBeVisible();
-  expect(screen.getByRole("region", { name: /Drawing/ })).toBeVisible();
+  const panel = screen.getByRole("complementary", { name: "工作与审核" });
+  // One list, one search, one receipt: no second queue or duplicate selection.
+  expect(panel.querySelectorAll(".workspace-list")).toHaveLength(1);
+  // One search: the donor's plain input inside the filter row, no shadow control.
+  expect(panel.querySelectorAll("label.workspace-search input")).toHaveLength(
+    1,
+  );
+  expect(screen.getByRole("textbox", { name: "搜索工作" })).toBeInstanceOf(
+    HTMLInputElement,
+  );
   expect(screen.queryByText(/工程判断列表 ·/)).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "关闭 Finding 面板" }));
+  expect(panel).toHaveTextContent("工作与审核");
+  expect(screen.getByRole("region", { name: "Finding 详情" })).toBeVisible();
+  expect(screen.getByRole("region", { name: /Drawing/ })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "关闭工作与审核面板" }));
   expect(
-    screen.getByRole("region", { name: "Canonical Work queue" }),
-  ).toBeVisible();
+    screen.queryByRole("complementary", { name: "工作与审核" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByRole("region", { name: /Drawing/ })).toBeVisible();
   expect(
     screen.queryByRole("button", { name: "返回工作列表" }),
@@ -998,4 +1033,30 @@ it("retries only failed secondary Evidence without losing the active successful 
   expect(
     screen.getByRole("region", { name: "结构化与提取证据" }),
   ).toHaveTextContent("Design change requires clearance");
+});
+
+it("clears the evidence session when a filter hides the selected Finding and restores only its own receipt", async () => {
+  setup();
+  await screen.findByRole("heading", { name: makeFinding().title });
+  await screen.findByRole("region", { name: "Drawing · 图纸 workspace host" });
+  fireEvent.change(screen.getByRole("textbox", { name: "搜索工作" }), {
+    target: { value: "no matching Finding" },
+  });
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("region", { name: "Drawing · 图纸 workspace host" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(
+    screen.queryByRole("button", { name: "确认" }),
+  ).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole("textbox", { name: "搜索工作" }), {
+    target: { value: "" },
+  });
+  await screen.findByRole("heading", { name: makeFinding().title });
+  expect(
+    await screen.findByRole("region", {
+      name: "Drawing · 图纸 workspace host",
+    }),
+  ).toHaveAttribute("data-evidence-id", "geometry");
 });

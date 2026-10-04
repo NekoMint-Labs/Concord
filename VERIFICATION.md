@@ -1,34 +1,53 @@
 # Reproduce verification and finish release qualification
 
-[STATUS.md](STATUS.md) records the current boundary. Commands below are verification
-entry points and reproduction guidance for the established team-development baseline.
+[STATUS.md](STATUS.md) owns the current integration boundary. Commands below are
+reproduction entry points, **not results for the dirty product worktree**.
 
-## Verification state and terminology
+## Current integration — unaccepted
 
-The maintainability refactor is complete and this revision is the intended
-**team-development baseline**. The full source/integration `verify.yml` qualification
-passed, including TypeScript typecheck, Vitest/React tests, the frontend production
-build, Prettier, Ruff, Pyright, real IFC verification, DBOS verification, and Temporal
-verification. Windows native qualification passed as well.
+Actual main + PR22 + dirty B were locally combined without committing in
+`/tmp/concord-seam-pass/full`. B + main was first rehearsed separately in
+`/tmp/concord-seam-pass/integrated`. The original dirty tree was snapshotted.
+Source composition and focused tests are not final integrated acceptance.
 
-The Windows installer was generated and manually accepted on a real Windows machine:
-the desktop application launched, the packaged Python sidecar and DBOS runtime worked,
-the coordination demo worked, and restart behavior was accepted. This is not a claim of
-Linux or macOS native qualification, code signing/notarization, or final production
-release qualification; those remain separate release work.
+The reported C IFC preparation failure is an archive SHA-256 mismatch:
 
-### Supplemental local evidence
+- expected in PR22 `frontend/viewer-integrations/ifc/prepare.py`:
+  `cd2c89a3e0410ab492d92b0e2ccfa3b16441630132a8a0a837b9b1052248afd5`;
+- observed archive with Git 2.53.0:
+  `95f5e877366bdea8dfa3c0e4b65bc4fd46e0007f68092e025ffd880b51682f1d`.
 
-- Backend suite: `235 passed, 23 skipped`.
-- Dependency-light frontend transport/style-entry suite: `24 passed`.
-- Python compilation passed.
-- Offline Python lock validation passed: `uv lock --check --offline`.
-- API/OpenAPI comparison, generated schema comparison, and CSS structural comparison
-  were performed.
-- An archival integrity check passed.
+This is the **source archive** check, not the separate npm lock hash
+`cd7223b245b36d2e0534bbed4499185e94647ae56463ec95632f8dd105db7ea0`.
+Do not bypass/update the pin merely to obtain a green build. Reconcile the pinned
+source/archive reproducibility with C before preparing assets and collecting fresh
+qualification. C’s unchanged preparation command failed in the local rehearsal. No checksum was
+bypassed and no C viewer source was changed.
 
-The comparisons and archive check are supplemental structural evidence. The full CI
-and Windows-native qualification above establish the current baseline.
+Earlier B donor-pass results in [UI_DONOR_VERIFICATION](docs/UI_DONOR_VERIFICATION.md)
+and isolated C qualifications in the [PR22 handoff](docs/EVIDENCE_VIEWER_ADAPTERS.md)
+are scoped evidence only. Neither proves this composed product works. After owner
+integration, qualification must cover exact-revision/hash loading, all four real
+surfaces, missing assets/targets/extraction, switching/reopening/cleanup, persisted
+human decisions and fresh ReCheck closure, plus applicable native packaging and
+license review. These are pending gates, not instructions to resume the stopped
+visuals task.
+
+## Historical verified main evidence
+
+The actual main snapshot inspected for this audit is
+`4124fc8d98a8d94abe8af33ea7d204452db16cf4` (merged #20). Its documentation records
+the established maintainability baseline's full `verify.yml` source/integration
+qualification: TypeScript, React/Vitest, production build, Prettier, Ruff, Pyright,
+real IFC, DBOS and Temporal, plus Windows native qualification. It also records
+manual Windows installer/startup, packaged sidecar/DBOS, coordination demo and
+restart acceptance. These historical records are not rerun evidence for this tree.
+
+Historical supplemental counts were backend `235 passed, 23 skipped` and
+transport/style-entry `24 passed`, plus Python compilation, offline lock validation,
+generated-contract/CSS comparisons and archival integrity. They are not current
+suite totals or proof of PR22 integration. Linux/macOS native, signing/notarization
+and final production release were not established by that evidence.
 
 ## Dependency locks and installation
 
@@ -115,16 +134,17 @@ The manual [native workflow](.github/workflows/native.yml) builds the packaged s
 exercises restart behavior, and performs Windows/Linux native WebView coordination
 and real IFC rendering/import checks. The IFC scenario uses the desktop provider
 default without an internal BIM switch; see [desktop/README.md](desktop/README.md).
-Windows native qualification and the manual Windows installer/startup/demo/restart
-acceptance are established for this baseline. Linux and macOS native qualification,
+Windows native qualification and manual Windows installer/startup/demo/restart
+acceptance are recorded for historical verified main only, not this worktree's new
+shell/viewer composition. Linux and macOS native qualification,
 code signing/notarization, and final production release qualification remain separate
 future release work. A successful source build is not evidence of a signed, notarized,
 or distributable production release.
 
 The native workflow's packaged Agent smoke imports two IFC revisions and creates a
-persisted R1-to-R2 comparison with official IfcDiff through the built sidecar. This
-qualifies the Desktop package's default IFC import and revision-comparison dependencies,
-not only the source SDK environment.
+persisted R1-to-R2 comparison with official IfcDiff through the built sidecar. The
+historical main evidence qualifies those default Desktop dependencies, not PR22's
+new isolated viewers, B's changed shell or their pending packaged integration.
 
 ## Regression coverage
 
@@ -145,3 +165,37 @@ These checks cover normalized publication, persisted dependencies, explicit clos
 cache/provenance isolation, cancellation/resume and real DBOS process-to-process outbox
 recovery. They use deterministic engineering fixtures, not qualified detection algorithms.
 See `docs/ENGINEERING_COORDINATION.md` for the shared contract and integration boundary.
+
+## Final fast integration checkpoint — 2026-07-13
+
+Executed against the actual uncommitted A+B+C rehearsal, not standalone B:
+
+- `pnpm test`: **86 files / 628 tests passed**, including C viewer unit tests and
+  23 host seam regressions. Test duration 70.94s. These are not browser acceptance.
+- `pnpm test:transport`: **43/43 passed**, including binary fetch cancellation.
+- `pnpm lint`: passed.
+- Initial typecheck/build stopped on a newly added test’s invalid `queryByRole`
+  `exact` option. Removed only the unsupported option; exact string accessible-name
+  matching/assertion is unchanged. Final rerun result is recorded below.
+- Original and integrated staged/unstaged `git diff --check`: passed.
+- Original HEAD remains `466d7a789328876adebb0fde68b7d1a2e5012af0`.
+- No remaining integration conflict markers/unmerged index entries. No B change to
+  `frontend/src/viewers/**`; C implementation remains owned by C.
+
+At the user’s explicit expedited-stop request, no final Chromium, real-project,
+engineering-real, strict four-surface product, IFC or C viewer browser suites were
+started. C backend integration/publication/adapters suites were not run in this
+final checkpoint. New strict `evidence-integration.spec.ts` exists but is **unrun**.
+Do not report real product flows, persistence or native navigation as accepted.
+
+Open blockers: C IFC donor archive checksum mismatch; absent production
+engineering-capability registration; decision replay/version fence and durable
+manual ReCheck retry limitations; coherent multi-source check fencing unresolved.
+No commit, push, PR creation or ownership-bypassing workaround was performed.
+
+Final rerun: `pnpm typecheck` and `pnpm build` both **passed**. Build includes all
+four C surface chunks. Existing donor CSS import-order, runtime URL, mixed
+static/dynamic BIM import and bundle-size warnings remain; these are not silently
+fixed in this non-visual pass. The corrected filter regression was rerun alone:
+**1 passed / 33 unrelated tests deselected**, and its formatting check passed.
+Full suite was not repeated after this type-only test correction.

@@ -21,6 +21,7 @@ import type {
   ProjectSourceStatus,
   Workspace,
 } from "../src/api/client";
+import { toolRail } from "./donor-conformance";
 
 /** Run ONLY with playwright.real-project.config.ts after building the real UI.
  * No mocks, reset, seed, fixed GUIDs, paid model calls or diagnostic runtime.
@@ -262,12 +263,7 @@ async function startPage(page: Page, backend: Backend) {
 }
 
 async function nav(page: Page, name: "项目" | "模型" | "工作") {
-  await page
-    .getByRole(name === "模型" ? "complementary" : "navigation", {
-      name: name === "模型" ? "项目导航" : "主要工作区",
-    })
-    .getByRole("button", { name, exact: true })
-    .click();
+  await toolRail(page).getByRole("button", { name, exact: true }).click();
 }
 
 async function createProject(
@@ -275,13 +271,18 @@ async function createProject(
   backend: Backend,
   name = backend.fixture.project_name,
 ) {
-  const picker = page.getByRole("button", { name: "切换项目", exact: true });
+  // The empty startup view creates a project directly; once a workspace is open
+  // the same command is the header's 项目 menu → 新建项目.
   const create = page.getByRole("button", { name: "新建项目", exact: true });
-  await expect(create.or(picker).first()).toBeVisible();
-  if (await picker.isVisible()) {
-    await picker.click();
-    await page.getByRole("menuitem", { name: "新建项目" }).click();
-  } else await create.click();
+  if (await create.isVisible()) {
+    await create.click();
+  } else {
+    await page
+      .locator(".calm-header")
+      .getByRole("button", { name: "项目", exact: true })
+      .click();
+    await page.getByRole("menuitem", { name: "新建项目", exact: true }).click();
+  }
   const dialog = page.getByRole("dialog", { name: "新建项目" });
   await dialog.getByLabel("项目名称").fill(name);
   await dialog
@@ -297,9 +298,7 @@ async function createProject(
   expect(response.status()).toBe(201);
   const project = (await response.json()) as Project;
   expect(project.id).not.toBe("harbor-east");
-  await expect(
-    page.getByRole("navigation", { name: "当前位置" }),
-  ).toContainText(name);
+  await expect(page.locator(".calm-project")).toContainText(name);
   return project;
 }
 
@@ -830,9 +829,7 @@ test("unseeded project: real R1/R2 geometry, durable B1, scoped evidence, record
     ).toEqual(bindings);
     await verifyOriginal(backend, sourcePath, r1, fixture.r1);
     await page.reload();
-    await expect(
-      page.getByRole("navigation", { name: "当前位置" }),
-    ).toContainText(project.name);
+    await expect(page.locator(".calm-project")).toContainText(project.name);
     await sourceRegister(page, fixture.source_name);
     const context = page.getByRole("complementary", { name: "资料上下文" });
     await expect(context).toContainText(basename(fixture.r1));
@@ -1401,8 +1398,14 @@ test("invalid IFC keeps the real source/error across restart; resume still fails
       )
     ).status(),
   ).toBe(404);
-  await page.getByRole("button", { name: "切换项目", exact: true }).click();
-  await page.getByRole("menuitem", { name: project.name, exact: true }).click();
+  await page
+    .locator(".calm-header")
+    .getByRole("button", { name: "打开", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "打开项目" })
+    .getByRole("button", { name: project.name })
+    .click();
   await sourceRegister(page, brokenName);
   await expect(context).toContainText(basename(fixture.invalid));
   await expect(context.getByRole("alert")).toContainText(failedAgain.error!);

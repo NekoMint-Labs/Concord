@@ -1,15 +1,8 @@
 /* Work is one bounded queue with one selected receipt. Donor panels own the
    surface; this file only supplies the queue's product geometry and facts. */
-.application-shell .work-list {
-  width: 100%;
-  max-width: none;
-  height: 100%;
-  padding: 0;
-  overflow: hidden;
-}
-
-.application-shell .work-queue-surface {
+.app-shell .work-queue-surface {
   display: block;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   height: 100%;
@@ -19,82 +12,18 @@
   --bim-panel--border: 0;
 }
 
-.application-shell .work-queue {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  background: var(--surface-workspace);
-}
-
-.application-shell .work-queue-head {
-  flex: none;
-  padding: 12px 20px 8px;
-  border-bottom: 1px solid var(--line-soft);
-}
-.application-shell .work-queue-head h1 {
-  margin: 0;
-  font-size: var(--fs-title);
-  font-weight: 600;
-}
-.application-shell .work-queue-head p {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: var(--fs-meta);
-}
-
-/* The selected Work receipt uses the same inspector surface as Findings. */
-.application-shell .work-list .workspace-inspector > section + section {
-  margin-top: 16px;
-}
-.application-shell .work-list .workspace-inspector > section h3 {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0 0 6px;
-  font-size: var(--fs-body);
-  font-weight: 600;
-  line-height: 1.5;
-}
-.application-shell .work-list .workspace-inspector > section p {
-  margin: 0 0 8px;
-  line-height: 1.6;
-}
-
-.application-shell .work-list .work-model-list {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.application-shell .work-list .work-model-list li {
-  display: grid;
-  gap: 4px;
-}
-.application-shell .work-list .work-model-list li > span {
-  color: var(--muted);
-  font-size: var(--fs-meta);
-}
-
 /* Summary facts are domain content beside donor-owned filters and actions. */
-.application-shell .workspace-summary {
+.app-shell .workspace-summary {
   display: flex;
   flex-wrap: wrap;
   gap: 24px;
   padding: 12px 20px;
 }
-.application-shell .workspace-summary > div {
+.app-shell .workspace-summary > div {
   display: grid;
   gap: 4px;
 }
-.application-shell .workspace-summary > div > span {
+.app-shell .workspace-summary > div > span {
   color: var(--muted);
   font-size: var(--fs-meta);
-}
-
-/* The donor label renders the action; retain readable Work titles via its token. */
-.application-shell .work-queue .workspace-row-top bim-button {
-  --bim-label--fz: 14px;
 }

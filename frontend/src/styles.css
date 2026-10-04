@@ -1,3 +1,10 @@
+/* The vendored donor declares a Google-Fonts @import inside tokens.css. Concord
+ * is a local-first product: `frontend/e2e/real-project.spec.ts` holds
+ * `expect(remoteRequests).toEqual([])`, so the app must not fetch anything from
+ * the public internet at load. The import is therefore deliberately not
+ * re-declared here — the build drops it, and the donor font stack falls back to
+ * `system-ui` exactly as the donor itself specifies when the network is
+ * unavailable. */
 @import "tailwindcss";
 @import "@xyflow/react/dist/style.css";
 @import "maplibre-gl/dist/maplibre-gl.css";
@@ -24,3 +31,8 @@
 @import "./styles/features/agent-context.css";
 
 @import "./styles/workbench.css";
+@import "./vendor/opentakeoff/styles/tokens.css";
+@import "./vendor/opentakeoff/styles/app.css";
+@import "./vendor/opentakeoff/styles/premiumWorkspace.css";
+@import "./vendor/opentakeoff/components/workspaceChrome.css";
+@import "./vendor/opentakeoff/components/workspacePanel.css";

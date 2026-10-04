@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { expectDonor } from "./donor-conformance";
+import {
+  expectDonor,
+  openWorkPanel,
+  toolRail,
+  workPanel,
+} from "./donor-conformance";
 
 const screenshots = resolve(
   "..",
@@ -43,17 +48,22 @@ for (const viewport of [
       localStorage.setItem("concord:last-project", id);
     }, project.id);
     await page.goto("/");
-    const nav = page.getByRole("navigation", { name: "主要工作区" });
-    await nav.getByRole("button", { name: "工作", exact: true }).click();
+    const rail = toolRail(page);
+    await rail.getByRole("button", { name: "工作", exact: true }).click();
+    await openWorkPanel(page);
+    const work = workPanel(page);
     await expect(
       page.getByRole("heading", { name: "还没有工作事项" }),
     ).toBeVisible();
+    await expect(work).toContainText(
+      "当前项目尚无资料版本或工程判断可供检查。",
+    );
+    // The Work surface is the adapted WorkspacePanel (plain controls), not a
+    // donor Lit panel; assert its own composition instead of shadow-DOM substrate.
     await expect(
-      page.getByRole("region", { name: "工作", exact: true }),
-    ).toContainText("当前项目尚无资料版本或工程判断可供检查。");
-    await expectDonor(page.locator("bim-panel.work-queue-surface"), {
-      headerHidden: true,
-    });
+      work.getByRole("heading", { name: "工作与审核", exact: true }),
+    ).toBeVisible();
+    await expect(work.locator(".workspace-summary")).toBeVisible();
     await capture(page, "work");
     await page.getByRole("button", { name: "打开项目 →", exact: true }).click();
     await expect(page.getByRole("region", { name: "项目管理" })).toBeVisible();
@@ -66,10 +76,7 @@ for (const viewport of [
       fixed: true,
     });
     await capture(page, "project");
-    await page
-      .getByRole("complementary", { name: "项目导航" })
-      .getByRole("button", { name: "模型", exact: true })
-      .click();
+    await rail.getByRole("button", { name: "模型", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "模型上下文" }),
     ).toBeVisible();
@@ -86,11 +93,10 @@ for (const viewport of [
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await page.getByRole("button", { name: "浏览", exact: true }).click();
+    const browse = page.getByRole("button", { name: "浏览", exact: true });
+    await browse.click();
     const explorer = page.getByRole("region", { name: "Project Explorer" });
-    await expect(
-      page.getByRole("button", { name: "浏览", exact: true }),
-    ).toHaveAttribute("aria-current", "page");
+    await expect(browse).toHaveAttribute("aria-pressed", "true");
     await expect(explorer.getByRole("searchbox")).toBeVisible();
     await expect(explorer.getByRole("list")).toHaveCount(0);
     await expect(
@@ -104,7 +110,7 @@ for (const viewport of [
     await capture(page, "browse-search");
     await explorer.getByRole("button", { name: "清除搜索与筛选" }).click();
     await expect(explorer.getByRole("searchbox")).toHaveValue("");
-    await nav.getByRole("button", { name: "项目", exact: true }).click();
+    await rail.getByRole("button", { name: "项目", exact: true }).click();
     await page
       .getByRole("navigation", { name: "项目内容" })
       .getByRole("button", { name: /^文档/ })
@@ -115,24 +121,27 @@ for (const viewport of [
     const chooser = page.waitForEvent("filechooser");
     await page.getByRole("button", { name: "导入文档", exact: true }).click();
     expect((await chooser).isMultiple()).toBe(false);
-    await page
-      .getByRole("navigation", { name: "当前位置" })
-      .getByRole("button", { name: project.name, exact: true })
-      .click();
+    // The header breadcrumb is gone; the rail's 项目 destination returns to the
+    // project record from the document view.
+    await rail.getByRole("button", { name: "项目", exact: true }).click();
+    await expect(page.getByRole("region", { name: "项目管理" })).toBeVisible();
     await page
       .getByRole("navigation", { name: "项目内容" })
       .getByRole("button", { name: /^历史/ })
       .click();
     await expect(page.getByText(/尚未确认项目基线/)).toBeVisible();
     await page.getByRole("button", { name: "打开项目 →", exact: true }).click();
-    const settings = page.getByRole("button", { name: "设置", exact: true });
+    const settings = rail.getByRole("button", { name: "设置", exact: true });
     await settings.focus();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(settings).toBeFocused();
-    await page.getByRole("button", { name: "高级", exact: true }).focus();
+    // 高级 sits behind the 所有控件 disclosure in the new header.
+    await page.locator(".calm-context-pinned button[aria-expanded]").click();
+    const advanced = page.locator('bim-button[aria-label="高级"]');
+    await advanced.focus();
     await page.keyboard.press("Enter");
     await expect(
       page.getByRole("menuitem", { name: /模拟模型版本更新/ }),

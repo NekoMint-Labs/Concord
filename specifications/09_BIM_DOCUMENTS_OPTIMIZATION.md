@@ -25,7 +25,9 @@ Geometry-heavy operations should be isolated/on-demand and never make normal app
 
 ## BIM viewer — Required
 
-Use a mature browser BIM stack, default **That Open Engine**, integrated into the React workspace. Required behaviors for the reference implementation:
+The former single-viewer donor mandate is retired. Current product/viewer seams
+are `docs/PRODUCT_WORKFLOW.md` and `docs/EVIDENCE_VIEWER_ADAPTERS.md`. C owns SDK
+lifecycles; B owns composition. Retained behavior constraints:
 
 - load an appropriate BIM representation/file;
 - select/highlight elements;

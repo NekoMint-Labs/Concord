@@ -22,6 +22,7 @@ export function useEngineeringFindings(project: string) {
     queryKey: engineeringKeys.findings(project),
     queryFn: () => api.engineeringFindings(project),
     enabled: !!project,
+    refetchInterval: 2500,
     select: (items) => items.filter((item) => item.project_id === project),
   });
 }
@@ -50,6 +51,7 @@ export function useEngineeringFinding(project: string, id = "") {
     queryKey: engineeringKeys.finding(project, id),
     queryFn: () => api.engineeringFinding(project, id),
     enabled,
+    refetchInterval: 2500,
     select: (item) =>
       item.project_id === project && item.id === id ? item : undefined,
   });
@@ -57,6 +59,7 @@ export function useEngineeringFinding(project: string, id = "") {
     queryKey: engineeringKeys.coordination(project, id),
     queryFn: () => api.engineeringCoordination(project, id),
     enabled,
+    refetchInterval: 2500,
     select: (items) =>
       items.filter(
         (item) => item.project_id === project && item.finding_id === id,
@@ -66,6 +69,8 @@ export function useEngineeringFinding(project: string, id = "") {
     queryKey: engineeringKeys.rechecks(project, id),
     queryFn: () => api.engineeringRechecks(project, id),
     enabled,
+    // Discover revision-triggered checks, not only runs already present in this view.
+    refetchInterval: 1200,
     select: (items) =>
       items.filter(
         (item) => item.project_id === project && item.finding_id === id,
@@ -119,6 +124,7 @@ export function useEngineeringFinding(project: string, id = "") {
         engineeringKeys.evidence(project, evidenceId),
       ),
       ["workspace", project],
+      ["sources", project],
       ["runs", project],
       ...(includeRuns
         ? checks.map((check) => ["current-operation-run", project, check.id])
