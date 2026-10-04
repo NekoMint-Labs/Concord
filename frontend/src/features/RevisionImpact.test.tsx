@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { api, type DTO } from "../api/client";
+import { donorText } from "../../tests/donor-dom";
 import { RevisionImpact } from "./RevisionImpact";
 
 /* RevisionImpact owns the selection state; Radix interaction is browser-covered. */
@@ -152,7 +153,9 @@ it("surfaces summary, affected WP, Evidence and continuity warnings", async () =
     ],
   });
   renderImpact([r1ToR2]);
-  expect(await screen.findByText("Ventilation")).toBeVisible();
+  await waitFor(() =>
+    expect(donorText("Ventilation", document.body)).toBeVisible(),
+  );
   expect(screen.queryByText("WP-27")).toBeNull();
   expect(screen.getByText(/构件标识变化较多/)).toBeVisible();
   fireEvent.click(screen.getByText(/比较依据 · 1 条/));
@@ -190,13 +193,18 @@ it("keeps a selected historical comparison pair for BIM inspection and investiga
     onInspect,
   });
 
-  expect(await screen.findByText("Electrical")).toBeVisible();
+  await waitFor(() =>
+    expect(donorText("Electrical", document.body)).toBeVisible(),
+  );
   const select = screen.getByRole("combobox", { name: "版本比较" });
   const option = screen.getByRole("option", {
     name: /R1 → R2/,
   }) as HTMLOptionElement;
   fireEvent.change(select, { target: { value: option.value } });
-  fireEvent.click(await screen.findByText("Structure"));
+  await waitFor(() =>
+    expect(donorText("Structure", document.body)).toBeVisible(),
+  );
+  fireEvent.click(donorText("Structure", document.body));
 
   expect(onInspect).toHaveBeenCalledWith({
     workPackageId: "WP-12",
@@ -214,5 +222,8 @@ it("keeps a selected historical comparison pair for BIM inspection and investiga
 it("keeps R1 as the accepted baseline while R3 still needs review", () => {
   renderImpact([r1ToR2], { acceptedRevisionId: "r1" });
   expect(screen.getByText("新版本待审核 · 当前基线未变")).toBeVisible();
-  expect(screen.getByRole("button", { name: "查看变化" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "查看变化" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
 });

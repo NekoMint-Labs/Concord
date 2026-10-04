@@ -303,7 +303,7 @@ it("uses one shell and synchronizes geometry, checkbox, list and exact snapshot 
   act(() => viewer.props!.onSelected("12345"));
   expect(
     screen.getByRole("button", { name: "确认关联 0 个构件" }),
-  ).toBeDisabled();
+  ).toHaveAttribute("aria-disabled", "true");
   act(() => viewer.props!.onSelected("wall-l02"));
   expect(
     screen.getAllByRole("checkbox", { name: "关联 Wall" })[0],
@@ -355,7 +355,7 @@ it("captures submitted count, blocks duplicate confirmation and fences a pending
   );
   expect(
     screen.getByRole("button", { name: "确认关联 0 个构件" }),
-  ).toBeDisabled();
+  ).toHaveAttribute("aria-disabled", "true");
   await act(async () => finish([]));
   await waitFor(() =>
     expect(invalidate).toHaveBeenCalledWith({
@@ -483,7 +483,7 @@ it("resets selection across source, revision and project changes and never enabl
   await waitFor(() => expect(viewer.props!.mapping!.selectedIds).toEqual([]));
   expect(
     screen.getByRole("button", { name: "确认关联 0 个构件" }),
-  ).toBeDisabled();
+  ).toHaveAttribute("aria-disabled", "true");
   rerender(
     <QueryClientProvider client={cache}>
       <BimMappingWorkspace
@@ -547,7 +547,7 @@ it("keeps more than 200 visible candidates out of Agent scope until explicitly s
     undefined,
   );
   const investigate = screen.getByRole("button", { name: "调查当前选择" });
-  expect(investigate).toBeDisabled();
+  expect(investigate).toHaveAttribute("aria-disabled", "true");
   fireEvent.click(screen.getByRole("checkbox", { name: "关联 Wall 0" }));
   expect(props.onContext).toHaveBeenLastCalledWith(
     "source-1",
@@ -568,13 +568,13 @@ it("keeps more than 200 visible candidates out of Agent scope until explicitly s
   fireEvent.click(screen.getByRole("button", { name: "选择全部" }));
   expect(viewer.props!.mapping!.selectedIds).toHaveLength(201);
   expect(props.onContext.mock.calls.at(-1)?.[2]).toHaveLength(201);
-  expect(investigate).toBeDisabled();
+  expect(investigate).toHaveAttribute("aria-disabled", "true");
   expect(screen.getByText(/最多.*200.*构件/)).toBeVisible();
   fireEvent.click(investigate);
   expect(props.onInvestigate).not.toHaveBeenCalled();
   // The full binding selection is retained. Removing one element permits the exact 200.
   fireEvent.click(screen.getByRole("checkbox", { name: "关联 Wall 200" }));
-  expect(investigate).toBeEnabled();
+  expect(investigate).not.toHaveAttribute("aria-disabled", "true");
   fireEvent.click(investigate);
   expect(props.onInvestigate.mock.calls.at(-1)?.[2]).toEqual(
     manyElements.slice(0, 200).map((item) => item.global_id),
@@ -588,7 +588,7 @@ it("keeps more than 200 visible candidates out of Agent scope until explicitly s
     undefined,
     undefined,
   );
-  expect(investigate).toBeDisabled();
+  expect(investigate).toHaveAttribute("aria-disabled", "true");
   cache.clear();
 });
 
@@ -621,7 +621,7 @@ it("preserves the defined inspection impact scope and blocks oversized investiga
     ),
   );
   const investigate = screen.getByRole("button", { name: "调查当前选择" });
-  expect(investigate).toBeDisabled();
+  expect(investigate).toHaveAttribute("aria-disabled", "true");
   expect(screen.getByText(/最多.*200.*构件/)).toBeVisible();
   fireEvent.click(investigate);
   expect(props.onInvestigate).not.toHaveBeenCalled();

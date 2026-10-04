@@ -1,3 +1,5 @@
+import { Button } from "../components/ui/button";
+import { AppSelect } from "../components/ui/AppSelect";
 import { api, type DTO, type Workspace } from "../api/client";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -146,13 +148,14 @@ export function ChangeExplorer({
               ? `新版本 R${latestRevision!.sequence} 已处理；当前基线未变。${comparison ? "当前显示的是历史比较。" : ""}`
               : `新版本 R${latestRevision!.sequence} 尚未处理完成。请到模型版本查看进度。`}
             {latestImport.data?.status === "COMPLETED" && (
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 disabled={compare.isPending}
                 onClick={() => compare.mutate()}
               >
                 {compare.isPending ? "正在比较…" : "查看与当前基线的变化"}
-              </button>
+              </Button>
             )}
           </p>
         )}
@@ -207,22 +210,21 @@ export function ChangeExplorer({
           }
           toolbar={
             <>
-              <select
-                aria-label="模型"
+              <AppSelect
+                label="模型"
                 value={sourceId}
-                onChange={(event) => setSourceId(event.target.value)}
-              >
-                {models.map((item) => (
-                  <option key={item.source.id} value={item.source.id}>
-                    {item.source.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setSourceId}
+                options={models.map((item) => ({
+                  value: item.source.id,
+                  label: item.source.name,
+                }))}
+              />
               {comparison && (
                 <div className="compare-filter" aria-label="变更类型">
                   {(["all", "added", "deleted", "changed"] as const).map(
                     (value) => (
-                      <button
+                      <Button
+                        variant="ghost"
                         type="button"
                         key={value}
                         aria-pressed={kind === value}
@@ -243,30 +245,33 @@ export function ChangeExplorer({
                                 (entry) => entry.change_kind === value,
                               ).length}
                         </small>
-                      </button>
+                      </Button>
                     ),
                   )}
                 </div>
               )}
               {comparison ? (
                 <>
-                  <button
+                  <Button
+                    variant="ghost"
                     type="button"
                     onClick={() => setShownRevision("from")}
                     aria-pressed={shownRevision === "from"}
                   >
                     R{from?.sequence} 变更前
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     type="button"
                     onClick={() => setShownRevision("to")}
                     aria-pressed={shownRevision === "to"}
                   >
                     R{to?.sequence} 当前版本
-                  </button>
+                  </Button>
                 </>
               ) : revisions.data && revisions.data.length >= 2 ? (
-                <button
+                <Button
+                  variant="ghost"
                   type="button"
                   onClick={() => compare.mutate()}
                   disabled={
@@ -275,11 +280,11 @@ export function ChangeExplorer({
                   }
                 >
                   查看变化
-                </button>
+                </Button>
               ) : (
-                <button type="button" onClick={onModels}>
+                <Button variant="ghost" type="button" onClick={onModels}>
                   模型版本
-                </button>
+                </Button>
               )}
               {selectedId &&
                 comparison &&
@@ -290,7 +295,8 @@ export function ChangeExplorer({
                     ),
                   )
                   .map((entry) => (
-                    <button
+                    <Button
+                      variant="ghost"
                       key={entry.work_package_id}
                       type="button"
                       onClick={() => {
@@ -307,7 +313,7 @@ export function ChangeExplorer({
                       }}
                     >
                       工作包 →
-                    </button>
+                    </Button>
                   ))}
             </>
           }

@@ -11,6 +11,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { api, type DTO } from "../api/client";
 import { ConcordAgent, type ConcordContext } from "./ConcordAgent";
 import { useConcordAgent } from "./useConcordAgent";
+import { useFindingPreview } from "./useFindingPreview";
+import { FindingDemoAgent } from "../app/fixtures/FindingDemoAgent";
 
 vi.mock("../components/ui/AppPopover", () => ({
   AppPopover: ({
@@ -84,8 +86,10 @@ it("defaults initiative to Suggest and persists an explicit mode change", async 
     .mockResolvedValue({ initiative: "manual" });
   view();
   fireEvent.click(screen.getByRole("button", { name: "调查方式" }));
-  expect(await screen.findByLabelText("调查方式")).toHaveTextContent("建议");
-  fireEvent.change(screen.getByLabelText("调查方式"), {
+  expect(
+    await screen.findByRole("combobox", { name: "调查方式" }),
+  ).toHaveTextContent("建议");
+  fireEvent.change(screen.getByRole("combobox", { name: "调查方式" }), {
     target: { value: "manual" },
   });
   await waitFor(() =>
@@ -366,7 +370,7 @@ it("does not send oversized explicit selections to Ask or Investigate", async ()
   submit();
   expect(screen.getByRole("button", { name: "询问" })).toBeDisabled();
   const investigation = screen.getByRole("button", { name: "保存为工程调查" });
-  expect(investigation).toBeDisabled();
+  expect(investigation).toHaveAttribute("aria-disabled", "true");
   fireEvent.click(investigation);
   await act(async () => {});
   expect(ask).not.toHaveBeenCalled();
@@ -599,3 +603,127 @@ it.each([false, true])(
     cache.clear();
   },
 );
+
+it("keeps Finding explanations fixture-only, cites targets, and does not relabel human edits as AI", () => {
+  const ask = vi.spyOn(api, "askAgent");
+  const investigate = vi.spyOn(api, "investigate");
+  const settings = vi.spyOn(api, "agentSettings");
+  function Host() {
+    const session = useFindingPreview();
+    return (
+      <>
+        <FindingDemoAgent session={session} />
+        <output data-testid="fixture-target">{session.active.id}</output>
+        <button
+          onClick={() =>
+            session.edit({ ...session.values, discipline: "暖通工程师" })
+          }
+        >
+          Edit fixture discipline
+        </button>
+      </>
+    );
+  }
+  render(<Host />);
+  fireEvent.click(screen.getByRole("button", { name: "为什么建议机电专业？" }));
+  expect(
+    screen.getByRole("region", { name: "Finding 示例说明" }),
+  ).toHaveTextContent("不是检测器确认的责任归属");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Edit fixture discipline" }),
+  );
+  expect(screen.queryByRole("region", { name: "Finding 示例说明" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "为什么建议机电专业？" }));
+  expect(
+    screen.getByRole("region", { name: "Finding 示例说明" }),
+  ).toHaveTextContent("来自人工示例编辑");
+  fireEvent.click(
+    screen.getByRole("button", { name: /B-142 × M-038 碰撞 · 结构化/ }),
+  );
+  expect(screen.getByTestId("fixture-target")).toHaveTextContent("clash");
+  expect(screen.queryByRole("region", { name: "Finding 示例说明" })).toBeNull();
+  expect(ask).not.toHaveBeenCalled();
+  expect(investigate).not.toHaveBeenCalled();
+  expect(settings).not.toHaveBeenCalled();
+});
+
+it("explains the persisted Finding read-only and fences answers on Finding changes", async () => {
+  vi.spyOn(api, "agentSettings").mockResolvedValue({ initiative: "manual" });
+  vi.spyOn(api, "agentNotices").mockResolvedValue([]);
+  const decide = vi.spyOn(api, "engineeringDecision");
+  let resolve!: (value: DTO<"AgentResponse">) => void;
+  const ask = vi.spyOn(api, "askAgent").mockImplementation(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  const finding: DTO<"Finding"> = {
+    id: "finding-real",
+    project_id: "project",
+    snapshot_id: "snapshot",
+    work_package_id: "WP-27",
+    title: "Real Finding",
+    what_changed: "Revision-bound change",
+    why_it_matters: "Suggested impact",
+    evidence_ids: ["persisted-evidence"],
+    change_ids: [],
+    dependencies: [],
+    impact: null,
+    suggested_discipline: "MEP",
+    suggested_action: "Inspect",
+    confidence: 0.8,
+    limitations: [],
+    state: "PROPOSED",
+    updated_at: "2026-06-01T00:00:00Z",
+    created_at: "2026-06-01T00:00:00Z",
+    conclusion: "",
+    reasoning_summary: "",
+  };
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const content = (current: DTO<"Finding">) => (
+    <QueryClientProvider client={client}>
+      <ConcordAgent
+        project="project"
+        context={context}
+        finding={current}
+        onRun={() => {}}
+      />
+    </QueryClientProvider>
+  );
+  const { rerender } = render(content(finding));
+  fireEvent.click(screen.getByRole("button", { name: "这项判断有哪些依据？" }));
+  fireEvent.click(screen.getByRole("button", { name: /^询问$/ }));
+  await waitFor(() => expect(ask).toHaveBeenCalled());
+  expect(ask.mock.calls[0][1].instruction).toContain("finding-real");
+  expect(ask.mock.calls[0][1].instruction).toContain("persisted-evidence");
+  rerender(
+    content({ ...finding, id: "finding-other", title: "Other Finding" }),
+  );
+  await act(async () =>
+    resolve({
+      answer: {
+        summary: "Late old explanation",
+        evidence_ids: [],
+        limitations: [],
+      },
+      scope: {
+        source_id: "source-1",
+        from_revision_id: "r1",
+        to_revision_id: "r2",
+        work_package_ids: ["WP-27"],
+        area_ids: [],
+        element_ids: ["gid-1"],
+      },
+      evidence: [],
+      tools: [],
+      persisted: false,
+    }),
+  );
+  expect(screen.queryByText("Late old explanation")).toBeNull();
+  expect(decide).not.toHaveBeenCalled();
+  expect(finding.state).toBe("PROPOSED");
+  client.clear();
+});

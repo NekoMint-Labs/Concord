@@ -1,3 +1,4 @@
+import { ThatOpenTextInput } from "../components/ThatOpenUI";
 import { useState } from "react";
 import type { DTO, WorkPackage } from "../api/client";
 import { Button } from "../components/ui/button";
@@ -106,7 +107,14 @@ export function EventComposer({
             : kind === "workforce"
               ? "可用人员"
               : "资源 / 前置工作 ID"}
-          <input
+          <ThatOpenTextInput
+            aria-label={
+              kind === "design_revision"
+                ? "新版本"
+                : kind === "workforce"
+                  ? "可用人员"
+                  : "资源 / 前置工作 ID"
+            }
             type={kind === "workforce" ? "number" : "text"}
             min={0}
             max={10000}

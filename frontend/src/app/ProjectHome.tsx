@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ThatOpenPanel } from "../components/ThatOpenUI";
 import type { ProjectSourceStatus, Workspace } from "../api/client";
 import { ProjectOverview } from "../features/ProjectOverview";
 import { ProjectContextPane } from "../features/ProjectContextPane";
@@ -75,26 +76,31 @@ export function ProjectHome({
             />
           }
         />
-        {selectedSource ? (
-          <SourceContextPane
-            key={selectedSource}
-            project={project}
-            sourceId={selectedSource}
-            workPackages={workspace.state.work_packages}
-            {...sourceContext}
-            onClose={() => selectSource("")}
-          />
-        ) : (
-          <ProjectContextPane
-            workspace={workspace}
-            context={context}
-            onTab={onTab}
-            onPackage={onPackage}
-            onDocument={onDocument}
-            onSource={onSource}
-            onModel={onModel}
-          />
-        )}
+        <ThatOpenPanel
+          className="project-context-surface"
+          label={selectedSource ? "资料上下文" : "项目记录"}
+        >
+          {selectedSource ? (
+            <SourceContextPane
+              key={selectedSource}
+              project={project}
+              sourceId={selectedSource}
+              workPackages={workspace.state.work_packages}
+              {...sourceContext}
+              onClose={() => selectSource("")}
+            />
+          ) : (
+            <ProjectContextPane
+              workspace={workspace}
+              context={context}
+              onTab={onTab}
+              onPackage={onPackage}
+              onDocument={onDocument}
+              onSource={onSource}
+              onModel={onModel}
+            />
+          )}
+        </ThatOpenPanel>
       </div>
     </section>
   );

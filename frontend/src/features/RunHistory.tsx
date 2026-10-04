@@ -126,7 +126,8 @@ export function RunHistory({
         </header>
         <div className="run-list">
           {runs.data?.map((run) => (
-            <button
+            <Button
+              variant="ghost"
               type="button"
               key={run.id}
               className={run.id === selected?.id ? "selected" : ""}
@@ -139,7 +140,7 @@ export function RunHistory({
                 </small>
               </span>
               <span className="run-list-state">{statusLabel(run.status)}</span>
-            </button>
+            </Button>
           ))}
           {runs.data?.length === 0 && (
             <p className="quiet-message pane-empty">尚无运行记录。</p>

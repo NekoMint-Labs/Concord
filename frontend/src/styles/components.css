@@ -47,13 +47,8 @@
   align-items: center;
   font-size: var(--fs-meta);
 }
-.alert button {
-  border: 0;
-  background: none;
+.alert bim-button {
   margin-left: auto;
-  color: inherit;
-  font-size: var(--fs-section);
-  line-height: 1;
 }
 .loading-view,
 .empty-state {
@@ -69,17 +64,15 @@
 }
 
 .workspace-state {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  align-content: center;
-  gap: 4px 12px;
+  display: flex;
+  align-items: center;
   width: min(520px, calc(100% - 48px));
   min-height: 100%;
   margin: 0 auto;
   padding: 32px 0;
   color: var(--muted);
 }
-.workspace-state > svg {
+.workspace-state-content > svg {
   grid-row: 1 / span 2;
   margin-top: 3px;
   color: var(--muted-2);
@@ -102,7 +95,7 @@
   grid-column: 2;
   margin-top: 10px;
 }
-.workspace-state.is-error > svg {
+.workspace-state.is-error .workspace-state-content > svg {
   color: var(--warning);
 }
 .workspace-state.is-compact {
@@ -262,20 +255,10 @@
  * never ambiguous.
  */
 .icon-button {
-  display: grid;
-  place-items: center;
   width: 25px;
   height: 25px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--muted);
 }
-.icon-button:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-.button {
+button.button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -288,15 +271,15 @@
   font-weight: 500;
   white-space: nowrap;
 }
-.button svg {
+button.button svg {
   opacity: 0.9;
 }
-.button-primary {
+button.button-primary {
   background: var(--primary);
   color: var(--on-primary);
   border-color: var(--primary);
 }
-.button-primary:hover {
+button.button-primary:hover {
   background: var(--primary-hover);
   border-color: var(--primary-hover);
 }
@@ -319,32 +302,49 @@
  * the eye because it is no longer the only thing saying "this is a control", not
  * because it has been weakened.
  */
-.button-secondary {
+button.button-secondary {
   background: var(--hover);
   color: var(--ink-2);
   border-color: var(--line-control-soft);
 }
-.button-secondary:hover {
+button.button-secondary:hover {
   background: var(--hover-strong);
 }
-.button-ghost {
+button.button-ghost {
   background: transparent;
   color: var(--ink-2);
 }
-.button-ghost:hover {
+button.button-ghost:hover {
   background: var(--hover);
 }
-.button-danger {
+button.button-danger {
   background: var(--surface);
   color: var(--danger-fg);
   border-color: var(--line-control-soft);
 }
-.button-danger:hover {
+button.button-danger:hover {
   background: var(--danger-soft);
 }
-.button-sm {
+button.button-sm {
   height: var(--control-h-sm);
   padding: 0 9px;
+}
+/* Donor buttons own their hit surface, states and focus; host sizing is layout. */
+bim-button.button {
+  display: inline-block;
+  height: var(--control-h);
+}
+bim-button.button-sm {
+  height: var(--control-h-sm);
+}
+bim-button.button-primary:not([disabled]):not([loading]):not([active]) {
+  --bim-button--bgc: var(--bim-ui_main-base);
+  --bim-button--bgc-h: var(--primary-hover);
+  --bim-label--c: var(--bim-ui_main-contrast);
+}
+bim-button.button-danger:not([disabled]):not([loading]):not([active]) {
+  --bim-label--c: var(--danger-fg);
+  --bim-button--bgc-h: var(--danger-soft);
 }
 /*
  * Integrated view toolbar: one chrome row that owns a primary view's title, its

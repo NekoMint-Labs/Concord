@@ -123,7 +123,9 @@ const test = base.extend<{ backend: Backend }>({
     }
 
     async function start() {
-      const port = endpoint ? new URL(endpoint).port : "0";
+      const port = endpoint
+        ? new URL(endpoint).port
+        : (process.env.CCA_E2E_PORT ?? "0");
       const child = spawn(
         python,
         ["-m", "app.cli", "serve", "--host", "127.0.0.1", "--port", port],
@@ -261,7 +263,9 @@ async function startPage(page: Page, backend: Backend) {
 
 async function nav(page: Page, name: "项目" | "模型" | "工作") {
   await page
-    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole(name === "模型" ? "complementary" : "navigation", {
+      name: name === "模型" ? "项目导航" : "主要工作区",
+    })
     .getByRole("button", { name, exact: true })
     .click();
 }
@@ -306,7 +310,9 @@ async function createPackage(
   floor: string,
 ) {
   await nav(page, "项目");
-  await page.getByRole("button", { name: "+ 添加工作包", exact: true }).click();
+  await page.getByRole("button", { name: "项目操作", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("menuitem", { name: "添加工作包", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "新建工作包" });
   await dialog
     .getByRole("region", { name: "新建区域" })
@@ -314,11 +320,15 @@ async function createPackage(
     .fill(areaName);
   await dialog.getByLabel("楼层").fill(floor);
   await dialog.getByRole("button", { name: "保存并使用此区域" }).click();
-  await selectOption(
-    page,
-    dialog.getByRole("combobox", { name: "所属区域" }),
-    areaName,
-  );
+  const area = dialog.getByRole("combobox", { name: "所属区域" });
+  await expect(area.locator("bim-label")).toHaveText(areaName);
+  await area.click();
+  await expect(
+    page.getByRole("option", { name: areaName, exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
+  await expect(area).toHaveAttribute("aria-expanded", "false");
+  await expect(dialog).toBeVisible();
   await dialog.getByLabel("工作包名称").fill(name);
   await dialog.getByLabel("专业").fill("Architecture");
   await dialog.getByLabel("负责人").fill("Review team");
@@ -340,7 +350,15 @@ async function createPackage(
 
 async function selectOption(page: Page, control: Locator, label: string) {
   await control.click();
-  await page.getByRole("option", { name: label, exact: true }).click();
+  const option = page.getByRole("option", { name: label, exact: true });
+  await expect(option).toBeVisible();
+  if ((await option.getAttribute("aria-selected")) !== "true")
+    await option.click();
+  await expect(option).toHaveAttribute("aria-selected", "true");
+  // The donor popup stays modal until explicitly dismissed; don't fill inert fields.
+  await page.keyboard.press("Escape");
+  await expect(control).toHaveAttribute("aria-expanded", "false");
+  await expect(control.locator("bim-label")).toHaveText(label);
 }
 
 async function openPackage(page: Page, name: string) {
@@ -358,8 +376,14 @@ async function sourceRegister(page: Page, name?: string) {
   await nav(page, "项目");
   const register = page.getByRole("region", { name: "项目资料", exact: true });
   await expect(register).toBeVisible();
-  if (name)
+  if (name) {
     await register.getByRole("button", { name: new RegExp(name) }).click();
+    const history = page
+      .getByRole("complementary", { name: "资料上下文", exact: true })
+      .getByRole("button", { name: "版本历史与操作", exact: true });
+    if ((await history.getAttribute("aria-expanded")) === "false")
+      await history.click();
+  }
   return register;
 }
 
@@ -372,9 +396,9 @@ async function upload(
   existing = false,
 ) {
   const register = await sourceRegister(page);
-  await register
-    .getByRole("button", { name: "+ 添加资料", exact: true })
-    .click();
+  await register.getByRole("button", { name: "资料操作", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("menuitem", { name: "添加资料", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "添加资料", exact: true });
   await dialog.getByLabel("选择文件（可多选）").setInputFiles(file);
   await expect(
@@ -470,6 +494,11 @@ async function acceptBaseline(
   revisionSequence: number,
 ) {
   const register = await sourceRegister(page, sourceName);
+  const baselineActions = register.getByRole("button", {
+    name: "基线记录与操作",
+  });
+  if ((await baselineActions.getAttribute("aria-expanded")) === "false")
+    await baselineActions.click();
   await register.getByRole("button", { name: "确认新基线" }).click();
   const dialog = page.getByRole("dialog", { name: `确认基线 B${sequence}` });
   await expect(dialog).toContainText(sourceName);
@@ -500,6 +529,11 @@ async function inspectImpact(
   workPackageName: string,
 ) {
   await sourceRegister(page, sourceName);
+  const comparisonDetails = page
+    .getByRole("complementary", { name: "资料上下文", exact: true })
+    .getByRole("button", { name: "比较详情与操作", exact: true });
+  if ((await comparisonDetails.getAttribute("aria-expanded")) === "false")
+    await comparisonDetails.click();
   const impact = page.getByRole("region", { name: "版本影响", exact: true });
   await impact
     .getByRole("button", { name: new RegExp(workPackageName) })
@@ -570,8 +604,11 @@ async function clickGeometry(page: Page, viewer: Locator, dock: Locator) {
   const bounds = await canvas.boundingBox();
   expect(bounds).not.toBeNull();
   let picked = false;
-  for (const y of [0.5, 0.35, 0.65, 0.2, 0.8]) {
-    for (const x of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+  // Thin IFC prisms can fall between the old 15%-spaced points after chrome changes.
+  // Keep testing real raycast picks, with a denser centre-first grid (no SDK/DOM fallback).
+  const points = [0.5, 0.45, 0.55, 0.4, 0.6, 0.35, 0.65, 0.3, 0.7, 0.2, 0.8];
+  for (const y of points) {
+    for (const x of points) {
       await canvas.click({
         position: { x: bounds!.width * x, y: bounds!.height * y },
       });
@@ -835,6 +872,12 @@ test("unseeded project: real R1/R2 geometry, durable B1, scoped evidence, record
   await sourceRegister(page, fixture.source_name);
   const context = page.getByRole("complementary", { name: "资料上下文" });
   await context.getByRole("button", { name: "查看变化", exact: true }).click();
+  const comparisonDetails = context.getByRole("button", {
+    name: "比较详情与操作",
+    exact: true,
+  });
+  if ((await comparisonDetails.getAttribute("aria-expanded")) === "false")
+    await comparisonDetails.click();
   const impact = context.getByRole("region", { name: "版本影响", exact: true });
   await expect(impact).toContainText("新增");
   await expect(impact).toContainText("删除");
@@ -1374,7 +1417,9 @@ test("multi-file text ingestion uses real enabled parsers and a complete explici
 }) => {
   await startPage(page, backend);
   const project = await createProject(page, backend);
-  await page.getByRole("button", { name: "+ 添加资料", exact: true }).click();
+  await page.getByRole("button", { name: "资料操作", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("menuitem", { name: "添加资料", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "添加资料", exact: true });
   const files = [
     {
@@ -1434,6 +1479,7 @@ test("multi-file text ingestion uses real enabled parsers and a complete explici
     expect(source.accepted_revision_id).toBeNull();
   }
   expect(await get(backend.api, `${path}/documents`)).toHaveLength(2);
+  await page.getByRole("button", { name: "基线记录与操作" }).click();
   await page.getByRole("button", { name: "确认新基线", exact: true }).click();
   const confirmation = page.getByRole("dialog", {
     name: "确认基线 B1",
@@ -1441,9 +1487,15 @@ test("multi-file text ingestion uses real enabled parsers and a complete explici
   });
   for (const source of sources)
     await expect(confirmation).toContainText(source.source.name);
+  const accepted = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`${path}/baselines`) &&
+      response.request().method() === "POST",
+  );
   await confirmation
     .getByRole("button", { name: "确认 B1", exact: true })
     .click();
+  expect((await accepted).status()).toBe(201);
   const baselines = await get<Baseline[]>(backend.api, `${path}/baselines`);
   expect(baselines).toHaveLength(1);
   expect(baselines[0].entries).toHaveLength(2);

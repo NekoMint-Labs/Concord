@@ -60,7 +60,7 @@ async function openPackage(page: Page, name: string) {
     .click();
   await page
     .getByRole("region", { name: "工作包状态" })
-    .getByRole("button", { name: "查看全部 →" })
+    .getByRole("button", { name: "查看全部 →", exact: true })
     .click();
   await page
     .getByRole("region", { name: "项目工作包" })
@@ -144,7 +144,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
       .getByRole("heading", { level: 2, name: /已阻塞|待批准/ }),
   ).toBeVisible();
   await page
-    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("complementary", { name: "项目导航" })
     .getByRole("button", { name: "模型", exact: true })
     .click();
   const uploads: string[] = [];
@@ -245,7 +245,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     .toBeGreaterThan(keyboardWidth - 5);
   await page.reload();
   await page
-    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("complementary", { name: "项目导航" })
     .getByRole("button", { name: "模型", exact: true })
     .click();
   await expect
@@ -341,7 +341,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     spatial.getByRole("button", { name: "技术详情" }),
   ).toHaveAttribute("aria-expanded", "true");
   const globalId = spatial
-    .locator(".disclosure-inner > .element-facts")
+    .locator(".element-facts")
     .getByText("GlobalId", { exact: true })
     .locator("..")
     .locator("dd");
@@ -369,7 +369,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   await page.getByRole("button", { name: "在模型中查看 →" }).click();
   await expect(page.getByRole("region", { name: "空间问题" })).toBeVisible();
   await page
-    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("complementary", { name: "项目导航" })
     .getByRole("button", { name: "模型", exact: true })
     .click();
   await expect(
@@ -377,7 +377,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   ).toContainText("送风管 E-01");
   await page.reload();
   await page
-    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("complementary", { name: "项目导航" })
     .getByRole("button", { name: "模型", exact: true })
     .click();
   await expect(viewer.getByRole("status")).toContainText("project-model.ifc");
@@ -442,9 +442,14 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   await structure.getByLabel("楼层").fill("L02");
   await structure.getByRole("button", { name: "保存并使用此区域" }).click();
   const area = structure.getByRole("combobox", { name: "所属区域" });
-  await expect(area).toContainText("East wing");
+  await expect(area.locator("bim-label")).toHaveText("East wing");
   await area.click();
-  await page.getByRole("option", { name: "East wing" }).click();
+  await expect(
+    page.getByRole("option", { name: "East wing", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
+  await expect(area).toHaveAttribute("aria-expanded", "false");
+  await expect(structure).toBeVisible();
   await structure.getByLabel("工作包名称").fill("Ventilation");
   await structure.getByLabel("专业").fill("MEP");
   await structure.getByLabel("负责人").fill("Team A");
@@ -502,7 +507,7 @@ test("real project survives restart through source, BIM mapping, baseline, revis
 
   await openPackage(page, "Ventilation");
   await page
-    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("complementary", { name: "项目导航" })
     .getByRole("button", { name: "模型", exact: true })
     .click();
   await page.getByRole("button", { name: "关联 BIM" }).click();
@@ -548,9 +553,16 @@ test("real project survives restart through source, BIM mapping, baseline, revis
       .getByRole("navigation", { name: "当前位置" })
       .getByText(name, { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("region", { name: "等待中" })).toContainText(
-    "Ventilation",
-  );
+  const waitingRow = page
+    .getByRole("region", { name: "工作", exact: true })
+    .locator(".workspace-row", {
+      has: page.getByRole("button", {
+        name: "Ventilation 尚未检查",
+        exact: true,
+      }),
+    });
+  await expect(waitingRow).toBeVisible();
+  await expect(waitingRow).toContainText("待检查");
   const reloadedRegister = await openSources(page, "MEP Model");
   await reloadedRegister
     .getByRole("button", { name: "基线记录与操作", exact: true })
@@ -573,6 +585,15 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   await page
     .getByRole("option", { name: "MEP Model · 添加版本", exact: true })
     .click();
+  await expect(
+    page.getByRole("option", { name: "MEP Model · 添加版本", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
+  await expect(secondDialog.getByRole("combobox")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(secondDialog).toBeVisible();
   const secondUpload = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
@@ -663,11 +684,12 @@ test("real project survives restart through source, BIM mapping, baseline, revis
       .getByRole("navigation", { name: "当前位置" })
       .getByText(name, { exact: true }),
   ).toBeVisible();
-  const completed = page.getByRole("region", { name: "最近完成" });
+  const completed = page.getByRole("region", { name: "工作", exact: true });
+  await completed.getByRole("tab", { name: "已处理", exact: true }).click();
   await expect(completed).toContainText("Concord 已完成调查");
   await completed.getByRole("button", { name: "Concord 已完成调查" }).click();
   await page
-    .getByRole("complementary", { name: "所选工作事项" })
+    .getByRole("region", { name: "所选工作事项" })
     .getByRole("button", { name: "查看调查依据" })
     .click();
   await expect(

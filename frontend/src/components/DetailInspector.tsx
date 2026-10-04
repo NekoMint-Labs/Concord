@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { AppTooltip } from "./ui/AppTooltip";
 import { icon } from "./ui/icon";
+import { Button } from "./ui/button";
 
 export function DetailInspectorHeader<T extends string>({
   eyebrow,
@@ -29,20 +30,22 @@ export function DetailInspectorHeader<T extends string>({
         </div>
         {meta && <span className="detail-inspector-meta">{meta}</span>}
         <AppTooltip label="关闭详情" side="left">
-          <button
+          <Button
+            variant="ghost"
             type="button"
             className="icon-button"
             aria-label="关闭详情"
             onClick={onClose}
           >
             <X {...icon} />
-          </button>
+          </Button>
         </AppTooltip>
       </div>
       {!!tabs?.length && activeTab && onTab && (
         <nav className="inspector-switch" aria-label="详情类型">
           {tabs.map((tab) => (
-            <button
+            <Button
+              variant="ghost"
               type="button"
               key={tab.id}
               className={tab.id === activeTab ? "active" : ""}
@@ -51,7 +54,7 @@ export function DetailInspectorHeader<T extends string>({
             >
               {tab.label}
               {!!tab.count && <span className="count">{tab.count}</span>}
-            </button>
+            </Button>
           ))}
         </nav>
       )}

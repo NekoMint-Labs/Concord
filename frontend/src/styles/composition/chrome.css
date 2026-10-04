@@ -2,8 +2,7 @@
 
 .application-shell .brand,
 .application-shell .app-header,
-.application-shell .context-bar,
-.application-shell .local-actions {
+.application-shell .context-bar {
   height: 40px;
   min-height: 40px;
 }
@@ -62,14 +61,8 @@
   height: 6px;
   margin-right: 6px;
 }
-.application-shell .local-actions > .button,
-.application-shell .local-actions > * > .button {
+.application-shell .local-actions bim-button {
   height: 26px;
-  padding: 0 8px;
-  border-radius: 4px;
-  color: var(--ink-2);
-  font-size: 12px;
-  font-weight: 500;
 }
 
 /* Top chrome is a location readout, not a second navigation system. */
@@ -99,8 +92,17 @@
   font-size: var(--fs-label);
   margin-left: auto;
 }
-.application-shell .local-actions {
-  gap: 4px;
-  padding: 0 12px 0 8px;
-  padding-right: 16px;
+/* One donor toolbar integration owner; Radix/React retain action semantics. */
+.application-shell bim-toolbar.local-actions {
+  --bim-toolbar--bgc: transparent;
+  --bim-toolbar--border: none;
+  --bim-toolbar--bdrs: 0;
+  --bim-toolbar--w: 100%;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 40px;
+  min-height: 40px;
+  margin-left: 0;
+  padding: 0 16px 0 8px;
 }

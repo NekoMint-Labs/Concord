@@ -1,3 +1,4 @@
+import { Button } from "../components/ui/button";
 import { useState } from "react";
 import { Pane, PaneDivider, PaneSplit } from "../layout/PaneSplit";
 import { BaselineHistory } from "./BaselineHistory";
@@ -51,9 +52,13 @@ export function ProjectSources(props: ProjectSourcesProps) {
         {data.baselines.error && (
           <div role="alert">
             <p>{data.baselines.error.message}</p>
-            <button type="button" onClick={() => void data.baselines.refetch()}>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => void data.baselines.refetch()}
+            >
               重试读取历史
-            </button>
+            </Button>
           </div>
         )}
         {data.baselines.isSuccess && (

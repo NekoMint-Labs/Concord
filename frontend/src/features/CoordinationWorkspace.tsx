@@ -1,3 +1,4 @@
+import { Button } from "../components/ui/button";
 import { useState, type ReactNode } from "react";
 import type { Workspace } from "../api/client";
 import type { InspectorView } from "./Inspector";
@@ -85,19 +86,20 @@ export function CoordinationWorkspace({
                 ["issues", `问题 ${constraints.length}`],
               ] as const
             ).map(([id, label]) => (
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 key={id}
                 className={overviewTab === id ? "active" : ""}
                 onClick={() => setOverviewTab(id)}
               >
                 {label}
-              </button>
+              </Button>
             ))}
             {onDocuments && (
-              <button type="button" onClick={onDocuments}>
+              <Button variant="ghost" type="button" onClick={onDocuments}>
                 文档 →
-              </button>
+              </Button>
             )}
           </nav>
           {overviewTab === "overview" && (

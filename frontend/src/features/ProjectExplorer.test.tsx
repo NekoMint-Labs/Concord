@@ -15,6 +15,55 @@ import {
   type Workspace,
 } from "../api/client";
 import { ProjectExplorer, type ExplorerTarget } from "./ProjectExplorer";
+import type { ComponentProps } from "react";
+import { Manager, Table } from "@thatopen/ui";
+
+// The app registers donors in main.tsx; this scoped suite doesn't import main.
+Manager.init();
+
+function tableRoots(scope: ParentNode = window.document.body): ShadowRoot[] {
+  return Array.from(scope.querySelectorAll("*")).flatMap((element) =>
+    element.shadowRoot
+      ? [element.shadowRoot, ...tableRoots(element.shadowRoot)]
+      : [],
+  );
+}
+
+function tableText(text: string, scope: ParentNode = window.document.body) {
+  return (
+    tableRoots(scope).flatMap((root) =>
+      within(root as unknown as HTMLElement).queryAllByText(text),
+    )[0] ?? null
+  );
+}
+
+function tableButton(
+  name: string | RegExp,
+  scope: ParentNode = window.document.body,
+) {
+  const button = tableRoots(scope).flatMap((root) =>
+    within(root as unknown as HTMLElement).queryAllByRole("button", { name }),
+  )[0];
+  expect(button).toBeDefined();
+  return button;
+}
+
+function filterTab(name: string) {
+  const selector = window.document.querySelector("bim-selector")!;
+  return within(selector.shadowRoot as unknown as HTMLElement).getByRole(
+    "tab",
+    { name },
+  );
+}
+
+function searchBox() {
+  const input = window.document.querySelector("bim-text-input")!;
+  return input.shadowRoot?.querySelector<HTMLInputElement>("input")!;
+}
+
+function tables(scope: ParentNode = window.document.body) {
+  return Array.from(scope.querySelectorAll<Table>("bim-table"));
+}
 
 const project = "tower-project";
 const timestamp = "2026-01-01T00:00:00Z";
@@ -133,6 +182,21 @@ const categories = [
 ] as const;
 
 beforeEach(() => {
+  // jsdom has no viewport intersection; render real donor cells as visible.
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      constructor(private callback: IntersectionObserverCallback) {}
+      observe(target: Element) {
+        this.callback(
+          [{ target, isIntersecting: true } as IntersectionObserverEntry],
+          this as unknown as IntersectionObserver,
+        );
+      }
+      unobserve() {}
+      disconnect() {}
+    },
+  );
   vi.spyOn(api, "sourceStatuses").mockResolvedValue(sources);
   vi.spyOn(api, "documents").mockResolvedValue([document]);
   vi.spyOn(api, "baselines").mockResolvedValue([baseline]);
@@ -144,9 +208,17 @@ beforeEach(() => {
     source === comparison.source_id ? [comparison] : [],
   );
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
-function mountExplorer() {
+function mountExplorer(
+  preview: Pick<
+    ComponentProps<typeof ProjectExplorer>,
+    "previewEntries" | "onPreviewEnabled" | "findingEntries"
+  > = {},
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
@@ -159,6 +231,7 @@ function mountExplorer() {
         sources={sources}
         onOpen={onOpen}
         onTab={onTab}
+        {...preview}
       />
     </QueryClientProvider>,
   );
@@ -166,17 +239,24 @@ function mountExplorer() {
 }
 
 async function loaded() {
-  fireEvent.change(screen.getByRole("searchbox", { name: "搜索项目对象" }), {
+  await waitFor(() => {
+    expect(searchBox()).toHaveAttribute("aria-label", "搜索项目对象");
+    expect(searchBox()).toHaveAttribute("type", "search");
+  });
+  fireEvent.input(searchBox(), {
     target: { value: "r" },
   });
   await screen.findByText("13 个对象匹配「r」");
+  await waitFor(() => expect(tableText("West tower HVAC · R9")).toBeVisible());
 }
 
 it("loads project API records into all six categories and filters each category", async () => {
   mountExplorer();
-  expect(screen.queryByRole("navigation", { name: "浏览对象类型" })).toBeNull();
-  expect(screen.queryByRole("list")).toBeNull();
-  expect(screen.queryByText(/个对象/)).toBeNull();
+  expect(
+    screen.getByRole("navigation", { name: "浏览对象类型" }),
+  ).toBeVisible();
+  expect(tables().length).toBeGreaterThan(0);
+  await screen.findByText("13 个项目对象");
   await loaded();
   expect(api.documents).toHaveBeenCalledWith(project);
   expect(api.baselines).toHaveBeenCalledWith(project);
@@ -187,21 +267,27 @@ it("loads project API records into all six categories and filters each category"
     [project, "src-hvac"],
     [project, "src-frame"],
   ]);
-  expect(screen.getByText("Permit notes.md")).toBeVisible();
-  expect(screen.getByText("West tower HVAC · R9")).toBeVisible();
-  expect(screen.getByText("East tower structure · R2 → R3")).toBeVisible();
-  expect(screen.getByText("Duct clearance measured at 420 mm")).toBeVisible();
-  expect(screen.getByText("B7 · Handover approval")).toBeVisible();
+  expect(tableText("Permit notes.md")).toBeVisible();
+  expect(tableText("West tower HVAC · R9")).toBeVisible();
+  expect(tableText("East tower structure · R2 → R3")).toBeVisible();
+  expect(tableText("Duct clearance measured at 420 mm")).toBeVisible();
+  expect(tableText("B7 · Handover approval")).toBeVisible();
 
   for (const [category, count] of categories) {
     const group = screen.getByRole("region", { name: category });
-    expect(within(group).getAllByRole("listitem")).toHaveLength(count);
+    expect(tables(group)[0].data).toHaveLength(count);
+    await waitFor(() =>
+      expect(
+        tableRoots(group).flatMap((root) =>
+          Array.from(root.querySelectorAll("bim-table-row:not([is-header])")),
+        ),
+      ).toHaveLength(count),
+    );
   }
   for (const [category, count] of categories) {
-    fireEvent.click(screen.getByRole("button", { name: category }));
-    expect(screen.getByRole("button", { name: category })).toHaveAttribute(
-      "aria-pressed",
-      "true",
+    fireEvent.click(filterTab(category));
+    await waitFor(() =>
+      expect(filterTab(category)).toHaveAttribute("aria-selected", "true"),
     );
     expect(screen.getByText(`${count} 个对象匹配「r」`)).toBeVisible();
     for (const [other] of categories) {
@@ -210,7 +296,7 @@ it("loads project API records into all six categories and filters each category"
       );
     }
   }
-  fireEvent.click(screen.getByRole("button", { name: "全部" }));
+  fireEvent.click(filterTab("全部"));
   await loaded();
   for (const [category] of categories) {
     expect(screen.getByRole("region", { name: category })).toBeVisible();
@@ -220,47 +306,67 @@ it("loads project API records into all six categories and filters each category"
 it("opens exact source, revision, comparison, package, document, evidence and baseline identities", async () => {
   const { onOpen, onTab } = mountExplorer();
   await loaded();
+  const action = tableButton("打开 Safety brief");
+  expect(action.tagName).toBe("BIM-BUTTON");
+  expect(action).toHaveAttribute("role", "button");
+  expect(action.constructor).toBe(customElements.get("bim-button"));
+  expect(action.tabIndex).toBe(0);
+  action.focus();
+  expect(action.getRootNode()).toHaveProperty("activeElement", action);
+  for (const table of tables()) {
+    expect(table).toBeInstanceOf(Table);
+    expect(table.shadowRoot).not.toBeNull();
+    expect(table.children).toHaveLength(0);
+    expect(table.selectableRows).toBe(false);
+    expect(table.queryString).toBeNull();
+    expect(table.columns.map((column) => column.name)).toEqual([
+      "名称",
+      "类型",
+      "记录",
+      "状态",
+      "操作",
+      "编号",
+    ]);
+    expect(table.hiddenColumns).toEqual(["编号"]);
+  }
   const cases: [string, RegExp, ExplorerTarget][] = [
-    ["资料", /^Safety brief /, { kind: "source", id: "src-brief" }],
-    ["资料", /^West tower HVAC /, { kind: "source", id: "src-hvac" }],
+    ["资料", /^打开 Safety brief$/, { kind: "source", id: "src-brief" }],
+    ["资料", /^打开 West tower HVAC$/, { kind: "source", id: "src-hvac" }],
     [
       "版本与比较",
-      /^Safety brief · R1 /,
+      /^打开 Safety brief · R1$/,
       { kind: "source", id: "src-brief", revisionId: "rev-brief-1" },
     ],
     [
       "版本与比较",
-      /^West tower HVAC · R9 /,
+      /^打开 West tower HVAC · R9$/,
       { kind: "source", id: "src-hvac", revisionId: "rev-hvac-9" },
     ],
     [
       "版本与比较",
-      /^East tower structure · R2 → R3 /,
+      /^打开 East tower structure · R2 → R3$/,
       { kind: "source", id: "src-frame", comparisonId: "cmp-frame" },
     ],
     [
       "工作包",
-      /^West tower duct installation /,
+      /^打开 West tower duct installation$/,
       { kind: "package", id: "pkg-west" },
     ],
-    ["文档", /^Permit notes\.md /, { kind: "document", id: "doc-permit" }],
+    ["文档", /^打开 Permit notes\.md$/, { kind: "document", id: "doc-permit" }],
     [
       "判断依据",
-      /^Duct clearance measured at 420 mm /,
+      /^打开 Duct clearance measured at 420 mm$/,
       { kind: "evidence", id: "ev-clearance" },
     ],
     [
       "基线与历史",
-      /^B7 · Handover approval /,
+      /^打开 B7 · Handover approval$/,
       { kind: "baseline", id: "baseline-handover" },
     ],
   ];
   for (const [category, name] of cases) {
     fireEvent.click(
-      within(screen.getByRole("region", { name: category })).getByRole(
-        "button",
-        { name },
-      ),
+      tableButton(name, screen.getByRole("region", { name: category })),
     );
   }
   expect(onOpen.mock.calls).toEqual(cases.map(([, , target]) => [target]));
@@ -270,7 +376,7 @@ it("opens exact source, revision, comparison, package, document, evidence and ba
 it("searches existing titles, metadata and IDs case-insensitively within the selected category", async () => {
   mountExplorer();
   await loaded();
-  const search = screen.getByRole("searchbox", { name: "搜索项目对象" });
+  const search = searchBox();
   const cases = [
     ["资料", "  SAFETY BRIEF  ", "Safety brief"],
     ["资料", "SRC-HVAC", "West tower HVAC"],
@@ -286,12 +392,12 @@ it("searches existing titles, metadata and IDs case-insensitively within the sel
     ["基线与历史", "BASELINE-HANDOVER", "B7 · Handover approval"],
   ];
   for (const [category, keyword, title] of cases) {
-    fireEvent.click(screen.getByRole("button", { name: category }));
-    fireEvent.change(search, { target: { value: keyword } });
+    fireEvent.click(filterTab(category));
+    fireEvent.input(search, { target: { value: keyword } });
     expect(screen.getByText(`1 个对象匹配「${keyword.trim()}」`)).toBeVisible();
     const group = screen.getByRole("region", { name: category });
-    expect(within(group).getAllByRole("listitem")).toHaveLength(1);
-    expect(within(group).getByText(title)).toBeVisible();
+    expect(tables(group)[0].data).toHaveLength(1);
+    await waitFor(() => expect(tableText(title, group)).toBeVisible());
   }
   // Local inventory search must not refetch records or invoke a search endpoint.
   expect(api.documents).toHaveBeenCalledTimes(1);
@@ -303,29 +409,37 @@ it("searches existing titles, metadata and IDs case-insensitively within the sel
 it("combines keyword and category filters, then clears both after no results", async () => {
   mountExplorer();
   await loaded();
-  const search = screen.getByRole("searchbox", { name: "搜索项目对象" });
-  fireEvent.change(search, { target: { value: "  pErMiT  " } });
+  const search = searchBox();
+  fireEvent.input(search, { target: { value: "  pErMiT  " } });
   expect(screen.getByText("1 个对象匹配「pErMiT」")).toBeVisible();
   // Matching objects stay above the fold instead of following empty categories.
   expect(
     screen.queryByRole("region", { name: "资料" }),
   ).not.toBeInTheDocument();
   expect(screen.getByRole("region", { name: "文档" })).toBeVisible();
-  expect(screen.getByText("Permit notes.md")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "工作包" }));
+  expect(tableText("Permit notes.md")).toBeVisible();
+  fireEvent.click(filterTab("工作包"));
   expect(screen.getByText("0 个对象匹配「pErMiT」")).toBeVisible();
   expect(
     screen.getByRole("heading", { name: "没有匹配的项目对象" }),
   ).toBeVisible();
-  expect(screen.queryByText("Permit notes.md")).not.toBeInTheDocument();
+  expect(tableText("Permit notes.md")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "清除搜索与筛选" }));
-  expect(search).toHaveValue("");
-  expect(screen.queryByRole("navigation", { name: "浏览对象类型" })).toBeNull();
+  await waitFor(() => expect(search).toHaveValue(""));
+  expect(
+    screen.getByRole("navigation", { name: "浏览对象类型" }),
+  ).toBeVisible();
   expect(
     screen.queryByRole("heading", { name: "没有匹配的项目对象" }),
   ).not.toBeInTheDocument();
-  expect(screen.queryByRole("list")).toBeNull();
-  expect(screen.queryByRole("navigation", { name: "浏览对象类型" })).toBeNull();
+  expect(tables()).toHaveLength(categories.length);
+  await waitFor(() =>
+    expect(filterTab("全部")).toHaveAttribute("aria-selected", "true"),
+  );
+  for (const [category, count] of categories)
+    expect(
+      tables(screen.getByRole("region", { name: category }))[0].data,
+    ).toHaveLength(count);
 });
 
 it.each(["documents", "baselines", "sourceRevisions", "comparisons"] as const)(
@@ -338,10 +452,10 @@ it.each(["documents", "baselines", "sourceRevisions", "comparisons"] as const)(
     vi.mocked(api[request]).mockRejectedValueOnce(new Error("Offline"));
     mountExplorer();
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "部分项目记录读取失败，搜索结果可能不完整。",
+      "搜索结果可能不完整",
     );
-    const search = screen.getByRole("searchbox", { name: "搜索项目对象" });
-    fireEvent.change(search, { target: { value: "r" } });
+    const search = searchBox();
+    fireEvent.input(search, { target: { value: "r" } });
     // useProjectContext starts the shared HVAC revision query first (two rows).
     await screen.findByText(
       `${request === "sourceRevisions" ? 11 : 12} 个对象匹配「r」`,
@@ -352,11 +466,15 @@ it.each(["documents", "baselines", "sourceRevisions", "comparisons"] as const)(
       sourceRevisions: "West tower HVAC · R9",
       comparisons: "East tower structure · R2 → R3",
     }[request];
-    expect(screen.queryByText(missingTitle)).not.toBeInTheDocument();
-    expect(screen.getByText("West tower duct installation")).toBeVisible();
-    expect(screen.getByText("Duct clearance measured at 420 mm")).toBeVisible();
-    fireEvent.change(search, { target: { value: "duct" } });
-    fireEvent.click(screen.getByRole("button", { name: "工作包" }));
+    expect(tableText(missingTitle)).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(tableText("West tower duct installation")).toBeVisible(),
+    );
+    await waitFor(() =>
+      expect(tableText("Duct clearance measured at 420 mm")).toBeVisible(),
+    );
+    fireEvent.input(search, { target: { value: "duct" } });
+    fireEvent.click(filterTab("工作包"));
     const callsBefore = {
       documents: vi.mocked(api.documents).mock.calls.length,
       baselines: vi.mocked(api.baselines).mock.calls.length,
@@ -375,22 +493,221 @@ it.each(["documents", "baselines", "sourceRevisions", "comparisons"] as const)(
       );
     }
     expect(search).toHaveValue("duct");
-    expect(screen.getByRole("button", { name: "工作包" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
+    await waitFor(() =>
+      expect(filterTab("工作包")).toHaveAttribute("aria-selected", "true"),
     );
     expect(screen.getByText("1 个对象匹配「duct」")).toBeVisible();
-    fireEvent.change(search, { target: { value: "" } });
-    expect(screen.queryByRole("list")).toBeNull();
+    fireEvent.input(search, { target: { value: "" } });
+    expect(tables()).toHaveLength(categories.length);
     await loaded();
-    expect(screen.getByRole("button", { name: "全部" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
+    await waitFor(() =>
+      expect(filterTab("全部")).toHaveAttribute("aria-selected", "true"),
     );
-    expect(screen.getByText("Permit notes.md")).toBeVisible();
-    expect(screen.getByText("Safety brief · R1")).toBeVisible();
-    expect(screen.getByText("West tower HVAC · R9")).toBeVisible();
-    expect(screen.getByText("East tower structure · R2 → R3")).toBeVisible();
-    expect(screen.getByText("B7 · Handover approval")).toBeVisible();
+    expect(tableText("Permit notes.md")).toBeVisible();
+    expect(tableText("Safety brief · R1")).toBeVisible();
+    expect(tableText("West tower HVAC · R9")).toBeVisible();
+    expect(tableText("East tower structure · R2 → R3")).toBeVisible();
+    expect(tableText("B7 · Handover approval")).toBeVisible();
   },
 );
+
+it("only exposes fixture targets after explicit opt-in and keeps them in a separate group", async () => {
+  const onPreviewEnabled = vi.fn();
+  const { onOpen } = mountExplorer({
+    onPreviewEnabled,
+    previewEntries: [
+      {
+        target: { kind: "fixture-evidence", id: "clash" },
+        title: "B-142 × M-038 碰撞",
+        meta: "结构 R2 / 机电 R1",
+        type: "Evidence 示例",
+        state: "不写入项目",
+        search: "fixture-only",
+      },
+    ],
+  });
+  expect(
+    screen.getByRole("checkbox", { name: "包含 Finding 交互示例" }),
+  ).toBeChecked();
+  await waitFor(() => expect(searchBox()).toBeDefined());
+  fireEvent.input(searchBox(), {
+    target: { value: "fixture-only" },
+  });
+  const result = await waitFor(() => tableButton("打开 B-142 × M-038 碰撞"));
+  expect(screen.getByRole("region", { name: "交互示例" })).toBeVisible();
+  fireEvent.click(result);
+  expect(onOpen).toHaveBeenCalledWith({
+    kind: "fixture-evidence",
+    id: "clash",
+  });
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: "包含 Finding 交互示例" }),
+  );
+  expect(onPreviewEnabled).toHaveBeenCalledWith(false);
+});
+
+it("leads with canonical engineering metadata while opaque Evidence IDs stay searchable and navigation exact", async () => {
+  const evidence = {
+    id: "opaque-evidence-uuid",
+    snapshot_id: "snapshot-x",
+    source_id: "src-frame",
+    source_revision_id: "rev-frame-3",
+    source_revision: "hash-x",
+    provider: "internal-provider",
+    observed_at: timestamp,
+    fact: "结构梁标高变化",
+    quality: "structured",
+    element_ids: [],
+    work_package_id: null,
+    page: null,
+    location: null,
+    viewer_target: {
+      kind: "drawing",
+      source_revision_id: "rev-frame-3",
+      page: 3,
+      normalized_bbox: [0.1, 0.2, 0.3, 0.4],
+    },
+  } satisfies DTO<"Evidence">;
+  vi.spyOn(api, "engineeringEvidence").mockResolvedValue(evidence);
+  const { onOpen } = mountExplorer({
+    findingEntries: [
+      {
+        target: {
+          kind: "finding",
+          id: "opaque-finding",
+          evidenceId: evidence.id,
+        },
+        title: "工程依据",
+        type: "工程依据",
+        meta: "梁调整需要复核",
+        search: evidence.id,
+      },
+    ],
+  });
+  const row = await waitFor(() => tableButton("打开 结构梁标高变化"));
+  await waitFor(() =>
+    expect(tableText("图纸 · 第 3 页 · 已提供区域")).toBeVisible(),
+  );
+  await waitFor(() => expect(tableText("结构化 · 已验证")).toBeVisible());
+  expect(row).not.toHaveTextContent(evidence.id);
+  expect(row).not.toHaveTextContent(evidence.provider);
+  const title = tableText("结构梁标高变化")!;
+  const details = title.parentElement!.querySelector("details")!;
+  expect(details.open).toBe(false);
+  expect(details).toHaveTextContent(evidence.id);
+  fireEvent.input(searchBox(), {
+    target: { value: evidence.id },
+  });
+  await waitFor(() => expect(tableButton("打开 结构梁标高变化")).toBeVisible());
+  fireEvent.click(tableButton("打开 结构梁标高变化"));
+  expect(onOpen).toHaveBeenCalledWith({
+    kind: "finding",
+    id: "opaque-finding",
+    evidenceId: evidence.id,
+  });
+  expect(api.engineeringEvidence).toHaveBeenCalledWith(project, evidence.id);
+});
+
+it("keeps Open bound to the exact target when search removes and reorders visible rows", async () => {
+  const { onOpen } = mountExplorer();
+  await loaded();
+  const search = searchBox();
+  fireEvent.input(search, { target: { value: "SRC-HVAC" } });
+  fireEvent.click(await waitFor(() => tableButton("打开 West tower HVAC")));
+  expect(onOpen).toHaveBeenLastCalledWith({ kind: "source", id: "src-hvac" });
+  fireEvent.input(search, { target: { value: "REV-FRAME-3" } });
+  fireEvent.click(
+    await waitFor(() => tableButton("打开 East tower structure · R3")),
+  );
+  expect(onOpen).toHaveBeenLastCalledWith({
+    kind: "source",
+    id: "src-frame",
+    revisionId: "rev-frame-3",
+  });
+  expect(api.sourceRevisions).toHaveBeenCalledTimes(3);
+});
+
+it.each(["identity", "project"] as const)(
+  "does not present canonical evidence crossing the %s fence",
+  async (fence) => {
+    const fencedEvidence = {
+      id: fence === "identity" ? "wrong-evidence" : "requested-evidence",
+      project_id: fence === "project" ? "other-project" : project,
+      snapshot_id: "snapshot-x",
+      source_id: "src-frame",
+      source_revision_id: "rev-frame-3",
+      source_revision: "hash-x",
+      provider: "internal-provider",
+      observed_at: timestamp,
+      fact: "Must not leak across the evidence fence",
+      quality: "structured",
+      element_ids: [],
+      work_package_id: null,
+      page: null,
+      location: null,
+      viewer_target: null,
+    } satisfies DTO<"Evidence"> & { project_id: string };
+    vi.spyOn(api, "engineeringEvidence").mockResolvedValue(fencedEvidence);
+    const { onOpen } = mountExplorer({
+      findingEntries: [
+        {
+          target: {
+            kind: "finding",
+            id: "finding-x",
+            evidenceId: "requested-evidence",
+          },
+          title: "Original engineering entry",
+          type: "工程依据",
+          meta: "Awaiting authoritative evidence",
+          search: "requested-evidence",
+        },
+      ],
+    });
+    await waitFor(() =>
+      expect(screen.queryByText("正在读取项目记录…")).not.toBeInTheDocument(),
+    );
+    expect(api.engineeringEvidence).toHaveBeenCalledWith(
+      project,
+      "requested-evidence",
+    );
+    expect(tableText("Must not leak across the evidence fence")).toBeNull();
+    fireEvent.click(
+      await waitFor(() => tableButton("打开 Original engineering entry")),
+    );
+    expect(onOpen).toHaveBeenCalledWith({
+      kind: "finding",
+      id: "finding-x",
+      evidenceId: "requested-evidence",
+    });
+  },
+);
+
+it("keeps category filtering on the donor selector's roving keyboard implementation", async () => {
+  mountExplorer();
+  await loaded();
+  const first = filterTab("全部");
+  expect(first).toHaveAttribute("aria-selected", "true");
+  expect(first).toHaveAttribute("tabindex", "0");
+  fireEvent.keyDown(first, { key: "ArrowRight" });
+  await waitFor(() =>
+    expect(filterTab("资料")).toHaveAttribute("aria-selected", "true"),
+  );
+  await waitFor(() =>
+    expect(
+      window.document.querySelector("bim-selector")!.shadowRoot!.activeElement,
+    ).toBe(filterTab("资料")),
+  );
+  expect(screen.getByRole("region", { name: "资料" })).toBeVisible();
+  expect(screen.queryByRole("region", { name: "文档" })).toBeNull();
+  fireEvent.keyDown(filterTab("资料"), { key: "Home" });
+  await waitFor(() =>
+    expect(filterTab("全部")).toHaveAttribute("aria-selected", "true"),
+  );
+  await waitFor(() =>
+    expect(
+      window.document.querySelector("bim-selector")!.shadowRoot!.activeElement,
+    ).toBe(filterTab("全部")),
+  );
+  for (const [category] of categories)
+    expect(screen.getByRole("region", { name: category })).toBeVisible();
+});

@@ -1,11 +1,11 @@
 import {
-  Box,
+  Search,
   Building2,
   ChevronsUpDown,
   FolderOpen,
   Home,
   PanelLeftClose,
-  PanelLeftOpen,
+  Box,
   Plus,
   Settings2,
 } from "lucide-react";
@@ -18,6 +18,7 @@ import {
   AppMenuSeparator,
 } from "../components/ui/AppMenu";
 import { AppTooltip } from "../components/ui/AppTooltip";
+import { Button } from "../components/ui/button";
 import { icon } from "../components/ui/icon";
 import { demoProjectName } from "../ui/demo/demoPresentation";
 import type { WorkspaceTab } from "./destinations";
@@ -28,8 +29,8 @@ const workspaceLinks: {
   icon: LucideIcon;
 }[] = [
   { tab: "work", label: "工作", icon: Home },
-  { tab: "bim", label: "模型", icon: Box },
   { tab: "project", label: "项目", icon: Building2 },
+  { tab: "browse", label: "浏览", icon: Search },
 ];
 
 export function ProjectSidebar({
@@ -87,14 +88,14 @@ export function ProjectSidebar({
             <strong>Concord</strong>
           </span>
           <AppTooltip label="收起侧栏" side="right">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               className="icon-button"
               aria-label="收起侧栏"
               onClick={onCollapse}
             >
               <PanelLeftClose {...icon} />
-            </button>
+            </Button>
           </AppTooltip>
         </div>
         <div className="project-picker">
@@ -171,9 +172,8 @@ export function ProjectSidebar({
           {workspaceLinks.map((item) => {
             const Icon = item.icon;
             return (
-              <button
+              <Button
                 key={item.tab}
-                type="button"
                 className={tab === item.tab ? "active" : ""}
                 aria-current={tab === item.tab ? "page" : undefined}
                 aria-label={item.label}
@@ -183,29 +183,28 @@ export function ProjectSidebar({
               >
                 <Icon {...icon} />
                 {item.label}
-              </button>
+              </Button>
             );
           })}
         </nav>
         <div className="sidebar-browse">
-          <button
-            type="button"
-            className={tab === "browse" ? "active" : ""}
-            aria-label="浏览"
-            aria-current={tab === "browse" ? "page" : undefined}
+          <Button
+            className={tab === "bim" ? "active" : ""}
+            aria-label="模型"
+            aria-current={tab === "bim" ? "page" : undefined}
             onClick={() => {
-              onTab?.("browse");
+              onTab?.("bim");
             }}
           >
-            <PanelLeftOpen {...icon} />
-            浏览
-          </button>
+            <Box {...icon} />
+            模型
+          </Button>
         </div>
       </div>
       <div className="sidebar-footer">
-        <button type="button" onClick={() => onProjectSettings?.()}>
+        <Button onClick={() => onProjectSettings?.()}>
           <Settings2 {...icon} /> 设置
-        </button>
+        </Button>
       </div>
     </aside>
   );

@@ -4,7 +4,24 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./App";
 import { initializeConnection } from "./api/client";
 import { Button } from "./components/ui/button";
+import { Manager, TableRow } from "@thatopen/ui";
+import { css } from "lit";
 import "./styles.css";
+
+// Register the donor web components once at the application boundary. React
+// remains the domain orchestrator; Lit owns the adopted UI surfaces.
+// Document-level CSS cannot reach donor shadow roots. Append the product motion
+// policy before Lit finalizes this component; do not copy or replace its styles.
+TableRow.styles = css`
+  ${TableRow.styles}
+  @media (prefers-reduced-motion: reduce) {
+    :host {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+`;
+Manager.init("", false); // Concord owns motion, including reduced-motion policy.
 
 const queryClient = new QueryClient({
   defaultOptions: {

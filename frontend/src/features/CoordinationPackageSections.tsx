@@ -46,7 +46,8 @@ export function CoordinationIssues({
       )}
       {constraints.length ? (
         constraints.map((issue) => (
-          <button
+          <Button
+            variant="ghost"
             className="package-issue"
             key={issue.id}
             type="button"
@@ -62,7 +63,7 @@ export function CoordinationIssues({
               </strong>
               <small>{issue.evidence_ids.length} 项判断依据 · 查看问题 →</small>
             </span>
-          </button>
+          </Button>
         ))
       ) : (
         <p>

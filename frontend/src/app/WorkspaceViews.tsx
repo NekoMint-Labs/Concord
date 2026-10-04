@@ -1,4 +1,8 @@
 import { lazy, Suspense } from "react";
+import { FindingWorkbench } from "../features/FindingWorkbench";
+import type { ExplorerEntry } from "../features/ProjectExplorer";
+import type { useWorkspaceLayout } from "../layout/WorkspaceLayout";
+
 import { ProjectExplorer } from "../features/ProjectExplorer";
 import { scopeFor } from "../features/agentContext";
 import { ViewerBoundary } from "../components/ViewerBoundary";
@@ -26,7 +30,17 @@ export { EmptyWorkPackages } from "./WorkPackageDirectory";
 export type { WorkspaceTab } from "./destinations";
 
 /** Navigation owns destinations; this component only composes the selected work surface. */
-export function WorkspaceViews(props: WorkspaceViewsProps) {
+type FindingWorkspaceProps = {
+  workspaceLayout?: ReturnType<typeof useWorkspaceLayout>;
+  findingId?: string;
+  findingEvidenceId?: string;
+  findingEntries?: ExplorerEntry[];
+  onOpenFinding?: (id: string, evidenceId?: string) => void;
+};
+
+export function WorkspaceViews(
+  props: WorkspaceViewsProps & FindingWorkspaceProps,
+) {
   const {
     project,
     data,
@@ -51,6 +65,11 @@ export function WorkspaceViews(props: WorkspaceViewsProps) {
     onInvestigateSource,
     onInspectImpact,
     onInvestigateWork,
+    workspaceLayout,
+    findingId = "",
+    findingEvidenceId,
+    findingEntries = [],
+    onOpenFinding,
   } = props;
   const navigation = useWorkspaceNavigation(props);
   const {
@@ -68,6 +87,43 @@ export function WorkspaceViews(props: WorkspaceViewsProps) {
   const width = usePaneWidth();
   const condensed = condensedFor(width, detailsOpen);
   const stackedInspector = detailsOpen && width <= 1120;
+  const workQueue = (
+    <WorkList
+      workspace={data}
+      sources={modelSources}
+      report={report}
+      run={run}
+      onSource={(id) => openSource({ kind: "source", id })}
+      onInvestigate={
+        onInvestigateWork ??
+        ((context) => {
+          onSourceContext?.(
+            context.sourceId,
+            context.revisionId,
+            context.revisionLabel,
+            context.fromRevisionId,
+            context.fromRevisionLabel,
+          );
+          onInvestigateSource?.(
+            context.sourceId,
+            context.revisionId,
+            context.fromRevisionId,
+          );
+        })
+      }
+      onPackage={openWorkPackage}
+      onModels={() => onTab("sources")}
+      onRecheck={onRecheck}
+      onReport={() => {
+        onTab("coordination");
+        openInvestigation();
+      }}
+      onProject={() => onTab("project")}
+      onTab={onTab}
+      selectedFindingId={findingId}
+      onFindingSelect={(id) => onOpenFinding?.(id)}
+    />
+  );
   return (
     <>
       {/*
@@ -96,44 +152,32 @@ export function WorkspaceViews(props: WorkspaceViewsProps) {
               }
             >
               <>
-                {tab === "work" && (
-                  <WorkList
-                    workspace={data}
-                    sources={modelSources}
-                    report={report}
-                    run={run}
-                    onSource={(id) => openSource({ kind: "source", id })}
-                    onInvestigate={
-                      onInvestigateWork ??
-                      ((context) => {
-                        onSourceContext?.(
-                          context.sourceId,
-                          context.revisionId,
-                          context.revisionLabel,
-                          context.fromRevisionId,
-                          context.fromRevisionLabel,
-                        );
-                        onInvestigateSource?.(
-                          context.sourceId,
-                          context.revisionId,
-                          context.fromRevisionId,
-                        );
-                      })
-                    }
-                    onPackage={openWorkPackage}
-                    onModels={() => onTab("sources")}
-                    onRecheck={onRecheck}
-                    onReport={openInvestigation}
-                    onProject={() => onTab("project")}
-                    onTab={onTab}
-                  />
-                )}
+                {tab === "work" &&
+                  (workspaceLayout ? (
+                    <FindingWorkbench
+                      prefs={workspaceLayout}
+                      key={project}
+                      project={project}
+                      selectedId={findingId}
+                      sources={modelSources}
+                      evidenceId={findingEvidenceId}
+                      onSelect={(id) => onOpenFinding?.(id)}
+                      queue={workQueue}
+                    />
+                  ) : (
+                    workQueue
+                  ))}
                 {tab === "browse" && (
                   <ProjectExplorer
                     workspace={data}
                     sources={modelSources}
                     onTab={onTab}
-                    onOpen={navigation.openExplorerTarget}
+                    findingEntries={findingEntries}
+                    onOpen={(target) => {
+                      if (target.kind === "finding") {
+                        onOpenFinding?.(target.id, target.evidenceId);
+                      } else navigation.openExplorerTarget(target);
+                    }}
                   />
                 )}
                 {tab === "project" && (

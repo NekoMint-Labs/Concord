@@ -1,3 +1,4 @@
+import { ThatOpenTextInput } from "../components/ThatOpenUI";
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type DTO } from "../api/client";
@@ -84,7 +85,7 @@ export function SemanticRetrieval({
         索引所选文档
       </Button>
       <div className="semantic-query">
-        <input
+        <ThatOpenTextInput
           aria-label="语义查询"
           value={query}
           onChange={(event) => {

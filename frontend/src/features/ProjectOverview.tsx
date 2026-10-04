@@ -1,3 +1,6 @@
+import { html } from "lit";
+import { ThatOpenDataTable } from "../components/ThatOpenDataTable";
+import { Button } from "../components/ui/button";
 import type { ReactNode } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { api, type Workspace } from "../api/client";
@@ -11,6 +14,7 @@ import {
 } from "../ui/demo/demoPresentation";
 import { statusLabel, statusTone } from "../ui/labels";
 import { AppMenu, AppMenuItem } from "../components/ui/AppMenu";
+import { ThatOpenPanel, ThatOpenPanelSection } from "../components/ThatOpenUI";
 
 /** Current project state, package inventory, and its revision history. */
 export function ProjectOverview({
@@ -103,98 +107,120 @@ export function ProjectOverview({
                 ? "已有项目资料，但尚未人工确认资料版本集合。"
                 : "当前资料版本已确认，施工检查没有未解决的阻塞条件。";
   return (
-    <div className="project-primary">
-      <header className="project-overview-head">
-        <div>
-          <h1>{demoProjectName(project.id, project.name)}</h1>
-        </div>
+    <ThatOpenPanel className="project-primary" label="项目">
+      <div slot="header-start" className="project-overview-head">
+        <h1>{demoProjectName(project.id, project.name)}</h1>
+      </div>
+      <div slot="header-end">
         <AppMenu label="项目操作">
           {onStructure && (
             <AppMenuItem onSelect={onStructure}>添加工作包</AppMenuItem>
           )}
           <AppMenuItem onSelect={() => onTab("settings")}>项目设置</AppMenuItem>
         </AppMenu>
-      </header>
-      <section className="project-state" aria-label="当前状态">
-        <h2>{pendingModels.length ? "有新版本待检查" : readinessText}</h2>
-        <p className="project-state-reason">{stateReason}</p>
-        <div className="project-state-footer">
-          <p>
-            <span>下一步</span> ·{" "}
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => {
-                if (!packages.length && onStructure) onStructure();
-                else
-                  onTab(
-                    pendingModels.length || !models.length || !baseline
-                      ? "sources"
-                      : "work",
-                  );
-              }}
-            >
-              {nextLabel} →
-            </button>
-          </p>
-        </div>
-      </section>
+      </div>
+      <ThatOpenPanelSection
+        className="project-state-surface"
+        label="当前状态"
+        fixed
+      >
+        <section className="project-state" aria-label="当前状态">
+          <h2>{pendingModels.length ? "有新版本待检查" : readinessText}</h2>
+          <p className="project-state-reason">{stateReason}</p>
+          <div className="project-state-footer">
+            <p>
+              <span>下一步</span> ·{" "}
+              <Button
+                variant="ghost"
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  if (!packages.length && onStructure) onStructure();
+                  else
+                    onTab(
+                      pendingModels.length || !models.length || !baseline
+                        ? "sources"
+                        : "work",
+                    );
+                }}
+              >
+                {nextLabel} →
+              </Button>
+            </p>
+          </div>
+        </section>
+      </ThatOpenPanelSection>
       <div className="project-main">
         {sourcesRegister}
         {!!packages.length && (
           <section className="project-ledger" aria-label="工作包状态">
-            <header className="project-ledger-head">
-              <div>
-                <h2>工作包</h2>
-                <span>{packages.length} 个</span>
-              </div>
-              <div>
-                <button type="button" onClick={() => onTab("work-packages")}>
+            <ThatOpenPanelSection
+              className="project-ledger-surface"
+              label={`${packages.length} 个`}
+              fixed
+              headerActions={
+                <Button
+                  variant="ghost"
+                  className="project-ledger-open text-button"
+                  type="button"
+                  onClick={() => onTab("work-packages")}
+                >
                   查看全部 →
-                </button>
-              </div>
-            </header>
-            <ul className="project-package-list">
-              {packages.map((wp) => {
-                const status = readiness(wp.id);
-                const area = workspace.state.areas.find(
-                  (item) => item.id === wp.area_id,
-                );
-                return (
-                  <li key={wp.id}>
-                    <button
-                      type="button"
-                      aria-pressed={selected === wp.id}
-                      onClick={() => onPackage(wp.id)}
-                    >
-                      <span className="project-package-id mono" title={wp.id}>
-                        {wp.id}
-                      </span>
-                      <span className="project-package-name">
-                        <strong title={demoWorkPackageName(wp.id, wp.name)}>
-                          {demoWorkPackageName(wp.id, wp.name)}
-                        </strong>
-                        <small className="project-package-meta">
-                          {demoAreaName(wp.area_id, area?.name ?? wp.area_id)}
-                          {" · "}
-                          {demoDiscipline(wp.discipline)}
-                        </small>
-                      </span>
-                      <span className="numeric">{linkedCount(wp)} 个构件</span>
-                      <span
-                        className={`package-status is-${workspace.stale ? "waiting" : statusTone(status)}`}
-                      >
-                        <i aria-hidden="true" />
-                        {workspace.stale ? "需复核" : statusLabel(status)}
-                      </span>
-                      <span className="project-package-open" aria-hidden="true">
-                        →
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+                </Button>
+              }
+            >
+              <h2 slot="header-start">工作包</h2>
+              <ThatOpenDataTable
+                aria-label="工作包状态表"
+                className="project-package-table"
+                columns={[
+                  { name: "工作包", width: "minmax(180px, 1fr)" },
+                  { name: "区域与专业", width: "minmax(150px, 1fr)" },
+                  { name: "构件", width: "90px" },
+                  { name: "施工条件", width: "100px" },
+                  { name: "操作", width: "64px" },
+                ]}
+                hiddenColumns={["编号"]}
+                data={packages.map((wp) => ({
+                  id: wp.id,
+                  data: {
+                    工作包: demoWorkPackageName(wp.id, wp.name),
+                    区域与专业: `${demoAreaName(wp.area_id, workspace.state.areas.find((area) => area.id === wp.area_id)?.name ?? wp.area_id)} · ${demoDiscipline(wp.discipline)}`,
+                    构件: `${linkedCount(wp)} 个构件`,
+                    施工条件: workspace.stale
+                      ? "需复核"
+                      : statusLabel(readiness(wp.id)),
+                    编号: wp.id,
+                    操作: wp.id,
+                  },
+                }))}
+                dataTransform={{
+                  工作包: (value) => html`<strong>${value}</strong>`,
+                  施工条件: (value, data) => {
+                    const tone = workspace.stale
+                      ? "waiting"
+                      : statusTone(readiness(String(data.编号)));
+                    const color =
+                      tone === "blocked"
+                        ? "var(--concord-danger-text)"
+                        : tone === "waiting"
+                          ? "var(--concord-warning-text)"
+                          : "var(--muted)";
+                    return html`<span style=${`color: ${color}`}
+                      >${value}</span
+                    >`;
+                  },
+                  操作: (value, data) =>
+                    html`<bim-button
+                      label="打开"
+                      aria-label=${`打开 ${data.工作包}`}
+                      .active=${selected === value}
+                      aria-pressed=${String(selected === value)}
+                      @click=${() => onPackage(String(value))}
+                    ></bim-button>`,
+                }}
+              />
+            </ThatOpenPanelSection>
           </section>
         )}
       </div>
@@ -204,22 +230,24 @@ export function ProjectOverview({
         !context.baselines.length &&
         !workspace.events.length && (
           <nav aria-label="项目内容" className="project-empty-record-links">
-            <button
+            <Button
+              variant="ghost"
               type="button"
               className="text-button"
               onClick={() => onTab("documents")}
             >
               文档 →
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               type="button"
               className="text-button"
               onClick={() => onTab("history")}
             >
               历史 →
-            </button>
+            </Button>
           </nav>
         )}
-    </div>
+    </ThatOpenPanel>
   );
 }

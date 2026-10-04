@@ -118,7 +118,7 @@ async function openProjectView(page: Page, name: "工作包" | "文档") {
   } else {
     await page
       .getByRole("region", { name: "工作包状态" })
-      .getByRole("button", { name: "查看全部 →" })
+      .getByRole("button", { name: "查看全部 →", exact: true })
       .click();
   }
 }
@@ -157,14 +157,20 @@ test("primary workspace has three intentions and surfaces a real decision", asyn
   await injectDemoEvent(page, /图纸 V16/);
   await expectBlocked(page);
   await nav.getByRole("button", { name: "工作", exact: true }).click();
-  const needs = page.getByRole("region", { name: "需要处理" });
-  await expect(needs.getByText(/东翼风管安装.*需要决定/)).toBeVisible();
-  await needs.getByRole("button", { name: /东翼风管安装.*需要决定/ }).click();
+  const work = page.getByRole("region", { name: "工作", exact: true });
+  await work.getByRole("tab", { name: /待处理/ }).click();
+  const decision = work
+    .locator(".workspace-row")
+    .filter({ hasText: "东翼风管安装" });
+  await expect(decision).toContainText("需要决定");
+  await decision
+    .getByRole("button", { name: "东翼风管安装 需要决定", exact: true })
+    .click();
   await expect(
-    page.getByRole("complementary", { name: "所选工作事项" }),
+    page.getByRole("region", { name: "所选工作事项" }),
   ).toContainText("需要决定");
   await page
-    .getByRole("complementary", { name: "所选工作事项" })
+    .getByRole("region", { name: "所选工作事项" })
     .getByRole("button", { name: "处理", exact: true })
     .click();
   await expectBlocked(page);
@@ -419,8 +425,10 @@ test("structured BIM, capability status, and run history remain usable without o
   await expect(duct).toBeVisible();
   await duct.click();
   await expect(duct).toHaveClass(/selected/);
-  const views = page.getByRole("navigation", { name: "主要工作区" });
-  await views.getByRole("button", { name: "模型", exact: true }).click();
+  await page
+    .getByRole("complementary", { name: "项目导航" })
+    .getByRole("button", { name: "模型", exact: true })
+    .click();
   await expect(page.getByRole("region", { name: "模型工作区" })).toBeVisible();
   // Both diagnostics and run history remain available through the advanced menu.
   await openAdvancedView(page, "能力诊断");

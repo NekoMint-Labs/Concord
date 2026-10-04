@@ -1,4 +1,5 @@
 import { lazy } from "react";
+import { ThatOpenViewport } from "../components/ThatOpenUI";
 import type { ModelTarget } from "./useWorkspaceNavigation";
 import type { WorkspaceViewsProps } from "./WorkspaceViewsProps";
 
@@ -62,7 +63,10 @@ export function ModelWorkspaceView({
   openWorkPackage,
 }: Props) {
   return (
-    <>
+    <ThatOpenViewport
+      className="model-workspace-viewport"
+      aria-label="模型工作区"
+    >
       {mappingMode && !!selected && (
         <BimMappingWorkspace
           project={project}
@@ -118,6 +122,6 @@ export function ModelWorkspaceView({
           condensed={condensed}
         />
       )}
-    </>
+    </ThatOpenViewport>
   );
 }

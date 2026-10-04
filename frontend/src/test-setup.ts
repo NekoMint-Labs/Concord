@@ -1,6 +1,31 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
+import { Manager } from "@thatopen/ui";
+
+// Match production registration; assertions exercise real donor components.
+Manager.init("", false);
+
+// jsdom has no viewport. Render donor table cells without simulating layout.
+if (!globalThis.IntersectionObserver) {
+  globalThis.IntersectionObserver = class {
+    constructor(private callback: IntersectionObserverCallback) {}
+    observe(target: Element) {
+      this.callback(
+        [{ target, isIntersecting: true } as IntersectionObserverEntry],
+        this as unknown as IntersectionObserver,
+      );
+    }
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return [];
+    }
+    readonly root = null;
+    readonly rootMargin = "0px";
+    readonly thresholds = [0];
+  };
+}
 
 /*
  * jsdom has no `matchMedia`, no `ResizeObserver`, and no rendering: an

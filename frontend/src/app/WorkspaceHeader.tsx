@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { PanelLeftOpen } from "lucide-react";
 import { api, type WorkPackage, type Workspace } from "../api/client";
 import { AppTooltip } from "../components/ui/AppTooltip";
+import { ThatOpenToolbar } from "../components/ThatOpenUI";
+import { Button } from "../components/ui/button";
 import { icon } from "../components/ui/icon";
 import {
   demoAreaName,
@@ -65,20 +67,20 @@ export function WorkspaceHeader({
       <div className="context-bar">
         {navCollapsed && (
           <AppTooltip label="展开侧栏">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               className="icon-button"
               aria-label="展开侧栏"
               onClick={onToggleNav}
             >
               <PanelLeftOpen {...icon} />
-            </button>
+            </Button>
           </AppTooltip>
         )}
         <nav className="breadcrumb" aria-label="当前位置">
-          <button type="button" onClick={() => onNavigate?.("project")}>
+          <Button onClick={() => onNavigate?.("project")}>
             {demoProjectName(project, data.state.project.name)}
-          </button>
+          </Button>
           {contextPackage && (tab === "coordination" || tab === "bim") && (
             <>
               <span className="crumb-sep">/</span>
@@ -96,12 +98,9 @@ export function WorkspaceHeader({
                   {demoWorkPackageName(contextPackage.id, contextPackage.name)}
                 </strong>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => onNavigate?.("coordination")}
-                >
+                <Button onClick={() => onNavigate?.("coordination")}>
                   {demoWorkPackageName(contextPackage.id, contextPackage.name)}
-                </button>
+                </Button>
               )}
             </>
           )}
@@ -158,9 +157,9 @@ export function WorkspaceHeader({
             )
           ))}
       </div>
-      <div className="local-actions" aria-label="当前工作区操作">
+      <ThatOpenToolbar className="local-actions" aria-label="当前工作区操作">
         {children}
-      </div>
+      </ThatOpenToolbar>
     </header>
   );
 }

@@ -147,10 +147,7 @@
   border: 0;
 }
 .application-shell .project-trigger {
-  border-radius: 4px;
-  justify-content: center;
   height: 36px;
-  padding: 0;
 }
 .application-shell .project-trigger .project-mark {
   width: 18px;

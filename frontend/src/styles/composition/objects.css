@@ -49,19 +49,15 @@
 }
 .application-shell
   :is(button, input, textarea, select, summary, [tabindex]):focus-visible,
-.application-shell .work-list .work-row:focus-visible,
 .application-shell .explorer-group li > button:focus-visible {
   outline: 2px solid var(--line-control-soft);
   outline-offset: -2px;
 }
-.application-shell
-  :is(.work-search, .explorer-search, .document-search):focus-within {
+.application-shell .explorer-search:focus-within {
   outline: 1px solid var(--line-control-soft);
   outline-offset: -1px;
 }
-.application-shell
-  :is(.work-search, .explorer-search, .document-search)
-  input:focus-visible {
+.application-shell .explorer-search input:focus-visible {
   outline: none;
 }
 .application-shell :is(.spatial-inspector-tabs, .spatial-context-tabs) button,

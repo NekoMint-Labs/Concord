@@ -43,6 +43,8 @@ vi.mock("../components/ui/AppSelect", () => ({
 
 beforeEach(() => vi.clearAllMocks());
 
+import { findDonorControl } from "../../tests/donor-dom";
+
 const documents = [
   { id: "first", filename: "First source" },
   { id: "second", filename: "Second source" },
@@ -74,14 +76,14 @@ function chooseDocument(name: string) {
   fireEvent.change(select, { target: { value: option.value } });
 }
 
-it("changing source or query clears the previous disclosure consent", () => {
+it("changing source or query clears the previous disclosure consent", async () => {
   setup();
   const consent = screen.getByRole("checkbox");
   fireEvent.click(consent);
   chooseDocument("Second source");
   expect(consent).not.toBeChecked();
   fireEvent.click(consent);
-  fireEvent.change(screen.getByLabelText("语义查询"), {
+  fireEvent.input(await findDonorControl("textbox", "语义查询"), {
     target: { value: "different text" },
   });
   expect(consent).not.toBeChecked();
@@ -95,7 +97,7 @@ it("a late result for an old source cannot appear under the new source", async (
     }),
   );
   setup();
-  fireEvent.change(screen.getByLabelText("语义查询"), {
+  fireEvent.input(await findDonorControl("textbox", "语义查询"), {
     target: { value: "duct evidence" },
   });
   fireEvent.click(screen.getByRole("button", { name: "搜索向量" }));

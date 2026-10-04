@@ -1,8 +1,172 @@
 # UI reference implementation map
 
-Patterns are adapted to Concord's React/CSS/CVA/Radix Slot/Lucide stack; no dependency or copied source is introduced.
+Patterns are adapted to Concord's React/CSS/CVA/Radix Slot/Lucide stack. The #16 workbench phase directly ports approved OpenTakeoff interaction source as recorded below. The subsequent donor migration adopts pinned `@thatopen/ui@3.4.14` and its existing Lit `3.3.1` runtime as the surface owner, without introducing a competing theme or domain state owner. See [the migration map](UI_DONOR_MIGRATION_MAP.md) for current ownership; older dependency statements below describe their historical phase.
 
-## WP-01 desktop workspace direction — current
+## #16 Product / Workspace — canonical #19 data integration
+
+The current product path consumes merged #19's generated `Finding`, `Evidence`,
+`ViewerTarget`, `FindingDecision`, `Coordination` and `ReCheck` contracts through
+`/api/projects/{project_id}/engineering`. This supersedes the fixture wiring described
+in the historical phases below; the donor work panel, docking, focus, layout and
+command-search mechanics remain unchanged.
+
+Work lists persisted engineering Findings independently of legacy Analysis/WorkPackage
+readiness. Finding selection uses opaque IDs, project-keyed application sessions and
+scoped query keys. Evidence is fetched by its persisted ID; `quality` alone separates
+structured, extracted and inferred records. Revision identity is `source_revision_id`,
+never the compatibility integrity hash `source_revision`. Missing legacy provenance or
+ViewerTargets remain visible limitations.
+
+The typed Evidence host routes drawing/CAD, BIM and document targets to their product
+surface without rewriting target fields. CAD's optional `layer` is preserved. #17's
+SDK adapters are not merged: the host retains Evidence and displays viewer unavailable,
+not successful navigation. No renderer or viewer lifecycle is implemented here.
+
+Human decisions wait for the backend, then refresh only affected Finding/list/history/
+ReCheck queries and existing project run/workspace records. ReChecks share existing
+AgentRun query/status infrastructure; execution completion does not imply RESOLVED.
+Manual retries retain the same operation ID after failure, including remounts and
+A → B → A navigation, in project/Finding-scoped QueryClient cache. Current-version
+binding is explained conservatively; only an accepted human CLOSED decision authorizes
+closure. The close dialog starts with no selected basis and explicitly submits the
+human-selected, evidence-bearing RESOLVED `recheck_id`; the backend validates its
+Finding/dependency binding and may reject the decision.
+
+Shared-contract gaps remain explicit: `FindingDecision` has no **Evidence insufficient**
+operation, and EDITED exposes title/action but not suggested discipline. Product controls
+explain these limits rather than mapping to other decisions or inventing authority.
+Contextual Agent questions use the existing scoped Ask/Investigation boundary; answers
+never write engineering Evidence, Coordination or Finding decisions.
+
+Previous deterministic fixtures are isolated visual/test inputs only. They are not
+imported by the production application or used as fallback API data. Browser qualification
+must distinguish canonical response mocks from real backend/persistence journeys.
+
+## #16 Product / Workspace phase three — Coordination / ReCheck interaction preview
+
+A's contract foundation is now published in unmerged PR #19, reviewed read-only at
+`c108e95ceeafabc04d263f620ddbf059d717e1a8`. This phase follows its semantics without
+merging that branch or copying generated schemas. `Coordination` is an append-only
+human decision record, not a new assignment/task API; closure needs current resolved
+structured evidence for every dependency source and an explicit human decision.
+
+`features/FindingFollowUp.tsx` adds an on-demand dialog inside the donor work panel.
+It shows local decision history, a visibly simulated MEP revision arrival, ReCheck
+availability and explicit sample selection. `app/fixtures/recheck.ts` supplies six
+UI scenarios: RESOLVED, STILL_OPEN, CHANGED, unavailable NEEDS_REVIEW, incomplete
+source coverage and an obsolete resolved sample. These are not detector outputs,
+provider health reports, uploads or canonical ReCheck DTOs. The initial scenario is
+unavailable, never synthetic success. Execution and business outcome remain distinct.
+
+The session hook retains sample revision/Finding-generation bindings and history.
+New revisions, edits and renewed decisions invalidate old closure eligibility. A
+close form also captures the selected sample: replacing it cannot silently reuse
+consent for the previous result. Only fresh structured resolved samples for both the
+MEP and structural model dependencies enable an explicitly confirmed **关闭示例**.
+It never closes a project Finding, promotes a Baseline or changes WorkPackage readiness.
+Evidence links and contextual Concord explanations reuse the existing typed host seam;
+modal Escape leaves the donor work panel open and restores focus to its trigger.
+
+The fixture-only hook's edit/review generation is not an A state enum or persistence
+contract. Evidence insufficient remains a local note, not an invented API decision.
+Switching projects/reloading/resetting clears all history and sample state. Real project
+Work, source/revision handling, Coordination and existing approvals remain unchanged.
+Checks cover all six sample paths, missing dependencies, version/decision invalidation,
+stale close consent, history retention/reset, exact viewer targets, offline API isolation
+and unchanged authoritative project state. Three viewport capture sets are stored under
+`.verification-work/issue-16-workbench/phase-3/`.
+
+Real wiring still requires #19 merge and generated API consumption, then #17 engineering
+capabilities/viewers. No backend/runtime/persistence/schema/desktop/viewer code is changed.
+
+## #16 Product / Workspace phase two — object navigation and contextual explanation
+
+`features/useFindingPreview.ts` lifts fixture selection, edits and human review into
+`ProjectApplication`'s project-keyed session. Work / Project / Browse navigation no
+longer discards the current Finding receipt. Turning off the preview removes its
+objects from Browse and command search, but does not erase session edits; reset,
+project switching and reload do. Only chrome preferences use browser storage.
+
+Browse's explicit **包含 Finding 交互示例** checkbox adds a separate **交互示例** group;
+real project categories and API-backed records remain unchanged. Finding results
+show the current local review status; Evidence results open the exact contextual
+host. The donor command menu reuses the same opted-in object entries rather than
+introducing another search backend or navigation store.
+
+`features/ConcordAgent.tsx` reuses Concord's anchored `AppPopover`, buttons and
+Agent surface for fixed **离线解释 fixture** questions about the current Finding.
+Answers distinguish structured evidence, extracted text and inferred interpretation,
+link back to the selected Evidence target, and identify human-edited discipline as
+human input rather than an AI conclusion. Fixture mode does not mount the real
+Agent runtime component or call its APIs. Changing object/edited values invalidates
+the previous displayed explanation; citation links return focus to the trigger.
+This is not a live chat, detector result, canonical Finding contract or persistence.
+
+Checks cover invalid fixture IDs/review input, session retention and project reset,
+Browse separation, API isolation, and Chromium navigation/citation/reload flows at
+1440×900, 1280×720 and 860×900. Rendered captures live under
+`.verification-work/issue-16-workbench/phase-2/`. #18 / A still owns contracts and
+Coordination/ReCheck mutations; #17 / C still owns actual viewers and engineering
+analysis. No new donor interaction or license dependency is introduced in phase two.
+
+## #16 Product / Workspace phase one — current composition
+
+The workbench now combines **Work / Project / Browse** navigation with contextual
+Drawing / Model / Document hosts. This phase supersedes the earlier six-destination
+navigation below, but preserves its CJK typography, near-white surfaces, primitives,
+accessibility, motion and visual tokens.
+
+OpenTakeoff is a source donor, not a visual redesign reference. At revision
+`60c82e34b389384401a083cefeb9389f89fbaae1` we port/adapt. This audit also checked
+current upstream HEAD `788e39bfe9c42b3260ea75e84a655e4574f9bc8c`: the chrome,
+layout, panel, focus, tokens and RevisionsPanel sources below are unchanged.
+TakeoffCanvas's newer OCR/sheet-label/snapping changes are outside this port.
+
+Port/adaptation map:
+
+| Donor | Concord | Retained interaction |
+| --- | --- | --- |
+| `workspaceLayout.js` / `WorkspaceLayout.jsx` | `layout/workspaceLayout.ts`, `WorkspaceLayout.tsx` | normalized local preferences, locked docking, grip drag/keyboard positioning, eight named arrangements, reset |
+| `focusMode.js` | `layout/focusMode.ts` | personal focus preference and event broadcast; storage-unavailable session fallback fixed |
+| `WorkspaceChrome.jsx` | `app/WorkspaceChrome.tsx` | compact chrome/action slots, bounded command filtering, active-descendant keyboard selection |
+| `WorkspacePanel.jsx` | `features/FindingWorkbench.tsx` | work list → selected receipt → evidence → explicit human review, panel open/close/Escape |
+| `workspaceChrome.css` / `workspacePanel.css` | `styles/workbench.css` | ported flex chrome, panel, command, docking and preference composition mapped to existing tokens |
+
+Inspected but deliberately rejected: `styles/tokens.css` branding/fonts/cobalt/HUD,
+TakeoffCanvas's measurement/OCR/quantity domain and viewer internals, and
+RevisionsPanel's snapshot restoration. None is Concord Baseline promotion or
+ReCheck authorization. Filtering/pagination and multi-tab estimating detail in
+WorkspacePanel are not ported for this one-candidate fixture; production object
+queries replace the isolated fixture after A's contract lands.
+
+Concord retains `PaneSplit` as the only resize engine, its existing responsive stacking,
+`components/ui/` (including Radix dialog focus management), `motion/`, real project
+lifecycle, Work queue, Project source/revision/baseline behavior, Browse, and contextual
+Agent. Layout/focus preferences are browser-local chrome only, never project state.
+`PaneSplit` exposes a user-only settled resize callback so donor arrangements save pixel
+widths without persisting viewport constraints. `PaneDivider` re-registers its separator
+when disabled changes: resizable-panels v4 otherwise retains a disabled separator's
+missing keyboard panel map after unlocking. Finding review actions remain pinned below
+its independently scrolling receipt, including in the stacked narrow-window layout.
+
+Work now renders the authoritative Finding list in its engineering context; selecting a
+Finding opens the docked review inspector without a separate “打开 Finding 工作台” mode.
+The command search does not create a second Finding workspace. Preview fixtures, where
+explicitly enabled for UI demonstrations, remain isolated from project records; real
+projects never silently receive fake Findings. Review/edit retains the existing server
+mutation and ReCheck contracts rather than creating local project state.
+
+`app/fixtures/finding.ts` contains an explicitly fixture-only ViewerTarget input,
+following the minimum target forms in #18. It is not a canonical or persistent schema.
+`app/EvidenceWorkspaceHost.tsx` routes its discriminant to Drawing, Model or Document
+host and exposes the exact revision/page/region/GlobalIds/section receipt, **not** a
+renderer. Replace fixture input with A's generated contracts after #18 and bind C's
+surfaces after #17; `frontend/src/viewers/` remains untouched in this phase.
+
+Apache-2.0 source attribution, license and upstream NOTICE are distributed under
+`frontend/public/licenses/` and recorded in `THIRD_PARTY_NOTICES.md`.
+
+## WP-01 desktop workspace direction — previous visual baseline
 
 The approved wide desktop mock (`WP-01 机电工程`) supersedes all earlier palette,
 density, shell, and navigation value statements in this document. Concord now uses:
@@ -366,3 +530,144 @@ That pass introduced no package: every pattern above was expressed in the existi
 The references were inspected as implementation patterns only. Concord contains no copied external source. shadcn/ui and xyflow are MIT; shadcn-admin is MIT; Supabase and Trigger.dev are Apache-2.0; GitHub Desktop, SpaceUI, and AFFiNE are MIT; Spacedrive is Functional Source License 1.1, inspected for layout composition only. AppFlowy is AGPL-3.0: it was used as a directional reference for ease-out desktop pane motion (`easeOutQuad`) and no AppFlowy source, widget, or asset was copied into this repository.
 
 Linear, Obsidian, Notion, and Attio are proprietary products and were used as a directional visual reference only - no source was inspected, and no branding, colour, or identity was copied. Concord's palette, radius scale, and motion tokens were independently derived and are asserted by its own token contract. No attribution notice is required for the independently implemented adaptations in this repository.
+
+## #16 existing-work audit and latest #10 baseline reconciliation
+
+The working tree already contained the three fixture phases above. Review found the
+Issue 16 branch tip `42c3da6` predates four latest #10 commits; this round imports the
+source delta through `41d3297` without committing, resetting or altering branch history.
+The latest extracted workspace/detail components remain in use. Ask and Investigation
+context fencing, source-processing generation guards and Work-before-launch context
+synchronization are preserved, along with their latest regression tests.
+
+Focused audit fixes: external dialog openers regain keyboard focus on Escape/save;
+keyed docked panes retain the grip across left/right movement; visible drop zones match
+hit testing; eight saved layouts remain inside a scrolling, viewport-bounded dialog;
+local preferences survive project-keyed remounts if storage is unavailable. Reset
+returns the mounted sample selector to unavailable. Visual review also found that the
+focus-mode exit overlapped workspace actions; it now occupies a compact strip instead
+of covering object controls. Selected historical
+ReCheck evidence retains its bound sample identity and visibly reports stale versions,
+changed Finding decisions or superseded samples in the host, including after navigation.
+None of these local receipt flags is a canonical validity contract.
+
+New regression captures include 1920×1080, 1440×900 and 1280×720 (plus the existing
+860×900 stacked-window checks), review/dialog focus, consecutive keyboard docking,
+eight saved arrangements and stale evidence receipts. Captures are verification
+artifacts under `.verification-work/issue-16-workbench/`, not production viewer output.
+
+Audit verification (Linux source/browser qualification): `pnpm typecheck` passed;
+`pnpm test` passed 56 files / 320 tests; `pnpm test:transport` passed 38 checks;
+`pnpm lint`, explicit Prettier checks for Finding/ReCheck/real-project E2E, production
+build and `git diff --check` passed. Chromium against the isolated DBOS production host
+passed 31/31; the separate real IFC suite passed 2/2; the independent real-project suite
+passed 3/3. The latter retains real R1/R2 geometry, exact GUIDs, original downloads,
+restart, approvals and B1/B2 assertions. Its old permanent controls were updated to
+current menus/disclosures; thin-prism canvas picking uses a denser centre-first grid
+but still requires a real geometry click (no SDK or DOM fallback). Existing Vite
+large-chunk/mixed-static-dynamic BIM warnings remain; Windows native packaging was
+not rerun and browser qualification is not a substitute for it.
+
+Rendered screenshot review covered actual Work unselected/Peek selected, selected
+Finding and its hidden/reopened review panel, Drawing/Model/Document target receipts,
+structured/extracted vs inferred sections, edited human recommendations, command search,
+focus mode before/after overlap correction, eight saved layouts, stale ReCheck evidence,
+unavailable verification and service recovery. Desktop captures were reviewed at
+1920×1080, 1440×900, 1280×720; 860×900 also verifies stacking. No remaining observed
+chrome overlap/horizontal overflow in those states; constrained panes intentionally
+scroll. Evidence hosts still display fixture location receipts, not rendered engineering
+files. Real IFC mapping/impact and B2 source/baseline captures from the separate lifecycle
+suite were also inspected. No backend, desktop, viewer, generated API/schema or manifest
+files were edited. A's #18 / unmerged #19 and C's #17 remain real-integration dependencies.
+
+
+## #16 canonical integration qualification (supersedes fixture-era results above)
+
+Branch `feat/16-product-workspace` is based on merged main
+`4fc1e56984c4554e07cc9c20fcc209ffb66e707b`. Previous #16 working changes were
+retained; `stash@{0}` remains a safety backup. No commit, push or PR was made.
+The generated OpenAPI/schema, backend, desktop and `frontend/src/viewers/**`
+remain unchanged. #17 / PR #21 still owns actual engineering viewer navigation.
+
+Final frontend gates: `pnpm typecheck`, `pnpm lint`, `pnpm build`, E2E DTO
+TypeScript checks and `git diff --check` pass. `pnpm test` passes **60 files /
+392 tests**; `pnpm test:transport` passes **38 checks**. Vite's existing large
+chunks and mixed dynamic/static BIM imports remain warnings. AFT returned a fresh
+inspection with no reported errors, but lacked authoritative diagnostics for two
+scoped files; successful TypeScript/build gates are the authority, not that gap.
+
+Final Chromium runs against built assets:
+
+- Default lane: **27/27**, including the **11** canonical Finding/ReCheck checks,
+  coordination, product, desktop recovery, quiet-workspace and local IFC regressions.
+- Isolated real-engineering lane: **1/1**; persisted reads, human confirmation,
+  NEEDS_REVIEW, rejected closure, trusted RESOLVED publication, explicitly selected
+  closure basis, persisted CLOSED/Coordination `recheck_id`, reload and reopening.
+- Real-project lane: **3/3**, retaining actual R1/R2 geometry, restart/isolation,
+  explicit B1/B2, approved simulated recheck and enabled multi-file text parsers.
+- Separate IFC lane: **2/2**, retaining actual rendering/GUIDs, original download,
+  source/mapping/baseline/revision/Investigation and restart assertions.
+
+An earlier default run had one coordination readiness timeout that passed on retry;
+the final complete run passed without retries. The multi-file baseline test now
+waits for the real POST's 201 response before GET assertions, rather than racing
+persistence. No business assertion was weakened.
+
+Qualification provenance is intentionally split. Actual Finding journeys use real
+HTTP, persistence and DBOS, but initial Evidence publication uses a trusted synthetic
+internal provider. The successful closure test uses the existing backend acceptance
+`CheckEngine`, not production clearance geometry. Loading captures delay and continue
+real requests. All-outcome/staleness/failure/retry and explicit DTO error-state cases
+in the dedicated browser specs are transport-mocked and named accordingly. None of
+these synthetic Finding records qualifies detector accuracy or #17 viewer navigation;
+real geometry remains qualified only by the separate existing geometry/IFC journeys.
+
+Representative screenshots were inspected at **1920×1080, 1440×900 and 1280×720**:
+exact Evidence/provenance, CAD layer, drawing/document hosts, inferred separation,
+empty/error and stale states, decisions, restored review panel, focus/layout and
+explicit real closure basis. No observed chrome overlap or horizontal overflow;
+tall target receipts, history and constrained review panes intentionally scroll.
+The close dialog remains visible at all three sizes, with DOM overflow assertions.
+Artifacts: `.verification-work/issue-19-findings/`,
+`.verification-work/issue-19-playwright-results/`, `.verification-work/issue-16-real/`,
+`.verification-work/real-project/` and the IFC lane's configured artifact directory.
+
+Remaining coordination: A must define a canonical Evidence-insufficient operation
+and any discipline-edit capability; neither is substituted locally. B must integrate
+and requalify C's exact-target viewer adapters after #17 lands, and qualify native
+Windows packaging separately if required. No #17/#18/#20/#21 implementation or new
+backend publication operation was added by this integration.
+
+## Issue #16: current-donor content conformance
+
+**Inspected donor:** OpenTakeoff revision `788e39bfe9c42b3260ea75e84a655e4574f9bc8c`, fetched into `/tmp/concord-opentakeoff-donor`. Required files inspected: `web/src/components/WorkspacePanel.jsx`, `workspacePanel.css`, `WorkspaceChrome.jsx`, `workspaceChrome.css`, `WorkspaceLayout.jsx`, and `web/src/lib/workspaceLayout.js`. This pass reuses the existing shell and docking/focus/search integration rather than replacing them.
+
+**Ported composition, adapted meaning:** `WorkspacePanel` supplies filters → compact object rows → selected-object inspector → quiet receipt/provenance → next action. Work shows an engineering-review lane above the separate project-work lane; their records and actions are not merged. The selected Finding appears once, with state, change, engineering consequence and suggested next action first. Its list is reopenable via a native disclosure. Canonical Finding JSON, exact timestamps, dependencies and opaque identities remain in technical details.
+
+Evidence leads with its fact/title, truthful quality, real source/revision labels and exact engineering target. Drawing page/region, CAD entity and optional layer, BIM GlobalIds, and document page/path remain exact; missing metadata says it is missing. Hashes, provider, snapshot/record IDs and target JSON are collapsed, not removed. Source/revision labels use the existing project/source query-cache key; the Evidence host remains a presentation-only component. No viewer is invoked or claimed to have located an object. Stale, unsupported, missing-target and unavailable-viewer boundaries keep their original target and selection.
+
+Coordination and ReCheck use compact records with engineering conclusion, checked condition, execution status and freshness kept distinct. Human decision history remains a separate append-only section; execution completion and AI explanation never imply closure. Raw enums, request IDs, run IDs and complete canonical records are available through technical disclosures. Browse uses object names, source/revision context and quality before identity; opaque IDs remain searchable and navigation remains exact.
+
+**Not used:** donor estimating/bidding semantics, quantity/price counters, appearance system, fonts, viewer runtime, or a second layout/persistence mechanism. The existing accent family alone was retuned to restrained petrol in `frontend/src/styles/base.css`; semantic status colors and the shell's geometry were preserved.
+
+**Verification artifacts:** `.verification-work/issue-16-donor-conformance/before/` retains the prior captures; `after/` contains fresh 1920×1080, 1440×900 and 1280×720 captures. Real HTTP Finding/Evidence/decision/ReCheck flows and explicitly transport-mocked exceptional/outcome states are separately named. E2E checks preserve exact target JSON (including absent/null CAD layer), authoritative decisions, rejection, retry identity, focus restoration and horizontal-overflow assertions; new bounds checks require change, consequence and next action to fit the inspector before scrolling at all three sizes. Native disclosures are exercised before inspecting their canonical content and then collapsed for screenshots. This qualifies #16 presentation, not #17 detection/viewer behavior or native Windows packaging.
+
+**Final checks:** `pnpm typecheck`, all 399 unit/integration tests (61 files), all 38 transport/token/style checks, `pnpm lint`, production build and `git diff --check` passed. Chromium passed 11 Finding/ReCheck cases, the real persisted closure/reopen case and 2 existing shell/Peek/model cases. The required 66-capture state/size matrix is complete with exact PNG dimensions; full before/after sets each contain 126 PNGs. Build retains bundle-size/mixed-import warnings; AFT had incomplete LSP reports for three files, so the clean TypeScript/build runs are the compile gates. See `.verification-work/issue-16-donor-conformance/REPORT.md`. Ready for FINAL VISUAL ACCEPTANCE, pending human approval; no commit/push/PR was performed.
+
+## #16 donor-owned UI qualification — current
+
+The ThatOpen donor migration supersedes the earlier fixture/content-conformance
+results above. Real donor Grid/Panel/Section/Table/Toolbar/Viewport surfaces now own
+the adopted workspace substrates; React retains domain orchestration and Radix
+retains modality. Work keeps its canonical Finding queue alongside Evidence and
+docked review without a separate workspace-opening mode.
+
+The final build passed 407 unit/integration tests, 38 transport/token/style checks,
+all 31 Chromium cases, 2 real IFC cases, 1 real persisted Finding/ReCheck case and
+3 real-project cases, without browser retries. Typecheck, lint, production build,
+whitespace and protected-path/fixture checks passed. The final 169-capture sets
+cover 1920×1080, 1440×900 and 1280×720. Native packaged Tauri smoke was not run.
+
+See [the ownership map](UI_DONOR_MIGRATION_MAP.md) and
+[the final verification record](UI_DONOR_VERIFICATION.md) for audited revisions,
+integration boundaries, exact logs/screenshots and qualification limits.

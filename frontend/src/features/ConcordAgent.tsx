@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScanSearch } from "lucide-react";
 import {
@@ -40,6 +41,7 @@ export type ConcordContext = {
 export function ConcordAgent({
   project,
   context,
+  finding,
   currentRun,
   report,
   onRun,
@@ -48,6 +50,7 @@ export function ConcordAgent({
 }: {
   project: string;
   context: ConcordContext;
+  finding?: DTO<"Finding">;
   currentRun?: AgentRun | null;
   report?: InvestigationReport | null;
   onRun: (run: AgentRun) => void;
@@ -59,7 +62,11 @@ export function ConcordAgent({
 }) {
   const cache = useQueryClient();
   const [question, setQuestion] = useState("");
-  const contextKey = engineeringContextKey(project, context);
+  const contextKey = JSON.stringify([
+    engineeringContextKey(project, context),
+    finding?.id,
+    finding?.updated_at,
+  ]);
   // A fresh token also fences A → B → A, not just different revision IDs.
   const askContext = useRef({ key: contextKey });
   if (askContext.current.key !== contextKey)
@@ -92,7 +99,13 @@ export function ConcordAgent({
             : { label: "检查当前项目", instruction: "调查当前项目" },
     [context],
   );
-  const submittedInstruction = question.trim() || investigation.instruction;
+  const contextualInstruction = (instruction: string) =>
+    finding
+      ? `${instruction}\n围绕 Finding ${finding.id}：${finding.title}。变化：${finding.what_changed}。建议专业：${finding.suggested_discipline ?? "未指定"}。Evidence IDs：${finding.evidence_ids.join(", ")}。这是解释请求，不能确认为 Evidence 或代替人工决策。`
+      : instruction;
+  const submittedInstruction = contextualInstruction(
+    question.trim() || investigation.instruction,
+  );
   const stream = useRunStream(
     validRun?.id,
     !!validRun &&
@@ -213,6 +226,29 @@ export function ConcordAgent({
           </p>
         </section>
 
+        {finding && (
+          <section className="finding-context-questions">
+            <strong>{finding.title}</strong>
+            <p>
+              仅解释当前 Finding；多源依赖的完整判定请查看工程 Evidence。AI
+              不能作出人工决策。
+            </p>
+            {[
+              "这项判断有哪些依据？",
+              "为什么建议此专业？",
+              "什么发生了变化？",
+            ].map((text) => (
+              <Button
+                key={text}
+                variant="secondary"
+                size="sm"
+                onClick={() => setQuestion(text)}
+              >
+                {text}
+              </Button>
+            ))}
+          </section>
+        )}
         <form
           className="agent-ask"
           onSubmit={(event) => {
@@ -222,7 +258,7 @@ export function ConcordAgent({
                 identity: askContext.current,
                 project,
                 context: { ...context, elementIds: [...context.elementIds] },
-                instruction: question.trim(),
+                instruction: contextualInstruction(question.trim()),
               });
           }}
         >

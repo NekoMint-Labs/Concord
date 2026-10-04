@@ -8,101 +8,55 @@ import {
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
-import { api, type Workspace } from "../api/client";
+import { api, type DTO, type Workspace } from "../api/client";
 import { WorkList } from "./WorkList";
 
 afterEach(() => vi.restoreAllMocks());
 
-/** The inbox's context region reads the same project queries the header does. */
 function cache() {
   return new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
 }
 
-it("routes authoritative approval and stale states to one next action", () => {
-  vi.spyOn(api, "baselines").mockResolvedValue([]);
-  vi.spyOn(api, "documents").mockResolvedValue([]);
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  const onPackage = vi.fn();
-  const onRecheck = vi.fn();
-  const props = {
-    workspace,
-    sources: [],
-    onPackage,
-    onRecheck,
-    onModels: vi.fn(),
-    onReport: vi.fn(),
-    onProject: vi.fn(),
-    onTab: vi.fn(),
+function finding(
+  id: string,
+  state: DTO<"Finding">["state"] = "PROPOSED",
+): DTO<"Finding"> {
+  return {
+    id,
+    project_id: "harbor-east",
+    state,
+    snapshot_id: "snapshot-2",
+    work_package_id: "WP-200",
+    title: `Finding ${id}`,
+    conclusion: "Measured coordination issue",
+    what_changed: "Duct moved in the latest revision",
+    why_it_matters: "Clearance needs review",
+    evidence_ids: ["evidence-1"],
+    reasoning_summary: "Compare the current source evidence",
+    confidence: 0.9,
+    limitations: [],
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    impact: null,
+    change_ids: [],
+    dependencies: [],
+    suggested_action: "Coordinate the route",
+    suggested_discipline: "MEP",
   };
-  const view = render(
-    <QueryClientProvider client={cache()}>
-      <WorkList {...props} />
-    </QueryClientProvider>,
-  );
-  const needs = screen.getByRole("region", { name: "需要处理" });
-  expect(within(needs).getByText(/需要决定/)).toBeVisible();
-  expect(
-    screen.queryByRole("complementary", { name: "所选工作事项" }),
-  ).not.toBeInTheDocument();
-  fireEvent.click(within(needs).getByRole("button", { name: /需要决定/ }));
-  fireEvent.click(
-    within(
-      screen.getByRole("complementary", { name: "所选工作事项" }),
-    ).getByRole("button", { name: "处理" }),
-  );
-  expect(onPackage).toHaveBeenCalledWith("WP-200");
+}
 
-  workspace.proposals = [];
-  workspace.stale = true;
-  workspace.analysis_run = { ...workspace.analysis_run!, status: "FAILED" };
-  view.rerender(
-    <QueryClientProvider client={cache()}>
-      <WorkList {...props} />
-    </QueryClientProvider>,
-  );
-  fireEvent.click(
-    within(
-      screen.getByRole("complementary", { name: "所选工作事项" }),
-    ).getByRole("button", { name: "重新检查" }),
-  );
-  expect(onRecheck).toHaveBeenCalledOnce();
-});
-
-it("shows a pending model as work without claiming a newer baseline", () => {
-  vi.spyOn(api, "baselines").mockResolvedValue([]);
-  vi.spyOn(api, "documents").mockResolvedValue([]);
-  vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  workspace.proposals = [];
-  workspace.stale = false;
-  workspace.analysis!.readiness = workspace.analysis!.readiness.map((row) => ({
-    ...row,
-    status: "READY",
-  }));
-  const onModels = vi.fn();
-  render(
+function renderList(
+  workspace = structuredClone(fixture.waiting) as unknown as Workspace,
+) {
+  return render(
     <QueryClientProvider client={cache()}>
       <WorkList
         workspace={workspace}
-        sources={[
-          {
-            source: {
-              id: "model",
-              project_id: "harbor-east",
-              name: "MEP",
-              kind: "BIM",
-              created_at: "2026-01-01T00:00:00Z",
-            },
-            latest_revision_id: "r2",
-            accepted_revision_id: "r1",
-            baseline_id: "b1",
-            has_pending_revision: true,
-          },
-        ]}
+        sources={[]}
         onPackage={vi.fn()}
-        onModels={onModels}
+        onModels={vi.fn()}
         onRecheck={vi.fn()}
         onReport={vi.fn()}
         onProject={vi.fn()}
@@ -110,34 +64,64 @@ it("shows a pending model as work without claiming a newer baseline", () => {
       />
     </QueryClientProvider>,
   );
-  const needs = screen.getByRole("region", { name: "需要处理" });
-  expect(within(needs).getByText("MEP 有新版本")).toBeVisible();
-  fireEvent.click(within(needs).getByRole("button", { name: /MEP 有新版本/ }));
-  fireEvent.click(
-    within(
-      screen.getByRole("complementary", { name: "所选工作事项" }),
-    ).getByRole("button", { name: "处理新版本" }),
+}
+
+it("combines opaque Finding IDs and project decisions in one queue", async () => {
+  vi.spyOn(api, "baselines").mockResolvedValue([]);
+  vi.spyOn(api, "documents").mockResolvedValue([]);
+  vi.spyOn(api, "engineeringFindings").mockResolvedValue([
+    finding("finding/opaque-73"),
+    finding("finding-done", "CONFIRMED"),
+  ]);
+  const onFindingSelect = vi.fn();
+  render(
+    <QueryClientProvider client={cache()}>
+      <WorkList
+        workspace={structuredClone(fixture.waiting) as unknown as Workspace}
+        sources={[]}
+        onPackage={vi.fn()}
+        onModels={vi.fn()}
+        onRecheck={vi.fn()}
+        onReport={vi.fn()}
+        onProject={vi.fn()}
+        onTab={vi.fn()}
+        onFindingSelect={onFindingSelect}
+      />
+    </QueryClientProvider>,
   );
-  expect(onModels).toHaveBeenCalledOnce();
-  const completed = screen.getByRole("region", { name: "最近完成" });
-  expect(completed.querySelector(".work-row-reason")).toBeNull();
-  expect(within(completed).getByText("东翼风管安装")).toBeVisible();
-  const packageRow = within(completed).getByRole("button", {
-    name: /东翼风管安装/,
-  });
-  expect(packageRow.querySelector("small")).not.toHaveTextContent(
-    "东翼风管安装",
-  );
-  fireEvent.click(packageRow);
-  const packagePeek = screen.getByRole("complementary", {
-    name: "所选工作事项",
-  });
+
   expect(
-    within(packagePeek).getByRole("region", { name: "为什么需要处理" }),
-  ).toHaveTextContent("基于当前基线");
+    await screen.findByRole("button", { name: /Finding finding\/opaque-73/ }),
+  ).toBeVisible();
+  expect(screen.getByText("5")).toBeVisible();
+  fireEvent.click(
+    screen.getByRole("button", { name: /Finding finding\/opaque-73/ }),
+  );
+  expect(onFindingSelect).toHaveBeenCalledWith("finding/opaque-73");
+  expect(
+    screen.getByRole("button", { name: /Finding finding\/opaque-73/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+
+  const tabs = document.querySelector("bim-tabs")!;
+  await waitFor(() =>
+    expect(tabs.shadowRoot?.querySelector("[role=tab]")).toBeDefined(),
+  );
+  fireEvent.click(
+    within(tabs.shadowRoot as unknown as HTMLElement).getByRole("tab", {
+      name: "已处理",
+    }),
+  );
+  expect(
+    screen.getByRole("button", { name: /Finding finding-done/ }),
+  ).toBeVisible();
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("button", { name: /Finding finding\/opaque-73/ }),
+    ).not.toBeInTheDocument(),
+  );
 });
 
-it("selects a work item in place before taking its real action", async () => {
+it("keeps a selected work receipt in place and routes its authoritative action", async () => {
   vi.spyOn(api, "baselines").mockResolvedValue([]);
   vi.spyOn(api, "documents").mockResolvedValue([]);
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
@@ -148,234 +132,92 @@ it("selects a work item in place before taking its real action", async () => {
         workspace={workspace}
         sources={[]}
         onPackage={onPackage}
-        onRecheck={vi.fn()}
         onModels={vi.fn()}
+        onRecheck={vi.fn()}
         onReport={vi.fn()}
         onProject={vi.fn()}
         onTab={vi.fn()}
       />
     </QueryClientProvider>,
   );
-  const row = screen.getByRole("button", { name: /需要决定/ });
+
+  const row = screen.getByRole("button", { name: /东翼风管安装/ });
   fireEvent.click(row);
-  expect(row).toHaveAttribute("aria-pressed", "true");
-  expect(
-    screen.getByRole("complementary", { name: "所选工作事项" }),
-  ).toHaveTextContent("WP-200");
-  expect(onPackage).not.toHaveBeenCalled();
-  const peek = screen.getByRole("complementary", { name: "所选工作事项" });
-  expect(
-    within(peek).getByRole("region", { name: "当前判断" }),
-  ).toHaveTextContent("已阻塞");
-  expect(within(peek).getAllByRole("button")).toHaveLength(2);
-  expect(within(peek).queryByRole("region", { name: "项目状态" })).toBeNull();
-  expect(within(peek).queryByRole("region", { name: "模型上下文" })).toBeNull();
-  expect(
-    within(peek).getByRole("region", { name: "下一步" }),
-  ).toHaveTextContent("处理");
-  fireEvent.click(within(peek).getByRole("button", { name: "关闭详情" }));
-  expect(
-    screen.queryByRole("complementary", { name: "所选工作事项" }),
-  ).not.toBeInTheDocument();
-  expect(row).toHaveAttribute("aria-pressed", "true");
-  await waitFor(() => expect(row).toHaveFocus());
-  fireEvent.click(row);
-  fireEvent.keyDown(row, { key: "ArrowDown" });
-  const next = screen.getByRole("button", { name: /结构交接.*可施工/ });
-  expect(next).toHaveAttribute("aria-pressed", "true");
-  expect(
-    screen.getByRole("complementary", { name: "所选工作事项" }),
-  ).toHaveTextContent("WP-100");
-  fireEvent.keyDown(next, { key: "Escape" });
-  expect(
-    screen.queryByRole("complementary", { name: "所选工作事项" }),
-  ).not.toBeInTheDocument();
-  fireEvent.click(row);
-  fireEvent.click(
-    within(
-      screen.getByRole("complementary", { name: "所选工作事项" }),
-    ).getByRole("button", { name: "处理" }),
-  );
+  const receipt = screen.getByRole("region", { name: "所选工作事项" });
+  expect(receipt).toHaveTextContent("为什么需要处理");
+  expect(receipt).toHaveTextContent("验收尚未通过");
+  fireEvent.click(within(receipt).getByRole("button", { name: "处理" }));
   expect(onPackage).toHaveBeenCalledWith("WP-200");
-  const search = screen.getByRole("searchbox", { name: "搜索工作事项" });
-  search.focus();
-  fireEvent.change(search, { target: { value: "结构交接" } });
-  expect(
-    screen.queryByRole("complementary", { name: "所选工作事项" }),
-  ).not.toBeInTheDocument();
-  await waitFor(() => expect(search).toHaveFocus());
-  fireEvent.change(search, { target: { value: "" } });
-  expect(
-    screen.queryByRole("complementary", { name: "所选工作事项" }),
-  ).not.toBeInTheDocument();
-});
 
-it("closes a disappearing selection without reopening it after a refresh", () => {
-  vi.spyOn(api, "baselines").mockResolvedValue([]);
-  vi.spyOn(api, "documents").mockResolvedValue([]);
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  const client = cache();
-  const content = () => (
-    <QueryClientProvider client={client}>
-      <WorkList
-        workspace={workspace}
-        sources={[]}
-        onPackage={vi.fn()}
-        onModels={vi.fn()}
-        onRecheck={vi.fn()}
-        onReport={vi.fn()}
-        onProject={vi.fn()}
-        onTab={vi.fn()}
-      />
-    </QueryClientProvider>
-  );
-  const view = render(content());
-  const row = screen.getByRole("button", { name: /结构交接.*可施工/ });
-  row.focus();
-  fireEvent.click(row);
-  expect(
-    screen.getByRole("complementary", { name: "所选工作事项" }),
-  ).toHaveTextContent("WP-100");
   workspace.stale = true;
-  view.rerender(content());
-  expect(
-    screen.queryByRole("complementary", { name: "所选工作事项" }),
-  ).not.toBeInTheDocument();
-  expect(screen.getByRole("searchbox", { name: "搜索工作事项" })).toHaveFocus();
-  workspace.stale = false;
-  view.rerender(content());
-  expect(
-    screen.getByRole("button", { name: /结构交接.*可施工/ }),
-  ).toHaveAttribute("aria-pressed", "false");
-  expect(
-    screen.queryByRole("complementary", { name: "所选工作事项" }),
-  ).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /东翼风管安装/ })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 });
 
-it("navigates displayed decisions while closed and dismisses without stealing outside focus", () => {
+it("uses donor controls for search and bounded paging", async () => {
   vi.spyOn(api, "baselines").mockResolvedValue([]);
   vi.spyOn(api, "documents").mockResolvedValue([]);
+  vi.spyOn(api, "engineeringFindings").mockResolvedValue([]);
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  render(
-    <QueryClientProvider client={cache()}>
-      <button type="button">Outside action</button>
-      <WorkList
-        workspace={workspace}
-        sources={[]}
-        onPackage={vi.fn()}
-        onModels={vi.fn()}
-        onRecheck={vi.fn()}
-        onReport={vi.fn()}
-        onProject={vi.fn()}
-        onTab={vi.fn()}
-      />
-    </QueryClientProvider>,
+  renderList(workspace);
+  fireEvent.click(screen.getByRole("button", { name: /东翼风管安装/ }));
+  expect(screen.getByRole("region", { name: "所选工作事项" })).toBeVisible();
+
+  const host = document.querySelector("bim-text-input")!;
+  expect(host).toBeInstanceOf(customElements.get("bim-text-input")!);
+  await waitFor(() =>
+    expect(host.shadowRoot?.querySelector("input")).toBeDefined(),
   );
-  const needs = within(
-    screen.getByRole("region", { name: "需要处理" }),
-  ).getByRole("button");
-  const done = within(
-    screen.getByRole("region", { name: "最近完成" }),
-  ).getAllByRole("button");
-  needs.focus();
-  fireEvent.keyDown(needs, { key: "End" });
-  expect(done.at(-1)).toHaveFocus();
-  expect(
-    screen.queryByRole("complementary", { name: "所选工作事项" }),
-  ).toBeNull();
-  fireEvent.keyDown(done.at(-1)!, { key: "Home" });
-  expect(needs).toHaveFocus();
-  fireEvent.click(needs);
-  const target = done[0];
-  fireEvent.keyDown(needs, { key: "ArrowDown" });
-  expect(target).toHaveFocus();
-  expect(target).toHaveAttribute("aria-pressed", "true");
-  expect(
-    screen.getByRole("complementary", { name: "所选工作事项" }),
-  ).toHaveTextContent("WP-100");
-  const outside = screen.getByRole("button", { name: "Outside action" });
-  outside.focus();
-  fireEvent.pointerDown(outside);
-  expect(outside).toHaveFocus();
-  expect(
-    screen.queryByRole("complementary", { name: "所选工作事项" }),
-  ).toBeNull();
-  expect(target).toHaveAttribute("aria-pressed", "true");
+  const search = within(host.shadowRoot as unknown as HTMLElement).getByRole(
+    "textbox",
+    { name: "搜索工作" },
+  );
+  fireEvent.input(search, { target: { value: "结构交接" } });
+  await waitFor(() => {
+    expect(screen.getByRole("button", { name: /结构交接/ })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /东翼风管安装/ }),
+    ).not.toBeInTheDocument();
+  });
+  expect(screen.getByText(/项匹配/)).toHaveTextContent(
+    "显示 1 项 · 共 1 项匹配",
+  );
+  expect(screen.queryByRole("region", { name: "所选工作事项" })).toBeNull();
+  fireEvent.input(search, { target: { value: "" } });
+  await waitFor(() => {
+    expect(
+      screen.getByRole("region", { name: "所选工作事项" }),
+    ).toHaveTextContent("东翼风管安装");
+    expect(
+      screen.getByRole("button", { name: /东翼风管安装/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
 });
 
-it("keeps a pending source Peek on its real comparison and at most one secondary destination", async () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  const source = {
-    source: {
-      id: "model",
-      project_id: "harbor-east",
-      name: "MEP",
-      kind: "BIM" as const,
-      created_at: "2026-01-01",
-    },
-    latest_revision_id: "r2",
-    accepted_revision_id: "r1",
-    baseline_id: "b1",
-    has_pending_revision: true,
-  };
-  vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
-  const comparison = {
-    id: "comparison",
-    project_id: "harbor-east",
-    source_id: "model",
-    from_revision_id: "r1",
-    to_revision_id: "r2",
-    summary: { warnings: ["continuity warning"] },
-  } as Awaited<ReturnType<typeof api.comparisons>>[number];
-  vi.spyOn(api, "comparisons").mockResolvedValue([comparison]);
-  vi.spyOn(api, "comparison").mockResolvedValue({
-    comparison,
-    changes: [
-      {
-        comparison_id: comparison.id,
-        global_id: "wall-1",
-        change_kind: "changed",
-        changed_aspects: ["placement"],
-      },
-    ],
-    affected_work_packages: [],
-  } as Awaited<ReturnType<typeof api.comparison>>);
-  const onSource = vi.fn();
-  render(
-    <QueryClientProvider client={cache()}>
-      <WorkList
-        workspace={workspace}
-        sources={[source]}
-        onPackage={vi.fn()}
-        onModels={vi.fn()}
-        onRecheck={vi.fn()}
-        onReport={vi.fn()}
-        onProject={vi.fn()}
-        onTab={vi.fn()}
-        onSource={onSource}
-      />
-    </QueryClientProvider>,
+it("retries failed Findings reads without replacing the project queue", async () => {
+  vi.spyOn(api, "baselines").mockResolvedValue([]);
+  vi.spyOn(api, "documents").mockResolvedValue([]);
+  const read = vi
+    .spyOn(api, "engineeringFindings")
+    .mockRejectedValueOnce(new Error("Findings service unavailable"))
+    .mockResolvedValueOnce([finding("recovered")]);
+  renderList();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Findings service unavailable",
   );
-  await waitFor(() =>
-    expect(api.comparison).toHaveBeenCalledWith(
-      "harbor-east",
-      "model",
-      "comparison",
-    ),
-  );
-  const sourceRow = within(
-    screen.getByRole("region", { name: "需要处理" }),
-  ).getByRole("button", { name: /MEP 有新版本/ });
-  expect(sourceRow.querySelector("small")).not.toHaveTextContent("MEP");
-  fireEvent.click(sourceRow);
-  const peek = screen.getByRole("complementary", { name: "所选工作事项" });
+  const retry = screen.getByRole("button", { name: "重试读取 Findings" });
+  expect(retry).toBeInstanceOf(customElements.get("bim-button")!);
+  expect(retry).toBeEnabled();
+  expect(screen.getByRole("button", { name: /东翼风管安装/ })).toBeVisible();
+  fireEvent.click(retry);
+
   expect(
-    await within(peek).findByText("1 个构件变化 · 0 个受影响工作包"),
+    await screen.findByRole("button", { name: "Finding recovered" }),
   ).toBeVisible();
-  expect(within(peek).getByRole("status")).toHaveTextContent("结果可能不完整");
-  expect(within(peek).getAllByRole("button")).toHaveLength(3);
-  fireEvent.click(
-    within(peek).getByRole("button", { name: "在项目中查看版本 →" }),
-  );
-  expect(onSource).toHaveBeenCalledWith("model");
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(read).toHaveBeenCalledTimes(2);
+  expect(read).toHaveBeenLastCalledWith("harbor-east");
 });

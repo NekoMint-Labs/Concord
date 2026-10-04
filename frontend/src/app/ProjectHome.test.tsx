@@ -1,6 +1,12 @@
 import type { ComponentProps } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
 import {
@@ -10,6 +16,8 @@ import {
   type Workspace,
 } from "../api/client";
 import { demoAreaName, demoDiscipline } from "../ui/demo/demoPresentation";
+import { Table } from "@thatopen/ui";
+import { donorButton, donorText } from "../../tests/donor-dom";
 import { statusLabel } from "../ui/labels";
 import { ProjectHome } from "./ProjectHome";
 
@@ -80,32 +88,37 @@ function home(
   };
 }
 
-it("keeps every package's facts in a lane and opens the real package with one click", () => {
+it("keeps every package's facts in a donor table and opens the real package with one click", async () => {
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
   const { onPackage, onTab } = home(workspace);
   const ledger = screen.getByRole("region", { name: "工作包状态" });
-  expect(within(ledger).getAllByRole("listitem")).toHaveLength(
-    workspace.state.work_packages.length,
+  const table = ledger.querySelector<Table>("bim-table")!;
+  expect(table).toBeInstanceOf(Table);
+  await waitFor(() =>
+    expect(table.data).toHaveLength(workspace.state.work_packages.length),
   );
-  expect(within(ledger).queryByRole("table")).toBeNull();
+  expect(within(ledger).queryByRole("listitem")).toBeNull();
 
   for (const wp of workspace.state.work_packages) {
-    const lane = within(ledger).getByRole("button", {
-      name: new RegExp(wp.id),
-    });
+    const row = table.data.find((row) => row.id === wp.id)!;
+    await waitFor(() =>
+      expect(donorButton(`打开 ${row.data.工作包}`, ledger)).toBeDefined(),
+    );
+    const lane = donorButton(`打开 ${row.data.工作包}`, ledger)!;
     const area = workspace.state.areas.find((item) => item.id === wp.area_id);
-    expect(lane).toHaveTextContent(
+    expect(row.data.区域与专业).toBe(
       `${demoAreaName(wp.area_id, area?.name ?? wp.area_id)} · ${demoDiscipline(wp.discipline)}`,
     );
-    expect(lane).toHaveTextContent(`${wp.element_ids.length} 个构件`);
+    expect(row.data.构件).toBe(`${wp.element_ids.length} 个构件`);
+    expect(donorText(String(row.data.区域与专业), table)).toBeDefined();
     expect(lane).toHaveAttribute("aria-pressed", String(wp.id === "WP-200"));
     const status =
       workspace.analysis?.readiness.find(
         (item) => item.work_package_id === wp.id,
       )?.status ?? "UNCHECKED";
-    expect(lane).toHaveTextContent(statusLabel(status));
+    expect(row.data.施工条件).toBe(statusLabel(status));
     lane.focus();
-    expect(lane).toHaveFocus();
+    expect(lane.getRootNode()).toHaveProperty("activeElement", lane);
     fireEvent.click(lane);
     expect(onPackage).toHaveBeenLastCalledWith(wp.id);
   }
@@ -117,7 +130,7 @@ it("keeps every package's facts in a lane and opens the real package with one cl
   ).toBeVisible();
 });
 
-it("does not present stale, unchecked, or empty packages as ready", () => {
+it("does not present stale, unchecked, or empty packages as ready", async () => {
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
   workspace.stale = true;
   const { refresh, onStructure } = home(workspace, {
@@ -130,21 +143,28 @@ it("does not present stale, unchecked, or empty packages as ready", () => {
     within(state).getByRole("button", { name: "检查当前施工条件 →" }),
   ).toBeVisible();
   const ledger = screen.getByRole("region", { name: "工作包状态" });
-  expect(within(ledger).getAllByText("需复核")).toHaveLength(
-    workspace.state.work_packages.length,
+  const table = ledger.querySelector<Table>("bim-table")!;
+  await waitFor(() =>
+    expect(table.data.map((row) => row.data.施工条件)).toEqual(
+      workspace.state.work_packages.map(() => "需复核"),
+    ),
   );
-  expect(within(ledger).queryByText("可施工")).toBeNull();
+  await waitFor(() => expect(donorText("需复核", table)).toBeDefined());
+  expect(donorText("可施工", table)).toBeUndefined();
 
   workspace.stale = false;
   workspace.analysis = null;
   refresh();
   expect(state).toHaveTextContent("尚未检查施工条件");
   expect(within(state).getByRole("heading")).not.toHaveTextContent("可施工");
-  expect(within(ledger).queryByText("可施工")).toBeNull();
   expect(state).toHaveTextContent("尚未运行施工检查，当前没有可施工结论。");
-  expect(within(ledger).getAllByText("未检查")).toHaveLength(
-    workspace.state.work_packages.length,
+  await waitFor(() =>
+    expect(table.data.map((row) => row.data.施工条件)).toEqual(
+      workspace.state.work_packages.map(() => "未检查"),
+    ),
   );
+  await waitFor(() => expect(donorText("未检查", table)).toBeDefined());
+  expect(donorText("可施工", table)).toBeUndefined();
 
   workspace.state.work_packages = [];
   refresh();
@@ -155,7 +175,7 @@ it("does not present stale, unchecked, or empty packages as ready", () => {
   expect(onStructure).toHaveBeenCalledOnce();
 });
 
-it("keeps full long package names without duplicate model or version panes", () => {
+it("keeps full long package names without duplicate model or version panes", async () => {
   const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
   const wp = workspace.state.work_packages[0];
   wp.id = "custom-package";
@@ -192,10 +212,12 @@ it("keeps full long package names without duplicate model or version panes", () 
       />
     </QueryClientProvider>,
   );
-  const lane = within(
-    screen.getByRole("region", { name: "工作包状态" }),
-  ).getByRole("button", { name: new RegExp(wp.id) });
-  expect(within(lane).getByTitle(wp.name)).toHaveTextContent(wp.name);
+  const ledger = screen.getByRole("region", { name: "工作包状态" });
+  await waitFor(() =>
+    expect(donorButton(`打开 ${wp.name}`, ledger)).toBeDefined(),
+  );
+  const lane = donorButton(`打开 ${wp.name}`, ledger)!;
+  expect(donorText(wp.name, ledger)).toBeDefined();
   expect(lane).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(lane);
   expect(onPackage).toHaveBeenCalledWith(wp.id);
