@@ -1,4 +1,6 @@
-/** C-owned staging surfaces; A supplies persistent ViewerTarget contracts. */
+import type { components } from "../../api/schema";
+/** Formal navigation contract; byte integrity stays inside C's adapter. */
+export type BimTarget = components["schemas"]["BimTarget"];
 export interface IfcSource {
   revisionId: string;
   sourceHash: string;
@@ -10,7 +12,6 @@ export interface IfcElementReference {
   sourceHash: string;
   globalId: string;
 }
-export type IfcNavigation = IfcElementReference;
 export interface IfcModelSummary {
   sourceRevisionId: string;
   sourceHash: string;

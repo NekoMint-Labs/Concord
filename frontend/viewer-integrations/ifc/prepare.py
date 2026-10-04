@@ -123,7 +123,7 @@ def publish() -> None:
         + REVISION
         + '","lock":"'
         + LOCK_SHA
-        + '"}',
+        + '","navigation":"canonical-bim-v1"}',
         encoding="utf-8",
     )
 

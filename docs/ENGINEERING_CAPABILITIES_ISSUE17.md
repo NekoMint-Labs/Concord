@@ -689,3 +689,58 @@ C can proceed with GlobalId navigation without inventing a shared camera meaning
 This continuation changes no generated schema, shared contract, dependency,
 workflow or B-owned product composition. Canonical BIM navigation and the other
 remaining #17 acceptance items are still open; #22 remains Draft.
+
+
+### October 4 canonical BIM GlobalId navigation continuation
+
+`IfcSurface.target`, user selections and `IfcModelAdapter.navigate` now consume
+A's generated `BimTarget`. The loaded source supplies its verified hash internally;
+public targets carry revision identity and a bounded set of unique GlobalIds.
+Every requested GUID must resolve and retain its identity in the requested model
+before any selection/framing effect. A bounded queue serializes requests, snapshots
+mutable inputs and fences disposal. Navigation errors are visible, clear prior
+native selection and do not become a successful fallback.
+
+A narrow recorded donor command awaits native multi-selection, merged geometry
+bounds, camera-controls and fragment rendering. It does not loop single-element
+commands or introduce another renderer/selection engine. Empty/non-finite geometry
+fails explicitly. The SDK retains same-origin checks; donor test messages now supply
+actual origins and include spoofed-origin rejection. The capability manifest binds
+the host to `canonical-bim-v1`, rejecting older assets without acknowledged navigation.
+The pinned archive, dependency lock and host SDK match the full twelve-patch/twelve-
+overlay replay (twenty-four adapted files); no dependency or donor version changed.
+
+Verification on October 4, 2026:
+
+- 433 root frontend tests passed with two workers, including 28 new BIM target,
+  adapter and surface cases. TypeScript/production build and complete frontend
+  Prettier passed. The changed preparation script passed Ruff/check-format.
+- 122 independent donor navigation/SDK/BCF/native-index tests passed. The new
+  `concord-navigation` helper measured 100% statements/branches/functions/lines
+  across eighteen tests. This is scoped coverage, not repository-wide coverage.
+- Six real Chromium IFC/BCF scenarios passed. Canonical targets reopen from cache,
+  reject absent/stale sources with a visible error, clear native selection after
+  failures, and select both real beam/assembly-child GUIDs as verified by the donor's
+  BCF export. Non-geometric targets fail rather than fitting an unrelated model.
+  Perspective/orthogonal BCF optics, two-model identity and worker release remain green.
+- The thirteen-element Golden model measured 1369.5 ms cold and 386.6 ms warm.
+  Native tree/fragment diagnostic assertions confirm reuse without a second validator
+  parser worker. These small fixtures do not qualify large-model/native throughput.
+- Independent SDK/app build passed. The first browser attempt used an incorrect
+  manual build base path and could not load embedded scripts. Rebuilding with the
+  documented `BASE_PATH=/viewer/ifc/`, then publishing the prepared local assets,
+  fixed that qualification setup; the complete six-case rerun passed unchanged.
+  Existing donor/Vite size, CSS and externalized-module warnings remain.
+- The rendered IFC screenshot was visually inspected and preserved under ignored
+  `.verification-work/screenshots/canonical-bim-target.png`. Generated assets,
+  reports, replay trees and screenshots are not committed.
+
+Non-null six-number `viewpoint` requests remain explicit unsupported errors until
+A confirms meaning, coordinate frame/units and precedence relative to element fitting.
+BCF remains the implemented camera/viewpoint exchange. Source-only/empty-GUID targets
+are also explicitly unsupported by this element-focused path; B can mount a verified
+source without a target to obtain the normal initial model view. Product composition,
+remaining output publication/providers, dual-source clash/ReCheck, versioned IDS input,
+native connectors, large-model/native and integrated Golden acceptance remain open.
+No shared domain/port/API/schema, workflow, dependency or B-owned composition file
+changed. #22 remains Draft and #17 remains incomplete.

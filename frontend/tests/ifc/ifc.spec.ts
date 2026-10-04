@@ -63,9 +63,9 @@ test("real IFC loads, navigates GlobalIds, reuses fragments/tree and releases wo
   await expect(donor.getByText("BEAM-01", { exact: true })).toBeVisible();
   await donor.getByPlaceholder("Search elements…").fill("");
   const target = {
-    sourceRevisionId: first[0].sourceRevisionId,
-    sourceHash: first[0].sourceHash,
-    globalId: "3M0KwyPFrBT9KwklhqZa8W",
+    kind: "bim" as const,
+    source_revision_id: first[0].sourceRevisionId,
+    global_ids: ["3M0KwyPFrBT9KwklhqZa8W"],
   };
   const navigation = await page.evaluate(
     async (target) =>
@@ -76,7 +76,7 @@ test("real IFC loads, navigates GlobalIds, reuses fragments/tree and releases wo
   );
   expect(navigation).toEqual(target);
   await expect(page.getByTestId("ifc-selection")).toContainText(
-    target.globalId,
+    target.global_ids[0],
   );
   const panels = await page.evaluate(() =>
     (window as unknown as { ifcSession: IfcModelAdapter }).ifcSession.panels(),
@@ -104,13 +104,32 @@ test("real IFC loads, navigates GlobalIds, reuses fragments/tree and releases wo
     try {
       await (
         window as unknown as { ifcSession: IfcModelAdapter }
-      ).ifcSession.navigate({ ...target, globalId: "0M0KwyPFrBT9KwklhqZa8W" });
+      ).ifcSession.navigate({
+        ...target,
+        global_ids: ["0M0KwyPFrBT9KwklhqZa8W"],
+      });
       return "unexpected success";
     } catch (error) {
       return String(error);
     }
   }, target);
   expect(missing).toContain("absent");
+  await expect(page.getByRole("alert")).toContainText("absent");
+  const afterFailure = await page.evaluate(async () =>
+    (window as unknown as { ifcSession: IfcModelAdapter }).ifcSession.saveBcf(
+      "Cleared selection",
+      "reviewer@example.test",
+    ),
+  );
+  expect(afterFailure.selected).toEqual([]);
+  await page.evaluate(
+    async (target) =>
+      (
+        window as unknown as { ifcSession: IfcModelAdapter }
+      ).ifcSession.navigate(target),
+    target,
+  );
+  await expect(page.getByRole("alert")).toHaveCount(0);
   await page.screenshot({
     path: "test-results/drawing/golden-ifc-viewer.png",
     fullPage: true,
@@ -123,6 +142,15 @@ test("real IFC loads, navigates GlobalIds, reuses fragments/tree and releases wo
   await expect.poll(() => workers.size).toBe(0);
   const warm = await open(page);
   expect(warm[0].fromCache).toBe(true);
+  expect(
+    await page.evaluate(
+      async (target) =>
+        (
+          window as unknown as { ifcSession: IfcModelAdapter }
+        ).ifcSession.navigate(target),
+      target,
+    ),
+  ).toEqual(target);
   await expect.poll(async () => (await diagnostics(page)).hits).toBe(1);
   expect((await diagnostics(page)).builds).toBe(0);
   expect(parserWorkers).toEqual([]);
@@ -173,9 +201,9 @@ test("two models keep selection bound to the requested revision", async ({
   const models = await open(page);
   expect(models).toHaveLength(2);
   const duct = {
-    sourceRevisionId: models[1].sourceRevisionId,
-    sourceHash: models[1].sourceHash,
-    globalId: "0wJm_7P3jD4uBWYGw9xyVx",
+    kind: "bim" as const,
+    source_revision_id: models[1].sourceRevisionId,
+    global_ids: ["0wJm_7P3jD4uBWYGw9xyVx"],
   };
   await page.evaluate(
     async (target) =>
@@ -200,8 +228,7 @@ test("two models keep selection bound to the requested revision", async ({
     },
     {
       ...duct,
-      sourceRevisionId: models[0].sourceRevisionId,
-      sourceHash: models[0].sourceHash,
+      source_revision_id: models[0].sourceRevisionId,
     },
   );
   expect(wrong).toContain("absent");
@@ -216,9 +243,9 @@ test("two models keep selection bound to the requested revision", async ({
         return String(error);
       }
     },
-    { ...duct, sourceHash: "0".repeat(64) },
+    { ...duct, source_revision_id: "missing-revision" },
   );
-  expect(stale).toContain("hash changed");
+  expect(stale).toContain("source revision is not loaded");
   await page.getByRole("button", { name: "Close viewer", exact: true }).click();
 });
 
@@ -440,9 +467,9 @@ model.write(sys.argv[2])
   await search.fill("ASSEMBLY-01");
   await expect(donor.getByText("ASSEMBLY-01", { exact: true })).toBeVisible();
   const target = {
-    sourceRevisionId: models[0].sourceRevisionId,
-    sourceHash: models[0].sourceHash,
-    globalId: "1M0KwyPFrBT9KwklhqZa8W",
+    kind: "bim" as const,
+    source_revision_id: models[0].sourceRevisionId,
+    global_ids: ["1M0KwyPFrBT9KwklhqZa8W"],
   };
   await page.evaluate(
     async (target) =>
@@ -454,6 +481,46 @@ model.write(sys.argv[2])
   await expect(page.getByTestId("ifc-selection")).toHaveText(
     JSON.stringify(target),
   );
+  const multi = {
+    ...target,
+    global_ids: ["3M0KwyPFrBT9KwklhqZa8W", "1M0KwyPFrBT9KwklhqZa8W"],
+  };
+  const selected = await page.evaluate(async (target) => {
+    const session = (window as unknown as { ifcSession: IfcModelAdapter })
+      .ifcSession;
+    const navigated = await session.navigate(target);
+    const saved = await session.saveBcf(
+      "Canonical multiselection",
+      "reviewer@example.test",
+    );
+    return {
+      navigated,
+      selected: saved.selected,
+      camera: await session.camera(),
+    };
+  }, multi);
+  expect(selected.navigated).toEqual(multi);
+  expect(selected.selected.map((item) => item.globalId)).toEqual(
+    multi.global_ids,
+  );
+  expect(Object.values(selected.camera.position).every(Number.isFinite)).toBe(
+    true,
+  );
+  const absentGeometry = await page.evaluate(async (target) => {
+    try {
+      await (
+        window as unknown as { ifcSession: IfcModelAdapter }
+      ).ifcSession.navigate({
+        ...target,
+        global_ids: ["3wJm_7P3jD4uBWYGw9xyVx"],
+      });
+      return "unexpected success";
+    } catch (error) {
+      return String(error);
+    }
+  }, target);
+  expect(absentGeometry).toContain("geometry bounds");
+  await expect(page.getByRole("alert")).toContainText("geometry bounds");
   expect(parserWorkers).toEqual([]);
   await page.getByRole("button", { name: "Close viewer", exact: true }).click();
 });

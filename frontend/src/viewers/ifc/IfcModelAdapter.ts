@@ -1,7 +1,7 @@
 import { IfcViewer } from "../../../vendor/ifc-viewer-online/ifc-viewer-sdk";
 import type {
   IfcSource,
-  IfcNavigation,
+  BimTarget,
   IfcElementReference,
   IfcModelSummary,
   IfcDiagnostics,
@@ -10,7 +10,8 @@ import type {
   IfcBcfScope,
   IfcBcfExport,
 } from "./ifcTypes";
-import { validateIfcNavigation } from "./ifcValidation";
+import { validateIfcReference } from "./ifcValidation";
+import { snapshotBimTarget } from "./ifcTarget";
 
 /** Mature donor SDK stays entirely inside C's engineering adapter. */
 export class IfcModelAdapter {
@@ -20,11 +21,18 @@ export class IfcModelAdapter {
     { source: IfcSource; modelId: string }
   >();
   private disposed = false;
+  private navigationQueue: Promise<unknown> = Promise.resolve();
+  private pendingNavigation = 0;
+  private readonly onSelection?: (target: BimTarget) => void;
+  private readonly onNavigationError?: (error: Error | null) => void;
   readonly summaries: IfcModelSummary[] = [];
   constructor(
     mount: HTMLElement,
-    onSelection?: (reference: IfcElementReference) => void,
+    onSelection?: (reference: BimTarget) => void,
+    onNavigationError?: (error: Error | null) => void,
   ) {
+    this.onSelection = onSelection;
+    this.onNavigationError = onNavigationError;
     this.viewer = new IfcViewer(mount, {
       baseUrl: new URL("/viewer/ifc/index.html", location.origin).href,
       lang: "en",
@@ -38,25 +46,31 @@ export class IfcModelAdapter {
       const binding = [...this.models.values()].find(
         (item) => item.modelId === event.modelId,
       );
-      if (!binding || this.disposed) return;
+      if (!binding || this.disposed || this.pendingNavigation) return;
       try {
         const item = await this.viewer.getElement(
           event.expressId,
           binding.modelId,
         );
-        if (!item?.globalId || this.disposed) return;
+        if (this.disposed || this.pendingNavigation) return;
+        if (!item?.globalId)
+          throw new Error("IFC selection has no stable GlobalId");
         const reference = {
           sourceRevisionId: binding.source.revisionId,
           sourceHash: binding.source.sourceHash,
           globalId: item.globalId,
         };
-        validateIfcNavigation(reference);
-        onSelection?.(reference);
+        validateIfcReference(reference);
+        onSelection?.({
+          kind: "bim",
+          source_revision_id: reference.sourceRevisionId,
+          global_ids: [reference.globalId],
+        });
+        onNavigationError?.(null);
       } catch (error) {
         if (!this.disposed)
-          console.warn(
-            "IFC selection could not resolve a stable reference",
-            error,
+          onNavigationError?.(
+            error instanceof Error ? error : new Error(String(error)),
           );
       }
     });
@@ -67,6 +81,7 @@ export class IfcModelAdapter {
       if (this.disposed) throw new Error("IFC viewer was closed");
       const start = performance.now();
       const loaded = await this.viewer.add(source.name, source.data.slice(0));
+      if (this.disposed) throw new Error("IFC viewer was closed");
       this.models.set(source.revisionId, { source, modelId: loaded.modelId });
       this.summaries.push({
         sourceRevisionId: source.revisionId,
@@ -78,24 +93,91 @@ export class IfcModelAdapter {
     }
     return this.summaries.slice();
   }
-  async navigate(target: IfcNavigation) {
-    validateIfcNavigation(target);
-    const binding = this.models.get(target.sourceRevisionId);
-    if (!binding || binding.source.sourceHash !== target.sourceHash)
-      throw new Error("IFC target revision is not loaded or its hash changed");
-    const [id] = await this.viewer.getIdsByGuids(
-      [target.globalId],
-      binding.modelId,
-    );
-    if (!Number.isSafeInteger(id) || id! <= 0)
+  navigate(target: BimTarget): Promise<BimTarget> {
+    if (this.disposed)
+      return Promise.reject(new Error("IFC viewer was closed"));
+    if (this.pendingNavigation >= 16) {
+      const failure = new Error("Too many pending BIM navigation requests");
+      this.onNavigationError?.(failure);
+      return Promise.reject(failure);
+    }
+    let verified: BimTarget | undefined;
+    let validationError: unknown;
+    try {
+      verified = snapshotBimTarget(target);
+    } catch (error) {
+      validationError = error;
+    }
+    this.pendingNavigation++;
+    const operation = this.navigationQueue.then(async () => {
+      try {
+        if (!verified) throw validationError;
+        const result = await this.navigateVerified(verified);
+        if (this.disposed) throw new Error("IFC viewer was closed");
+        this.onNavigationError?.(null);
+        this.onSelection?.(result);
+        return result;
+      } catch (error) {
+        return await this.rejectNavigation(error);
+      } finally {
+        this.pendingNavigation--;
+      }
+    });
+    this.navigationQueue = operation.catch(() => {});
+    return operation;
+  }
+  private async rejectNavigation(error: unknown): Promise<never> {
+    const failure = error instanceof Error ? error : new Error(String(error));
+    if (!this.disposed) {
+      this.onNavigationError?.(failure);
+      try {
+        await this.viewer.clearTargetSelection();
+      } catch (cleanupError) {
+        if (!this.disposed)
+          this.onNavigationError?.(
+            new Error(
+              `${failure.message}; IFC selection cleanup failed: ${String(cleanupError)}`,
+            ),
+          );
+      }
+    }
+    throw failure;
+  }
+  private async navigateVerified(target: BimTarget) {
+    const checkpoint = () => {
+      if (this.disposed) throw new Error("IFC viewer was closed");
+    };
+    checkpoint();
+    const binding = this.models.get(target.source_revision_id);
+    if (!binding) throw new Error("IFC target source revision is not loaded");
+    const guids = target.global_ids!;
+    const ids = await this.viewer.getIdsByGuids(guids, binding.modelId);
+    checkpoint();
+    if (
+      ids.length !== guids.length ||
+      ids.some((id) => !Number.isSafeInteger(id) || id! <= 0)
+    )
       throw new Error(
         "IFC GlobalId is absent from the requested source revision",
       );
-    const element = await this.viewer.getElement(id!, binding.modelId);
-    if (element?.globalId !== target.globalId)
-      throw new Error("IFC target identity could not be verified");
-    this.viewer.select(id!, binding.modelId);
-    return { ...target };
+    // Bound SDK queries; every GUID must verify before any selection/camera effect.
+    for (let offset = 0; offset < ids.length; offset += 16) {
+      const elements = await Promise.all(
+        ids
+          .slice(offset, offset + 16)
+          .map((id) => this.viewer.getElement(id!, binding.modelId)),
+      );
+      checkpoint();
+      if (
+        elements.some(
+          (element, index) => element?.globalId !== guids[offset + index],
+        )
+      )
+        throw new Error("IFC target identity could not be verified");
+    }
+    await this.viewer.navigateElements(ids as number[], binding.modelId);
+    checkpoint();
+    return target;
   }
   diagnostics(): Promise<IfcDiagnostics> {
     return this.viewer.getEngineeringDiagnostics();
@@ -176,7 +258,7 @@ export class IfcModelAdapter {
         sourceHash: binding.source.sourceHash,
         globalId: item.globalId,
       };
-      validateIfcNavigation(reference);
+      validateIfcReference(reference);
       return reference;
     });
   }

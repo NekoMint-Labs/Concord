@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  validateIfcNavigation,
+  validateIfcReference,
   validateIfcSources,
   snapshotIfcSources,
 } from "./ifcValidation";
@@ -56,12 +56,12 @@ describe("revision-bound IFC boundary", () => {
       sourceHash: "0".repeat(64),
       globalId: "3M0KwyPFrBT9KwklhqZa8W",
     };
-    expect(() => validateIfcNavigation(target)).not.toThrow();
+    expect(() => validateIfcReference(target)).not.toThrow();
     for (const patch of [
       { globalId: "not-a-guid" },
       { sourceHash: "bad" },
       { sourceRevisionId: "" },
     ])
-      expect(() => validateIfcNavigation({ ...target, ...patch })).toThrow();
+      expect(() => validateIfcReference({ ...target, ...patch })).toThrow();
   });
 });

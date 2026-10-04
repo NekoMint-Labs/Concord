@@ -13,7 +13,7 @@ pnpm --dir frontend exec playwright test --config playwright.engineering.config.
 ```
 
 The preparation script fetches exactly the pinned Git revision, verifies its Git
-archive and npm lock hashes, safely extracts the source, applies eleven focused
+archive and npm lock hashes, safely extracts the source, applies twelve focused
 patches and native fragment-index/tree-cache/BCF overlays, installs the original locked dependencies,
 and builds the independent application. Runtime assets are copied to ignored
 frontend/public/viewer/ifc. Build output, dependency trees and the source archive
@@ -47,11 +47,25 @@ Adaptations:
   changes retain perspective/orthogonal optics and bound ZIP expansion. Host
   parsing requests require a version manifest; legacy donor parsing retains its
   existing fallback. Request workers terminate on completion, error or exit.
+- A narrow acknowledged command reuses native multi-selection, merged bounds,
+  camera-controls and fragment rendering. It resolves only after selection/framing
+  finishes, rejects missing geometry or a removed model, and clears stale
+  highlighting after host navigation failures. The donor SDK tests now supply
+  actual iframe origins and explicitly reject spoofed origins.
 - Concord owns source selection. The donor toolbar is suppressed while its
   properties, scene, measurement, section and plans panels remain available.
 
-C's IfcSurface and IfcModelAdapter retain source revision/hash bindings, stable
-selection and navigation, local capability failure, and disposal. No donor types
+C's IfcSurface.target, selection callback and ModelAdapter.navigate consume the
+merged generated BimTarget (source_revision_id and global_ids). The loaded,
+verified source supplies its hash internally. All requested GUIDs must exist and
+verify in the specified model before native selection/framing starts; the bounded
+queue serializes navigation and fences closed viewers. Capability assets advertise
+canonical-bim-v1 so an older fire-and-forget build cannot pass the host version
+check. A non-null six-number viewpoint currently fails explicitly pending A's
+coordinate/meaning confirmation; full camera exchange continues through BCF.
+Source-only/empty-GUID targets are explicitly unsupported by this element-focused
+navigation path. C's adapters retain revision/hash integrity, local failure and
+disposal. No donor types
 are exported into A's domain or B's public surface. The product App is unchanged.
 
 Qualified: real Golden IFC rendering, stable GlobalId target and selection,
@@ -67,12 +81,12 @@ preservation of visibility, coloring, attachments or extensions.
 The extra ModelTree source parse is removed. The fragment importer still owns
 its internal geometry/property passes; one total source parse is not claimed.
 Large-model/GPU pressure behavior,
-A's persistent ViewerTarget seam and native packaging remain acceptance work.
+B's product composition, remaining runtime publication and native packaging remain acceptance work.
 
 Focused independent donor qualification (after preparing the source):
 
 ```text
-node node_modules/vitest/vitest.mjs run src/lib/bcf.test.ts src/lib/concord-bcf.test.ts src/lib/concord-fragment-index.test.ts src/lib/concord-build-index.test.ts
+node node_modules/vitest/vitest.mjs run src/lib/bcf.test.ts src/lib/concord-bcf.test.ts src/lib/concord-fragment-index.test.ts src/lib/concord-build-index.test.ts src/lib/concord-navigation.test.ts src/sdk/ifc-viewer-sdk.test.ts
 ```
 
 Run this command inside the cached adapted donor directory. Concord's root

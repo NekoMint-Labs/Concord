@@ -1024,6 +1024,14 @@ export class IfcViewer {
   }
 
   /** Fetch an element's IFC data (attributes + property/quantity sets), or null. */
+  /** Acknowledge native multi-element selection and framing only after completion. */
+  navigateElements(ids: number[], modelId: string): Promise<void> {
+    return this.request('ifcviewer:navigate-elements', { ids, modelId }, 30000)
+  }
+  clearTargetSelection(): Promise<void> {
+    return this.request('ifcviewer:clear-target-selection')
+  }
+
   getIdsByGuids(guids: string[], modelId: string): Promise<(number | null)[]> {
     return this.request('ifcviewer:get-ids-by-guids', { guids, modelId })
   }

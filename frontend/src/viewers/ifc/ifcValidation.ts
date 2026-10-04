@@ -1,9 +1,10 @@
 import { sha256 } from "../drawing/pdfDiffValidation";
-import type { IfcSource, IfcNavigation } from "./ifcTypes";
+import type { IfcSource, IfcElementReference } from "./ifcTypes";
+export const IFC_NAVIGATION = "canonical-bim-v1";
 export const IFC_DONOR = "5073adf1f5fadef76129460555482b6507c2be74";
 export const IFC_LOCK =
   "cd7223b245b36d2e0534bbed4499185e94647ae56463ec95632f8dd105db7ea0";
-export function validateIfcNavigation(target: IfcNavigation) {
+export function validateIfcReference(target: IfcElementReference) {
   if (
     !target.sourceRevisionId ||
     !/^[0-9a-f]{64}$/.test(target.sourceHash) ||

@@ -200,14 +200,18 @@ license/notice texts and a dependency/version/license inventory next to its
 local assets; this is attribution preparation, not production license approval.
 The SDK's original MIT license is kept under frontend/vendor/ifc-viewer-online.
 
-Ten recorded source patches add origin checks, SDK GUID/diagnostic/BCF queries,
+Twelve recorded source patches add origin checks, SDK GUID/diagnostic/BCF queries,
 local workers/WASM, the fragment SDK's native GUID attribute fallback,
 full-hash/versioned geometry keys, native fragment-based ModelTree indexing
 and bounded spatial-tree caching, and remove the site's
 service-worker/font-stylesheet hooks. The Concord SDK uses the donor's existing
 toolbar/sidebar URL overrides. No renderer, inspector, section or measurement
 engine is independently rewritten. Cache/tree output remains viewer-local;
-canonical contracts remain separate acceptance work. BCF overlays use the donor's
+generated canonical targets are consumed at C's boundary, while product/runtime
+integration remains acceptance work. A narrow acknowledged navigation command
+reuses native selection, merged bounds, camera-controls and rendering for complete
+GlobalId sets; no selection/geometry engine is added. Donor SDK test messages
+retain real origins and include spoofed-origin rejection. BCF overlays use the donor's
 XML parser/writer and coordinate conversion, native cameras, sections and
 selection. Narrow changes retain orthogonal camera optics and bound archive
 expansion. Export uses BCF 3.0 bytes; no proprietary viewpoint format is added.
