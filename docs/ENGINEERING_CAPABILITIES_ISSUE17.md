@@ -847,6 +847,14 @@ this is not repository-wide coverage. The first concurrent full frontend run
 hit the existing BimMappingWorkspace 5-second timeout; a complete one-worker
 rerun passed without changing tests or timeouts.
 
+The first CI submission (`ae99be6`) exposed a test-boundary error: a main
+frontend test imported the independent CAD donor's types, requiring an SDK
+which Web CI intentionally does not install. That donor-normalization case
+now lives under the independent CAD tests. Main typecheck was requalified with
+the independent CAD dependency directory absent. No package, lock or workflow
+change was needed. All 42 independent CAD tests and the complete 481-test
+frontend regression passed after the fix; real donor/browser coverage remains.
+
 This completes isolated CAD output normalization only. A still owns a trusted
 invocation/publication path which validates persisted project/source revisions
 and original bytes. The raw comparison artifact and its donor limitations must

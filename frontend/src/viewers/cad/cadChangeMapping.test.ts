@@ -4,7 +4,6 @@ import { mapCadChanges } from "./cadChangeMapping";
 import type { CadChangeContext } from "./cadChangeMapping";
 import { CAD_ENGINE } from "./cadTypes";
 import type { CadChangeCandidate, CadComparison } from "./cadTypes";
-import { normalizeCadResult } from "../../../viewer-integrations/cad/src/normalizeCadResult";
 
 beforeEach(() => vi.stubGlobal("crypto", webcrypto));
 afterEach(() => vi.unstubAllGlobals());
@@ -148,36 +147,7 @@ it("owns values before hashing so caller mutations cannot relabel results", asyn
   value.sourceHashes[0] = "c".repeat(64);
   expect(await pending).toEqual(await mapCadChanges(result(pair()), context()));
 });
-it("accepts the unchanged donor's normalized pair and retains input scope", async () => {
-  const c = context();
-  const normalized = normalizeCadResult(
-    {
-      added: [],
-      deleted: [],
-      unchanged: [],
-      navigation: [],
-      changeSets: [],
-      modified: pair().map((candidate) => ({
-        side: candidate.sourceRevisionId === "R1" ? "left" : "right",
-        kind: "modified",
-        objectId: candidate.entityId,
-        pairedId: candidate.pairedEntityId,
-        dxfType: candidate.entityType,
-        layer: candidate.layer,
-        extents: candidate.location,
-        changes: [{ field: "geometry", oldValue: "old", newValue: "new" }],
-      })),
-    },
-    { ...c.before, name: "old.dxf", data: new ArrayBuffer(1) },
-    { ...c.after, name: "new.dxf", data: new ArrayBuffer(1) },
-  );
-  expect(normalized.revisionIds).toEqual(["R1", "R2"]);
-  expect(normalized.sourceHashes).toEqual([
-    c.before.sourceHash,
-    c.after.sourceHash,
-  ]);
-  expect(await mapCadChanges(normalized, c)).toHaveLength(1);
-});
+
 it.each([
   ["missing project", { projectId: " " }, "identities"],
   ["missing source", { sourceId: "" }, "identities"],
@@ -340,4 +310,19 @@ it("copies revision metadata without copying loaded source bytes", async () => {
   expect(await mapCadChanges(result(), scope)).toEqual(
     await mapCadChanges(result(), context()),
   );
+});
+
+it("retains distinct revision identities when both revisions have identical bytes", async () => {
+  const sameBytes = result(pair());
+  sameBytes.sourceHashes[1] = sameBytes.sourceHashes[0];
+  sameBytes.changes[1].sourceHash = sameBytes.sourceHashes[0];
+  const [change] = await mapCadChanges(sameBytes, {
+    ...context(),
+    after: { revisionId: "R2", sourceHash: "a".repeat(64) },
+  });
+  expect(change).toMatchObject({
+    from_revision_id: "R1",
+    to_revision_id: "R2",
+    subject: { source_revision_id: "R2" },
+  });
 });
