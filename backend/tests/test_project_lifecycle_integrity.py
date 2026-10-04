@@ -218,7 +218,7 @@ def test_upgrade_existing_database_preserves_project_and_snapshot(tmp_path):
         with engine.connect() as connection:
             assert (
                 connection.execute(text("select version_num from alembic_version")).scalar_one()
-                == "0008"
+                == "0009"
             )
             assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
         with engine.begin() as connection:
@@ -231,7 +231,7 @@ def test_upgrade_existing_database_preserves_project_and_snapshot(tmp_path):
         with engine.connect() as connection:
             assert (
                 connection.execute(text("select version_num from alembic_version")).scalar_one()
-                == "0008"
+                == "0009"
             )
             assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
     finally:

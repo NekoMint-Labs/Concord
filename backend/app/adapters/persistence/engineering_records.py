@@ -7,16 +7,45 @@ from app.adapters.persistence.engineering_tables import (
     CoordinationRow,
     DependencyRow,
     FindingRow,
+    IDSRequirementsRow,
     PublicationRow,
     ReCheckRow,
 )
 from app.adapters.persistence.record_session import SessionRecords
-from app.domain.engineering import Change, Coordination, ReCheck
+from app.domain.engineering import Change, Coordination, IDSRequirementsSelection, ReCheck
 from app.domain.errors import NotFound
 from app.domain.models import Finding
 
 
 class EngineeringRecords(SessionRecords):
+    def ids_requirements(self, project_id: str) -> IDSRequirementsSelection | None:
+        row = self.session.get(IDSRequirementsRow, project_id)
+        return IDSRequirementsSelection.model_validate(row.payload) if row else None
+
+    def save_ids_requirements(self, item: IDSRequirementsSelection) -> None:
+        self.session.merge(
+            IDSRequirementsRow(
+                project_id=item.project_id,
+                source_id=item.source_id,
+                revision_id=item.revision_id,
+                payload=item.model_dump(mode="json"),
+            )
+        )
+        self.session.flush()
+
+    def ids_findings(self, project_id: str) -> list[Finding]:
+        identities = select(DependencyRow.finding_id).where(
+            DependencyRow.project_id == project_id, DependencyRow.uses_ids_requirements.is_(True)
+        )
+        rows = self.session.scalars(
+            select(FindingRow).where(
+                FindingRow.project_id == project_id,
+                FindingRow.state == "CONFIRMED",
+                FindingRow.id.in_(identities),
+            )
+        )
+        return [Finding.model_validate(row.payload) for row in rows]
+
     def add_change(self, item: Change) -> None:
         self.session.add(
             ChangeRow(
@@ -59,6 +88,7 @@ class EngineeringRecords(SessionRecords):
                         project_id=item.project_id,
                         source_id=dependency.source_id,
                         source_revision_id=dependency.source_revision_id,
+                        uses_ids_requirements=dependency.requirements_kind == "ids",
                     )
                 )
 

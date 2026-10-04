@@ -336,6 +336,116 @@
         }
       }
     },
+    "/api/projects/{project_id}/engineering/ids-requirements": {
+      "get": {
+        "tags": [
+          "engineering"
+        ],
+        "summary": "Ids Requirements",
+        "operationId": "ids_requirements_api_projects__project_id__engineering_ids_requirements_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/IDSRequirementsSelection"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Ids Requirements Api Projects  Project Id  Engineering Ids Requirements Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "engineering"
+        ],
+        "summary": "Select Ids Requirements",
+        "operationId": "select_ids_requirements_api_projects__project_id__engineering_ids_requirements_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IDSRequirementsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IDSRequirementsSelection"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/engineering/changes": {
       "get": {
         "tags": [
@@ -5616,6 +5726,80 @@
         ],
         "title": "Capability"
       },
+      "CapabilityInput": {
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "title": "Group Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "from_revision_id": {
+            "type": "string",
+            "title": "From Revision Id"
+          },
+          "source_revision_id": {
+            "type": "string",
+            "title": "Source Revision Id"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/DrawingTarget"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CadTarget"
+                  },
+                  {
+                    "$ref": "#/components/schemas/BimTarget"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DocumentTarget"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "bim": "#/components/schemas/BimTarget",
+                    "cad": "#/components/schemas/CadTarget",
+                    "document": "#/components/schemas/DocumentTarget",
+                    "drawing": "#/components/schemas/DrawingTarget"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "group_id",
+          "role",
+          "source_id",
+          "from_revision_id",
+          "source_revision_id",
+          "sha256",
+          "target"
+        ],
+        "title": "CapabilityInput"
+      },
       "CapabilityJob": {
         "properties": {
           "id": {
@@ -7367,6 +7551,44 @@
             "type": "array",
             "title": "Work Package Ids",
             "default": []
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id"
+          },
+          "input_role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Role"
+          },
+          "requirements_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "ids"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requirements Kind"
           }
         },
         "additionalProperties": false,
@@ -7492,6 +7714,70 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "IDSRequirementsRequest": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source Id"
+          },
+          "revision_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Revision Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_id",
+          "revision_id"
+        ],
+        "title": "IDSRequirementsRequest"
+      },
+      "IDSRequirementsSelection": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source Id"
+          },
+          "revision_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Revision Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "selected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Selected At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_id",
+          "revision_id",
+          "project_id",
+          "sha256",
+          "id",
+          "selected_at"
+        ],
+        "title": "IDSRequirementsSelection"
       },
       "Impact": {
         "properties": {
@@ -8174,6 +8460,24 @@
               }
             ],
             "title": "Completed At"
+          },
+          "inputs": {
+            "items": {
+              "$ref": "#/components/schemas/CapabilityInput"
+            },
+            "type": "array",
+            "title": "Inputs",
+            "default": []
+          },
+          "ids_requirements": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IDSRequirementsSelection"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -8191,7 +8495,9 @@
           "evidence_ids",
           "explanation",
           "created_at",
-          "completed_at"
+          "completed_at",
+          "inputs",
+          "ids_requirements"
         ],
         "title": "ReCheck"
       },

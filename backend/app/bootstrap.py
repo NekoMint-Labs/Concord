@@ -29,6 +29,7 @@ from app.application.coordination import CoordinationService
 from app.application.derived_artifacts import DerivedArtifacts
 from app.application.engineering_findings import FindingService
 from app.application.engineering_publication import EngineeringPublisher
+from app.application.ids_requirements import IDSRequirementsService
 from app.application.investigations import InvestigationService
 from app.application.project_sources import ProjectSourceService
 from app.application.projects import ProjectService
@@ -70,6 +71,7 @@ class Services:
     engineering: EngineeringPublisher
     rechecks: ReCheckService
     artifacts: DerivedArtifacts
+    ids_requirements: IDSRequirementsService
 
     resources: ExitStack
 
@@ -152,9 +154,8 @@ def build_services(
         workflow.capabilities = jobs
         artifacts = DerivedArtifacts(storage)
         rechecks = ReCheckService(factory, artifacts, runtime_name)
-        rechecks.capabilities = {
-            capability.name: capability for capability in engineering_capabilities
-        }
+        for capability in engineering_capabilities:
+            rechecks.register(capability)
         workflow.rechecks = rechecks
         observed_workflow = ObservedWorkflow(workflow, telemetry)
         if settings.diagnostic_runtime:
@@ -183,6 +184,13 @@ def build_services(
         resources.callback(runtime.close)
         rechecks.runtime = runtime
         agent_control = AgentControlService(factory, runtime, runtime_name)
+        sources = ProjectSourceService(
+            factory,
+            storage,
+            settings.max_upload_bytes,
+            agent_control,
+            settings.upload_format_limits,
+        )
         result = Services(
             settings,
             factory,
@@ -198,13 +206,7 @@ def build_services(
             storage,
             telemetry,
             ProjectService(factory),
-            ProjectSourceService(
-                factory,
-                storage,
-                settings.max_upload_bytes,
-                agent_control,
-                settings.upload_format_limits,
-            ),
+            sources,
             BaselineService(factory),
             agent_control,
             investigations,
@@ -215,6 +217,7 @@ def build_services(
             EngineeringPublisher(factory),
             rechecks,
             artifacts,
+            IDSRequirementsService(factory, sources, rechecks),
             resources,
         )
         result.sources.rechecks = rechecks

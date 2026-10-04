@@ -1,5 +1,6 @@
 """Evidence-bound findings and explicit human coordination decisions."""
 
+from app.application.engineering_inputs import inputs_current, validate_groups
 from app.application.engineering_publication import validate_evidence
 from app.application.projects import record_lifecycle_change
 from app.application.rechecks import ReCheckService
@@ -12,6 +13,7 @@ from app.ports.coordination import CoordinationRepository, RepositoryFactory
 
 
 def validate_draft(repo: CoordinationRepository, project_id: str, request: FindingDraft) -> None:
+    validate_groups(request.dependencies)
     state = repo.state(project_id)
     evidence = repo.evidence_by_ids(project_id, request.evidence_ids)
     if {e.id for e in evidence} != set(request.evidence_ids):
@@ -138,18 +140,16 @@ class FindingService:
             or recheck.finding_updated_at != item.updated_at
         ):
             raise Conflict("Closure requires current resolved ReCheck evidence")
-        latest = repo.latest_source_revision(project_id, recheck.source_id)
-        if latest is None or latest.id != recheck.source_revision_id:
+        if not inputs_current(repo, recheck):
             raise Conflict("ReCheck is superseded by a newer revision")
         # Multi-source findings require a resolved, current check for every dependency source.
-        for source_id in {d.source_id for d in item.dependencies}:
-            latest = repo.latest_source_revision(project_id, source_id)
+        for dependency in item.dependencies:
             if not any(
                 r.outcome == "RESOLVED"
                 and r.evidence_ids
                 and r.finding_updated_at == item.updated_at
-                and latest
-                and r.source_revision_id == latest.id
+                and dependency in r.dependencies
+                and inputs_current(repo, r)
                 for r in repo.rechecks(project_id, item.id)
             ):
                 raise Conflict("Every dependency source requires current resolved evidence")

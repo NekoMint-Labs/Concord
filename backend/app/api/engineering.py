@@ -8,6 +8,8 @@ from app.domain.engineering import (
     Coordination,
     FindingDecision,
     FindingDraft,
+    IDSRequirementsRequest,
+    IDSRequirementsSelection,
     ReCheck,
     ReCheckRequest,
 )
@@ -15,6 +17,18 @@ from app.domain.models import Evidence, Finding
 from app.policies.actions import require
 
 router = APIRouter(prefix="/api/projects/{project_id}/engineering", tags=["engineering"])
+
+
+@router.get("/ids-requirements", response_model=IDSRequirementsSelection | None)
+def ids_requirements(project_id: str, user: CurrentUser, svc=Depends(services)):
+    return svc.ids_requirements.get(project_id, user)
+
+
+@router.put("/ids-requirements", response_model=IDSRequirementsSelection)
+def select_ids_requirements(
+    project_id: str, request: IDSRequirementsRequest, user: CurrentUser, svc=Depends(services)
+):
+    return svc.ids_requirements.select(project_id, request, user)
 
 
 @router.get("/changes", response_model=list[Change])

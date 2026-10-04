@@ -57,3 +57,16 @@ class FindingDependency(BaseModel):
     expected_condition: str = Field(min_length=1, max_length=2000)
     target: ViewerTarget
     work_package_ids: tuple[str, ...] = ()
+    group_id: str | None = Field(default=None, min_length=1, max_length=100)
+    input_role: str | None = Field(default=None, min_length=1, max_length=100)
+    requirements_kind: Literal["ids"] | None = None
+
+    @model_validator(mode="after")
+    def grouped_role(self):
+        if self.group_id and self.group_id.startswith("dependency:"):
+            raise ValueError("dependency: is reserved for ungrouped runtime inputs")
+        if (self.group_id is None) != (self.input_role is None):
+            raise ValueError("Grouped dependencies require both group_id and input_role")
+        if self.input_role == "requirements":
+            raise ValueError("requirements is reserved for the selected IDS artifact")
+        return self

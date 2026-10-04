@@ -37,6 +37,28 @@ class Coordination(Model):
 ReCheckOutcome = Literal["RESOLVED", "STILL_OPEN", "CHANGED", "NEEDS_REVIEW"]
 
 
+class CapabilityInput(Model):
+    group_id: str
+    role: str
+    source_id: str
+    from_revision_id: str
+    source_revision_id: str
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    target: ViewerTarget | None = None
+
+
+class IDSRequirementsRequest(Model):
+    source_id: str = Field(min_length=1)
+    revision_id: str = Field(min_length=1)
+
+
+class IDSRequirementsSelection(IDSRequirementsRequest):
+    project_id: str
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    id: str = Field(default_factory=new_id)
+    selected_at: AwareDatetime = Field(default_factory=utcnow)
+
+
 class ReCheck(Model):
     id: str = Field(default_factory=new_id)
     project_id: str
@@ -51,6 +73,8 @@ class ReCheck(Model):
     explanation: str = ""
     created_at: AwareDatetime = Field(default_factory=utcnow)
     completed_at: AwareDatetime | None = None
+    inputs: tuple[CapabilityInput, ...] = ()
+    ids_requirements: IDSRequirementsSelection | None = None
 
 
 class EngineeringPublication(Model):
@@ -91,6 +115,11 @@ class CapabilityCheck(Model):
     from_revision_id: str
     to_revision_id: str
     dependency: FindingDependency
+    group_id: str | None = None
+    inputs: tuple[CapabilityInput, ...] = ()
+    # Transient verified originals, aligned with inputs; never persisted in ReCheck.
+    input_bytes: tuple[bytes, ...] = Field(default=(), exclude=True)
+    ids_requirements: IDSRequirementsSelection | None = None
 
 
 class CapabilityCheckResult(Model):
@@ -98,3 +127,4 @@ class CapabilityCheckResult(Model):
     explanation: str = Field(min_length=1, max_length=4000)
     # Engine drafts: platform assigns snapshot and evidence identities on publication.
     evidence: tuple[Evidence, ...] = Field(default=(), max_length=1000)
+    expected_condition_satisfied: bool | None = None

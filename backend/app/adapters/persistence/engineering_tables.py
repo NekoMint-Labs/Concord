@@ -1,6 +1,14 @@
 """Indexed coordination state; payloads retain the canonical domain contracts."""
 
-from sqlalchemy import JSON, ForeignKey, ForeignKeyConstraint, Index, String, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.adapters.persistence.tables import Base
@@ -37,6 +45,7 @@ class DependencyRow(Base):
     __tablename__ = "finding_dependencies"
     __table_args__ = (
         Index("ix_dependency_source", "project_id", "source_id"),
+        Index("ix_dependency_ids", "project_id", "uses_ids_requirements"),
         ForeignKeyConstraint(
             ["project_id", "source_id", "source_revision_id"],
             [
@@ -51,6 +60,25 @@ class DependencyRow(Base):
     project_id: Mapped[str] = mapped_column(String(100))
     source_id: Mapped[str] = mapped_column(String(100))
     source_revision_id: Mapped[str] = mapped_column(String(100))
+    uses_ids_requirements: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class IDSRequirementsRow(Base):
+    __tablename__ = "engineering_ids_requirements"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["project_id", "source_id", "revision_id"],
+            [
+                "project_source_revisions.project_id",
+                "project_source_revisions.source_id",
+                "project_source_revisions.id",
+            ],
+        ),
+    )
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(100))
+    revision_id: Mapped[str] = mapped_column(String(100))
+    payload: Mapped[dict] = mapped_column(JSON)
 
 
 class CoordinationRow(Base):
