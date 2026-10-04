@@ -7,15 +7,10 @@ export interface ExtractedDocument {
   filename: string;
   chunks: readonly DocumentChunk[];
 }
-export interface DocumentNavigation {
-  sourceRevisionId: string;
-  sourceHash: string;
-  chunkId: string;
-  page?: number | null;
-  location?: string | null;
-}
+/** Generated public navigation contract; hashes and chunk IDs stay inside this adapter. */
+export type DocumentTarget = components["schemas"]["DocumentTarget"];
 export interface DocumentController {
-  navigate(target: DocumentNavigation): Promise<DocumentNavigation>;
+  navigate(target: DocumentTarget): Promise<DocumentTarget>;
 }
 export interface DocumentCell {
   group: string;

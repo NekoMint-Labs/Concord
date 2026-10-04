@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   DocumentChunk,
   DocumentController,
-  DocumentNavigation,
+  DocumentTarget,
   ExtractedDocument,
 } from "./documentTypes";
 import {
@@ -19,11 +19,12 @@ export default function DocumentSurface({
   onSelection,
 }: {
   source: ExtractedDocument;
-  target?: DocumentNavigation;
+  target?: DocumentTarget;
   onReady?: (controller: DocumentController) => void;
-  onSelection?: (reference: DocumentNavigation) => void;
+  onSelection?: (reference: DocumentTarget) => void;
 }) {
   const nodes = useRef(new Map<string, HTMLElement>());
+  const controllerRef = useRef<DocumentController | undefined>(undefined);
   const callbacks = useRef({ onReady, onSelection });
   callbacks.current = { onReady, onSelection };
   const [selected, setSelected] = useState("");
@@ -55,36 +56,49 @@ export default function DocumentSurface({
     let live = true;
     setSelected("");
     setError("");
-    const navigate = async (reference: DocumentNavigation) => {
-      if (!live || content.error)
-        throw new Error(content.error || "Document viewer was closed");
-      const chunk = resolveDocumentTarget(source, reference);
-      const node = nodes.current.get(chunk.id);
-      if (!node) throw new Error("Document excerpt is not mounted");
-      setSelected(chunk.id);
-      node.scrollIntoView?.({ block: "center", behavior: "auto" });
-      node.focus({ preventScroll: true });
-      const result = documentReference(source, chunk);
-      callbacks.current.onSelection?.(result);
-      return result;
+    const navigate = async (reference: DocumentTarget) => {
+      if (!live) throw new Error("Document viewer was closed");
+      try {
+        if (content.error) throw new Error(content.error);
+        const chunk = resolveDocumentTarget(source, reference);
+        const node = nodes.current.get(chunk.id);
+        if (!node) throw new Error("Document excerpt is not mounted");
+        const result = documentReference(source, chunk);
+        setError("");
+        setSelected(chunk.id);
+        node.scrollIntoView?.({ block: "center", behavior: "auto" });
+        node.focus({ preventScroll: true });
+        callbacks.current.onSelection?.(result);
+        return result;
+      } catch (failure) {
+        setSelected("");
+        setError(failure instanceof Error ? failure.message : String(failure));
+        throw failure;
+      }
     };
     const controller = { navigate };
+    controllerRef.current = controller;
     if (!content.error) callbacks.current.onReady?.(controller);
-    if (target)
-      void navigate(target).catch((failure) => {
-        if (live) setError(failure.message);
-      });
     return () => {
       live = false;
+      controllerRef.current = undefined;
     };
+  }, [source, content]);
+  useEffect(() => {
+    if (target) void controllerRef.current?.navigate(target).catch(() => {});
   }, [source, content, target]);
   const bind = (id: string) => (node: HTMLElement | null) => {
     if (node) nodes.current.set(id, node);
     else nodes.current.delete(id);
   };
   const choose = (chunk: DocumentChunk) => {
-    setSelected(chunk.id);
-    callbacks.current.onSelection?.(documentReference(source, chunk));
+    try {
+      const reference = documentReference(source, chunk);
+      void controllerRef.current?.navigate(reference).catch(() => {});
+    } catch (failure) {
+      setSelected("");
+      setError(failure instanceof Error ? failure.message : String(failure));
+    }
   };
   if (content.error)
     return (

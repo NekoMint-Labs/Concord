@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import type {
+  DocumentTarget,
   DocumentController,
   ExtractedDocument,
 } from "../../src/viewers/document/documentTypes";
@@ -51,10 +52,14 @@ for (const format of ["xlsx", "docx"] as const) {
     await expect(
       page.getByRole("heading", { name: source.filename, exact: true }),
     ).toBeVisible();
-    const target = {
-      sourceRevisionId: source.sourceRevisionId,
-      sourceHash: source.sourceHash,
-      chunkId: chunk.id,
+    const path =
+      format === "xlsx"
+        ? ["Coordination", "row:4", "cell:C4"]
+        : ["header-0", "row:3", "cell:C3"];
+    const target: DocumentTarget = {
+      kind: "document",
+      source_revision_id: source.sourceRevisionId,
+      structural_path: path,
       page: chunk.page,
       location: chunk.location,
     };
@@ -68,9 +73,13 @@ for (const format of ["xlsx", "docx"] as const) {
       );
     expect(await navigate()).toEqual(target);
     await expect(page.locator('tr[data-selected="true"]')).toContainText(text);
-    await expect(page.getByTestId("document-selection")).toHaveText(
-      JSON.stringify(target),
-    );
+    await expect
+      .poll(async () =>
+        JSON.parse(
+          (await page.getByTestId("document-selection").textContent())!,
+        ),
+      )
+      .toEqual(target);
     if (format === "xlsx") {
       await expect(page.locator("table")).toHaveCount(2);
       await expect(page.locator("tbody tr")).toHaveCount(22);
@@ -81,9 +90,9 @@ for (const format of ["xlsx", "docx"] as const) {
       )!;
       expect(instruction).toBeTruthy();
       const paragraph = {
-        sourceRevisionId: source.sourceRevisionId,
-        sourceHash: source.sourceHash,
-        chunkId: instruction.id,
+        kind: "document" as const,
+        source_revision_id: source.sourceRevisionId,
+        structural_path: [instruction.location!.split("; ")[0]],
         page: instruction.page,
         location: instruction.location,
       };
@@ -102,13 +111,33 @@ for (const format of ["xlsx", "docx"] as const) {
       try {
         await (
           window as unknown as { documentSession: DocumentController }
-        ).documentSession.navigate({ ...target, sourceHash: "0".repeat(64) });
+        ).documentSession.navigate({
+          ...target,
+          source_revision_id: "missing-revision",
+        });
         return "unexpected success";
       } catch (error) {
         return String(error);
       }
     }, target);
-    expect(stale).toContain("hash changed");
+    expect(stale).toContain("source revision is not loaded");
+    await expect(page.getByRole("alert")).toContainText(
+      "source revision is not loaded",
+    );
+    await expect(page.locator('[data-selected="true"]')).toHaveCount(0);
+    // Resolve the contract's structural path without C's chunk identity/location.
+    const structural = await page.evaluate(
+      async (target) =>
+        (
+          window as unknown as { documentSession: DocumentController }
+        ).documentSession.navigate({
+          source_revision_id: target.source_revision_id,
+          structural_path: target.structural_path,
+        }),
+      target,
+    );
+    expect(structural).toEqual(target);
+    await expect(page.getByRole("alert")).toHaveCount(0);
     await page
       .getByRole("button", { name: "Close viewer", exact: true })
       .click();
@@ -126,6 +155,24 @@ for (const format of ["xlsx", "docx"] as const) {
       }
     }, target);
     expect(closed).toContain("closed");
+    await page
+      .getByRole("button", { name: "Open document", exact: true })
+      .click();
+    // Docling chunk IDs are not a public navigation identity and can regenerate.
+    const regenerated = {
+      ...source,
+      chunks: source.chunks.map((item, index) => ({
+        ...item,
+        id: `new-${index}`,
+      })),
+    };
+    await page
+      .getByLabel("Qualified extraction", { exact: true })
+      .setInputFiles({
+        name: `${format}-regenerated.json`,
+        mimeType: "application/json",
+        buffer: Buffer.from(JSON.stringify(regenerated)),
+      });
     await page
       .getByRole("button", { name: "Open document", exact: true })
       .click();

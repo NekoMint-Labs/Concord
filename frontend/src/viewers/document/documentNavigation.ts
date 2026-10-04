@@ -1,6 +1,6 @@
 import type {
   DocumentChunk,
-  DocumentNavigation,
+  DocumentTarget,
   DocumentCell,
   ExtractedDocument,
 } from "./documentTypes";
@@ -43,47 +43,88 @@ export function validateExtractedDocument(source: ExtractedDocument) {
       throw new Error("Document extraction exceeds the surface memory limit");
   }
 }
+/** Paths use actual donor ancestry/cell addresses or the donor item reference. */
+function documentPath(chunk: DocumentChunk): string[] {
+  const cell = documentCell(chunk);
+  if (cell)
+    return [
+      ...(cell.group === cell.tableId ? [cell.tableId] : cell.group.split("/")),
+      `row:${cell.row}`,
+      `cell:${cell.address}`,
+    ];
+  const reference = chunk.location?.split("; ")[0];
+  return reference ? [reference] : [];
+}
 export function documentReference(
   source: ExtractedDocument,
   chunk: DocumentChunk,
-): DocumentNavigation {
+): DocumentTarget {
+  if (!chunk.location)
+    throw new Error("Document excerpt has no stable source location");
   return {
-    sourceRevisionId: source.sourceRevisionId,
-    sourceHash: source.sourceHash,
-    chunkId: chunk.id,
+    kind: "document",
+    source_revision_id: source.sourceRevisionId,
     page: chunk.page,
+    structural_path: documentPath(chunk),
     location: chunk.location,
   };
 }
 export function resolveDocumentTarget(
   source: ExtractedDocument,
-  target: DocumentNavigation,
+  target: DocumentTarget,
 ): DocumentChunk {
+  validateExtractedDocument(source);
   if (
-    target.sourceRevisionId !== source.sourceRevisionId ||
-    target.sourceHash !== source.sourceHash
+    !target ||
+    (target.kind !== undefined && target.kind !== "document") ||
+    target.source_revision_id !== source.sourceRevisionId
   )
-    throw new Error(
-      "Document target revision is not loaded or its hash changed",
-    );
-  const chunk = source.chunks.find((item) => item.id === target.chunkId);
-  if (!chunk)
-    throw new Error(
-      "Document excerpt is absent from the requested source revision",
-    );
+    throw new Error("Document target source revision is not loaded");
+  const path =
+    target.structural_path === undefined ? [] : target.structural_path;
   if (
-    (target.page !== undefined && target.page !== chunk.page) ||
-    (target.location !== undefined && target.location !== chunk.location)
+    !Array.isArray(path) ||
+    path.length > 64 ||
+    path.some(
+      (part) => typeof part !== "string" || !part || part.length > 1000,
+    ) ||
+    path.join("/").length > 16000 ||
+    (target.page != null &&
+      (!Number.isSafeInteger(target.page) ||
+        target.page < 1 ||
+        target.page > 10000)) ||
+    (target.location != null &&
+      (typeof target.location !== "string" ||
+        !target.location ||
+        target.location.length > 16000))
   )
+    throw new Error("Document target location is invalid");
+  // Every supplied selector must agree. No substring/nearest-cell fallback.
+  const matches = source.chunks.filter((chunk) => {
+    if (target.page != null && target.page !== chunk.page) return false;
+    if (target.location != null && target.location !== chunk.location)
+      return false;
+    const actual = documentPath(chunk);
+    return path.every((part, index) => part === actual[index]);
+  });
+  if (!matches.length)
     throw new Error(
-      "Document target location does not match the source excerpt",
+      "Document target location is absent from the requested source revision",
     );
-  return chunk;
+  // Pages/sections open at their first excerpt; exact items/cells need a unique location.
+  const exactItem =
+    path.length > 0 &&
+    matches.some((chunk) => documentPath(chunk).length === path.length);
+  if (matches.length > 1 && (target.location != null || exactItem))
+    throw new Error(
+      "Document target location is ambiguous; an exact source location is required",
+    );
+  return matches[0];
 }
 /** Presentation of actual Docling cell addresses; this does not reparse a workbook. */
 export function documentCell(chunk: DocumentChunk): DocumentCell | undefined {
   const match =
-    /^([^;]+); (.*)\/row:(\d+)\/cell:([A-Z]+)(\d+); row-span=(\d+); col-span=(\d+); column-header=(True|False); row-header=(True|False)(?:;|$)/.exec(
+    /^([^;]+); (?:pages=[^;]+; |ocr-page-confidence=[^;]+; )*(.*)\/row:(\d+)\/cell:([A-Z]+)(\d+); row-span=(\d+); col-span=(\d+); column-header=(True|False); row-header=(True|False)(?:;|$)/.exec(
       chunk.location ?? "",
     );
   if (!match) return undefined;

@@ -657,3 +657,35 @@ An isolated frozen environment matching the lightweight backend lane (models/tel
 without BIM) ran the four cache unit tests successfully and explicitly skipped the
 optional real IfcTester test. That skip is not engine qualification; the separate
 BIM-enabled seven-test required suite and no-skip gate provide that evidence.
+
+
+### October 4 canonical DocumentTarget continuation
+
+The extracted-document surface now consumes the generated `DocumentTarget` and
+returns that contract for user selections and controller navigation. Public
+navigation binds to `source_revision_id`, page, structural path and exact source
+location; extraction chunk IDs and the verified source hash remain internal.
+Reopening the same source location works after chunk IDs are regenerated.
+Page and section targets open the first matching excerpt; exact cell/item targets
+reject ambiguous split excerpts or duplicated cell addresses unless an exact
+location distinguishes them. Every supplied selector must agree. Unknown/stale
+revisions, invalid selectors, corrupt extraction hashes and missing provenance
+produce visible failures and clear previous highlights. Source replacement and
+unmount invalidate the old controller, while target changes retain its lifetime.
+
+Verification: 405 frontend tests passed with two workers, including thirteen
+Document navigation/lifecycle cases. Production TypeScript/build, complete frontend
+Prettier and changed-file whitespace checks passed. Two real Chromium scenarios
+used Docling's Golden XLSX/DOCX output to reopen cells/paragraphs, reject a stale
+revision and reopen regenerated extraction IDs with the same canonical target.
+The XLSX screenshot was inspected and shows the exact C4 selection with source
+provenance. Browser screenshots/reports remain ignored local artifacts.
+
+B confirmed the current ownership/integration direction on #22, while explicitly
+withholding final approval until remaining acceptance work is complete. A still
+needs to confirm dual-source clash/ReCheck inputs and versioned IDS requirements
+selection. A separate question records the six-number BIM viewpoint semantics;
+C can proceed with GlobalId navigation without inventing a shared camera meaning.
+This continuation changes no generated schema, shared contract, dependency,
+workflow or B-owned product composition. Canonical BIM navigation and the other
+remaining #17 acceptance items are still open; #22 remains Draft.
