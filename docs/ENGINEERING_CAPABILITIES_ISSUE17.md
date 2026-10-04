@@ -878,3 +878,20 @@ canonical Change; the follow-up reopen assertion also clears stale comparison
 status in the test harness. Full local browser/typecheck reruns remain dependent
 on restoring the project PDF/browser dependency tree after an interrupted local
 install. CI must requalify the complete branch before review.
+
+## October 4, 2026 capability adapter continuation
+
+The C-owned `IfcClashCapability` and `IfcTesterCapability` now consume the merged
+`EngineeringCapability.check` request. The clash wrapper requires the complete
+role-qualified two-model group, passes both verified originals to IfcClash, and
+rejects result provenance that does not match either persisted source revision or
+hash. The IDS wrapper requires the explicitly selected requirements source and
+revision, passes the original selected IDS bytes to IfcTester, and verifies both
+model and requirements hashes before mapping violations to canonical Evidence.
+
+Both wrappers expose the installed engine version for the durable cache identity.
+They evaluate only the documented conditions `No clashes`, `All IDS requirements
+pass`, and `No IDS violations`; unsupported condition text remains `NEEDS_REVIEW`.
+Empty output is not turned into resolution Evidence. The wrappers are adapter
+objects only; registration through the composition root and product composition
+remain owner-coordinated integration work.
