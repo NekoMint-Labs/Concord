@@ -1,10 +1,19 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import "../styles/features/stage-surfaces.css";
 import { api, type AgentRun, type DTO } from "../api/client";
 import { AppDisclosure } from "../components/ui/AppDisclosure";
 import { Button } from "../components/ui/button";
 import { RunHistory } from "./RunHistory";
 import { SemanticRetrieval } from "./SemanticRetrieval";
+
+/* The three checks this surface can start. The row is a compact donor filter
+ * band; the hint each tool carries is a tooltip, not a second line. */
+const operationTools = [
+  ["schedule", "约束排程", "班组、设备与前置关系"],
+  ["vision", "现场图像", "安全图像观察"],
+  ["retrieval", "文档检索", "派生向量索引"],
+] as const;
 
 export function Operations({
   project,
@@ -45,41 +54,28 @@ export function Operations({
   }
 
   return (
-    <section className="operations-workspace">
-      <header className="view-toolbar">
-        <h2>活动与运行</h2>
-        <span className="viewer-toolbar-note">
-          显式启动工程检查，并核对每次运行的结果与轨迹
-        </span>
+    <main className="workspace-stage-surface operations-workspace">
+      <header className="workspace-stage-band">
+        <nav className="operation-filters" aria-label="检查类型">
+          {operationTools.map(([id, label, hint]) => (
+            <button
+              type="button"
+              key={id}
+              aria-pressed={tool === id}
+              title={hint}
+              onClick={() => setTool(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+        <span className="dot-leader" aria-hidden="true" />
+        <small>显式启动工程检查，并核对每次运行的结果与轨迹</small>
       </header>
-      <div className="operations-layout">
-        <aside className="operation-console" aria-label="启动检查">
-          <header>
-            <span className="eyebrow">检查工具</span>
-            <h3>启动新运行</h3>
-          </header>
-          <nav className="operation-tabs" aria-label="检查类型">
-            {[
-              ["schedule", "约束排程", "班组、设备与前置关系"],
-              ["vision", "现场图像", "安全图像观察"],
-              ["retrieval", "文档检索", "派生向量索引"],
-            ].map(([id, label, hint]) => (
-              <Button
-                variant="ghost"
-                type="button"
-                key={id}
-                className={tool === id ? "selected" : ""}
-                onClick={() =>
-                  setTool(id as "schedule" | "vision" | "retrieval")
-                }
-              >
-                <strong>{label}</strong>
-                <small>{hint}</small>
-              </Button>
-            ))}
-          </nav>
-
-          <div className="operation-tool">
+      <div className="workspace-stage-body operations-stage-body">
+        <div className="operations-layout">
+          <section className="operation-console" aria-label="启动检查">
+            <div className="operation-tool">
             {tool === "schedule" && (
               <section aria-labelledby="schedule-tool">
                 <h4 id="schedule-tool">约束排程</h4>
@@ -176,16 +172,17 @@ export function Operations({
                 onRun={setPreferredRun}
               />
             )}
-          </div>
-        </aside>
+            </div>
+          </section>
 
-        <RunHistory
-          key={preferredRun}
-          project={project}
-          preferred={preferredRun}
-          perform={perform}
-        />
+          <RunHistory
+            key={preferredRun}
+            project={project}
+            preferred={preferredRun}
+            perform={perform}
+          />
+        </div>
       </div>
-    </section>
+    </main>
   );
 }

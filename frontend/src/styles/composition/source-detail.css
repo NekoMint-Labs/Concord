@@ -54,8 +54,9 @@
   margin-bottom: 8px;
   font-size: 13px;
 }
+/* Tighter revision block: it recedes into the object's single column. */
 .app-shell .sources-context-revision {
-  padding: 14px 0;
+  padding: 10px 0;
 }
 .app-shell .sources-context-revision > header {
   align-items: baseline;

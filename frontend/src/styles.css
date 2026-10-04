@@ -15,6 +15,7 @@
 @import "./styles/ui.css";
 @import "./styles/shell.css";
 @import "./styles/features/inspector.css";
+@import "./styles/features/context-inspector.css";
 @import "./styles/features/documents.css";
 @import "./styles/features/events.css";
 @import "./styles/features/operations.css";

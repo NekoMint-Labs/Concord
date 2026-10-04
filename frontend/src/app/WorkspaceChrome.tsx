@@ -38,6 +38,7 @@ export function WorkspaceChrome({
   aids,
   action,
   scaleMenu,
+  navigationLabel = "资料",
 }: {
   title: string;
   subtitle: string;
@@ -63,6 +64,7 @@ export function WorkspaceChrome({
   aids?: ReactNode;
   action?: ReactNode;
   scaleMenu?: ReactNode;
+  navigationLabel?: string;
 }) {
   return (
     <>
@@ -84,10 +86,10 @@ export function WorkspaceChrome({
             type="button"
             aria-pressed={navigationOpen}
             onClick={onNavigate}
-            title="资料导航 — 项目资料与工作包"
+            title={`${navigationLabel}导航 — 当前工作区的对象列表`}
           >
             <Icon name="sheets" size={16} />
-            资料
+            {navigationLabel}
           </button>
           {pinControl}
           <button

@@ -63,7 +63,7 @@
   background: var(--concord-ready-mark);
 }
 .app-shell .central-workspace {
-  background: var(--surface);
+  background: var(--surface-workspace);
 }
 /* The divider changes only the Inspector column; the stage retains the bottom context. */
 .app-shell .bim-workspace.spatial-workspace {
@@ -101,7 +101,7 @@
 .app-shell .bim-workspace .spatial-context {
   min-width: 0;
   min-height: 0;
-  background: var(--surface);
+  background: var(--surface-detail);
   border-top: 1px solid var(--concord-context-divider);
 }
 .app-shell .bim-stage {

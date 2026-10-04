@@ -15,7 +15,6 @@ import {
   type Workspace,
 } from "../api/client";
 import { Button } from "../components/ui/button";
-import { AppDialog } from "../components/ui/AppDialog";
 import { icon } from "../components/ui/icon";
 import { usePaneWidth } from "../layout/paneBudget";
 import {
@@ -30,12 +29,14 @@ import {
   targetLabel,
   qualityLabels,
 } from "../app/EvidenceWorkspaceHost";
-import {
-  WorkspaceInlineState,
-  engineeringErrorMessage,
-} from "../components/WorkspaceInlineState";
+import { WorkspaceInlineState } from "../components/WorkspaceInlineState";
 import { shortDate } from "../ui/labels";
 import { FindingFollowUp, recheckFreshness } from "./FindingFollowUp";
+import {
+  FindingDecisionInline,
+  FindingGapNotice,
+  type FindingDecisionKind,
+} from "./FindingDecisionInline";
 import {
   useEngineeringFindings,
   useEngineeringFinding,
@@ -67,14 +68,6 @@ export type WorkSurfaceProps = {
     revisionLabel?: string;
     fromRevisionLabel?: string;
   }) => void;
-};
-
-const actions = {
-  CONFIRMED: "确认",
-  DISMISSED: "忽略",
-  EDITED: "编辑",
-  CLOSED: "关闭",
-  REOPENED: "重新打开",
 };
 
 export function FindingWorkbench({
@@ -205,8 +198,9 @@ export function FindingWorkbench({
     />
   );
   const evidencePanel = (
-    <section
+    <main
       key="finding-evidence"
+      className="workspace-stage"
       aria-label="工程依据"
       style={{ flex: 1, minWidth: 0, display: "flex", order: 0 }}
     >
@@ -268,7 +262,7 @@ export function FindingWorkbench({
           </div>
         </section>
       )}
-    </section>
+    </main>
   );
   return (
     <>
@@ -293,13 +287,19 @@ function FindingDetail({
   sources?: DTO<"ProjectSourceStatus">[];
 }) {
   const finding = session.finding.data;
-  const [pendingDecision, setPendingDecision] = useState<
-    DTO<"FindingDecision">["decision"] | null
-  >(null);
-  const [reason, setReason] = useState("");
-  const [closureCheckId, setClosureCheckId] = useState("");
-  const [draft, setDraft] = useState({ title: "", suggested_action: "" });
+  const [pendingDecision, setPendingDecision] =
+    useState<FindingDecisionKind | null>(null);
   const [gapOpen, setGapOpen] = useState(false);
+  const open = pendingDecision !== null || gapOpen;
+  // A decision strip grows out of a button and collapses back to it: remember
+  // the trigger so focus returns there, never to the panel chrome.
+  const returnFocus = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (open || !returnFocus.current) return;
+    const target = returnFocus.current;
+    returnFocus.current = null;
+    if (target.isConnected) target.focus();
+  }, [open]);
   if (session.finding.isPending)
     return (
       <WorkspaceInlineState title="正在读取 Finding 详情…">
@@ -327,14 +327,17 @@ function FindingDetail({
         请选择当前项目中的工程判断。
       </WorkspaceInlineState>
     );
-  const startDecision = (decision: DTO<"FindingDecision">["decision"]) => {
-    setReason("");
-    setClosureCheckId("");
-    setDraft({
-      title: finding.title,
-      suggested_action: finding.suggested_action ?? "",
-    });
+  // The decision strip opens in place; it never leaves the docked panel.
+  const startDecision = (
+    decision: FindingDecisionKind,
+    element: HTMLElement,
+  ) => {
+    returnFocus.current = element;
     setPendingDecision(decision);
+  };
+  const openGap = (element: HTMLElement) => {
+    returnFocus.current = element;
+    setGapOpen(true);
   };
   const evidenceLinks = (quality: "verified" | "inferred") =>
     finding.evidence_ids.map((id) => {
@@ -371,8 +374,11 @@ function FindingDetail({
     });
   return (
     <div className="workspace-work-view">
-      <section className="workspace-inspector" aria-label="Finding 详情">
-        <div className="workspace-inspector-title">
+      <section
+        className="workspace-inspector finding-receipt"
+        aria-label="Finding 详情"
+      >
+        <div className="workspace-inspector-title finding-receipt-title">
           <h2 id="finding-title" tabIndex={-1}>
             {finding.title}
           </h2>
@@ -381,15 +387,15 @@ function FindingDetail({
           {findingStateLabels[finding.state]} · {shortDate(finding.updated_at)}
         </p>
         <section className="finding-section">
-          <h3>什么变了</h3>
+          <h3 className="t-label">什么变了</h3>
           <p>{finding.what_changed}</p>
         </section>
         <section className="finding-section">
-          <h3>为什么重要</h3>
+          <h3 className="t-label">为什么重要</h3>
           <p>{finding.why_it_matters}</p>
         </section>
         <section className="finding-section finding-next-action">
-          <h3>下一步 · 建议</h3>
+          <h3 className="t-label">下一步 · 建议</h3>
           <p>{finding.suggested_action || "先检查关联依据，再作人工判断。"}</p>
           <p className="workspace-receipt-note">
             建议专业：{finding.suggested_discipline || "未指定"} ·
@@ -400,7 +406,7 @@ function FindingDetail({
           className="finding-section finding-evidence"
           aria-label="结构化与提取证据"
         >
-          <h3>已验证 / 提取依据</h3>
+          <h3 className="t-label">已验证 / 提取依据</h3>
           <p className="finding-help">
             结构化表示工程验证；提取内容来自资料，不等于已验证几何或满足条件。
           </p>
@@ -433,7 +439,7 @@ function FindingDetail({
           className="finding-section finding-inference"
           aria-label="推断与 AI 建议"
         >
-          <h3>推断与建议</h3>
+          <h3 className="t-label">推断与建议</h3>
           <p className="finding-help">
             不是已验证工程事实；建议由人工判断。AI 解释不会成为 Evidence
             或人工决策。
@@ -444,7 +450,7 @@ function FindingDetail({
           </p>
         </section>
         <section className="finding-section">
-          <h3>限制与依赖</h3>
+          <h3 className="t-label">限制与依赖</h3>
           {finding.limitations.map((text, index) => (
             <p key={index}>{text}</p>
           ))}
@@ -497,221 +503,106 @@ function FindingDetail({
             {JSON.stringify(finding, null, 2)}
           </pre>
         </details>
-      </section>
-      <div className="finding-review-controls">
-        <div className="workspace-inspector-actions" aria-label="人工判断">
-          {finding.state === "PROPOSED" && (
-            <Button
-              size="sm"
-              disabled={session.busy}
-              onClick={() => startDecision("CONFIRMED")}
-            >
-              确认
-            </Button>
-          )}
-          {(finding.state === "PROPOSED" || finding.state === "CONFIRMED") && (
-            <>
+        {/* Decisions live in the receipt. The strip swaps in over the buttons,
+            in place, and never becomes a modal. */}
+        <div className="finding-decision-area">
+          <div
+            className="workspace-inspector-actions"
+            aria-label="人工判断"
+            hidden={open}
+          >
+            {finding.state === "PROPOSED" && (
+              <Button
+                size="sm"
+                disabled={session.busy}
+                onClick={(event) =>
+                  startDecision("CONFIRMED", event.currentTarget)
+                }
+              >
+                确认
+              </Button>
+            )}
+            {(finding.state === "PROPOSED" ||
+              finding.state === "CONFIRMED") && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={session.busy}
+                  onClick={(event) =>
+                    startDecision("DISMISSED", event.currentTarget)
+                  }
+                >
+                  忽略
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={session.busy}
+                  onClick={(event) =>
+                    startDecision("EDITED", event.currentTarget)
+                  }
+                >
+                  编辑
+                </Button>
+              </>
+            )}
+            {finding.state === "CONFIRMED" && (
               <Button
                 variant="secondary"
                 size="sm"
                 disabled={session.busy}
-                onClick={() => startDecision("DISMISSED")}
+                onClick={(event) =>
+                  startDecision("CLOSED", event.currentTarget)
+                }
               >
-                忽略
+                关闭
               </Button>
+            )}
+            {(finding.state === "CLOSED" || finding.state === "DISMISSED") && (
               <Button
-                variant="ghost"
                 size="sm"
                 disabled={session.busy}
-                onClick={() => startDecision("EDITED")}
+                onClick={(event) =>
+                  startDecision("REOPENED", event.currentTarget)
+                }
               >
-                编辑
+                重新打开
               </Button>
-            </>
-          )}
-          {finding.state === "CONFIRMED" && (
+            )}
             <Button
               variant="secondary"
               size="sm"
-              disabled={session.busy}
-              onClick={() => startDecision("CLOSED")}
+              onClick={(event) => openGap(event.currentTarget)}
             >
-              关闭
+              证据不足
             </Button>
-          )}
-          {(finding.state === "CLOSED" || finding.state === "DISMISSED") && (
-            <Button
-              size="sm"
-              disabled={session.busy}
-              onClick={() => startDecision("REOPENED")}
-            >
-              重新打开
-            </Button>
-          )}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setGapOpen(true)}
-          >
-            证据不足
-          </Button>
-          <FindingFollowUp
-            session={session}
-            sources={sources}
-            onEvidence={onEvidence}
-          />
-        </div>
-        {session.busy && (
-          <p className="finding-decision-status" role="status">
-            正在提交，请等待确认…
-          </p>
-        )}
-      </div>
-      <AppDialog
-        open={gapOpen}
-        onOpenChange={setGapOpen}
-        title="证据不足"
-        description="目前不支持单独记录证据不足；此操作不可提交，也不会更改工程判断。"
-      >
-        <p>请先检查或补充工程依据，再作人工判断。当前未写入任何人工决策。</p>
-        <Button onClick={() => setGapOpen(false)}>返回证据</Button>
-      </AppDialog>
-      <AppDialog
-        open={pendingDecision !== null}
-        onOpenChange={(next) => {
-          if (!next && !session.busy) setPendingDecision(null);
-        }}
-        title={`${pendingDecision ? actions[pendingDecision] : "判断"} Finding`}
-        description={
-          pendingDecision === "CLOSED"
-            ? "请选择已验证满足全部依赖条件的当前复核依据。关闭仍需人工确认；依据不足时会拒绝关闭并保留记录。"
-            : "提交你的人工判断。成功保存后才更新工程判断与协调记录。"
-        }
-      >
-        <form
-          className="finding-edit-form"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            if (!pendingDecision || session.busy) return;
-            const result = await session.decide({
-              decision: pendingDecision,
-              note: reason.trim(),
-              ...(pendingDecision === "CLOSED" && closureCheckId
-                ? { recheck_id: closureCheckId }
-                : {}),
-              ...(pendingDecision === "EDITED"
-                ? {
-                    title: draft.title.trim(),
-                    suggested_action: draft.suggested_action.trim(),
-                  }
-                : {}),
-            });
-            if (result) setPendingDecision(null);
-          }}
-        >
-          <p>{finding.title}</p>
-          {pendingDecision === "CLOSED" && (
-            <label>
-              关闭依据 ReCheck
-              <select
-                aria-label="关闭依据 ReCheck"
-                value={closureCheckId}
-                onChange={(event) => setClosureCheckId(event.target.value)}
-              >
-                <option value="">
-                  选择条件已验证满足的工程依据（未选将由服务器拒绝）
-                </option>
-                {session.rechecks.data
-                  ?.filter(
-                    (check) =>
-                      check.outcome === "RESOLVED" &&
-                      check.evidence_ids.length > 0,
-                  )
-                  .map((check) => (
-                    <option key={check.id} value={check.id}>
-                      条件已验证满足 ·{" "}
-                      {shortDate(check.completed_at ?? check.created_at)} ·{" "}
-                      {recheckFreshness(check, finding, sources)}
-                    </option>
-                  ))}
-              </select>
-              <span>
-                执行完成不等于解决；人工选择依据后服务器仍验证全部依赖。
-              </span>
-            </label>
-          )}
-          {pendingDecision === "EDITED" && (
-            <>
-              <label>
-                Finding 标题
-                <input
-                  aria-label="Finding 标题"
-                  required
-                  maxLength={240}
-                  value={draft.title}
-                  onChange={(event) =>
-                    setDraft({ ...draft, title: event.target.value })
-                  }
-                />
-              </label>
-              <label>
-                建议专业（目前仅支持查看）
-                <input readOnly value={finding.suggested_discipline ?? ""} />
-              </label>
-              <label>
-                建议行动
-                <textarea
-                  aria-label="建议行动"
-                  maxLength={1000}
-                  value={draft.suggested_action}
-                  onChange={(event) =>
-                    setDraft({ ...draft, suggested_action: event.target.value })
-                  }
-                />
-              </label>
-            </>
-          )}
-          <label>
-            判断说明
-            <textarea
-              aria-label="判断说明"
-              rows={3}
-              maxLength={1000}
-              required={pendingDecision !== "CONFIRMED"}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
+            <FindingFollowUp
+              session={session}
+              sources={sources}
+              onEvidence={onEvidence}
             />
-          </label>
-          {session.error && (
-            <WorkspaceInlineState
-              title="人工判断未保存"
-              diagnostic={session.error}
-              alert
-            >
-              {engineeringErrorMessage(session.error)} 可调整依据后重新提交。
-            </WorkspaceInlineState>
-          )}
-          <div>
-            <Button
-              variant="secondary"
-              disabled={session.busy}
-              onClick={() => setPendingDecision(null)}
-            >
-              取消
-            </Button>
-            <Button
-              type="submit"
-              disabled={
-                session.busy ||
-                (pendingDecision !== "CONFIRMED" && !reason.trim()) ||
-                (pendingDecision === "EDITED" && !draft.title.trim())
-              }
-            >
-              {session.busy ? "正在提交…" : "提交人工判断"}
-            </Button>
           </div>
-        </form>
-      </AppDialog>
+          {pendingDecision !== null && (
+            <FindingDecisionInline
+              key={pendingDecision}
+              decision={pendingDecision}
+              finding={finding}
+              session={session}
+              sources={sources}
+              onClose={() => setPendingDecision(null)}
+            />
+          )}
+          {gapOpen && <FindingGapNotice onClose={() => setGapOpen(false)} />}
+          {pendingDecision !== null && session.busy && (
+            // aria-live, not role="status": the receipt already owns one status
+            // region (the Finding state readout) that queries select by role.
+            <p className="finding-decision-status" aria-live="polite">
+              正在提交，请等待确认…
+            </p>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
