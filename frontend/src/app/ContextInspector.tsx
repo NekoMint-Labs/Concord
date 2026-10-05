@@ -6,6 +6,12 @@
  * one inspector in the workspace: selecting a Finding, an Evidence, a Source,
  * a Revision, a Document or a Work Package fills this panel and nothing else
  * opens beside it.
+ *
+ * It is a docked panel, not a page: a panel header (kind, object name, close), a
+ * body of titled sections whose facts are a table with quiet captions and ink
+ * values, and a footer whose actions are pinned to the panel's own bottom edge.
+ * The raw object key is provenance rather than product copy, so it lives in the
+ * product's one disclosure for exactly that.
  */
 import { X } from "lucide-react";
 import type {
@@ -187,14 +193,16 @@ export function ContextInspector({
       </header>
       <div className="context-inspector-body">
         {!object && (
-          <p className="context-inspector-note">
-            在导航器中选择资料、版本、工作包或工程判断，检查器会显示它的来源、依据与当前判断。
-          </p>
+          <section className="context-section">
+            <p className="context-inspector-note">
+              在导航器中选择资料、版本、工作包或工程判断，检查器会显示它的来源、依据与当前判断。
+            </p>
+          </section>
         )}
         {!!rows.length && (
           <section className="context-section">
             <h3 className="t-label">身份与来源</h3>
-            <dl>
+            <dl className="context-facts">
               {rows.map(([label, value]) => (
                 <div key={label}>
                   <dt>{label}</dt>
@@ -287,6 +295,21 @@ export function ContextInspector({
             )}
           </section>
         )}
+        <div className="context-inspector-technical">
+          <details className="concord-details">
+            <summary>对象键</summary>
+            <dl className="context-facts">
+              <div>
+                <dt>当前对象键</dt>
+                <dd>
+                  <code title="当前对象键">
+                    {object ? stageKey(object) : "—"}
+                  </code>
+                </dd>
+              </div>
+            </dl>
+          </details>
+        </div>
       </div>
       <footer className="context-inspector-footer">
         <button
@@ -319,7 +342,6 @@ export function ContextInspector({
         >
           查看工作包上下文 →
         </button>
-        <code title="当前对象键">{object ? stageKey(object) : "—"}</code>
       </footer>
     </aside>
   );

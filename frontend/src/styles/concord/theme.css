@@ -1,0 +1,730 @@
+/*
+ * ── Concord primitives ──────────────────────────────────────────────────────
+ *
+ * The material every surface is made of: the frame, the paper, the control faces,
+ * the floating objects, the state blocks. Loaded last, so it settles the donor and
+ * Concord sheets in one place instead of adding a fourth opinion about a button.
+ *
+ * Three rules hold everywhere below.
+ *
+ *  1. A region is separated from its neighbour by a *plane step*, not by linework.
+ *     A hairline is only drawn where two planes really meet, so a panel edge is a
+ *     seam and a list of rows is not a grid of boxes.
+ *  2. A control is identified by its own boundary and its own fill, never by a
+ *     shadow. Elevation is spent only on objects that genuinely leave the page: a
+ *     menu, a popover, a tooltip, a dialog. A shadow under a button is the tell of
+ *     a template.
+ *  3. The accent is a position, not a decoration. It marks the current object, the
+ *     focus ring, the committed action, and the AI's own voice - and it is never a
+ *     region background.
+ */
+
+/* ── the window ───────────────────────────────────────────────────────────── */
+
+html,
+body {
+  background: var(--c-backdrop);
+}
+
+.app-shell {
+  color: var(--ink);
+  background: var(--c-backdrop);
+}
+
+/*
+ * Paper texture. Not a gradient wash and not a noise image: a two-pass dot lattice
+ * at 2-3% alpha, sized so it disappears at reading distance and only reads as
+ * "this is a surface, not a fill" up close. It is the one texture in the product
+ * and it is spent on large planes only - never behind text, never on a control.
+ */
+.paper-bright,
+.paper-cream {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    var(--c-wash-paper) 1px,
+    transparent 0
+  );
+  background-size: 6px 6px;
+}
+.ink-panel {
+  background-color: var(--band);
+  color: var(--band-ink);
+  background-image:
+    linear-gradient(var(--c-wash-panel) 1px, transparent 1px),
+    linear-gradient(90deg, var(--c-wash-panel) 1px, transparent 1px);
+  background-size:
+    100% 3px,
+    3px 100%;
+}
+/*
+ * The drafting field: the plane a sheet or a model sits on. A fine engineering
+ * grid, one value up from the field, so a drawing reads as an object placed on a
+ * table rather than as a bitmap floating in a void.
+ */
+.concord-canvas,
+.evidence-canvas,
+.model-workspace-viewport,
+.map-canvas {
+  background-color: var(--canvas);
+  background-image:
+    linear-gradient(var(--c-wash-canvas) 1px, transparent 1px),
+    linear-gradient(90deg, var(--c-wash-canvas) 1px, transparent 1px);
+  background-size:
+    24px 24px,
+    24px 24px;
+}
+
+::selection {
+  background: var(--c-tint-accent-strong);
+  color: var(--ink);
+}
+
+/*
+ * Scrollbars: a desktop pane is narrow, so the default gutter costs real reading
+ * width and a native scrollbar is a loud "this is a web page" signal.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-line-float) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--c-line-float);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 6px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--line-control);
+  background-clip: content-box;
+}
+
+/* ── type roles ───────────────────────────────────────────────────────────── */
+
+/*
+ * `.eyebrow` and `.t-label` are the small mono register: a group title, a pane
+ * header, a metadata key. They are the only uppercase tracking text in the
+ * product, which is what keeps them identifiable as a *label* tier rather than as
+ * small body text - so they are spent on labels and never on prose.
+ */
+.t-label,
+.eyebrow,
+.section-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.t-display {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.t-mono,
+.t-mono-data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * A card title: one step larger than body, quietly tighter. Used for the object a
+ * reader has selected - a Finding, a source, a work package.
+ */
+.concord-title {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+/* ── chips, badges, rails ─────────────────────────────────────────────────── */
+
+/*
+ * The state chip. This is the product's one "informational badge": a tinted plane
+ * with a matching hairline and a small mono label, used for a Finding's state, a
+ * ReCheck outcome, an Evidence quality and a document status. Reading a state at a
+ * glance is the single most common scan in this product, so the chip earns real
+ * material rather than being a grey word in a corner.
+ */
+.concord-chip,
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 20px;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--face-inset);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.concord-chip[data-tone="accent"],
+.pill[data-tone="accent"] {
+  border-color: var(--c-tint-accent-strong);
+  background: var(--c-tint-accent);
+  color: var(--c-accent-deep);
+}
+.concord-chip[data-tone="positive"] {
+  border-color: var(--c-tint-positive);
+  background: var(--c-positive-surface);
+  color: var(--c-positive);
+}
+.concord-chip[data-tone="warning"] {
+  border-color: var(--c-tint-warning);
+  background: var(--c-warning-surface);
+  color: var(--c-warning);
+}
+.concord-chip[data-tone="danger"] {
+  border-color: var(--c-tint-danger);
+  background: var(--c-danger-surface);
+  color: var(--c-danger);
+}
+/* A chip on the dark frame: the tint is the frame's own light, so it stays legible */
+.concord-chip[data-on-band="true"] {
+  border-color: var(--band-line);
+  background: var(--band-select);
+  color: var(--band-ink);
+}
+
+/* ── control faces ────────────────────────────────────────────────────────── */
+
+/*
+ * Every control face in the product gets the same two signals at rest: a fill one
+ * step off the plane it sits on, and a boundary that clears 3:1. The pointer then
+ * darkens the same material instead of repainting the control, so rest and hover
+ * read as one object at two depths rather than as two designs.
+ */
+button.button {
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-control-soft);
+  background: var(--face-raised);
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 500;
+  box-shadow: none;
+}
+button.button:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--line-control);
+}
+button.button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+  border-color: var(--focus);
+}
+button.button-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+button.button-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+button.button-secondary {
+  background: var(--face-inset);
+  border-color: var(--line-control-soft);
+  color: var(--ink);
+}
+button.button-secondary:hover:not(:disabled) {
+  background: var(--hover-strong);
+  border-color: var(--line-control);
+}
+button.button-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-2);
+}
+button.button-ghost:hover:not(:disabled) {
+  background: var(--hover);
+  border-color: transparent;
+}
+button.button-danger {
+  background: var(--face-raised);
+  border-color: var(--line-control-soft);
+  color: var(--danger-fg);
+}
+button.button-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger-fg);
+}
+button.button[aria-pressed="true"]:not(.button-primary) {
+  border-color: var(--accent);
+  background: var(--c-tint-accent);
+  color: var(--c-accent-deep);
+}
+button.button-sm {
+  height: var(--control-h-sm);
+  padding: 0 var(--space-2);
+}
+/*
+ * A donor action is a single-height control: the library fixes the host's height and
+ * centres one line of label in it. A row whose content is two lines - a title with its
+ * own provenance line beneath it - therefore renders taller than its host and overlaps
+ * itself, which is the single worst thing to scan in a list. The row keeps the control's
+ * minimum and grows with its content; nothing about the control's own surface or states
+ * changes.
+ */
+bim-button.button:has(small) {
+  height: auto;
+  min-height: var(--control-h);
+}
+
+/*
+ * The icon button: a square face, used in a toolbar or a pane header. It has no
+ * fill at rest because it is already inside a band that provides one - it is
+ * identified by its hover and its focus, which is why the donor contract allows
+ * this file's sibling to declare no background here.
+ */
+button.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h);
+  height: var(--control-h);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink-2);
+}
+button.icon-button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--ink);
+}
+button.icon-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--face-inset);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  line-height: 1;
+}
+
+input,
+textarea,
+select {
+  min-height: var(--control-h);
+  padding: 3px var(--space-2);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+  color: var(--ink);
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-faint);
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--focus);
+  background: var(--face-raised);
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -1px;
+}
+
+/* checkbox / radio take the accent, so a form has one position colour */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--primary);
+  min-height: 0;
+}
+
+/* ── surfaces and panels ──────────────────────────────────────────────────── */
+
+/*
+ * A Concord panel is a plane plus one seam. The seam is only drawn on the edge
+ * that faces another plane, which is what makes a dock read as part of the window
+ * rather than as a floating card.
+ */
+.concord-panel {
+  background: var(--panel);
+  border: 0;
+  border-inline-end: 1px solid var(--hairline);
+}
+.concord-panel[data-side="right"] {
+  border-inline-end: 0;
+  border-inline-start: 1px solid var(--hairline);
+}
+
+/* A section header inside a panel: a filled band, not a floating title */
+.concord-section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+  color: var(--ink);
+}
+.concord-section-head > strong {
+  font-size: var(--fs-action);
+  font-weight: 600;
+}
+
+/* ── floating objects ─────────────────────────────────────────────────────── */
+
+.modal-backdrop {
+  background: var(--scrim);
+  backdrop-filter: none;
+}
+.dialog-card,
+.dialog[open] {
+  border: 1px solid var(--line-float);
+  border-radius: var(--radius-lg);
+  background: var(--face-raised);
+  box-shadow: var(--shadow-modal);
+}
+.dialog-header {
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+}
+.dialog-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dialog-heading h2 {
+  font-size: var(--fs-section);
+  font-weight: 600;
+}
+
+.popover,
+.menu-content {
+  border: 1px solid var(--line-float);
+  border-radius: var(--radius-lg);
+  background: var(--face-raised);
+  box-shadow: var(--shadow-float);
+}
+.menu-content {
+  min-width: 240px;
+  max-width: 340px;
+  padding: var(--space-1);
+}
+.menu-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 28px;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-action);
+  text-align: left;
+}
+.menu-item:hover:not([data-disabled]),
+.menu-item:focus-visible {
+  background: var(--hover-strong);
+  outline: none;
+}
+.menu-item.active,
+.menu-item[data-state="checked"] {
+  background: var(--c-tint-accent);
+  color: var(--c-accent-deep);
+}
+.menu-item.is-danger {
+  color: var(--danger-fg);
+}
+.menu-label {
+  padding: var(--space-1) var(--space-2) 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.menu-item-hint {
+  margin-left: auto;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+}
+/*
+ * A menu item that carries a description under its label. The label column stacks so
+ * the description never overlaps the shortcut on the right, which is what a single
+ * unwrapped line of Chinese prose does inside a fixed-width popover.
+ */
+.menu-item-label {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.menu-item-label > .menu-item-hint {
+  margin-left: 0;
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: normal;
+}
+.menu-separator {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--hairline);
+}
+
+.tooltip {
+  z-index: 60;
+  max-width: 280px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--band-line);
+  border-radius: var(--radius-sm);
+  background: var(--band);
+  color: var(--band-ink);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  box-shadow: var(--shadow-float);
+}
+
+/* sonner's toast: a floating object, not a system notification */
+[data-sonner-toast] {
+  border: 1px solid var(--line-float) !important;
+  border-radius: var(--radius-lg) !important;
+  background: var(--face-raised) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-float) !important;
+}
+[data-sonner-toast] [data-description] {
+  color: var(--muted) !important;
+}
+
+/* ── tables and property lists ────────────────────────────────────────────── */
+
+table {
+  font-size: var(--fs-body);
+}
+thead th,
+th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line-control-soft);
+  background: var(--face-inset);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-2);
+  vertical-align: top;
+}
+tbody tr:hover {
+  background: var(--hover);
+}
+td small {
+  color: var(--muted);
+}
+
+/*
+ * A property row: key on the left in the quiet tier, value on the right in ink.
+ * This is the shape the Inspector, the Evidence receipt and every object summary
+ * share, so an engineering value looks the same wherever it is read.
+ */
+dl > div {
+  display: grid;
+  grid-template-columns: minmax(84px, 34%) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+dt {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+/* ── state blocks ─────────────────────────────────────────────────────────── */
+
+/*
+ * Loading, empty and error are states of the *region they occupy*, not dialogs: the
+ * block takes the region's own plane, states the situation in one sentence, and
+ * offers the one action that resolves it. The icon is the only colour, so a state
+ * never out-shouts the object it describes.
+ */
+.workspace-state-surface {
+  --bim-panel--bg: var(--face-inset);
+  --bim-panel--border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+}
+.workspace-state-content {
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+}
+.workspace-state {
+  color: var(--ink);
+}
+.workspace-state h3 {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+.workspace-state.is-error .workspace-state-surface {
+  --bim-panel--bg: var(--c-danger-surface);
+  --bim-panel--border: 1px solid var(--c-tint-danger);
+}
+.workspace-state.is-warning .workspace-state-surface {
+  --bim-panel--bg: var(--c-warning-surface);
+  --bim-panel--border: 1px solid var(--c-tint-warning);
+}
+.workspace-state-copy p,
+.workspace-state-copy {
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  line-height: 1.65;
+}
+.workspace-state-action {
+  margin-top: var(--space-2);
+}
+
+/*
+ * The inline state inside a receipt or a viewer: a band, not a card, because it
+ * sits within a region that already has a boundary.
+ */
+.workspace-inline-state {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--line-control-soft);
+  border-radius: var(--radius-sm);
+  background: var(--face-inset);
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
+.workspace-inline-state[data-kind="error"] {
+  border-color: var(--c-tint-danger);
+  border-left-color: var(--danger-fg);
+  background: var(--c-danger-surface);
+}
+.workspace-inline-state[data-kind="warning"] {
+  border-color: var(--c-tint-warning);
+  border-left-color: var(--warn-fg);
+  background: var(--c-warning-surface);
+}
+.workspace-inline-state strong {
+  display: block;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--c-tint-danger);
+  border-left: 3px solid var(--danger-fg);
+  background: var(--c-danger-surface);
+  color: var(--ink);
+  font-size: var(--fs-meta);
+}
+
+/* ── technical details ────────────────────────────────────────────────────── */
+
+/*
+ * Provenance collapsed: the raw IDs, hashes and timestamps an engineer sometimes
+ * needs and a decision never needs. It is a disclosure, so it stays quiet until
+ * opened - and it is never the only place a fact is stated.
+ */
+.workspace-technical-details,
+.evidence-technical-details,
+details.concord-details {
+  margin-top: var(--space-3);
+  border-top: 1px dashed var(--line-control-soft);
+  padding-top: var(--space-2);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+.workspace-technical-details summary,
+.evidence-technical-details summary,
+details.concord-details > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  cursor: pointer;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  list-style: none;
+}
+.workspace-technical-details summary::before,
+.evidence-technical-details summary::before,
+details.concord-details > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--motion-fast) var(--ease);
+}
+details[open] > summary::before {
+  transform: rotate(45deg);
+}
+.workspace-technical-details summary::-webkit-details-marker,
+.evidence-technical-details summary::-webkit-details-marker,
+details.concord-details > summary::-webkit-details-marker {
+  display: none;
+}
+.workspace-technical-details dl > div,
+.evidence-technical-details dl > div {
+  grid-template-columns: minmax(110px, 30%) minmax(0, 1fr);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--line-soft);
+}

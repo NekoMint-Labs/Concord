@@ -10,159 +10,115 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Icon } from "../vendor/opentakeoff/brand/icons";
 import { keyText } from "../vendor/opentakeoff/lib/keys";
+import type { StageObject } from "./stageContracts";
 
-// Workspace chrome. All actions are supplied by the application; this component
-// owns only navigation, search and disclosure state.
+/*
+ * The instrument bar.
+ *
+ * This is the window's whole chrome: one dark band, one row. The previous shell
+ * stacked a header over a second light "context" band and filled both, which meant
+ * twenty controls competed at the same weight and the single most important thing on
+ * screen - the engineering object being worked on - had the least room.
+ *
+ * The bar is organised by what a reader needs in order, left to right:
+ *
+ *   who/what   the wordmark, the project, and where inside it you are
+ *   find       one search entry for every object and action
+ *   scope      which working context the surfaces below are scoped to
+ *   act        the assistant, the one committed action for the current mode
+ *   more       everything administrative, diagnostic and mode-independent
+ *
+ * Mode-specific verbs are deliberately *not* here. They belong to the surface they
+ * change (the stage band), where they sit next to the object they act on. The rail
+ * owns mode switching, so the bar carries no second navigation.
+ */
 export function WorkspaceChrome({
   title,
   subtitle,
   onOpen,
   onNavigate,
   navigationOpen,
-  onWork,
-  workOpen,
-  workButtonRef,
-  pending,
-  running,
-  onReport,
-  onFocus,
-  onControls,
-  controlsOpen,
   onSearch,
-  pinControl,
-  panelTools,
-  layoutMenu,
   fileMenu,
-  conditionControl,
-  history,
-  aids,
+  scope,
+  assistant,
   action,
-  scaleMenu,
-  navigationLabel = "资料",
+  overflow,
+  navigationLabel = "对象",
+  busyLabel,
 }: {
   title: string;
   subtitle: string;
   onOpen: () => void;
   onNavigate: () => void;
   navigationOpen: boolean;
-  onWork: () => void;
-  workOpen: boolean;
-  workButtonRef?: React.Ref<HTMLButtonElement>;
-  pending: number;
-  running: boolean;
-  onReport: () => void;
-  onFocus: () => void;
-  onControls: () => void;
-  controlsOpen: boolean;
   onSearch: () => void;
-  pinControl?: ReactNode;
-  panelTools?: ReactNode;
-  layoutMenu?: ReactNode;
   fileMenu?: ReactNode;
-  conditionControl?: ReactNode;
-  history?: ReactNode;
-  aids?: ReactNode;
+  scope?: ReactNode;
+  assistant?: ReactNode;
   action?: ReactNode;
-  scaleMenu?: ReactNode;
+  overflow?: ReactNode;
   navigationLabel?: string;
+  busyLabel?: string;
 }) {
   return (
-    <>
-      <header className="calm-header">
-        <strong className="calm-brand">
+    <header className="concord-bar" role="banner">
+      <button
+        type="button"
+        className="concord-brand"
+        onClick={onOpen}
+        aria-label="打开或新建项目"
+        title="打开或新建项目"
+      >
+        <span className="concord-mark" aria-hidden="true" />
+        <span className="concord-wordmark">
           conc<span>ord</span>
-        </strong>
-        <div className="calm-project" title={title}>
-          <span>{title || "未命名工作区"}</span>
-          <small>{subtitle}</small>
-        </div>
-        <div className="calm-header-actions">
-          <button type="button" onClick={onOpen} title="打开项目">
-            <Icon name="plus" size={16} />
-            <span>打开</span>
-          </button>
-          {fileMenu}
-          <button
-            type="button"
-            aria-pressed={navigationOpen}
-            onClick={onNavigate}
-            title={`${navigationLabel}导航 — 当前工作区的对象列表`}
-          >
-            <Icon name="sheets" size={16} />
-            {navigationLabel}
-          </button>
-          {pinControl}
-          <button
-            type="button"
-            onClick={onSearch}
-            className="calm-search-trigger"
-            title="查找对象或操作"
-          >
-            <Icon name="search" size={16} />
-            <span>查找对象或操作</span>
-            <kbd>{keyText("⌘K")}</kbd>
-          </button>
-          <button
-            type="button"
-            ref={workButtonRef}
-            aria-expanded={workOpen}
-            onClick={onWork}
-            className="calm-work"
-            title="工作与审核 — 工程判断、依据与人工复核"
-          >
-            工作
-            {running ? (
-              <span className="calm-badge">运行中</span>
-            ) : pending > 0 ? (
-              <span className="calm-badge">{pending}</span>
-            ) : null}
-          </button>
-          {panelTools}
-          <button type="button" onClick={onReport} className="calm-report">
-            <Icon name="document" size={16} />
-            报告
-          </button>
-          {layoutMenu}
-        </div>
-      </header>
-      <div className="calm-context" aria-label="当前位置与当前工作包">
-        <div className="calm-context-scroll">
-          {conditionControl}
-          {history ? (
-            <>
-              <span className="calm-separator" />
-              {history}
-            </>
-          ) : null}
-          {aids ? (
-            <>
-              <span className="calm-separator" />
-              {aids}
-            </>
-          ) : null}
-        </div>
-        <div className="calm-context-pinned">
-          {action}
-          {scaleMenu}
-          <button
-            type="button"
-            onClick={onFocus}
-            title="专注模式 — 隐藏 chrome，保留当前工作区（F）"
-          >
-            <Icon name="focus" size={16} />
-            <span className="calm-focus-label">专注</span>
-          </button>
-          <button
-            type="button"
-            onClick={onControls}
-            aria-expanded={controlsOpen}
-            title="所有工作区控件与设置"
-          >
-            {controlsOpen ? "关闭控件" : "所有控件"}
-          </button>
-        </div>
+        </span>
+      </button>
+
+      <div className="concord-identity" title={title}>
+        <strong>{title || "未命名工作区"}</strong>
+        <span className="concord-trail">{subtitle}</span>
       </div>
-    </>
+      {fileMenu}
+
+      <div className="concord-bar-mid">
+        <button
+          type="button"
+          className="concord-search"
+          onClick={onSearch}
+          title="查找对象、工程判断、资料或操作"
+        >
+          <Icon name="search" size={15} />
+          <span>查找对象、判断、资料或操作</span>
+          <kbd>{keyText("⌘K")}</kbd>
+        </button>
+      </div>
+
+      <div className="concord-bar-tools">
+        {busyLabel ? (
+          <span className="concord-busy" role="status">
+            {busyLabel}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          className="concord-bar-btn"
+          aria-label={`${navigationLabel}导航`}
+          aria-pressed={navigationOpen}
+          onClick={onNavigate}
+          title={`${navigationLabel}导航 — 当前工作区的对象列表`}
+        >
+          <Icon name="sheets" size={15} />
+          <span>{navigationLabel}</span>
+        </button>
+        {scope}
+        <span className="concord-bar-divider" aria-hidden="true" />
+        {assistant}
+        {action}
+        {overflow}
+      </div>
+    </header>
   );
 }
 
@@ -171,6 +127,8 @@ export type NavigatorItem = {
   label: string;
   file: string;
   count?: number;
+  /** The object's class, emitted as `data-kind` so a row can be styled by it. */
+  kind?: StageObject["kind"];
 };
 
 export function WorkspaceNavigator({
@@ -257,6 +215,7 @@ export function WorkspaceNavigator({
           <button
             type="button"
             key={s.key}
+            data-kind={s.kind}
             aria-current={s.key === current ? "page" : undefined}
             onClick={() => onSelect(s.key)}
             title={`${s.label} · ${s.file}`}

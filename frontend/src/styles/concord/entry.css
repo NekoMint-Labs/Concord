@@ -1,0 +1,407 @@
+/*
+ * ── the entry screen ───────────────────────────────────────────────────────
+ *
+ * The instrument's front door, before there is anything to work on.
+ *
+ * It is a window, not a card: the same charcoal frame the workspace shell wears
+ * around its paper, drawn edge to edge and split in two. The title column says
+ * what the product is and offers the one action that starts work; the panel
+ * beside it carries the state - the connection in progress, the connection that
+ * failed, or the three things the product does to a project once it has one.
+ *
+ * Because nothing is open there is no paper plane anywhere on this screen, and
+ * that is deliberate: an entry screen that opens on a bright sheet reads like a
+ * document was already loaded, which is exactly the state it exists to deny. The
+ * only two materials are the frame and one step raised out of it, so the screen
+ * still says "the application is here" without pretending work has started.
+ *
+ * The space is a designed measure, not the window's full bleed. The frame is
+ * bounded to a fixed inner width and centred on the desk, so the two columns sit
+ * in a composition rather than being flung to the window edges, and the field
+ * around them is a shaped region with the frame's own edge drawn on it. Inside the
+ * window each column opens on a ruled label - the masthead on the left, the state
+ * caption on the right - and each is anchored at its other end: the identity block
+ * and its action band on the floor of the left column, the capability list and the
+ * local-first footnote on the right. Nothing floats in a void; the empty middle is
+ * a region bounded by the labels above it and the blocks below it.
+ *
+ * Everything below is the palette spent through tokens - no literal colour, no
+ * second face - and it is imported last, so it is the last word on the frame.
+ * The old `.startup*` rules that remain in the shell and surface sheets no longer
+ * match anything: the entry has its own vocabulary now.
+ */
+
+.entry {
+  display: grid;
+  justify-items: center;
+  align-items: stretch;
+  min-height: 100dvh;
+  padding: var(--space-5);
+  background-color: var(--c-chrome);
+  color: var(--c-chrome-ink);
+}
+
+/*
+ * The window: two columns inside one designed measure, centred on the desk with
+ * one hairline between them and the frame closed around both. The measure is what
+ * keeps the composition off the window edges; the field beside it is deliberate.
+ */
+.entry-window {
+  width: min(1440px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(316px, 30%);
+  min-width: 0;
+  border: 1px solid var(--c-chrome-line);
+  background-color: var(--c-chrome);
+  overflow: hidden;
+}
+
+/* ── the title column ────────────────────────────────────────────────────── */
+
+/*
+ * The identity block is one dense unit - wordmark, two lines, then the action band
+ * immediately beneath them - anchored to the floor of the column. The masthead
+ * label above it opens the column, so the field between them reads as a bounded
+ * region rather than the leftover around a centred block.
+ */
+.entry-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  padding: var(--space-6) clamp(var(--space-5), 5vw, 72px);
+}
+.entry-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin-top: auto;
+}
+/* The masthead label, ruled like the panel caption so the two open the window on
+   one line. */
+.entry-eyebrow {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--c-chrome-line);
+  color: var(--c-chrome-ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.14em;
+}
+.entry-lockup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.entry-mark {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  background: var(--c-chrome-focus);
+  box-shadow: 0 0 0 4px var(--c-band-highlight);
+}
+.entry-wordmark {
+  margin: 0;
+  color: var(--c-chrome-ink);
+  font-size: var(--fs-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.entry-position {
+  max-width: 32em;
+  margin-top: var(--space-2);
+  color: var(--c-chrome-ink);
+  font-size: var(--fs-body);
+  line-height: 1.7;
+}
+.entry-support {
+  max-width: 36em;
+  color: var(--c-chrome-ink-2);
+  font-size: var(--fs-meta);
+  line-height: 1.7;
+}
+
+/* The action band, immediately under the lines it belongs to: a rule states the
+   band, the label names it, the controls sit on it. */
+.entry-start {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--c-chrome-line);
+}
+.entry-step-label {
+  color: var(--c-chrome-ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.14em;
+}
+.entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/*
+ * Control faces on the frame. The product's own controls are donor elements -
+ * `bim-button` with a slotted label - so the face is set through the donor's own
+ * variables and, for the states the donor does not name, on the host itself. A
+ * secondary control is a raised charcoal face closed by a hairline; the primary
+ * is the one filled copper face on the screen.
+ */
+.entry-window bim-button.button,
+.entry-window button.button {
+  --bim-button--bgc: var(--c-chrome-raised);
+  --bim-button--bgc-h: var(--c-chrome-select);
+  --bim-label--c: var(--c-chrome-ink);
+  height: var(--control-h-lg);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--c-chrome-line);
+  border-radius: var(--radius-md);
+  background: var(--c-chrome-raised);
+  color: var(--c-chrome-ink);
+  font-size: var(--fs-action);
+  font-weight: 500;
+}
+.entry-window bim-button.button:hover:not(:disabled),
+.entry-window button.button:hover:not(:disabled) {
+  border-color: var(--c-chrome-ink-3);
+  background: var(--c-chrome-select);
+}
+.entry-window bim-button.button:focus-visible,
+.entry-window button.button:focus-visible {
+  outline: 2px solid var(--c-chrome-focus);
+  outline-offset: 1px;
+}
+.entry-window bim-button.button-primary,
+.entry-window button.button-primary {
+  --bim-button--bgc: var(--c-accent);
+  --bim-button--bgc-h: var(--c-accent-deep);
+  --bim-label--c: var(--c-on-accent);
+  border-color: var(--c-accent);
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  font-weight: 600;
+}
+.entry-window bim-button.button-primary:hover:not(:disabled),
+.entry-window button.button-primary:hover:not(:disabled) {
+  border-color: var(--c-accent-deep);
+  background: var(--c-accent-deep);
+}
+.entry-window bim-button.button-secondary:disabled,
+.entry-window bim-button.button-primary:disabled,
+.entry-window bim-button.button:disabled {
+  --bim-label--c: var(--c-chrome-ink-3);
+  border-color: var(--c-chrome-line);
+  background: var(--c-chrome);
+  color: var(--c-chrome-ink-3);
+}
+
+/* ── the state panel ────────────────────────────────────────────────────── */
+
+.entry-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-6) var(--space-5);
+  border-left: 1px solid var(--c-chrome-line);
+  background-color: var(--c-chrome-raised);
+}
+.entry-panel-label {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--c-chrome-line);
+  color: var(--c-chrome-ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.14em;
+}
+.entry-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.entry-panel-foot {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--c-chrome-line);
+  color: var(--c-chrome-ink-2);
+  font-size: var(--fs-meta);
+}
+
+/* The connecting state: one lit square, because there is nothing to move yet. */
+.entry-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--c-chrome-ink);
+  font-size: var(--fs-body);
+}
+.entry-status::before {
+  content: "";
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--c-chrome-focus);
+  animation: entry-pulse 1.1s var(--ease) infinite;
+}
+@keyframes entry-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* The failure state: the same frame, with the connection stated plainly. The
+   marker is the connecting square unlit, and the words carry the meaning - the
+   palette has no danger tone that clears AA on the frame. */
+.entry-alert {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--c-chrome-ink);
+  font-size: var(--fs-section);
+  font-weight: 600;
+  line-height: 1.6;
+}
+.entry-alert::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--c-chrome-ink-2);
+}
+.entry-note {
+  color: var(--c-chrome-ink-2);
+  font-size: var(--fs-meta);
+  line-height: 1.7;
+}
+.entry-diagnostics-toggle {
+  align-self: flex-start;
+}
+
+/*
+ * What the product does, once it is connected: a grouped list under its caption -
+ * a short number, a title and one line per stage, a hairline between the rows and
+ * nothing after the last. The list takes its own height, so the rows sit at a
+ * normal rhythm instead of being stretched over the panel's full height and the
+ * column still closes on the local-first footnote.
+ */
+.entry-capabilities {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.entry-capabilities li {
+  display: grid;
+  grid-template-columns: var(--space-6) minmax(0, 1fr);
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--c-chrome-line);
+}
+.entry-capabilities li:first-child {
+  padding-top: 0;
+}
+.entry-capabilities li:last-child {
+  border-bottom: 0;
+}
+.entry-capability-index {
+  grid-row: 1 / span 2;
+  color: var(--c-chrome-ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
+}
+.entry-capability-title {
+  color: var(--c-chrome-ink);
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.entry-capability-note {
+  color: var(--c-chrome-ink-2);
+  font-size: var(--fs-meta);
+  line-height: 1.7;
+}
+
+/* ── diagnostics, in the panel rather than in a floating box ─────────────── */
+
+.entry-diagnostics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--c-chrome-line);
+  border-radius: var(--radius-md);
+  background-color: var(--c-chrome);
+}
+.entry-diagnostics form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.entry-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  color: var(--c-chrome-ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+}
+.entry-field input {
+  height: var(--control-h);
+  border-color: var(--c-chrome-line);
+  background-color: var(--c-chrome-raised);
+  color: var(--c-chrome-ink);
+  font-family: var(--font-mono);
+  letter-spacing: 0;
+}
+.entry-diagnostic {
+  display: grid;
+  grid-template-columns: minmax(80px, 26%) minmax(0, 1fr);
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--c-chrome-line);
+  color: var(--c-chrome-ink-2);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
+.entry-diagnostic:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.entry-diagnostic-label {
+  color: var(--c-chrome-ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+}
+
+/*
+ * A narrow window loses the split before it loses the frame: the panel drops
+ * under the title block and keeps its own rule, so the two regions stay two.
+ */
+@media (max-width: 1000px) {
+  .entry-window {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .entry-title-block {
+    padding: var(--space-6) var(--space-5);
+  }
+  .entry-panel {
+    border-top: 1px solid var(--c-chrome-line);
+    border-left: 0;
+  }
+}

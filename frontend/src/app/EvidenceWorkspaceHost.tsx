@@ -1,6 +1,14 @@
 import { Box, FileText, Scan } from "lucide-react";
 import { motion } from "motion/react";
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { api, readSource, type DTO } from "../api/client";
 import { ViewerBoundary } from "../components/ViewerBoundary";
 import type { DrawingSource } from "../viewers/drawing/pdfDiffTypes";
@@ -17,6 +25,7 @@ import { icon } from "../components/ui/icon";
 import { Button } from "../components/ui/button";
 import { WorkspaceInlineState } from "../components/WorkspaceInlineState";
 import { ThatOpenPanel } from "../components/ThatOpenUI";
+import { useViewerChromeLocalization } from "./useViewerChromeLocalization";
 
 export type Evidence = DTO<"Evidence">;
 export type TargetSurface = "drawing" | "model" | "document";
@@ -25,6 +34,15 @@ export const qualityLabels = {
   structured: "结构化 · 已验证",
   extracted: "提取 · 来源内容",
   inferred: "推断 · 未验证",
+} as const;
+
+/** The tone a quality claim carries in the host's own chip. Verified facts are
+ * neutral, extracted source is a statement of provenance, inference is a caution -
+ * and they have to be distinguishable without reading the label. */
+const qualityTones = {
+  structured: "neutral",
+  extracted: "accent",
+  inferred: "warning",
 } as const;
 
 export function targetSurface(
@@ -68,6 +86,27 @@ const hostNames = {
   model: "BIM 模型",
   document: "工程文档",
 };
+/** The short form of a navigation state, for the host's own status chip. */
+const stateLabels = {
+  loading: "正在读取",
+  viewer_active: "已定位",
+  missing_viewer_target: "缺少目标",
+  revision_unavailable: "版本不可用",
+  target_unsupported: "不支持的目标",
+  viewer_unavailable: "查看器不可用",
+  revision_mismatch: "版本不一致",
+  navigation_failed: "定位失败",
+} as const;
+const stateTones = {
+  loading: "neutral",
+  viewer_active: "positive",
+  missing_viewer_target: "warning",
+  revision_unavailable: "warning",
+  target_unsupported: "warning",
+  viewer_unavailable: "warning",
+  revision_mismatch: "danger",
+  navigation_failed: "danger",
+} as const;
 const boundaryMessages = {
   missing_viewer_target:
     "没有精确定位目标；保留证据，不从旧版页码或位置推断目标。",
@@ -82,7 +121,19 @@ const boundaryMessages = {
   navigation_failed: "工程查看器加载或定位失败；证据与人工判断保持不变。",
 };
 
-/** Product host seam only. Canonical provenance stays available, but secondary. */
+/**
+ * The evidence surface: the object a Finding is about, opened at the exact place in
+ * the exact revision that produced it.
+ *
+ * The composition is deliberately canvas-first. A reviewer comes here to *look* at a
+ * drawing, a model or an extract, so the viewer takes the stage and the receipt - the
+ * claim, its quality, its provenance - is a reference rail beside it rather than a
+ * page of facts the viewer is buried behind. The rail keeps the canonical record
+ * complete: collapsed provenance, exact viewer target, and a state block that says
+ * what actually happened when navigation was requested.
+ *
+ * Product host seam only. Canonical provenance stays available, but secondary.
+ */
 export function EvidenceWorkspaceHost({
   evidence,
   project,
@@ -145,14 +196,21 @@ export function EvidenceWorkspaceHost({
             : viewerState.context === context
               ? viewerState.state
               : "loading";
+  const navState = viewerError ? "navigation_failed" : boundaryState;
+  const mounted =
+    !!project &&
+    !!target &&
+    !!surface &&
+    target.source_revision_id === evidence.source_revision_id &&
+    revisionAvailable !== false;
   const { variants, transition } = useMotion();
   const HostIcon =
     surface === "model" ? Box : surface === "drawing" ? Scan : FileText;
   const hostName = surface ? hostNames[surface] : "工程依据";
   const targetDetails = target
     ? [
-        ["定位目标", targetLabel(target)],
         ["目标来源版本", revisionName(target.source_revision_id)],
+        ["定位目标", targetLabel(target)],
         ...(target.kind === "drawing"
           ? [
               ["图纸页码", `第 ${target.page} 页`],
@@ -202,15 +260,51 @@ export function EvidenceWorkspaceHost({
       data-viewer-target-kind={target?.kind}
       data-source-revision-id={target?.source_revision_id}
       data-evidence-stale={stale}
-      data-navigation-state={viewerError ? "navigation_failed" : boundaryState}
+      data-navigation-state={navState}
     >
       <ThatOpenPanel className="evidence-context-surface" label="工程依据">
         <div className="evidence-context-content">
-          <header className="evidence-host-header">
-            <HostIcon {...icon} />
-            <strong>{hostName}</strong>
-            <span>
-              {sourceName} · {revisionName(evidence.source_revision_id)}
+          {/* One Concord bar for object identity: what kind of engineering object
+              this is, its name and revision, how good the claim is, and what the
+              viewer actually did. Honesty is the point - insufficiency is named as
+              insufficiency, never dressed up as verified. */}
+          <header className="evidence-host-bar">
+            <span className="evidence-host-kind">
+              <HostIcon {...icon} />
+              <span className="evidence-host-kind-label">{hostName}</span>
+            </span>
+            <span className="evidence-host-identity">
+              <strong className="evidence-host-object">{sourceName}</strong>
+              <span className="evidence-host-revision">
+                {revisionName(evidence.source_revision_id)}
+              </span>
+            </span>
+            <span className="evidence-host-chips">
+              {stale && (
+                <span
+                  className="concord-chip"
+                  data-tone="warning"
+                  title="历史证据：已过期或被替换"
+                >
+                  历史证据 · 已过期
+                </span>
+              )}
+              <span
+                className="concord-chip"
+                data-tone={qualityTones[evidence.quality]}
+                title="依据质量"
+              >
+                {qualityLabels[evidence.quality]}
+              </span>
+              <span
+                className="concord-chip"
+                data-tone={stateTones[navState as keyof typeof stateTones]}
+                title={
+                  boundaryMessages[navState as keyof typeof boundaryMessages]
+                }
+              >
+                {stateLabels[navState as keyof typeof stateLabels]}
+              </span>
             </span>
           </header>
           <motion.div
@@ -221,63 +315,65 @@ export function EvidenceWorkspaceHost({
             variants={variants.detailSwap}
             transition={transition("fast")}
           >
+            {/* The rail: the claim and everything a reviewer must be able to check
+                about it. Reading order puts the record before the pixels, which is
+                what an engineering product should do. */}
             <div className="evidence-target-receipt">
-              <span className="eyebrow">工程依据 · 选中对象</span>
-              <h2>{evidenceLabel(evidence)}</h2>
-              <p className="evidence-quality">
-                {qualityLabels[evidence.quality]}
-              </p>
+              <div className="evidence-receipt-head">
+                <span className="t-label">工程依据 · 选中对象</span>
+                <span
+                  className="concord-chip"
+                  data-tone={qualityTones[evidence.quality]}
+                >
+                  {qualityLabels[evidence.quality]}
+                </span>
+              </div>
+              <h2 className="evidence-receipt-claim">
+                {evidenceLabel(evidence)}
+              </h2>
               {evidence.quality === "inferred" && (
-                <p className="workspace-receipt-note">
+                <p className="evidence-receipt-caution">
                   推断 · 不是已验证工程事实
                 </p>
               )}
-              <dl className="evidence-primary-facts">
-                <div>
-                  <dt>来源与版本</dt>
-                  <dd>
-                    {sourceName} · {revisionName(evidence.source_revision_id)}
-                  </dd>
-                </div>
-                {targetDetails.map(([label, value]) => (
-                  <div key={label}>
-                    <dt>{label}</dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
-              </dl>
-              <WorkspaceInlineState
-                title={stale ? "历史证据 · 已过期或被替换" : "工程查看器状态"}
-                alert={!!viewerError || boundaryState === "navigation_failed"}
-                diagnostic={viewerError ?? undefined}
-                action={
-                  <Button variant="secondary" disabled>
-                    查看原始工程目标
-                  </Button>
+              <div className="evidence-receipt-section">
+                <span className="t-label">精确定位目标</span>
+                <dl className="evidence-primary-facts">
+                  {targetDetails.map(([label, value]) => (
+                    <div key={label}>
+                      <dt>{label}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+              <div
+                className="evidence-receipt-state"
+                data-stale={stale ? "true" : undefined}
+                data-alert={
+                  !!viewerError || boundaryState === "navigation_failed"
+                    ? "true"
+                    : undefined
                 }
               >
-                {stale && "不适用于当前版本与人工判断。"}
-                {viewerError
-                  ? boundaryMessages.navigation_failed
-                  : boundaryMessages[
-                      boundaryState as keyof typeof boundaryMessages
-                    ]}
-              </WorkspaceInlineState>
-              {project &&
-                target &&
-                surface &&
-                target.source_revision_id === evidence.source_revision_id &&
-                revisionAvailable !== false && (
-                  <ViewerBoundary key={context}>
-                    <EvidenceViewer
-                      key={context}
-                      project={project}
-                      evidence={evidence}
-                      onState={onViewerState}
-                      onError={onViewerError}
-                    />
-                  </ViewerBoundary>
-                )}
+                <WorkspaceInlineState
+                  title={stale ? "历史证据 · 已过期或被替换" : "工程查看器状态"}
+                  alert={!!viewerError || boundaryState === "navigation_failed"}
+                  diagnostic={viewerError ?? undefined}
+                  action={
+                    <Button variant="secondary" disabled>
+                      查看原始工程目标
+                    </Button>
+                  }
+                >
+                  {stale && "不适用于当前版本与人工判断。"}
+                  {viewerError
+                    ? boundaryMessages.navigation_failed
+                    : boundaryMessages[
+                        boundaryState as keyof typeof boundaryMessages
+                      ]}
+                </WorkspaceInlineState>
+              </div>
               <details className="evidence-technical-details">
                 <summary>来源与技术详情</summary>
                 <dl>
@@ -299,6 +395,35 @@ export function EvidenceWorkspaceHost({
                   </div>
                 </dl>
               </details>
+            </div>
+            {/* The stage: the drawing, the model, the extract. */}
+            <div
+              className="evidence-canvas"
+              data-active={mounted && !viewerError ? "true" : undefined}
+            >
+              {mounted ? (
+                <ViewerBoundary key={context}>
+                  <EvidenceViewer
+                    key={context}
+                    project={project!}
+                    evidence={evidence}
+                    onState={onViewerState}
+                    onError={onViewerError}
+                  />
+                </ViewerBoundary>
+              ) : (
+                <div className="evidence-canvas-idle" aria-hidden="true">
+                  <span className="evidence-canvas-idle-mark">
+                    <HostIcon size={28} strokeWidth={1.25} />
+                  </span>
+                  <p className="evidence-canvas-idle-state">
+                    {stateLabels[navState as keyof typeof stateLabels]}
+                  </p>
+                  <p className="evidence-canvas-idle-note">
+                    未在此平面挂载工程查看器；定位状态与原因见工程依据栏。
+                  </p>
+                </div>
+              )}
             </div>
           </motion.div>
           <footer className="evidence-host-footer">
@@ -441,36 +566,61 @@ function EvidenceViewer({
         </WorkspaceInlineState>
       }
     >
-      {target.kind === "drawing" && (
-        <DrawingSurface
-          source={loaded.source}
-          target={target}
-          onError={onError}
-        />
-      )}
-      {target.kind === "cad" && (
-        <CadSurface before={loaded.source} target={target} onError={onError} />
-      )}
-      {target.kind === "bim" && (
-        <IfcSurface
-          sources={loaded.ifcSources}
-          target={target}
-          onError={onError}
-        />
-      )}
-      {target.kind === "document" && loaded.document && (
-        <DocumentSurface
-          source={loaded.document}
-          target={target}
-          onError={onError}
-        />
-      )}
-      <Button
-        variant="secondary"
-        onClick={() => setAttempt((value) => value + 1)}
-      >
-        重新打开工程查看器
-      </Button>
+      <ViewerSlot>
+        {target.kind === "drawing" && (
+          <DrawingSurface
+            source={loaded.source}
+            target={target}
+            onError={onError}
+          />
+        )}
+        {target.kind === "cad" && (
+          <CadSurface
+            before={loaded.source}
+            target={target}
+            onError={onError}
+          />
+        )}
+        {target.kind === "bim" && (
+          <IfcSurface
+            sources={loaded.ifcSources}
+            target={target}
+            onError={onError}
+          />
+        )}
+        {target.kind === "document" && loaded.document && (
+          <DocumentSurface
+            source={loaded.document}
+            target={target}
+            onError={onError}
+          />
+        )}
+      </ViewerSlot>
+      <div className="evidence-viewer-tools">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setAttempt((value) => value + 1)}
+        >
+          重新打开工程查看器
+        </Button>
+      </div>
     </Suspense>
+  );
+}
+
+/**
+ * The host-owned stage the viewer is mounted in. It exists as its own component so the
+ * chrome bridge walks the slot only once it is actually on the page, and re-runs when
+ * the viewer remounts on an evidence-context change - the live seam the donor chrome
+ * is localised through, without editing a byte of the pinned viewer integration.
+ */
+function ViewerSlot({ children }: { children: ReactNode }) {
+  const slot = useRef<HTMLDivElement>(null);
+  useViewerChromeLocalization(slot);
+  return (
+    <div className="evidence-viewer-slot" ref={slot}>
+      {children}
+    </div>
   );
 }

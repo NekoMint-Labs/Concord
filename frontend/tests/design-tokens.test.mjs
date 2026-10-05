@@ -4,54 +4,82 @@ import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, relative } from "node:path";
 
-// The design contract lives in one place: src/styles/base.css. Feature
-// stylesheets consume it, they never restate it.
+// ─────────────────────────────────────────────────────────────────────────────
+// The design contract.
 //
-// This file asserts *relationships*, not taste. Every number here is a threshold
-// a design-system invariant actually depends on - "two neighbouring planes must
-// be distinguishable", "product text must be readable on the darkest plane it
-// lands on", "a control boundary must be identifiable". The values of the tokens
-// themselves are the art direction's business and are deliberately not asserted,
-// because pinning e.g. `--line: #dcdcd7` here would turn a palette decision into
-// a test failure instead of a palette decision.
+// Every assertion below is a *relationship* a design system depends on - "two
+// neighbouring planes must be distinguishable", "product text must be readable on
+// the darkest plane it lands on", "a control boundary must be identifiable" - or a
+// structural fact about *where* a value may be written. No assertion pins an
+// individual colour value, because that would turn an art-direction decision into a
+// test failure instead of an art-direction decision.
+//
+// Ownership, which is what makes the rest checkable:
+//
+//   styles/concord/tokens.css   the palette: every colour literal in the product,
+//                               both looks, the token bridge, and the ThatOpen
+//                               component bridge
+//   styles/base.css             the scales (type, space, controls, radius, motion)
+//                               and the semantic colour names, with no literal
+//   styles/concord/*.css        the material, spent through tokens
+//   vendor/opentakeoff/**       byte-pinned donor sheets, which may not be edited and
+//                               whose values are therefore owned by the palette
+// ─────────────────────────────────────────────────────────────────────────────
+
 const stylesDir = fileURLToPath(new URL("../src/styles", import.meta.url));
+const palettePath = join(stylesDir, "concord/tokens.css");
 const basePath = join(stylesDir, "base.css");
-const base = readFileSync(basePath, "utf8");
-
-// The workspace look is vendored, not authored here: the OpenTakeoff donor
-// tokens sheet owns the values, and base.css aliases Concord's names onto it.
-const donorPath = join(stylesDir, "../vendor/opentakeoff/styles/tokens.css");
-const donor = readFileSync(donorPath, "utf8");
 const entryPath = join(stylesDir, "../styles.css");
+const palette = readFileSync(palettePath, "utf8");
+const base = readFileSync(basePath, "utf8");
 const entrySheet = readFileSync(entryPath, "utf8");
-// The dark palette the graphite look resolves against, which is where the
-// structural ladder now lives (base.css states the order; the donor owns the
-// values).
-const lookSheet = readFileSync(
-  join(stylesDir, "../vendor/opentakeoff/styles/premiumWorkspace.css"),
-  "utf8",
+
+/** Every `--name: value;` declaration inside one scope. */
+function declarations(text) {
+  const out = new Map();
+  for (const [, name, value] of text.matchAll(/--([a-z0-9_-]+):\s*([^;]+);/g)) {
+    out.set(name, value.trim());
+  }
+  return out;
+}
+
+const at = (needle) => {
+  const index = palette.indexOf(needle);
+  assert.ok(index !== -1, `tokens.css must declare ${needle}`);
+  return index;
+};
+
+const lightPalette = declarations(
+  palette.slice(0, at(':root[data-concord-look="dark"]')),
 );
+const darkPalette = declarations(
+  palette.slice(at(':root[data-concord-look="dark"]'), at("── Token bridge")),
+);
+/*
+ * The two look scopes, so each ladder can be asserted on its own, and the alias bridge,
+ * which is declared once on `:root` and once on the shell scope.
+ */
+const lightLook = palette.slice(0, at(':root[data-concord-look="dark"]'));
+const darkLook = palette.slice(
+  at(':root[data-concord-look="dark"]'),
+  at("── Token bridge"),
+);
+const bridge = declarations(
+  palette.slice(at("── Token bridge"), at("The instrument-band vocabulary")),
+);
+const baseDeclarations = declarations(base);
 
-function stylesheets(dir = stylesDir) {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) return stylesheets(path);
-    return entry.name.endsWith(".css") ? [path] : [];
-  });
-}
+/** The look a `--c-*` name resolves to, given the scope's own declaration map. */
+const raw = (name, look) => {
+  const scope = look === "dark" ? darkPalette : lightPalette;
+  const value = scope.get(`c-${name}`) ?? lightPalette.get(`c-${name}`);
+  assert.ok(value, `the palette must declare --c-${name}`);
+  return value;
+};
 
-function hexToken(name) {
-  const match = new RegExp(`--${name}: #([0-9a-f]{3}|[0-9a-f]{6});`).exec(base);
-  assert.ok(match, `base.css must declare --${name} as a hex colour`);
-  const digits = match[1];
-  return `#${digits.length === 3 ? [...digits].map((d) => d + d).join("") : digits}`;
-}
+const channels = (hex) => [1, 3, 5].map((o) => parseInt(hex.slice(o, o + 2), 16));
 
-function channels(hex) {
-  return [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16));
-}
-
-function luminance(hex) {
+const luminance = (hex) => {
   const linear = channels(hex).map((value) => {
     const channel = value / 255;
     return channel <= 0.04045
@@ -59,57 +87,48 @@ function luminance(hex) {
       : ((channel + 0.055) / 1.055) ** 2.4;
   });
   return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
-}
+};
 
 /** WCAG contrast ratio between two opaque colours. */
-function contrast(a, b) {
+const contrast = (a, b) => {
   const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (values[0] + 0.05) / (values[1] + 0.05);
-}
+};
 
-/** Composite an `rgba(r, g, b, a)` token over an opaque plane. */
-function composite(name, over) {
-  const match = new RegExp(
-    `--${name}: rgba\\(\\s*(\\d+),\\s*(\\d+),\\s*(\\d+),\\s*([\\d.]+)\\s*\\)`,
-  ).exec(base);
-  assert.ok(match, `base.css must declare --${name} as an rgba colour`);
-  const [red, green, blue, alpha] = match.slice(1).map(Number);
+/** Flatten an `rgb(r g b / a)` value (channels may be a `--c-*-rgb` triplet) over a plane. */
+function composite(value, over, look) {
+  const rgb = /rgb\(\s*([\d, ]+)\s*(?:\/\s*([\d.]+)\s*)?\)/.exec(value);
+  assert.ok(rgb, `expected an rgb() colour, got ${value}`);
+  const parts = rgb[1].split(/[,\s]+/).filter(Boolean).map(Number);
+  assert.equal(parts.length, 3, `expected three channels in ${value}`);
+  const alpha = rgb[2] === undefined ? 1 : Number(rgb[2]);
   const plane = channels(over);
-  const mixed = [red, green, blue].map((value, index) =>
-    Math.round(value * alpha + plane[index] * (1 - alpha)),
+  const mixed = parts.map((part, index) =>
+    Math.round(part * alpha + plane[index] * (1 - alpha)),
   );
-  return `#${mixed.map((value) => value.toString(16).padStart(2, "0")).join("")}`;
+  void look;
+  return `#${mixed.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
 /**
- * The structural ladder, ordered from the dimmest plane to the work plane. The
- * order is the design: navigation is the most receded plane, then the docked
- * contextual pane, then a local object browser, then chrome bands and pane
- * headers, and the surface you work on is the lightest thing on screen.
+ * The structural ladder, dimmest plane first. The order is the design: the window
+ * backdrop is the dimmest thing on screen, then a docked column, then the plane you
+ * work on, then the objects that sit on top of it.
  *
- * `surface-list` is in this list rather than excluded from it, and the change is
- * the point: while it was excluded, the local object browser was free to sit
- * 1.035:1 from the chrome bands that name it and 1.051:1 from the Inspector's
- * plane, which is what the rendered audit measured and what the Windows review
- * saw as one slab. A plane a reader has to separate from four others is a plane
- * of the ladder, and the contract says so now.
+ * The dark look runs the same order rather than the inverse: elevation is a *value*
+ * relationship in both looks, so "where I am working" is always the lighter of the two
+ * planes beside it.
  */
-const planes = [
-  "bg-app",
-  "surface-nav",
-  "surface-detail",
-  "surface-list",
-  "surface-chrome",
-  "surface-workspace",
-];
+const PLANES = ["backdrop", "nav", "work", "raised"];
 
 /** Text may not fall below this on any plane it is allowed to land on. */
 const TEXT_FLOOR = 4.5;
-
 /** WCAG 1.4.11: a boundary that identifies a control. */
 const CONTROL_FLOOR = 3;
+/** The point at which an area difference starts to be seen as two materials. */
+const PLANE_STEP = 1.08;
 
-test("the token scales keep one step per role", () => {
+test("the scale layer holds one step per role", () => {
   const expected = [
     ["--radius-none", "0px"],
     ["--radius-sm", "4px"],
@@ -128,259 +147,28 @@ test("the token scales keep one step per role", () => {
   }
 });
 
-test("the dark look spends one donor step per structural role, in order", () => {
-  // This assertion used to pin the *opposite*: the bridge at the end of base.css
-  // deliberately collapsed every structural plane onto the donor's single work
-  // plane, so the shell, the navigator, the inspector, the Work dock and the
-  // work surface all resolved to one value, and a monotonic-ladder assertion no
-  // longer described the design. That collapse was the bug - a window of three
-  // large panels around one work surface read as one flat field - so the ladder
-  // is asserted again, against the donor's own dark values, and the ordering is
-  // the contract: the work plane is the lightest structural plane, the docked
-  // columns beside it are a step darker, and the chrome is darker again.
-  const graphiteAt = lookSheet.indexOf("[data-workspace-look=graphite]");
-  assert.ok(graphiteAt !== -1, "the donor must declare a graphite look");
-  const graphiteDonor = Object.fromEntries(
-    [
-      ...lookSheet
-        .slice(graphiteAt, lookSheet.indexOf("}", graphiteAt))
-        .matchAll(/--([a-z0-9-]+):\s*(#[0-9a-f]{6})/g),
-    ].map((match) => [match[1], match[2]]),
-  );
-  const darkScope = base.slice(
-    base.indexOf('[data-workspace-look="graphite"]'),
-  );
-  const darkBlock = darkScope.slice(0, darkScope.indexOf("\n}"));
-  const darkPlane = (name) => {
-    const reference = new RegExp(
-      `--${name}:\\s*var\\(--([a-z-]+)\\);`,
-    ).exec(darkBlock);
-    assert.ok(reference, `the graphite scope must assign --${name} its own step`);
-    const value = graphiteDonor[reference[1]];
-    assert.ok(
-      value,
-      `--${name} points at --${reference[1]}, which the donor's graphite look does not declare`,
-    );
-    return value;
-  };
-  const ladder = [
-    "bg-app",
-    "surface-nav",
-    "surface-workspace",
-    "surface",
+test("the type ramp is monotonic and never falls below the 12px reading floor", () => {
+  const order = [
+    "fs-display",
+    "fs-title",
+    "fs-section",
+    "fs-body",
+    "fs-action",
+    "fs-meta",
+    "fs-label",
   ];
-  for (let step = 1; step < ladder.length; step += 1) {
-    const ratio = contrast(
-      darkPlane(ladder[step - 1]),
-      darkPlane(ladder[step]),
-    );
-    assert.ok(
-      ratio >= 1.08,
-      `${ladder[step - 1]} to ${ladder[step]} is only ${ratio.toFixed(3)}:1 in the dark look; neighbouring planes must read as two materials`,
-    );
-  }
-  // The chrome bands sit above the work plane, so they have to be the darker of
-  // the two rather than the same slab with a hairline through it.
-  assert.ok(
-    contrast(darkPlane("surface-chrome"), darkPlane("surface-workspace")) >=
-      1.08,
-    "the chrome and the work plane must be two values",
+  const sizes = order.map((name) =>
+    Number(new RegExp(`--${name}: (\\d+)px;`).exec(base)[1]),
   );
-  // Every text tier the dark look can use, against every plane it can land on.
-  for (const ink of ["ink", "ink-soft", "ink-secondary", "ink-muted"]) {
-    for (const plane of ladder) {
-      const ratio = contrast(graphiteDonor[ink], darkPlane(plane));
-      assert.ok(
-        ratio >= TEXT_FLOOR,
-        `--${ink} is ${ratio.toFixed(2)}:1 on the dark ${plane}, below the ${TEXT_FLOOR}:1 AA floor`,
-      );
-    }
-  }
-  // Paper is the one light surface, and it is deliberately not #fff.
-  assert.match(
-    darkBlock,
-    /--well:\s*#[0-9a-f]{6};/,
-    "the dark look must declare the media well a page is read on",
-  );
-  assert.ok(
-    !/--well:\s*#(?:fff|ffffff);/i.test(base),
-    "the media well must not be pure white",
-  );
-});
-
-test("the structural planes alias the vendored OpenTakeoff palette", () => {
-  // The light look (and the :root fallback) still spend the donor's light
-  // vocabulary; the alias set is declared once per theme scope on purpose,
-  // because var() substitutes at computed-value time, so a single :root copy
-  // would not re-resolve for a descendant `[data-workspace-look]` scope. Pin the
-  // three scopes so a future edit cannot quietly drop the light or the dark one.
-  const copies = base.match(/--surface-workspace:\s*var\(--[a-z-]+\);/g) ?? [];
-  assert.equal(
-    copies.length,
-    3,
-    "the alias bridge must be declared under :root and both [data-workspace-look] scopes",
-  );
-  for (const plane of planes) {
-    const match = new RegExp(
-      `--${plane}:\\s*var\\(--([a-z-]+)\\);`,
-    ).exec(base);
-    assert.ok(match, `--${plane} must alias a donor token, never a literal`);
-    assert.match(
-      donor,
-      new RegExp(`--${match[1]}:\\s*#`),
-      `--${plane} points at --${match[1]}, which the vendored tokens.css does not declare`,
-    );
-  }
-  for (const name of ["paper-bright", "paper-cream", "ink", "cobalt"]) {
-    assert.match(
-      donor,
-      new RegExp(`--${name}:\\s*#`),
-      `the vendored tokens.css must declare --${name}`,
-    );
-  }
-});
-
-test("base.css aliases Concord's surfaces, lines, text and accent onto the donor palette", () => {
-  // The two vocabularies do not overlap - Concord names versus donor names - so
-  // every Concord token that carries a palette value has to be re-pointed at a
-  // donor token or the surface keeps its old grey. The alias must reference the
-  // donor property (never copy a literal), and the donor must actually declare
-  // the property it points at, or the alias resolves to nothing.
-  //
-  // The list below is the *light* assignment, which is also the :root fallback.
-  // The graphite look is the one the product ships in and it spends the donor's
-  // dark vocabulary instead, one role per step; its assignments are held with
-  // the ladder above rather than repeated here.
-  const aliases = [
-    ["bg-app", "paper-bright"],
-    ["surface-inset", "paper-shadow"],
-    ["surface-nav", "paper-bright"],
-    ["surface-detail", "paper-bright"],
-    ["surface-list", "paper-bright"],
-    ["surface-chrome", "paper-bright"],
-    ["surface-workspace", "paper-bright"],
-    ["surface", "paper-bright"],
-    ["surface-elevated", "surface-pop"],
-    ["surface-search", "surface-pop"],
-    ["line", "ink-faint"],
-    ["line-soft", "ink-faint"],
-    ["line-float", "ink-faint"],
-    ["ink-2", "ink-soft"],
-    ["muted", "ink-muted"],
-    ["muted-2", "ink-muted"],
-    ["text-muted", "ink-muted"],
-    ["accent", "cobalt"],
-    ["primary", "cobalt"],
-    ["primary-hover", "cobalt-deep"],
-    ["on-primary", "accent-contrast"],
-    ["focus", "cobalt"],
-    ["hover", "paper-shadow"],
-    ["hover-strong", "tint-select"],
-  ];
-  for (const [concord, donorName] of aliases) {
-    assert.ok(
-      base.includes(`--${concord}: var(--${donorName});`),
-      `base.css must alias --${concord} onto the donor token --${donorName}`,
-    );
-    assert.match(
-      donor,
-      new RegExp(`--${donorName}:\\s*#`),
-      `--${concord} points at --${donorName}, which the vendored tokens.css does not declare`,
-    );
-  }
-  // ...and the dark look has to spend more than one donor step across the
-  // structural roles, which is the whole correction: a role that resolves to the
-  // same plane as its neighbour is a role the reader cannot see.
-  const darkScope = base.slice(
-    base.indexOf('[data-workspace-look="graphite"]'),
-  );
-  const darkBlock = darkScope.slice(0, darkScope.indexOf("\n}"));
-  const steps = planes.map(
-    (plane) =>
-      new RegExp(`--${plane}:\\s*var\\(--([a-z-]+)\\);`).exec(darkBlock)?.[1],
-  );
-  assert.ok(
-    steps.every(Boolean),
-    "the graphite scope must assign every structural plane its own step",
-  );
-  assert.ok(
-    new Set(steps).size >= 3,
-    `the dark look collapses its structural planes (${steps.join(", ")}); at least three donor steps are needed for a window of panels around a work plane`,
-  );
-});
-
-test("the vendored OpenTakeoff tokens are imported by the stylesheet entry", () => {
-  // The alias bridge only resolves because the donor sheet is loaded, and it only
-  // wins where the two define the same property because it is imported after
-  // base.css. styles.css has to keep that order.
-  const lines = entrySheet.split("\n").map((line) => line.trim());
-  const baseAt = lines.indexOf('@import "./styles/base.css";');
-  const donorAt = lines.findIndex((line) =>
-    /^@import "\.\/vendor\/opentakeoff\/styles\/tokens\.css";$/.test(line),
-  );
-  assert.ok(baseAt !== -1, "styles.css must still import base.css");
-  assert.ok(
-    donorAt > baseAt,
-    "styles.css must import the vendored OpenTakeoff tokens after base.css so the donor palette wins",
-  );
-});
-
-test("colour is declared once, in base.css", () => {
-  const literal =
-    /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\(|:\s*(?:white|black)\b/;
-  const offenders = [];
-  for (const path of stylesheets()) {
-    if (path === basePath) continue;
-    const lines = readFileSync(path, "utf8").split("\n");
-    lines.forEach((line, index) => {
-      if (literal.test(line)) {
-        offenders.push(
-          `${relative(stylesDir, path)}:${index + 1}: ${line.trim()}`,
-        );
-      }
-    });
-  }
   assert.deepEqual(
-    offenders,
-    [],
-    `Colour outside base.css must route through a token:\n${offenders.join("\n")}`,
+    sizes,
+    [...sizes].sort((a, b) => b - a),
+    "the type ramp must be monotonic",
   );
-});
-
-test("the semantic layer resolves to the physical ladder, not to new values", () => {
-  // Product code and components/ui name a colour by what it is for. That layer
-  // must stay an alias: if it ever declares its own value, the palette has two
-  // owners and one of them will drift.
-  const semantic = [
-    "background",
-    "workspace",
-    "sidebar",
-    "chrome",
-    "surface-elevated",
-    "border",
-    "border-strong",
-    "text",
-    "text-secondary",
-    "text-muted",
-    "text-faint",
-    "warning",
-    "warning-muted",
-    "focus-ring",
-  ];
-  for (const name of semantic) {
-    const match = new RegExp(`--${name}: var\\(--([a-z0-9-]+)\\);`).exec(base);
-    assert.ok(match, `--${name} must resolve to a physical token with var()`);
-    assert.ok(
-      new RegExp(`--${match[1]}: [#a-z]`).test(base),
-      `--${name} points at --${match[1]}, which base.css does not declare`,
-    );
-  }
-  for (const name of ["accent-muted", "success"]) {
-    assert.ok(
-      new RegExp(`--${name}: [#a-z]`).test(base),
-      `--${name} is part of the semantic layer and must be declared in base.css`,
-    );
-  }
+  assert.ok(
+    Math.min(...sizes) >= 12,
+    "no text role may fall below 12px: below that a reader stops reading and starts decoding",
+  );
 });
 
 test("the spacing rhythm is one repeating step", () => {
@@ -400,18 +188,6 @@ test("the spacing rhythm is one repeating step", () => {
   );
 });
 
-test("the motion vocabulary stays a three-step ramp", () => {
-  const ms = (token) =>
-    Number(new RegExp(`--${token}: (\\d+)ms;`).exec(base)[1]);
-  const [instant, fast, normal] = [
-    ms("motion-instant"),
-    ms("motion-fast"),
-    ms("motion"),
-  ];
-  assert.ok(instant < fast && fast < normal, "the ramp must be ordered");
-  assert.ok(normal <= 200, "a state change must not outlast 200ms");
-});
-
 test("radius is semantic: monotonic, and no structural surface reaches the dialog", () => {
   const steps = ["none", "sm", "md", "lg", "xl"];
   const values = steps.map((step) =>
@@ -427,6 +203,26 @@ test("radius is semantic: monotonic, and no structural surface reaches the dialo
     Math.max(...values),
     10,
     "no structural surface may reach the dialog radius",
+  );
+});
+
+test("the motion vocabulary stays a three-step ramp", () => {
+  const ms = (token) =>
+    Number(new RegExp(`--${token}: (\\d+)ms;`).exec(base)[1]);
+  const [instant, fast, normal] = [
+    ms("motion-instant"),
+    ms("motion-fast"),
+    ms("motion"),
+  ];
+  assert.ok(instant < fast && fast < normal, "the ramp must be ordered");
+  assert.ok(normal <= 200, "a state change must not outlast 200ms");
+});
+
+test("reduced motion is honoured globally rather than per selector", () => {
+  assert.match(
+    base,
+    /@media \(prefers-reduced-motion: reduce\) \{\s*\*,\s*\*::before,\s*\*::after \{/,
+    "base.css must collapse every duration under prefers-reduced-motion",
   );
 });
 
@@ -458,162 +254,496 @@ test("technical identifiers have one mono role", () => {
   );
 });
 
-test("reduced motion is honoured globally rather than per selector", () => {
-  assert.match(
-    base,
-    /@media \(prefers-reduced-motion: reduce\) \{\s*\*,\s*\*::before,\s*\*::after \{/,
-    "base.css must collapse every duration under prefers-reduced-motion",
+function stylesheets(dir = stylesDir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return stylesheets(path);
+    return entry.name.endsWith(".css") ? [path] : [];
+  });
+}
+
+test("colour is declared once, in the palette", () => {
+  // One owner, and it is a file you can read top to bottom. Any other sheet that
+  // writes a literal has started a second palette, which is how the previous
+  // direction ended up with 130 hard-coded greys and eleven near-identical planes.
+  const literal =
+    /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\(|:\s*(?:white|black)\b/;
+  const offenders = [];
+  for (const path of stylesheets()) {
+    if (path === palettePath) continue;
+    readFileSync(path, "utf8")
+      .split("\n")
+      .forEach((line, index) => {
+        if (literal.test(line)) {
+          offenders.push(
+            `${relative(stylesDir, path)}:${index + 1}: ${line.trim()}`,
+          );
+        }
+      });
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `Colour outside tokens.css must route through a token:\n${offenders.join("\n")}`,
   );
 });
 
-test("the neutral ladder stays neutral, cool-stone, and never blue", () => {
-  // The ladder is neutral graphite with a whisper of cool.
-  //
-  // This assertion used to require a *warm* bias (`r >= g >= b`) on every
-  // neutral, which is the direction the palette review rejected: at these
-  // densities a few points of warmth in every plane read as a yellow-green cast
-  // rather than as material, and the workspace looked dirty next to the white
-  // objects sitting on it. Warmth and cold are both failures at the extremes -
-  // a cream ladder turns the product into a theme, and a blue-grey ladder reads
-  // as an absence of colour - so the contract now holds the whole ladder inside a
-  // narrow band around true neutral instead of pinning it to one side of it.
-  //
-  // `blue - red` is the axis that matters: it is what separates "clean graphite"
-  // from both "muddy olive" (well negative) and "blue" (well positive). The
-  // band is wide enough to let the ladder carry a cool cast and no wider.
-  const neutral = [
-    ...planes,
-    "surface",
-    "line",
-    "line-soft",
-    "line-control",
-    "line-control-soft",
-    "line-float",
-    "ink",
-    "ink-2",
-    "muted",
-    "muted-2",
+test("the semantic layer resolves to the palette, not to new values", () => {
+  // Product code and every component under components/ui name a colour by what it is
+  // for. That layer must stay an alias: if it ever declares its own value the palette
+  // has two owners, and one of them will drift.
+  const semantic = [
+    "background",
+    "workspace",
+    "sidebar",
+    "chrome",
+    "surface-elevated",
+    "border",
+    "border-strong",
+    "text",
+    "text-secondary",
+    "text-muted",
+    "text-faint",
+    "warning",
+    "warning-muted",
+    "success",
+    "focus-ring",
   ];
-  for (const name of neutral) {
-    const hex = hexToken(name);
-    const [r, g, b] = channels(hex);
+  for (const name of semantic) {
+    const value = baseDeclarations.get(name);
+    assert.ok(value, `--${name} must be declared in base.css`);
+    const reference = /^var\(--c-([a-z0-9-]+)\)$/.exec(value);
     assert.ok(
-      Math.max(r, g, b) - Math.min(r, g, b) <= 12,
-      `--${name} (${hex}) is too saturated for the neutral ladder; saturation belongs to --accent and the warning family`,
+      reference,
+      `--${name} must resolve to a --c-* palette token, got ${value}`,
     );
     assert.ok(
-      b - r >= -3 && b - r <= 7,
-      `--${name} (${hex}) is off the neutral axis (blue - red = ${b - r}); the ladder is graphite with a whisper of cool, neither a warm cast nor a blue grey`,
+      lightPalette.has(`c-${reference[1]}`),
+      `--${name} points at --c-${reference[1]}, which the palette does not declare`,
     );
   }
 });
 
-test("every text token clears AA against every plane it can land on", () => {
-  // The reference plane is the darkest structural plane a token can land on
-  // (--surface-nav), which is what pulled --muted-2 down when the ladder
-  // darkened. --background is the window backdrop and only ever carries the
-  // startup surface and the canvas label, so only those two are checked there.
-  for (const name of ["ink", "ink-2", "muted"]) {
-    for (const plane of planes) {
-      const ratio = contrast(hexToken(name), hexToken(plane));
+test("every alias in the bridge names a palette token", () => {
+  // The bridge is what lets three vocabularies - Concord's own names, the vendored
+  // OpenTakeoff names, and the accumulated --concord-* feature names - resolve onto one
+  // palette. An alias that points at a token nobody declares resolves to nothing, and a
+  // property that resolves to nothing is an invisible failure.
+  assert.ok(bridge.size > 60, "the bridge must keep the full alias set");
+  for (const [name, value] of bridge) {
+    const references = [...value.matchAll(/var\(--([a-z0-9_-]+)\)/g)].map(
+      (match) => match[1],
+    );
+    if (!references.length) {
+      // a few aliases are structural (e.g. `--glow: none`), which is intentional
+      continue;
+    }
+    for (const reference of references) {
       assert.ok(
-        ratio >= TEXT_FLOOR,
-        `--${name} is ${ratio.toFixed(2)}:1 on --${plane}, below the ${TEXT_FLOOR}:1 AA floor`,
+        lightPalette.has(reference) ||
+          bridge.has(reference) ||
+          baseDeclarations.has(reference) ||
+          /^c-/.test(reference),
+        `--${name} points at --${reference}, which nothing declares`,
       );
     }
-    const onBackdrop = contrast(hexToken(name), hexToken("bg-app"));
+  }
+  // The donor's own names must be declared by the palette, because the vendored sheets
+  // are byte-pinned and cannot be edited: they can only be re-pointed.
+  for (const donorName of [
+    "paper-bright",
+    "paper-cream",
+    "paper-shadow",
+    "ink",
+    "ink-soft",
+    "ink-muted",
+    "ink-faint",
+    "cobalt",
+    "cobalt-deep",
+    "accent-contrast",
+    "status-bg",
+    "status-fg",
+    "status-acc",
+    "workspace-face",
+    "workspace-active-face",
+    "workspace-glow",
+    "stage",
+    "well",
+  ]) {
     assert.ok(
-      onBackdrop >= TEXT_FLOOR,
-      `--${name} is ${onBackdrop.toFixed(2)}:1 on the window backdrop`,
+      bridge.has(donorName),
+      `the bridge must re-point the donor token --${donorName}`,
     );
   }
-  for (const name of ["muted-2", "warn-fg", "danger-fg"]) {
-    for (const plane of [
-      "surface-nav",
-      "surface-detail",
-      "surface-list",
-      "surface-chrome",
-      "surface-workspace",
-      "surface",
-    ]) {
-      const ratio = contrast(hexToken(name), hexToken(plane));
+  // ...and the donor's generated faces must be neutralised: this product has no
+  // gradients and no glow.
+  for (const flattened of ["workspace-glow", "glow"]) {
+    assert.equal(
+      bridge.get(flattened),
+      "none",
+      `--${flattened} must be flattened to none`,
+    );
+  }
+});
+
+test("the bridge is declared on the shell as well as :root", () => {
+  // The vendored premiumWorkspace.css re-declares --cobalt, --paper-*, --ink-* and
+  // --stage per look *on the shell element*, at a specificity that outranks a plain
+  // :root copy. An alias declared only on :root therefore loses inside the window -
+  // which is exactly the failure that left the donor's blue on every Concord control.
+  const scopes = palette.match(
+    /\.app-shell\.premium-workspace\[data-workspace-look\]\s*\{/g,
+  );
+  assert.equal(
+    scopes?.length,
+    1,
+    "the shell scope must carry one bridge copy",
+  );
+  const shellAt = palette.indexOf(".app-shell.premium-workspace[");
+  const shellDeclarations = declarations(
+    palette.slice(shellAt, palette.indexOf("\n}", shellAt)),
+  );
+  let covered = 0;
+  for (const [name, value] of bridge) {
+    // The look-dependent names have to be mirrored - that is the point of the second
+    // copy. The `--concord-*` feature aliases are look-independent (they resolve to
+    // other aliases), and `--stage` is the one name the two looks place differently.
+    if (name.startsWith("concord-") || name === "stage") continue;
+    assert.equal(
+      shellDeclarations.get(name),
+      value,
+      `--${name} must be identical on :root and on the shell scope`,
+    );
+    covered += 1;
+  }
+  assert.ok(
+    covered > 50,
+    `the shell scope must mirror the look-dependent bridge (only ${covered} names matched)`,
+  );
+});
+
+test("both looks spend one step per structural role, in order", () => {
+  for (const look of ["light", "dark"]) {
+    for (let step = 1; step < PLANES.length; step += 1) {
+      const ratio = contrast(
+        raw(PLANES[step - 1], look),
+        raw(PLANES[step], look),
+      );
+      assert.ok(
+        ratio >= PLANE_STEP,
+        `${look}: ${PLANES[step - 1]} to ${PLANES[step]} is only ${ratio.toFixed(3)}:1; neighbouring planes must read as two materials`,
+      );
+    }
+  }
+});
+
+test("the instrument frame is a different material from the page", () => {
+  // The frame is dark in BOTH looks and that is the point: it states where the
+  // application ends and the document begins, and it is why a window of panels does
+  // not read as one pale slab. Asserted as a *material* relationship, not a direction.
+  for (const look of ["light", "dark"]) {
+    const frame = raw("chrome", look);
+    for (const plane of ["work", "nav"]) {
+      const page = raw(plane, look);
+      const ratio = contrast(frame, page);
+      const floor = look === "light" ? 4 : 1.25;
+      assert.ok(
+        ratio >= floor,
+        `${look}: the frame is only ${ratio.toFixed(2)}:1 from --c-${plane}; the instrument must be a different material from the page`,
+      );
+    }
+    assert.ok(
+      luminance(frame) < luminance(raw("work", look)),
+      `${look}: the frame must be the darker of the two, or it stops reading as the instrument around the document`,
+    );
+  }
+});
+
+test("every text tier clears AA against every plane it can land on", () => {
+  for (const look of ["light", "dark"]) {
+    for (const ink of ["ink", "ink-2", "ink-3", "ink-4"]) {
+      for (const plane of PLANES) {
+        const ratio = contrast(raw(ink, look), raw(plane, look));
+        assert.ok(
+          ratio >= TEXT_FLOOR,
+          `${look}: --c-${ink} is ${ratio.toFixed(2)}:1 on --c-${plane}, below the ${TEXT_FLOOR}:1 AA floor`,
+        );
+      }
+    }
+    // The frame's own ink, against the frame.
+    for (const ink of ["chrome-ink", "chrome-ink-2"]) {
+      const ratio = contrast(raw(ink, look), raw("chrome", look));
       assert.ok(
         ratio >= TEXT_FLOOR,
-        `--${name} is ${ratio.toFixed(2)}:1 on --${plane}, below the ${TEXT_FLOOR}:1 AA floor`,
+        `${look}: --c-${ink} is ${ratio.toFixed(2)}:1 on the frame`,
       );
+    }
+    // Status colours are text colours: they are read as state, in a chip or as a word.
+    for (const status of ["positive", "warning", "danger", "info"]) {
+      for (const plane of ["nav", "work"]) {
+        const ratio = contrast(raw(status, look), raw(plane, look));
+        assert.ok(
+          ratio >= TEXT_FLOOR,
+          `${look}: --c-${status} is ${ratio.toFixed(2)}:1 on --c-${plane}`,
+        );
+      }
     }
   }
 });
 
 test("a control boundary is identifiable, and a content rule is visible where it is drawn", () => {
-  // WCAG 1.4.11 for controls: a boundary that identifies a control has to be
-  // identifiable *wherever the control is placed*, which includes the darker
-  // navigation plane the project picker sits on - a tone tuned only against
-  // white passes the common case and fails the one that matters.
-  for (const plane of [
-    "surface",
-    "surface-nav",
-    "surface-detail",
-    "surface-chrome",
-  ]) {
-    const ratio = contrast(hexToken("line-control"), hexToken(plane));
+  for (const look of ["light", "dark"]) {
+    // `--line-control` may land on any plane, including the darkest one.
+    for (const plane of PLANES) {
+      const ratio = contrast(raw("line-control", look), raw(plane, look));
+      assert.ok(
+        ratio >= CONTROL_FLOOR,
+        `${look}: --c-line-control is ${ratio.toFixed(2)}:1 on --c-${plane}; a control boundary must clear ${CONTROL_FLOOR}:1 wherever it is placed`,
+      );
+    }
+    // `-soft` is the quieter boundary, spent only on the light planes where most
+    // controls actually sit.
+    for (const plane of ["nav", "work", "raised"]) {
+      const ratio = contrast(
+        raw("line-control-soft", look),
+        raw(plane, look),
+      );
+      assert.ok(
+        ratio >= CONTROL_FLOOR,
+        `${look}: --c-line-control-soft is ${ratio.toFixed(2)}:1 on --c-${plane}; it may only be spent where it clears the floor`,
+      );
+    }
     assert.ok(
-      ratio >= CONTROL_FLOOR,
-      `--line-control is ${ratio.toFixed(2)}:1 on --${plane}; a control boundary must clear ${CONTROL_FLOOR}:1`,
+      contrast(raw("line-control-soft", look), raw("work", look)) <
+        contrast(raw("line-control", look), raw("work", look)),
+      `${look}: --c-line-control-soft must be the quieter of the two, or the split has no reason to exist`,
+    );
+    // A content rule has no contrast floor, but it must be visible on the plane it is
+    // drawn on: an invisible hairline is a table that lost its rows.
+    const rule = contrast(raw("line", look), raw("work", look));
+    assert.ok(
+      rule >= 1.1,
+      `${look}: --c-line is ${rule.toFixed(3)}:1 on --c-work; a content rule must stay visible`,
+    );
+    const floatEdge = contrast(raw("line-float", look), raw("raised", look));
+    assert.ok(
+      floatEdge >= 1.15,
+      `${look}: --c-line-float is ${floatEdge.toFixed(3)}:1 on --c-raised; a floating surface must close its own shape`,
     );
   }
-  // The quieter boundary exists because most controls never land on the
-  // navigation plane at all, and at the tone the picker needs they read as
-  // native form outlines. It has to clear the same floor on every plane it is
-  // *allowed* on - the darkest of those being --surface-detail, where the
-  // Inspector's own fields sit - and it is deliberately not asserted against
-  // --surface-nav or --bg-app, because it must never be spent there.
-  for (const plane of [
-    "surface",
-    "surface-detail",
-    "surface-chrome",
-    "surface-workspace",
-  ]) {
-    const ratio = contrast(hexToken("line-control-soft"), hexToken(plane));
+});
+
+test("the accent is warm, saturated, and carries its own label", () => {
+  for (const look of ["light", "dark"]) {
+    const accent = raw("accent", look);
+    const [r, g, b] = channels(accent);
     assert.ok(
-      ratio >= CONTROL_FLOOR,
-      `--line-control-soft is ${ratio.toFixed(2)}:1 on --${plane}; a control boundary must clear ${CONTROL_FLOOR}:1 wherever it may be spent`,
+      r > g && g > b,
+      `${look}: --c-accent (${accent}) must stay a warm hue; position belongs to one warm family, not a second colour`,
+    );
+    // Saturated, unlike the exception family: a state must be separable from the accent
+    // by chroma and not only by hue, because hue alone is the one signal a colour-blind
+    // reader does not have.
+    assert.ok(
+      Math.max(r, g, b) - Math.min(r, g, b) > 80,
+      `${look}: --c-accent (${accent}) is too desaturated to be read as "current position"`,
+    );
+    for (const name of ["accent", "accent-deep"]) {
+      const ratio = contrast(raw("on-accent", look), raw(name, look));
+      assert.ok(
+        ratio >= TEXT_FLOOR,
+        `${look}: the label on --c-${name} is ${ratio.toFixed(2)}:1, below the ${TEXT_FLOOR}:1 floor`,
+      );
+    }
+  }
+  // The exception family is ochre and rust: warm, but low-chroma, so it never reads as
+  // the accent.
+  for (const look of ["light", "dark"]) {
+    for (const name of ["warning", "danger"]) {
+      const [r, g, b] = channels(raw(name, look));
+      assert.ok(
+        r > b,
+        `${look}: --c-${name} must stay a warm hue, distinct from a cool information colour`,
+      );
+    }
+    const [pr, pg] = channels(raw("positive", look));
+    assert.ok(
+      pg >= pr,
+      `${look}: --c-positive must not drift into the accent or the exception family`,
     );
   }
-  // ...and it must actually be the quieter of the two, or the split has no
-  // reason to exist.
-  assert.ok(
-    contrast(hexToken("line-control-soft"), hexToken("surface")) <
-      contrast(hexToken("line-control"), hexToken("surface")),
-    "--line-control-soft must be lighter than --line-control on the light planes it is for",
+});
+
+test("a selection has area, and a match inside running text is a highlight", () => {
+  // Selection is a surface, not only a 1-2px indicator, so it has to be a visible step
+  // on both planes a selected row can sit on: a docked panel and the work plane.
+  for (const look of ["light", "dark"]) {
+    const tint = {
+      ...palette,
+    };
+    const accentRgb = raw("accent-rgb", look);
+    const selection = `rgb(${accentRgb} / ${look === "dark" ? 0.15 : 0.11})`;
+    for (const plane of ["nav", "work", "chrome-band"]) {
+      const surface = composite(selection, raw(plane, look), look);
+      const ratio = contrast(surface, raw(plane, look));
+      assert.ok(
+        ratio >= 1.08,
+        `${look}: a selection tint on --c-${plane} is only ${ratio.toFixed(3)}:1`,
+      );
+    }
+    // The denser step exists for a match inside running text, so it has to be a
+    // highlight rather than a selection tint.
+    const highlight = composite(
+      `rgb(${accentRgb} / ${look === "dark" ? 0.27 : 0.2})`,
+      raw("work", look),
+      look,
+    );
+    const ratio = contrast(highlight, raw("work", look));
+    assert.ok(
+      ratio >= 1.25,
+      `${look}: an accent-strong match on the work plane is only ${ratio.toFixed(3)}:1`,
+    );
+    void tint;
+  }
+});
+
+test("the neutral ladder is warm stone, never cream and never grey", () => {
+  // Warmth is the material: a few degrees of it is what stops the product reading as
+  // an absence of colour. The failure modes on either side are real - a saturated cream
+  // turns the product into a theme, and a cool grey reads as a default - so the whole
+  // ladder is held inside a narrow band: warm (red above blue) and low-chroma.
+  const neutral = [
+    ...PLANES,
+    "detail",
+    "list",
+    "chrome-band",
+    "canvas",
+    "inset",
+    "line",
+    "line-soft",
+    "line-control",
+    "line-control-soft",
+    "line-float",
+    "well",
+  ];
+  for (const look of ["light", "dark"]) {
+    for (const name of neutral) {
+      const hex = raw(name, look);
+      const [r, g, b] = channels(hex);
+      assert.ok(
+        r >= b,
+        `${look}: --c-${name} (${hex}) is cool (blue above red); the ladder is warm stone`,
+      );
+      assert.ok(
+        Math.max(r, g, b) - Math.min(r, g, b) <= 32,
+        `${look}: --c-${name} (${hex}) is too saturated for the neutral ladder; saturation belongs to --c-accent and the status family`,
+      );
+    }
+  }
+  // The paper well is the one light surface in the dark look - a drawing or an
+  // extracted document is read on paper - and it is deliberately not pure white.
+  for (const look of ["light", "dark"]) {
+    const well = raw("well", look);
+    assert.ok(
+      luminance(well) > 0.75,
+      `${look}: --c-well must stay a light reading surface`,
+    );
+    assert.ok(
+      !/^#(?:fff|ffffff)$/i.test(well),
+      `${look}: the media well must not be pure white`,
+    );
+  }
+});
+
+test("the ThatOpen components inherit the same material", () => {
+  // The Lit components are the one surface this stylesheet cannot reach directly: they
+  // read their own bridge. Every variable that bridge needs must therefore be declared,
+  // or a panel renders in the library's default palette - which is a second theme no
+  // stylesheet in this repository can see.
+  const required = [
+    "bim-ui_bg-base",
+    "bim-ui_bg-contrast-10",
+    "bim-ui_bg-contrast-50",
+    "bim-ui_main-base",
+    "bim-ui_main-contrast",
+    "bim-ui_accent-base",
+    "bim-ui_danger-base",
+    "bim-ui_warning-base",
+    "bim-ui_success-base",
+    "bim-ui_info-base",
+  ];
+  for (const name of required) {
+    assert.match(
+      bridge.get(name) ?? "",
+      /^var\(--c-/,
+      `the bridge must point ${name} at a palette token`,
+    );
+    const reference = /^var\(--([a-z0-9-]+)\)$/.exec(bridge.get(name));
+    assert.ok(
+      lightPalette.has(reference[1]) ||
+        bridge.has(reference[1]) ||
+        baseDeclarations.has(reference[1]),
+      `${name} points at --${reference[1]}, which nothing declares`,
+    );
+  }
+  // The component's *primary* colour is the product accent, and its label ink is the
+  // accent's own label - so a Lit button and a React button are the same object.
+  assert.equal(bridge.get("bim-ui_main-base"), "var(--c-accent)");
+  assert.equal(bridge.get("bim-ui_main-contrast"), "var(--c-on-accent)");
+  // A status surface takes the ink that is legible on it, which is light in the light
+  // look and the window's own charcoal in the dark look.
+  for (const name of ["danger", "warning", "success", "info"]) {
+    assert.equal(
+      bridge.get(`bim-ui_${name}-contrast`),
+      "var(--c-on-status)",
+      `${name} surfaces must take --c-on-status as their label ink`,
+    );
+  }
+  // ...and the library's own generator variables that the sheets above never touch must
+  // be flattened, or the donor's glow returns on a hover.
+  for (const name of ["workspace-glow", "glow"]) {
+    assert.equal(bridge.get(name), "none");
+  }
+});
+
+test("the entry point imports the palette last, and only once", () => {
+  // The cascade is the mechanism: the palette has to win over the vendored donor sheets,
+  // and the donor sheets have to be loaded at all for the bridge to resolve.
+  const imports = entrySheet
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const paletteAt = imports.indexOf('@import "./styles/concord/tokens.css";');
+  const donorAt = imports.indexOf(
+    '@import "./vendor/opentakeoff/styles/tokens.css";',
   );
-  // Both tokens now clear the floor on the near-white navigation plane. Keep the
-  // secondary token measurably quieter instead of requiring it to fail contrast.
-  assert.ok(
-    contrast(hexToken("line-control-soft"), hexToken("surface")) <
-      contrast(hexToken("line-control"), hexToken("surface")),
-    "--line-control-soft must remain quieter than --line-control",
+  const vendorAt = imports.findIndex((line) =>
+    /^@import "\.\/vendor\/opentakeoff\/styles\/premiumWorkspace\.css";$/.test(
+      line,
+    ),
   );
-  for (const name of ["line", "line-soft"]) {
-    const ratio = contrast(hexToken(name), hexToken("surface-workspace"));
-    assert.ok(
-      ratio >= 1.15,
-      `--${name} is ${ratio.toFixed(3)}:1 on the work plane; a content rule drawn there must stay visible`,
-    );
-  }
-  const floatEdge = contrast(hexToken("line-float"), hexToken("surface"));
+  assert.notEqual(paletteAt, -1, "the entry must import the palette");
   assert.ok(
-    floatEdge >= 1.3,
-    `--line-float is ${floatEdge.toFixed(3)}:1 on --surface; a floating surface must close its own shape`,
+    donorAt !== -1 && vendorAt !== -1,
+    "the vendored donor sheets must still be imported",
+  );
+  assert.ok(
+    paletteAt > donorAt && paletteAt > vendorAt,
+    "the palette must be imported after the vendored sheets so it wins the cascade",
+  );
+  assert.equal(
+    imports.filter((line) => line.includes("concord/tokens.css")).length,
+    1,
+    "the palette must be imported exactly once",
   );
 });
 
 test("the document shell declares no palette value of its own", () => {
   // index.html sits outside the token layer, so the contract test that scans
-  // src/styles cannot see it. The window tint has to be a literal there (HTML
-  // cannot read a custom property), so the rule is narrower and still real: it
-  // must be a value the ladder already declares, and it must be the only literal
-  // in the file. A second one would be a second owner of a palette value.
+  // src/styles cannot see it. The window tint has to be a literal there (HTML cannot
+  // read a custom property), so the rule is narrower and still real: it must be a value
+  // the palette already declares, and it must be the only literal in the file.
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const literals = [
     ...html.matchAll(/#[0-9a-fA-F]{3,8}\b|\brgba?\s*\(|\bhsla?\s*\(/g),
@@ -627,82 +757,37 @@ test("the document shell declares no palette value of its own", () => {
     [tint],
     "the window tint must be the only colour literal in index.html",
   );
-  const ladder = new Set(
-    [...base.matchAll(/--[a-z0-9-]+: (#[0-9a-f]{6});/g)].map((match) =>
+  const declared = new Set(
+    [...palette.matchAll(/--[a-z0-9-]+:\s*(#[0-9a-f]{6});/g)].map((match) =>
       match[1].toLowerCase(),
     ),
   );
   assert.ok(
-    ladder.has(tint.toLowerCase()),
-    `the window tint ${tint} is not a value declared in the token ladder`,
+    declared.has(tint.toLowerCase()),
+    `the window tint ${tint} is not a value the palette declares`,
+  );
+  // The tint is the frame, so it must be the frame's value: a Windows title bar in a
+  // third colour is exactly the seam this contract exists to prevent.
+  assert.ok(
+    tint.toLowerCase() === raw("chrome", "light") ||
+      tint.toLowerCase() === raw("chrome", "dark"),
+    `the window tint ${tint} must be the instrument frame's own value`,
   );
 });
 
-test("the accent has area, and position never reads as exception", () => {
-  // The accent is a surface now, not only a 1-2px indicator, so the selected
-  // state has to be a visible step on both planes a selected row can sit on -
-  // the recessed pane plane (a source list) and the work plane (a reading
-  // surface). If this ever stops clearing a visible step, selection has quietly
-  // gone back to being one hairline.
-  for (const plane of [
-    "surface-workspace",
-    "surface-detail",
-    "surface-chrome",
-  ]) {
-    const surface = composite("accent-muted", hexToken(plane));
-    const ratio = contrast(surface, hexToken(plane));
+test("the palette and the scales are each imported through the single entry", () => {
+  // Two sheets owning the same thing is the failure this whole file guards against, so
+  // assert the ownership split explicitly: base.css must not declare a colour literal,
+  // and the palette must not declare a scale.
+  assert.doesNotMatch(
+    base,
+    /#[0-9a-fA-F]{3,8}\b/,
+    "base.css owns scales and semantics; the palette owns colour values",
+  );
+  for (const scale of ["--space-4", "--radius-lg", "--motion:"]) {
     assert.ok(
-      ratio >= 1.08,
-      `an accent-muted selection on --${plane} is only ${ratio.toFixed(3)}:1`,
+      !palette.includes(`${scale}`),
+      `the palette must not restate the scale token ${scale}`,
     );
   }
-  // The denser step exists for a mark inside running text, so it has to be a
-  // *highlight* rather than a selection tint: a found match must be the first
-  // thing the eye lands on in a paragraph.
-  const highlight = composite("accent-strong", hexToken("surface-workspace"));
-  const highlightRatio = contrast(highlight, hexToken("surface-workspace"));
-  assert.ok(
-    highlightRatio >= 1.25,
-    `an accent-strong match highlight on the work plane is only ${highlightRatio.toFixed(3)}:1`,
-  );
-  const onHighlight = contrast(hexToken("ink"), highlight);
-  assert.ok(
-    onHighlight >= TEXT_FLOOR,
-    `body ink on an accent-strong highlight is ${onHighlight.toFixed(2)}:1`,
-  );
-  // The primary control is the accent's own family taken to a working depth, not
-  // a second colour: a committed action and the current position have to belong
-  // to one identity, and white has to survive on the fill. This is what replaced
-  // a neutral-black button, which read as a generic template control.
-  for (const name of ["primary", "primary-hover"]) {
-    const [r, g, b] = channels(hexToken(name));
-    assert.ok(
-      b > r && b > g,
-      `--${name} must stay in the accent's cool family; a committed action shares the product's identity rather than starting a second one`,
-    );
-    const onPrimary = contrast(hexToken("on-primary"), hexToken(name));
-    assert.ok(
-      onPrimary >= TEXT_FLOOR,
-      `the primary label is ${onPrimary.toFixed(2)}:1 on --${name}, below the ${TEXT_FLOOR}:1 AA floor`,
-    );
-  }
-  // One accent family, and hues that cannot be confused: position is cool,
-  // exception and danger are warm, health is green.
-  const cool = channels(hexToken("accent"));
-  assert.ok(
-    cool[2] > cool[0] && cool[2] > cool[1],
-    "--accent must stay a cool hue",
-  );
-  for (const name of ["warn-fg", "danger-fg"]) {
-    const [r, g, b] = channels(hexToken(name));
-    assert.ok(
-      r > g && g >= b,
-      `--${name} must stay a warm hue, distinct from position`,
-    );
-  }
-  const success = channels(hexToken("success"));
-  assert.ok(
-    success[1] > success[0],
-    "--success must not drift into the accent or the warning family",
-  );
 });

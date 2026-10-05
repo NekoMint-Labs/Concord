@@ -4,342 +4,77 @@
  * Status colours describe real state; elevation belongs only to floating UI.
  * The existing semantic tokens below keep every workspace on one palette.
  */
+/*
+ * ── Concord scales, and the semantic colour layer ───────────────────────────
+ *
+ * This file owns the *scales* - type, spacing, control heights, radius, motion,
+ * elevation, and the font stack - and the *semantic* colour names that product code
+ * and `components/ui` are written against. It owns no colour value: every colour is
+ * declared once, in `styles/concord/tokens.css`, which is imported after this file and
+ * which the donor sheets' `!important` workspace looks cannot outrank.
+ *
+ * The split is deliberate. A scale is a relationship (four steps of radius, six steps
+ * of space, a monotonic type ramp) and belongs with the contract that checks it; a
+ * colour is art direction and belongs in one palette file that can be read top to
+ * bottom in one sitting. `frontend/tests/design-tokens.test.mjs` reads both files and
+ * holds the relationships.
+ *
+ * The semantic names below are the ones product code uses - they say what a value is
+ * *for*, so a palette change is one edit in the palette file rather than a hunt through
+ * feature stylesheets for `--surface-workspace`.
+ */
 :root {
   font-family: var(--font-ui);
-  color: var(--ink);
-  background: var(--bg-app);
+  color: var(--c-ink);
+  background: var(--c-backdrop);
   font-size: 13.5px;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 
   /*
-   * Neutrals. One plane per structural role, ordered by recession: the window
-   * backdrop is the dimmest, persistent navigation sits on top of it, the docked
-   * contextual Inspector is the next step, a local object list - a BIM element
-   * browser, a document source list - comes next, then the chrome bands (a
-   * toolbar, a pane header, a grouped value well), and the work plane is the
-   * lightest thing on screen. Depth is a value relationship, never a box, so no
-   * plane needs a border to be legible.
+   * Type scale: one step per role, with a real size step between every role. Seven
+   * roles: 22 / 19 / 15 / 14 / 13 / 12 / 12. The display step is the largest thing on
+   * any surface - a project name, a surface title - and it sits far enough above the
+   * section step that a reader can find the top of a region from across the room. The
+   * label step is the smallest tier, and the floor is 12px because below that a reader
+   * stops reading and starts decoding - which is the point at which a dense product
+   * stops being dense and starts being tiring.
    *
-   * The four roles are distinguished by which plane they take - the local object
-   * list used to share the Inspector's, which is what made a window of three
-   * similar grey columns around one work plane read as assembled rather than as
-   * one product - and each role is spent once.
-   *
-   * Every one of those roles is now a step of the *ordered* ladder, and that is
-   * the correction this pass made. The previous ladder was ordered
-   * `bg-app < nav < detail < chrome < workspace` and then spent `--surface-list`
-   * *inside* that ladder as a half step, which left the two pairs it mattered for
-   * below the floor: the local object list rendered 1.05:1 from the Inspector and
-   * 1.035:1 from the chrome bands, and a 1px pane header over a 1.035:1 body is
-   * not a band, it is the same slab with a line through it. Worse, persistent
-   * navigation had been re-assigned onto `--surface-chrome`, so the sidebar,
-   * every pane header, every toolbar and the timeline were literally one value
-   * and the local browser was the smallest step away from all of them. The
-   * Windows review read that as "several large nearly-white slabs", which is what
-   * it was.
-   *
-   * The ladder was therefore re-spaced rather than re-decorated: navigation moves
-   * down, the Inspector and the local object list move down with it, and the
-   * chrome and work planes stay exactly where they were, because those two were
-   * the pair that already read correctly. That re-spacing is what buys each
-   * neighbouring pair a real step without returning to linework - five planes
-   * cannot be squeezed into the 1.03:1 band the previous pass had left for them.
-   *
-   * Measured, not eyeballed: every neighbouring step of the ladder above clears
-   * 1.08:1 (frontend/tests/design-tokens.test.mjs holds the whole order,
-   * `--surface-list` included), and the *rendered* pairs the audit measured are
-   * 1.175:1 navigation-to-local-browser, 1.085:1 pane-header-to-local-browser
-   * body, and 1.186:1 local-browser-to-work-plane. The steps have to be this
-   * large because the eye is far better at detecting a thin high-contrast edge
-   * than a 2% area difference - so a small step plus a hairline reads as a table,
-   * while a large step plus no hairline reads as separated regions.
-   *
-   * Navigation-to-Inspector is the tight step, at 1.0800:1 - it clears the floor
-   * by 0.00005 and there is no slack left anywhere in this ladder. Navigation
-   * cannot come down any further without `--line-control` failing its 3:1 floor on
-   * the plane that token exists for, and the Inspector cannot come up without
-   * breaking its step to the local object list. A future edit that wants room here
-   * has to move `--line-control` (and then `--muted-2`, which is spaced against
-   * the same plane) *with* the navigation plane, not one of them alone.
+   * Hierarchy below the floor is spent on weight and colour instead: a 500 label in a
+   * quieter ink rather than a smaller one.
    */
-  --bg-app: #eef1f5;
-  /*
-   * A well cut into the work plane, and the only one in the product: the
-   * decision tray on 工作. It is its own value rather than `--bg-app` because
-   * the window backdrop is the dimmest plane in the ladder and spent as a
-   * large area it read as a grey slab that the reader looked at instead of
-   * through - the rows inside it were competing with their own container. One
-   * full step lighter keeps the recess legible (1.11:1 on the work plane,
-   * clear of the ~1.08 floor below which an area difference stops being seen)
-   * while letting the row titles carry the emphasis, and it lifts every text
-   * tone drawn on it, including the red state label, by about 5%.
-   */
-  --surface-inset: #f3f6fa;
-  --surface-nav: #f2f4f8;
-  --surface-detail: #f5f7fa;
-  /* the local object list's own body: a plane of its own, one full step below the
-     chrome bands it is named by and one above persistent navigation */
-  --surface-list: #f7f9fb;
-  --surface-chrome: #fafafa;
-  --surface-workspace: #ffffff;
-  /* controls, content objects, and floating surfaces stay plain white so they
-     read as objects sitting on a region rather than as another region */
-  --surface: #fff;
-
-  /* ThatOpen token bridge: donor components inherit Concord's light, dense
-     engineering palette rather than introducing a second theme. */
-  --bim-ui_bg-base: var(--bg-app);
-  --bim-ui_bg-contrast-10: var(--surface-inset);
-  --bim-ui_bg-contrast-20: var(--line-soft);
-  --bim-ui_bg-contrast-30: var(--hover);
-  --bim-ui_bg-contrast-40: var(--line-control-soft);
-  --bim-ui_bg-contrast-50: var(--muted);
-  --bim-ui_bg-contrast-60: var(--ink-2);
-  --bim-ui_bg-contrast-70: var(--ink-2);
-  --bim-ui_bg-contrast-80: var(--ink);
-  --bim-ui_bg-contrast-90: var(--ink);
-  --bim-ui_bg-contrast-100: var(--ink);
-  --bim-ui_main-base: var(--accent);
-  --bim-ui_main-contrast: var(--surface);
-  --bim-ui_accent-base: var(--accent);
-  --bim-ui_accent-contrast: var(--surface);
-  --bim-ui_danger-base: var(--concord-danger-text);
-  --bim-ui_danger-contrast: var(--surface);
-  --bim-ui_warning-base: var(--concord-warning-text);
-  --bim-ui_warning-contrast: var(--surface);
-  --bim-ui_success-base: var(--success);
-  --bim-ui_success-contrast: var(--surface);
-  --bim-ui_info-base: var(--accent);
-  --bim-ui_info-contrast: var(--surface);
-  --bim-ui_size-base: var(--fs-label);
-  --bim-ui_size-lg: var(--fs-body);
-  --bim-ui_size-2xs: 3px;
-  --bim-ui_size-4xs: 2px;
-  /*
-   * Lines. Four values, one job each, and the job is written on the token so a
-   * new rule can pick the right one instead of reaching for the nearest grey.
-   */
-  /* content rules: table rows, evidence boundaries. Decorative, so no
-     contrast floor - but it must stay visible on the work plane it is drawn on */
-  --line: #e5e8eb;
-  /* the quieter content rule, for a second-order separation on a light plane */
-  --line-soft: #e9ebee;
-  /*
-   * Control boundaries. Two tokens, and the split is a placement rule rather
-   * than a tone preference: a boundary has to clear WCAG 1.4.11 (3:1) against
-   * the plane it is drawn on, and the two planes controls actually sit on are
-   * far apart in value.
-   *
-   * `--line-control` is the boundary for a control that can land on the
-   * *navigation* plane - the project picker, and the startup token field on the
-   * window backdrop. It is re-toned with the plane it is reserved for: on the
-   * navigation plane it measures 3.07:1, which is the floor, so its value is not
-   * free and it moves whenever that plane does. It cannot be quietened any
-   * further without failing on the exact plane it is reserved for.
-   *
-   * `--line-control-soft` is the boundary for every control that only ever sits
-   * on a light plane - a toolbar button, a search field, a dialog field, the
-   * BIM IFC actions. The binding plane is the darkest of those
-   * (`--surface-detail`, where the Inspector's own fields sit) and it clears
-   * 3.05:1 there, 3.60:1 on chrome, 4.07:1 on white. It is a little lighter than
-   * `--line-control`, which is what stops every secondary control in the product
-   * reading as a native form outline - and the split is smaller than it used to
-   * be because the Inspector's plane came down with the rest of the ladder, so
-   * the room between the two boundaries narrowed with it.
-   *
-   * The rule is one direction only: `--line-control-soft` may never be spent on
-   * `--surface-nav` or `--bg-app`, where it measures 2.82:1 and 2.55:1.
-   * frontend/tests/design-tokens.test.mjs holds both halves of it.
-   */
-  --line-control: #85888b;
-  --line-control-soft: #898c8f;
-  /* floating-surface edges. A menu or a dialog is identified by its surface and
-     its shadow; this only has to close the shape. */
-  --line-float: #c8cbce;
-
-  --ink: #17191c;
-  --ink-2: #373a3d;
-  --muted: #606467;
-  /* The text ladder is spaced against the *darkest* structural plane a token can
-     land on (--surface-nav), not against the work plane. Spacing it against the
-     work plane is how muted-2 previously sat at 2.96:1 while carrying product
-     text - a value that looked fine on paper and failed wherever it was used.
-     Moving the ladder darker in this pass is what pulled muted-2 down with it. */
-  --muted-2: #626568;
-
-  /* interaction overlays are neutral ink at low alpha, so a hover reads as the
-     same material darkening under the pointer rather than as grey paint */
-  --surface-search: rgba(255, 255, 255, 0.62);
-  --hover: rgba(31, 47, 74, 0.05);
-  /*
-   * The second depth of the same overlay, and the reason it exists is that a
-   * secondary control now rests on the first one. A white rectangle on a chrome
-   * band is a form outline and nothing else: at 1.09:1 its own fill says nothing,
-   * so a 1px boundary was carrying the whole control and every toolbar read as a
-   * row of outlined boxes. Filled with the neutral the pointer already uses, the
-   * same control is a quiet local surface whose edge is one of two signals rather
-   * than the only one - and the pointer then darkens it by `--hover-strong`, so
-   * rest and hover are one material at two depths.
-   */
-  --hover-strong: rgba(31, 47, 74, 0.09);
-  --focus: var(--accent);
-
-  /*
-   * Radius is semantic: one step per object class, not one softness applied to
-   * everything. The values barely moved in this pass - what changed is *where*
-   * they are spent. Softness is now attached to objects inside a region (a
-   * selected row, a grouped well, a property block) and to objects that float
-   * above one, while every structural seam stays square. Attaching the radius to
-   * the shell instead is what produced both previous failures in turn: a page of
-   * rounded cards, then a shell with no material at all.
-   */
-  --radius-none: 0px; /* pane joins and structural seams: never softened */
-  --radius-sm: 4px; /* selected rows, menu items, tags, tiny interactive objects */
-  --radius-md: 6px; /* inputs, buttons, and content objects inside a region */
-  --radius-lg: 8px; /* menus, popovers, toasts, pane-local floating objects */
-  --radius-xl: 10px; /* dialogs: the one object layered over everything */
-
-  /*
-   * Motion: short, asymmetric, ease-out, and spent on state changes rather than
-   * on pointer feedback. The curve starts quickly and settles slowly, which is
-   * what a desktop pane feels like and is not what a spring feels like. There
-   * are no springs, no bounce, and no scale beyond a pressed control.
-   */
-  --motion-instant: 100ms; /* the pointer's own feedback */
-  --motion-fast: 120ms; /* a control resolving */
-  --motion: 160ms; /* a region, a record, or an indicator changing identity */
-  --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-
-  /*
-   * Elevation is spent only on objects that genuinely leave the page, in two
-   * steps. A control is identified by its own boundary and its surface, never by
-   * a shadow - a shadow under a button is the tell of a template, and it also
-   * made a committed action compete with a floating surface for the same signal.
-   */
-  --shadow-float:
-    0 2px 4px rgba(20, 23, 27, 0.06), 0 8px 24px rgba(20, 23, 27, 0.12);
-  --shadow-modal:
-    0 4px 12px rgba(17, 20, 24, 0.1), 0 24px 64px rgba(17, 20, 24, 0.22);
-  /* the scrim behind a modal: neutral, so it reads as the page dimming rather
-     than as a tint laid over it */
-  --scrim: rgba(20, 23, 27, 0.4);
-
-  /* Accent is reserved for position, focus and primary action. */
-  --accent: #2b6671;
-  /* A persistent selected row has a distinct surface, not a hover colour. */
-  --accent-muted: rgba(43, 102, 113, 0.12);
-  /* Stronger only for matches highlighted inside running text. */
-  --accent-strong: rgba(43, 102, 113, 0.2);
-
-  /* Primary controls share the accent identity and carry white action text. */
-  --primary: #2b6671;
-  --primary-hover: #235660;
-  --on-primary: #fff;
-
-  /*
-   * One restrained exception colour, used only for blocking state. Its surface
-   * step is a very low-chroma warm white rather than the saturated cream it used
-   * to be: at full chroma a blocked work package turned into a sticky note that
-   * out-shouted the page it was warning about. Amber states the exception in a
-   * badge, a rail, or a value - it does not fill a region.
-   */
-  --warn-fg: #7a4e00;
-  --warn-line: rgba(122, 78, 0, 0.42);
-  --warn-bg: #f7f2e8;
-  --danger-fg: #a02a1e;
-  --danger-soft: rgba(160, 42, 30, 0.06);
-
-  /*
-   * Type scale: one step per role, with a real size step between every role.
-   * Seven roles: 20 / 18 / 14.5 / 13.5 / 13 / 12.5 / 12. The display step is the
-   * application's own name on the startup surface; the label step is the smallest
-   * tier, and it is now a real 12px rather than 11.5px (below).
-   *
-   * The two smallest steps moved up one notch in this pass - 12 -> 12.5 and
-   * 11.5 -> 12 - and nothing else moved. The floor is the reason. 11.5px was
-   * carrying text a person has to read: a property label, a metadata key, a pane
-   * header's count, a work package's own id beside its name. Meaningful text below
-   * 12px is the point at which a desktop reader stops reading and starts decoding,
-   * and the small end is where the product's *volume* of quiet text lives, so the
-   * lift costs a little height in every list and buys legibility everywhere. Only
-   * technical register - a GUID, a SHA, an IFC id, a revision - may approach the
-   * floor, and it approaches it through the mono role rather than by earning a
-   * smaller step. Hierarchy below this point is spent on weight and colour, which
-   * is what the two tiers beneath the action step are: a 500 label in a quieter
-   * ink, not a smaller one.
-   *
-   * The scale came down about 7% in the density pass before this one, unevenly and
-   * on purpose. The two steps that were doing the shouting were the display and the
-   * title step: a 20px pane title in a 48px toolbar band and a 22px product name
-   * read as a settings application, and the object title sat one pixel under the
-   * display step, so a work package's own name competed with the application's. The
-   * two bands that carry the volume of product text moved least - body text cannot
-   * be made "denser" by shrinking it past the point where Chinese is comfortable
-   * at 1x - and the label tier moved *up* there too, because 11px tracking labels
-   * were the reason the header and metadata rows read as coarse rather than quiet.
-   * That direction is the one this pass finished: the smallest tier is now at the
-   * floor a reader can actually hold.
-   *
-   * The hierarchy is spent on weight and colour instead (see --font-ui).
-   */
-  --fs-display: 18px; /* the application's own name, on the startup surface */
-  --fs-title: 18px; /* object title: the selected work package, a document */
-  --fs-section: 15px; /* a pane's or a section's own heading */
-  --fs-body: 14px; /* body text and engineering values */
-  --fs-action: 13px; /* controls, list-row titles */
-  --fs-meta: 12px; /* metadata, timestamps, counts, gutters */
-  --fs-label: 12px; /* the small label tier: eyebrows, group titles, pane headers */
+  --fs-display: 22px;
+  --fs-title: 19px;
+  --fs-section: 15px;
+  --fs-body: 14px;
+  --fs-action: 13px;
+  --fs-meta: 12px;
+  --fs-label: 12px;
 
   /*
    * Font roles. One UI face for everything, and one technical face for the
    * identifiers an engineer scans rather than reads (a GUID, a SHA, an IFC id).
-   * System faces only: the same build renders in a browser and in the Windows
-   * Tauri WebView, and a remote font would be a network dependency and a flash
-   * of unstyled text in both.
    *
-   * The order is CJK-first on purpose. This is a Chinese product whose lines mix
-   * Han and Latin constantly ("L02 东翼 · 结构交接", "最新版本 R2"), and a
-   * Latin-first stack sets the Latin in one face and the Han in another, so a
-   * single label carries two incompatible sets of proportions and weights. A
-   * modern CJK sans draws both, so the pair sits on one baseline grid: HarmonyOS
-   * Sans SC and MiSans are named first because they are the cleanest current
-   * Chinese UI faces and are already the system default on the platforms that
-   * ship them; everything after them is the platform fallback chain, so a machine
-   * with neither still gets YaHei on Windows, PingFang on macOS, Noto elsewhere.
+   * System faces only: the same build renders in a browser and in the Windows Tauri
+   * WebView, and a remote font would be a network dependency in both - which the
+   * local-first contract forbids (`frontend/e2e/real-project.spec.ts` asserts that the
+   * application makes no remote request at load).
    *
-   * Neither face is bundled - see the rule above - so this is a preference, not a
-   * dependency: it changes the rendering only where the reader already has the
-   * face. The previous stack named Inter first, which is worse than neutral here:
-   * Inter is Latin-only and unbundled, so where it *was* installed it silently
-   * split Latin away from Han and nowhere else.
-   *
-   * Three weights are named - 400, 500, 600 - and the middle one is deliberately
-   * the tier labels and metadata are written in. On the Windows WebView both
-   * "Segoe UI" and "Microsoft YaHei" resolve 500 to their regular face, so a 500
-   * label is *not* distinguished from body text by weight on the platform this
-   * ships in; it is distinguished by size, tracking, and colour, which is the
-   * hierarchy this pass wants. 600 is then spent only where it is carrying real
-   * information - an object title, the current row or view, a committed action -
-   * instead of on every 11px label in the product, which is what made the
-   * interface read as heavy. Never write a 500-to-600 *difference* into a line
-   * that carries Chinese product text: it renders as identical.
+   * The order is CJK-first on purpose. This is a Chinese product whose lines mix Han
+   * and Latin constantly ("L02 东翼 · 结构交接", "最新版本 R2"), and a Latin-first stack
+   * would set the Latin in one face and the Han in another, so a single label would
+   * carry two incompatible sets of proportions.
    */
   --font-ui:
     "HarmonyOS Sans SC", MiSans, "Segoe UI", "Microsoft YaHei", "PingFang SC",
     "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  /* the shell takes the same face as the rest of the product rather than its own
-     second stack: one UI face is the point, and the two had already drifted */
   --concord-font-ui: var(--font-ui);
 
   /*
-   * Spacing rhythm. A 4px base with a repeating step, so padding and gaps land
-   * on a shared set of values instead of every component inventing its own
-   * 13px. Structural chrome uses the small end, region padding the middle, and
-   * section separation the large end - the two largest steps exist so that
-   * "another section starts here" can be said with space instead of a rule.
+   * Spacing rhythm: a 4px base with a repeating step, so padding and gaps land on a
+   * shared set of values instead of every component inventing its own 13px.
    */
   --space-1: 4px;
   --space-2: 8px;
@@ -348,210 +83,71 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  /*
-   * The analysis footer's own height, named once. It is declared as a token
-   * because two places have to agree on it: the footer takes it as its minimum
-   * height, and every scrollable workspace reserves it as bottom padding so the
-   * end of the content can always clear the band above it.
-   */
+  /* The analysis footer's own height, named once: the footer takes it as its minimum
+     and every scrollable workspace reserves it as bottom padding. */
   --status-bar-h: 32px;
 
-  /*
-   * Control heights, named once so the density calibration is one edit rather
-   * than a hunt through feature stylesheets. Two steps: the standard control
-   * (buttons, inputs, the project picker) and the small one used where a control
-   * sits inside a chrome band that is itself only 42px tall. Both stay above the
-   * 24px WCAG 2.5.8 target floor, which is the one number this scale may not go
-   * under for the sake of density.
-   */
+  /* Control heights, named once so density is one edit rather than a hunt through
+     feature sheets. Both stay above the 24px WCAG 2.5.8 target floor. */
   --control-h: 28px;
   --control-h-sm: 25px;
+  --control-h-lg: 32px;
 
-  /*
-   * The gap between a functional icon and its label, named once. It is one
-   * number for the whole product because it is an optical relationship rather
-   * than a layout decision: a 15px mark and a line of 13px text need about 6px
-   * between them, and a feature that invents its own value is how two buttons in
-   * one chrome row stop reading as one row. The icon size and stroke that go
-   * with it live in frontend/src/components/ui/icon.ts.
-   */
+  /* The gap between a functional icon and its label: an optical relationship rather
+     than a layout decision, and one number for the whole product, because a feature
+     that invents its own is how two buttons in one row stop reading as one row. */
   --icon-gap: 6px;
 
   /*
-   * Semantic layer. These are the names product code and every component under
-   * components/ui should use: they say what a value is *for*, so a future
-   * palette change is one edit to the physical ladder above rather than a hunt
-   * through feature stylesheets for `--surface-workspace`. Each one resolves to
-   * a step of that ladder, so there is still exactly one place a colour value is
-   * written - and frontend/tests/design-tokens.test.mjs checks that every name
-   * in this block resolves to a token that exists.
+   * Radius is semantic: one step per object class, not one softness applied to
+   * everything. Structural seams stay square; softness belongs to objects *inside* a
+   * region (a selected row, a tag) and to objects that float above one (a menu, a
+   * dialog).
    */
-  --background: var(--bg-app);
-  --workspace: var(--surface-workspace);
-  /*
-   * Persistent navigation takes the recessed navigation plane, and this is the
-   * assignment the surface pass corrected back.
-   *
-   * It had been moved onto `--surface-chrome` to stop the column reading as a tall
-   * grey slab bolted to the left of the window - and the slab was real, but the
-   * cause was never the plane: the column was 248px wide, carried nothing below
-   * its last row, and had no material relationship with anything else on screen.
-   * The width and the row grammar were fixed where they belong (styles/shell.css),
-   * and the assignment then cost the product the one distinction a desktop
-   * application most needs: global navigation, every pane header, both toolbars,
-   * the timeline and the local object browser all rendered within 1.035:1 of each
-   * other. The Windows review called the result "several large nearly-white
-   * slabs", which is precisely what one value spent on five roles looks like.
-   *
-   * On the navigation plane the column is the most recessed large surface on
-   * screen, the work plane is 1.39:1 lighter than it, and the local object browser
-   * beside it is a full step lighter (1.18:1) - so "global navigation" and "this
-   * tool's own browser" are two roles a reader can separate at a glance rather
-   * than two greys they have to compare. The column is not dark: it is the second
-   * lightest thing on screen after the work plane, and it is the window backdrop
-   * that stays dimmest.
-   *
-   * Selection is not weakened by the darker plane. --accent-muted measures 1.21:1
-   * on `--surface-chrome` and strengthens as the plane under it darkens, so a
-   * selected work package is a *stronger* step on the navigation plane than it
-   * was on chrome (tests/design-tokens.test.mjs holds the floor).
-   */
-  --sidebar: var(--surface-nav);
-  --chrome: var(--surface-chrome);
-  --surface-elevated: var(--surface);
-  --border: var(--line);
-  --border-strong: var(--line-control);
-  --text: var(--ink);
-  --text-secondary: var(--ink-2);
-  --text-muted: var(--muted);
-  --text-faint: var(--muted-2);
-  --warning: var(--warn-fg);
-  --warning-muted: var(--warn-bg);
-  /*
-   * The completed/healthy semantic. Restrained on purpose: it is a status
-   * colour, not a brand accent, and the product reports READY and COMPLETED as
-   * plain text rather than as a green surface. There is deliberately no
-   * success *surface* token: a green panel on a work plane is the dashboard
-   * read this direction avoids, and nothing has ever needed one.
-   */
-  --success: #2f6b4f;
+  --radius-none: 0px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
 
-  /* Concord feature roles resolve here so selection, status and shell materials
-     remain consistent across Work, Model and Project. */
-  --concord-accent: #2b6671;
-  --concord-accent-strong: #235660;
-  --concord-accent-tint: #eaf2f3;
-  --concord-action-hover: #edf2f5;
-  --concord-shell-surface: #f2f4f8;
-  --concord-shell-divider: #e4e6e9;
-  --concord-ink: #1f262d;
-  --concord-muted: #5c6670;
-  --concord-divider: #e7e9ec;
-  --concord-brand-mark: #1f262d;
-  --concord-nav-text: #3e4852;
-  --concord-nav-selection: #e4eff0;
-  --concord-nav-active: #235660;
-  --concord-row-rail: #2b6671;
-  --concord-float-edge: #d9dde1;
-  --concord-float-shadow: #1f262d1f;
-  --concord-stage-chip: #ffffffeb;
-  --concord-nav-divider: #eceff2;
-  --concord-area-label: #606c79;
-  --concord-header-surface: #fafbfc;
-  --concord-header-divider: #e9edf1;
-  --concord-header-label: #6b7782;
-  --concord-header-control: #f6f8fa;
-  --concord-dark-ink: #273543;
-  --concord-ready-mark: #278455;
-  --concord-workspace-surface: #ffffff;
-  --concord-model-surface: #e9edef;
-  --concord-viewer-stage: #e4e7ea;
-  --concord-context-divider: #e3e8ed;
-  --concord-inspector-title: #2b3947;
-  --concord-inspector-subtitle: #647181;
-  --concord-inspector-divider: #e9edf0;
-  --concord-tab-label: #596878;
-  --concord-tab-active: #20344d;
-  --concord-count-surface: #f1f3f6;
-  --concord-quiet-metadata: var(--muted-2);
-  --concord-element-surface: #edf1f4;
-  --concord-element-icon: #8294a2;
-  --concord-element-kind: #687a88;
-  --concord-fact-label: #647382;
-  --concord-fact-value: #344150;
-  --concord-row-hover: #f3f5f6;
-  --concord-amber-mark: #ae7614;
-  --concord-red-mark: #b5473f;
-  --concord-technical-text: #677380;
-  --concord-context-label: #637180;
-  --concord-control-surface: #f4f6f8;
-  --concord-context-tab: #687481;
-  --concord-context-active: #253241;
-  --concord-table-label: #657381;
-  --concord-table-value: #495563;
-  --concord-table-action: #2b6671;
-  --concord-row-selected: #eaf2f3;
-  --concord-warning-surface: #fff4e4;
-  --concord-warning-text: #8f5e18;
-  --concord-danger-surface: #fcebea;
-  --concord-danger-text: #b54742;
-  --concord-empty-text: #78838e;
-  --concord-control-shadow: #27354320;
-  --concord-viewer-shadow: #27354326;
-  --concord-viewer-text: #354353;
-  --concord-label-shadow: #16334b30;
-  --concord-issue-border: #f1d6cf;
-  --concord-issue-surface: #fffdfa;
-  --concord-issue-shadow: #24354323;
-  --concord-issue-text: #37424e;
-  --concord-toolbar-shadow: #27354330;
-  --concord-toolbar-active: #2b6671;
-  --concord-disabled-tab: #9aa4ad;
-  --concord-ready-surface: #eaf4ee;
-  --concord-ready-text: #2f6b4f;
-  --concord-comparison-border: #eef1f4;
-  --concord-comparison-surface: #eaf2f3;
-  --concord-comparison-text: #5f6d7c;
-  --concord-issue-icon: #b5473f;
-  --concord-issue-body: #45515d;
-  --concord-blocking-text: #a83a33;
-  --concord-issue-action: #2f4050;
-  --concord-filter-shadow: #27354325;
-  --concord-filter-count: #778490;
-  --concord-investigation-tab: #667481;
-  --concord-investigation-active: #293a4a;
-  --concord-investigation-count: #f0f2f4;
-  --concord-investigation-status: #2c496b;
-  --concord-section-divider: #e7ebef;
-  --concord-document-status: #7a8691;
-  --concord-document-meta: #697785;
-  --concord-eyebrow: #828e9a;
-  --concord-document-divider: #e8ecf0;
-  --concord-document-input: #f8fafc;
-  --concord-document-region: #f5f7fa;
-  --concord-document-list: #f9fafc;
-  --concord-list-heading: #364251;
-  --concord-document-filter: #596b7b;
-  --concord-document-active: #2b6671;
-  --concord-document-filter-active: #e9eff2;
-  --concord-document-row-border: #e5eaf0;
-  --concord-document-selected: #eaf2f3;
-  --concord-document-selected-border: #9bbfc3;
-  --concord-document-icon: #596b7a;
-  --concord-document-preview: #f3f5f8;
-  --concord-document-header-icon: #596b7a;
-  --concord-document-sheet-border: #e4e8ee;
-  --concord-document-sheet-shadow: #27333f0a;
-  --concord-metadata-label: #687684;
-  --concord-worktab-text: #596b7a;
-  --concord-worktab-active: #2b6671;
-  --concord-package-description: #687785;
-  --concord-package-issue: #b5473f;
-  --concord-package-meta: #70808b;
-  --concord-spatial-pane: #fbfcfd;
+  /*
+   * Motion: short, asymmetric, ease-out, and spent on state changes rather than on
+   * pointer feedback. The curve starts quickly and settles slowly, which is what a
+   * desktop pane feels like and is not what a spring feels like. No bounce, no scale
+   * beyond a pressed control.
+   */
+  --motion-instant: 100ms;
+  --motion-fast: 120ms;
+  --motion: 160ms;
+  --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
-  --focus-ring: var(--accent);
+  /*
+   * The semantic colour layer. Every name resolves to a step of the palette ladder in
+   * `styles/concord/tokens.css` - never to a literal, or the palette would have two
+   * owners and one of them would drift.
+   */
+  --background: var(--c-backdrop);
+  --workspace: var(--c-work);
+  --sidebar: var(--c-nav);
+  --chrome: var(--c-chrome-band);
+  --surface-elevated: var(--c-raised);
+  --border: var(--c-line);
+  --border-strong: var(--c-line-control);
+  --text: var(--c-ink);
+  --text-secondary: var(--c-ink-2);
+  --text-muted: var(--c-ink-3);
+  --text-faint: var(--c-text-faint);
+  --warning: var(--c-warning);
+  --warning-muted: var(--c-warning-surface);
+  --success: var(--c-positive);
+  --focus-ring: var(--c-accent);
+
+  /* The instrument band, for the shell and status strips. `--chrome-ink` is the ink a
+     dark band is written in, and it is deliberately not the same token as `--ink`. */
+  --chrome-ink: var(--c-chrome-ink);
+  --chrome-ink-2: var(--c-chrome-ink-2);
 }
+
 * {
   box-sizing: border-box;
 }
@@ -726,599 +322,4 @@ a {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
-}
-
-/*
- * ── OpenTakeoff token-alias bridge ──────────────────────────────────────────
- *
- * Concord's palette and the vendored OpenTakeoff workspace palette are two
- * different vocabularies. `frontend/src/vendor/opentakeoff/styles/tokens.css`
- * is imported *after* this file, so wherever the two sheets declare the same
- * custom property the donor wins - but that only covers the names they share.
- * Concord's own surface, line, text and accent names are not among them, so
- * without this bridge every Concord surface would keep its old grey palette
- * while the donor components switched to the workspace look. These declarations
- * re-point the Concord names onto the donor palette (values are `var()`
- * references, never copied literals), and that is why every Concord surface now
- * adopts the workspace look, resolved per scope.
- *
- * The alias set is declared three times on purpose. `var()` is substituted at
- * computed-value time: an alias declared once on `:root` resolves against the
- * `:root` donor values and does *not* re-resolve for a descendant scope. The
- * vendor's `premiumWorkspace.css` re-declares the donor tokens per
- * `[data-workspace-look]`, so a single frozen `:root` copy would ignore the
- * workspace look entirely. Each scope therefore carries its own copy; because
- * the values are references they resolve against whatever the donor tokens are
- * inside that scope. This section only *adds* declarations - every earlier
- * declaration in this file is untouched, and the later alias wins by source
- * order within the same selector.
- */
-
-:root {
-  --bg-app: var(--paper-bright);
-  --surface-inset: var(--paper-shadow);
-  --surface-nav: var(--paper-bright);
-  --surface-detail: var(--paper-bright);
-  --surface-list: var(--paper-bright);
-  --surface-chrome: var(--paper-bright);
-  --surface-workspace: var(--paper-bright);
-  --surface: var(--paper-bright);
-  --surface-elevated: var(--surface-pop);
-  --surface-search: var(--surface-pop);
-  --line: var(--ink-faint);
-  --line-soft: var(--ink-faint);
-  --line-float: var(--ink-faint);
-  --ink-2: var(--ink-soft);
-  --muted: var(--ink-muted);
-  --muted-2: var(--ink-muted);
-  --text-muted: var(--ink-muted);
-  --accent: var(--cobalt);
-  --primary: var(--cobalt);
-  --primary-hover: var(--cobalt-deep);
-  --on-primary: var(--accent-contrast);
-  --focus: var(--cobalt);
-  --hover: var(--paper-shadow);
-  --hover-strong: var(--tint-select);
-}
-
-.premium-workspace[data-workspace-look="light"] {
-  --bg-app: var(--paper-bright);
-  --surface-inset: var(--paper-shadow);
-  --surface-nav: var(--paper-bright);
-  --surface-detail: var(--paper-bright);
-  --surface-list: var(--paper-bright);
-  --surface-chrome: var(--paper-bright);
-  --surface-workspace: var(--paper-bright);
-  --surface: var(--paper-bright);
-  --surface-elevated: var(--surface-pop);
-  --surface-search: var(--surface-pop);
-  --line: var(--ink-faint);
-  --line-soft: var(--ink-faint);
-  --line-float: var(--ink-faint);
-  --ink-2: var(--ink-soft);
-  --muted: var(--ink-muted);
-  --muted-2: var(--ink-muted);
-  --text-muted: var(--ink-muted);
-  --accent: var(--cobalt);
-  --primary: var(--cobalt);
-  --primary-hover: var(--cobalt-deep);
-  --on-primary: var(--accent-contrast);
-  --focus: var(--cobalt);
-  --hover: var(--paper-shadow);
-  --hover-strong: var(--tint-select);
-}
-
-/*
- * The graphite ladder, re-spaced.
- *
- * The bridge above mapped *every* structural plane onto the donor's single
- * `--paper-bright`, so the shell backdrop, the top chrome, the navigator, the
- * contextual inspector, the Work panel, the work plane and every content object
- * resolved to one value: a window of three large panels around one work surface
- * read as one flat field, and no amount of linework could say which region was
- * which. That assignment was the error, not the palette, so it is corrected here
- * by giving each role its own step of the *donor's own* dark vocabulary rather
- * than by layering a second theme on top:
- *
- *   window backdrop / chrome bands  --status-bg    #101622  (dimmest)
- *   navigator, inspector, Work dock --paper-bright #181e2a
- *   the work plane                  --paper-cream  #202839  (one step up)
- *   objects on the work plane       --surface-pop  #263349
- *   hover                           --paper-shadow #2a3548
- *   selected                        --tint-select  #243b62
- *   a well cut into the work plane  --stage        #111622
- *
- * Measured, not eyeballed: every neighbouring pair of that ladder clears
- * 1.08:1 (shell 1.085 / docks 1.132 / work plane 1.160 / raised 1.195), which is
- * the point at which an area difference starts to be seen as two materials. The
- * reward is that the work plane is now the *lightest* structural plane and the
- * docked columns beside it are a real step darker - the reader can tell
- * "where I am working" from "where I am choosing" with the text covered up.
- *
- * The text ladder is spaced against the work plane it is drawn on and keeps one
- * step per role: --ink (12.6:1) / --ink-2 (9.3:1) / --muted (8.1:1) /
- * --muted-2 (6.6:1). `--muted` and `--muted-2` used to resolve to the *same*
- * donor ink, which flattened every secondary and metadata line in the product
- * into one grey; they now take two different stops of it.
- *
- * `--well` is the donor's own media-well token ("PDF thumbnails and stamp
- * previews are light media" — vendor tokens.css), and the dark look is where it
- * earns its keep: it is the paper a drawing or a parsed document is read on,
- * kept warm and off-white so a sheet reads as a sheet rather than as the one
- * glaring white rectangle in a black window. It stays light in every look.
- */
-.premium-workspace[data-workspace-look="graphite"],
-.premium-workspace[data-workspace-look="hud"] {
-  --bg-app: var(--status-bg);
-  --surface-chrome: var(--status-bg);
-  --surface-nav: var(--paper-bright);
-  --surface-detail: var(--paper-bright);
-  --surface-list: var(--paper-bright);
-  --surface-workspace: var(--paper-cream);
-  --surface: var(--surface-pop);
-  --surface-inset: var(--stage);
-  --surface-elevated: var(--surface-pop);
-  --surface-search: var(--surface-pop);
-  --well: #f2f0ec;
-  --line: var(--ink-faint);
-  --line-soft: var(--ink-faint);
-  --line-float: var(--ink-faint);
-  --ink-2: var(--ink-soft);
-  --muted: var(--ink-secondary);
-  --muted-2: var(--ink-muted);
-  --text-muted: var(--muted);
-  --accent: var(--cobalt);
-  --primary: var(--cobalt);
-  --primary-hover: var(--cobalt-deep);
-  --on-primary: var(--accent-contrast);
-  --focus: var(--cobalt);
-  --hover: var(--paper-shadow);
-  --hover-strong: var(--tint-select);
-}
-
-/*
- * ── Concord palette + ThatOpen bridge, re-scoped ────────────────────────────
- *
- * The block above re-points Concord's *structural* names (surfaces, lines, text
- * and the accent) onto the donor palette. Two families were left behind and are
- * closed here, re-declared in the same three scopes for the same reason: `var()`
- * substitutes at computed-value time, so an alias declared once on `:root`
- * freezes against the `:root` donor values and never re-resolves inside a
- * descendant `[data-workspace-look]` scope.
- *
- *   (a) The `--concord-*` feature palette, declared earlier as literal light hex.
- *   (b) The ThatOpen `--bim-ui_*` bridge, declared once on `:root`, which froze
- *       at the light value before it was inherited into the shell.
- *
- * Every value below is a `var()` reference into the donor vocabulary; none is a
- * copied literal (the donor sheet is imported after this one, so the donor owns
- * the value and each scope resolves it). Mapping is by role:
- *   - base/structural planes (shell, header, nav, element, count, control)  → --paper-bright
- *   - raised fills (chips, filled controls, status cards)                   → --surface-pop
- *   - selected/active fills (selection, tint, active filter)                → --tint-select
- *   - plain hover                                                           → --paper-shadow
- *   - working/stage planes (workspace, model, viewer)                       → --stage
- *   - dividers, edges, hairlines                                            → --ink-faint
- *   - text                                                                  → --ink / --ink-secondary / --ink-muted
- *   - the single accent (accent, action, rail, brand, active)               → --cobalt / --cobalt-deep
- *   - status marks                                                          → --c-positive / --c-warning / --c-danger
- *
- * Left alone on purpose: the eight `--concord-*-shadow` tokens
- * (float, control, viewer, label, issue, toolbar, filter, document-sheet).
- * They are drop-shadow colours, not part of the plane/text/accent vocabulary,
- * and the donor exposes no shadow token to map them onto.
- *
- * `--bim-ui_bg-*` keep their existing Concord references and now resolve per
- * scope. Two names they reference were not yet in the bridge and are added here:
- * `--line-control-soft` (a control hairline → --ink-faint) and `--success`
- * (the positive status → --c-positive).
- */
-
-:root {
-  --concord-accent: var(--cobalt);
-  --concord-accent-strong: var(--cobalt-deep);
-  --concord-accent-tint: var(--tint-select);
-  --concord-action-hover: var(--paper-shadow);
-  --concord-shell-surface: var(--paper-bright);
-  --concord-shell-divider: var(--ink-faint);
-  --concord-ink: var(--ink);
-  --concord-muted: var(--ink-muted);
-  --concord-divider: var(--ink-faint);
-  --concord-brand-mark: var(--cobalt);
-  --concord-nav-text: var(--ink-secondary);
-  --concord-nav-selection: var(--tint-select);
-  --concord-nav-active: var(--cobalt-deep);
-  --concord-row-rail: var(--cobalt);
-  --concord-float-edge: var(--ink-faint);
-  --concord-stage-chip: var(--surface-pop);
-  --concord-nav-divider: var(--ink-faint);
-  --concord-area-label: var(--ink-muted);
-  --concord-header-surface: var(--paper-bright);
-  --concord-header-divider: var(--ink-faint);
-  --concord-header-label: var(--ink-muted);
-  --concord-header-control: var(--paper-bright);
-  --concord-dark-ink: var(--ink);
-  --concord-ready-mark: var(--c-positive);
-  --concord-workspace-surface: var(--stage);
-  --concord-model-surface: var(--stage);
-  --concord-viewer-stage: var(--stage);
-  --concord-context-divider: var(--ink-faint);
-  --concord-inspector-title: var(--ink);
-  --concord-inspector-subtitle: var(--ink-muted);
-  --concord-inspector-divider: var(--ink-faint);
-  --concord-tab-label: var(--ink-secondary);
-  --concord-tab-active: var(--ink);
-  --concord-count-surface: var(--paper-bright);
-  --concord-quiet-metadata: var(--ink-muted);
-  --concord-element-surface: var(--paper-bright);
-  --concord-element-icon: var(--ink-muted);
-  --concord-element-kind: var(--ink-muted);
-  --concord-fact-label: var(--ink-muted);
-  --concord-fact-value: var(--ink);
-  --concord-row-hover: var(--paper-shadow);
-  --concord-amber-mark: var(--c-warning);
-  --concord-red-mark: var(--c-danger);
-  --concord-technical-text: var(--ink-muted);
-  --concord-context-label: var(--ink-muted);
-  --concord-control-surface: var(--paper-bright);
-  --concord-context-tab: var(--ink-secondary);
-  --concord-context-active: var(--ink);
-  --concord-table-label: var(--ink-muted);
-  --concord-table-value: var(--ink);
-  --concord-table-action: var(--cobalt);
-  --concord-row-selected: var(--tint-select);
-  --concord-warning-surface: var(--surface-pop);
-  --concord-warning-text: var(--c-warning);
-  --concord-danger-surface: var(--surface-pop);
-  --concord-danger-text: var(--c-danger);
-  --concord-empty-text: var(--ink-muted);
-  --concord-viewer-text: var(--ink-secondary);
-  --concord-issue-border: var(--ink-faint);
-  --concord-issue-surface: var(--surface-pop);
-  --concord-issue-text: var(--ink);
-  --concord-toolbar-active: var(--cobalt);
-  --concord-disabled-tab: var(--ink-muted);
-  --concord-ready-surface: var(--surface-pop);
-  --concord-ready-text: var(--c-positive);
-  --concord-comparison-border: var(--ink-faint);
-  --concord-comparison-surface: var(--tint-select);
-  --concord-comparison-text: var(--ink-muted);
-  --concord-issue-icon: var(--c-danger);
-  --concord-issue-body: var(--ink-secondary);
-  --concord-blocking-text: var(--c-danger);
-  --concord-issue-action: var(--cobalt);
-  --concord-filter-count: var(--ink-muted);
-  --concord-investigation-tab: var(--ink-muted);
-  --concord-investigation-active: var(--ink);
-  --concord-investigation-count: var(--paper-bright);
-  --concord-investigation-status: var(--ink-secondary);
-  --concord-section-divider: var(--ink-faint);
-  --concord-document-status: var(--ink-muted);
-  --concord-document-meta: var(--ink-muted);
-  --concord-eyebrow: var(--ink-muted);
-  --concord-document-divider: var(--ink-faint);
-  --concord-document-input: var(--paper-bright);
-  --concord-document-region: var(--paper-bright);
-  --concord-document-list: var(--paper-bright);
-  --concord-list-heading: var(--ink);
-  --concord-document-filter: var(--ink-secondary);
-  --concord-document-active: var(--cobalt);
-  --concord-document-filter-active: var(--tint-select);
-  --concord-document-row-border: var(--ink-faint);
-  --concord-document-selected: var(--tint-select);
-  --concord-document-selected-border: var(--ink-faint);
-  --concord-document-icon: var(--ink-secondary);
-  --concord-document-preview: var(--paper-bright);
-  --concord-document-header-icon: var(--ink-secondary);
-  --concord-document-sheet-border: var(--ink-faint);
-  --concord-metadata-label: var(--ink-muted);
-  --concord-worktab-text: var(--ink-secondary);
-  --concord-worktab-active: var(--cobalt);
-  --concord-package-description: var(--ink-muted);
-  --concord-package-issue: var(--c-danger);
-  --concord-package-meta: var(--ink-muted);
-  --concord-spatial-pane: var(--paper-bright);
-
-  --line-control-soft: var(--ink-faint);
-  --success: var(--c-positive);
-  --bim-ui_bg-base: var(--bg-app);
-  --bim-ui_bg-contrast-10: var(--surface-inset);
-  --bim-ui_bg-contrast-20: var(--line-soft);
-  --bim-ui_bg-contrast-30: var(--hover);
-  --bim-ui_bg-contrast-40: var(--line-control-soft);
-  --bim-ui_bg-contrast-50: var(--muted);
-  --bim-ui_bg-contrast-60: var(--ink-2);
-  --bim-ui_bg-contrast-70: var(--ink-2);
-  --bim-ui_bg-contrast-80: var(--ink);
-  --bim-ui_bg-contrast-90: var(--ink);
-  --bim-ui_bg-contrast-100: var(--ink);
-  --bim-ui_main-base: var(--accent);
-  --bim-ui_main-contrast: var(--surface);
-  --bim-ui_accent-base: var(--accent);
-  --bim-ui_accent-contrast: var(--surface);
-  --bim-ui_danger-base: var(--concord-danger-text);
-  --bim-ui_danger-contrast: var(--surface);
-  --bim-ui_warning-base: var(--concord-warning-text);
-  --bim-ui_warning-contrast: var(--surface);
-  --bim-ui_success-base: var(--success);
-  --bim-ui_success-contrast: var(--surface);
-  --bim-ui_info-base: var(--accent);
-  --bim-ui_info-contrast: var(--surface);
-  --bim-ui_size-base: var(--fs-label);
-  --bim-ui_size-lg: var(--fs-body);
-  --bim-ui_size-2xs: 3px;
-  --bim-ui_size-4xs: 2px;
-}
-
-.premium-workspace[data-workspace-look="light"] {
-  --concord-accent: var(--cobalt);
-  --concord-accent-strong: var(--cobalt-deep);
-  --concord-accent-tint: var(--tint-select);
-  --concord-action-hover: var(--paper-shadow);
-  --concord-shell-surface: var(--paper-bright);
-  --concord-shell-divider: var(--ink-faint);
-  --concord-ink: var(--ink);
-  --concord-muted: var(--ink-muted);
-  --concord-divider: var(--ink-faint);
-  --concord-brand-mark: var(--cobalt);
-  --concord-nav-text: var(--ink-secondary);
-  --concord-nav-selection: var(--tint-select);
-  --concord-nav-active: var(--cobalt-deep);
-  --concord-row-rail: var(--cobalt);
-  --concord-float-edge: var(--ink-faint);
-  --concord-stage-chip: var(--surface-pop);
-  --concord-nav-divider: var(--ink-faint);
-  --concord-area-label: var(--ink-muted);
-  --concord-header-surface: var(--paper-bright);
-  --concord-header-divider: var(--ink-faint);
-  --concord-header-label: var(--ink-muted);
-  --concord-header-control: var(--paper-bright);
-  --concord-dark-ink: var(--ink);
-  --concord-ready-mark: var(--c-positive);
-  --concord-workspace-surface: var(--stage);
-  --concord-model-surface: var(--stage);
-  --concord-viewer-stage: var(--stage);
-  --concord-context-divider: var(--ink-faint);
-  --concord-inspector-title: var(--ink);
-  --concord-inspector-subtitle: var(--ink-muted);
-  --concord-inspector-divider: var(--ink-faint);
-  --concord-tab-label: var(--ink-secondary);
-  --concord-tab-active: var(--ink);
-  --concord-count-surface: var(--paper-bright);
-  --concord-quiet-metadata: var(--ink-muted);
-  --concord-element-surface: var(--paper-bright);
-  --concord-element-icon: var(--ink-muted);
-  --concord-element-kind: var(--ink-muted);
-  --concord-fact-label: var(--ink-muted);
-  --concord-fact-value: var(--ink);
-  --concord-row-hover: var(--paper-shadow);
-  --concord-amber-mark: var(--c-warning);
-  --concord-red-mark: var(--c-danger);
-  --concord-technical-text: var(--ink-muted);
-  --concord-context-label: var(--ink-muted);
-  --concord-control-surface: var(--paper-bright);
-  --concord-context-tab: var(--ink-secondary);
-  --concord-context-active: var(--ink);
-  --concord-table-label: var(--ink-muted);
-  --concord-table-value: var(--ink);
-  --concord-table-action: var(--cobalt);
-  --concord-row-selected: var(--tint-select);
-  --concord-warning-surface: var(--surface-pop);
-  --concord-warning-text: var(--c-warning);
-  --concord-danger-surface: var(--surface-pop);
-  --concord-danger-text: var(--c-danger);
-  --concord-empty-text: var(--ink-muted);
-  --concord-viewer-text: var(--ink-secondary);
-  --concord-issue-border: var(--ink-faint);
-  --concord-issue-surface: var(--surface-pop);
-  --concord-issue-text: var(--ink);
-  --concord-toolbar-active: var(--cobalt);
-  --concord-disabled-tab: var(--ink-muted);
-  --concord-ready-surface: var(--surface-pop);
-  --concord-ready-text: var(--c-positive);
-  --concord-comparison-border: var(--ink-faint);
-  --concord-comparison-surface: var(--tint-select);
-  --concord-comparison-text: var(--ink-muted);
-  --concord-issue-icon: var(--c-danger);
-  --concord-issue-body: var(--ink-secondary);
-  --concord-blocking-text: var(--c-danger);
-  --concord-issue-action: var(--cobalt);
-  --concord-filter-count: var(--ink-muted);
-  --concord-investigation-tab: var(--ink-muted);
-  --concord-investigation-active: var(--ink);
-  --concord-investigation-count: var(--paper-bright);
-  --concord-investigation-status: var(--ink-secondary);
-  --concord-section-divider: var(--ink-faint);
-  --concord-document-status: var(--ink-muted);
-  --concord-document-meta: var(--ink-muted);
-  --concord-eyebrow: var(--ink-muted);
-  --concord-document-divider: var(--ink-faint);
-  --concord-document-input: var(--paper-bright);
-  --concord-document-region: var(--paper-bright);
-  --concord-document-list: var(--paper-bright);
-  --concord-list-heading: var(--ink);
-  --concord-document-filter: var(--ink-secondary);
-  --concord-document-active: var(--cobalt);
-  --concord-document-filter-active: var(--tint-select);
-  --concord-document-row-border: var(--ink-faint);
-  --concord-document-selected: var(--tint-select);
-  --concord-document-selected-border: var(--ink-faint);
-  --concord-document-icon: var(--ink-secondary);
-  --concord-document-preview: var(--paper-bright);
-  --concord-document-header-icon: var(--ink-secondary);
-  --concord-document-sheet-border: var(--ink-faint);
-  --concord-metadata-label: var(--ink-muted);
-  --concord-worktab-text: var(--ink-secondary);
-  --concord-worktab-active: var(--cobalt);
-  --concord-package-description: var(--ink-muted);
-  --concord-package-issue: var(--c-danger);
-  --concord-package-meta: var(--ink-muted);
-  --concord-spatial-pane: var(--paper-bright);
-
-  --line-control-soft: var(--ink-faint);
-  --success: var(--c-positive);
-  --bim-ui_bg-base: var(--bg-app);
-  --bim-ui_bg-contrast-10: var(--surface-inset);
-  --bim-ui_bg-contrast-20: var(--line-soft);
-  --bim-ui_bg-contrast-30: var(--hover);
-  --bim-ui_bg-contrast-40: var(--line-control-soft);
-  --bim-ui_bg-contrast-50: var(--muted);
-  --bim-ui_bg-contrast-60: var(--ink-2);
-  --bim-ui_bg-contrast-70: var(--ink-2);
-  --bim-ui_bg-contrast-80: var(--ink);
-  --bim-ui_bg-contrast-90: var(--ink);
-  --bim-ui_bg-contrast-100: var(--ink);
-  --bim-ui_main-base: var(--accent);
-  --bim-ui_main-contrast: var(--surface);
-  --bim-ui_accent-base: var(--accent);
-  --bim-ui_accent-contrast: var(--surface);
-  --bim-ui_danger-base: var(--concord-danger-text);
-  --bim-ui_danger-contrast: var(--surface);
-  --bim-ui_warning-base: var(--concord-warning-text);
-  --bim-ui_warning-contrast: var(--surface);
-  --bim-ui_success-base: var(--success);
-  --bim-ui_success-contrast: var(--surface);
-  --bim-ui_info-base: var(--accent);
-  --bim-ui_info-contrast: var(--surface);
-  --bim-ui_size-base: var(--fs-label);
-  --bim-ui_size-lg: var(--fs-body);
-  --bim-ui_size-2xs: 3px;
-  --bim-ui_size-4xs: 2px;
-}
-
-.premium-workspace[data-workspace-look="graphite"],
-.premium-workspace[data-workspace-look="hud"] {
-  --concord-accent: var(--cobalt);
-  --concord-accent-strong: var(--cobalt-deep);
-  --concord-accent-tint: var(--tint-select);
-  --concord-action-hover: var(--paper-shadow);
-  --concord-shell-surface: var(--paper-bright);
-  --concord-shell-divider: var(--ink-faint);
-  --concord-ink: var(--ink);
-  --concord-muted: var(--ink-muted);
-  --concord-divider: var(--ink-faint);
-  --concord-brand-mark: var(--cobalt);
-  --concord-nav-text: var(--ink-secondary);
-  --concord-nav-selection: var(--tint-select);
-  --concord-nav-active: var(--cobalt-deep);
-  --concord-row-rail: var(--cobalt);
-  --concord-float-edge: var(--ink-faint);
-  --concord-stage-chip: var(--surface-pop);
-  --concord-nav-divider: var(--ink-faint);
-  --concord-area-label: var(--ink-muted);
-  --concord-header-surface: var(--paper-bright);
-  --concord-header-divider: var(--ink-faint);
-  --concord-header-label: var(--ink-muted);
-  --concord-header-control: var(--paper-bright);
-  --concord-dark-ink: var(--ink);
-  --concord-ready-mark: var(--c-positive);
-  --concord-workspace-surface: var(--stage);
-  --concord-model-surface: var(--stage);
-  --concord-viewer-stage: var(--stage);
-  --concord-context-divider: var(--ink-faint);
-  --concord-inspector-title: var(--ink);
-  --concord-inspector-subtitle: var(--ink-muted);
-  --concord-inspector-divider: var(--ink-faint);
-  --concord-tab-label: var(--ink-secondary);
-  --concord-tab-active: var(--ink);
-  --concord-count-surface: var(--paper-bright);
-  --concord-quiet-metadata: var(--ink-muted);
-  --concord-element-surface: var(--paper-bright);
-  --concord-element-icon: var(--ink-muted);
-  --concord-element-kind: var(--ink-muted);
-  --concord-fact-label: var(--ink-muted);
-  --concord-fact-value: var(--ink);
-  --concord-row-hover: var(--paper-shadow);
-  --concord-amber-mark: var(--c-warning);
-  --concord-red-mark: var(--c-danger);
-  --concord-technical-text: var(--ink-muted);
-  --concord-context-label: var(--ink-muted);
-  --concord-control-surface: var(--paper-bright);
-  --concord-context-tab: var(--ink-secondary);
-  --concord-context-active: var(--ink);
-  --concord-table-label: var(--ink-muted);
-  --concord-table-value: var(--ink);
-  --concord-table-action: var(--cobalt);
-  --concord-row-selected: var(--tint-select);
-  --concord-warning-surface: var(--surface-pop);
-  --concord-warning-text: var(--c-warning);
-  --concord-danger-surface: var(--surface-pop);
-  --concord-danger-text: var(--c-danger);
-  --concord-empty-text: var(--ink-muted);
-  --concord-viewer-text: var(--ink-secondary);
-  --concord-issue-border: var(--ink-faint);
-  --concord-issue-surface: var(--surface-pop);
-  --concord-issue-text: var(--ink);
-  --concord-toolbar-active: var(--cobalt);
-  --concord-disabled-tab: var(--ink-muted);
-  --concord-ready-surface: var(--surface-pop);
-  --concord-ready-text: var(--c-positive);
-  --concord-comparison-border: var(--ink-faint);
-  --concord-comparison-surface: var(--tint-select);
-  --concord-comparison-text: var(--ink-muted);
-  --concord-issue-icon: var(--c-danger);
-  --concord-issue-body: var(--ink-secondary);
-  --concord-blocking-text: var(--c-danger);
-  --concord-issue-action: var(--cobalt);
-  --concord-filter-count: var(--ink-muted);
-  --concord-investigation-tab: var(--ink-muted);
-  --concord-investigation-active: var(--ink);
-  --concord-investigation-count: var(--paper-bright);
-  --concord-investigation-status: var(--ink-secondary);
-  --concord-section-divider: var(--ink-faint);
-  --concord-document-status: var(--ink-muted);
-  --concord-document-meta: var(--ink-muted);
-  --concord-eyebrow: var(--ink-muted);
-  --concord-document-divider: var(--ink-faint);
-  --concord-document-input: var(--paper-bright);
-  --concord-document-region: var(--paper-bright);
-  --concord-document-list: var(--paper-bright);
-  --concord-list-heading: var(--ink);
-  --concord-document-filter: var(--ink-secondary);
-  --concord-document-active: var(--cobalt);
-  --concord-document-filter-active: var(--tint-select);
-  --concord-document-row-border: var(--ink-faint);
-  --concord-document-selected: var(--tint-select);
-  --concord-document-selected-border: var(--ink-faint);
-  --concord-document-icon: var(--ink-secondary);
-  --concord-document-preview: var(--paper-bright);
-  --concord-document-header-icon: var(--ink-secondary);
-  --concord-document-sheet-border: var(--ink-faint);
-  --concord-metadata-label: var(--ink-muted);
-  --concord-worktab-text: var(--ink-secondary);
-  --concord-worktab-active: var(--cobalt);
-  --concord-package-description: var(--ink-muted);
-  --concord-package-issue: var(--c-danger);
-  --concord-package-meta: var(--ink-muted);
-  --concord-spatial-pane: var(--paper-bright);
-
-  --line-control-soft: var(--ink-faint);
-  --success: var(--c-positive);
-  --bim-ui_bg-base: var(--bg-app);
-  --bim-ui_bg-contrast-10: var(--surface-inset);
-  --bim-ui_bg-contrast-20: var(--line-soft);
-  --bim-ui_bg-contrast-30: var(--hover);
-  --bim-ui_bg-contrast-40: var(--line-control-soft);
-  --bim-ui_bg-contrast-50: var(--muted);
-  --bim-ui_bg-contrast-60: var(--ink-2);
-  --bim-ui_bg-contrast-70: var(--ink-2);
-  --bim-ui_bg-contrast-80: var(--ink);
-  --bim-ui_bg-contrast-90: var(--ink);
-  --bim-ui_bg-contrast-100: var(--ink);
-  --bim-ui_main-base: var(--accent);
-  --bim-ui_main-contrast: var(--surface);
-  --bim-ui_accent-base: var(--accent);
-  --bim-ui_accent-contrast: var(--surface);
-  --bim-ui_danger-base: var(--concord-danger-text);
-  --bim-ui_danger-contrast: var(--surface);
-  --bim-ui_warning-base: var(--concord-warning-text);
-  --bim-ui_warning-contrast: var(--surface);
-  --bim-ui_success-base: var(--success);
-  --bim-ui_success-contrast: var(--surface);
-  --bim-ui_info-base: var(--accent);
-  --bim-ui_info-contrast: var(--surface);
-  --bim-ui_size-base: var(--fs-label);
-  --bim-ui_size-lg: var(--fs-body);
-  --bim-ui_size-2xs: 3px;
-  --bim-ui_size-4xs: 2px;
 }

@@ -24,6 +24,13 @@ export type StageNavigatorItem = {
   file: string;
   count?: number;
   group?: string;
+  /*
+   * Which class of object the row is, so the navigator can express a hierarchy
+   * instead of printing every object at one weight. A revision is a child of the
+   * source it came from, and the rail has to be able to say so in the row itself
+   * rather than in the strings inside it.
+   */
+  kind?: StageObject["kind"];
 };
 
 export const stageKey = (object: StageObject): string => {

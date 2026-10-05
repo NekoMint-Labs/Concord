@@ -37,3 +37,14 @@
 @import "./vendor/opentakeoff/styles/premiumWorkspace.css";
 @import "./vendor/opentakeoff/components/workspaceChrome.css";
 @import "./vendor/opentakeoff/components/workspacePanel.css";
+/* The Concord material is a single layer imported last: it owns the palette
+ * (concord/tokens.css) and settles the donor + Concord sheets in one place
+ * instead of adding a fourth opinion about a button. */
+@import "./styles/concord/tokens.css";
+@import "./styles/concord/theme.css";
+@import "./styles/concord/shell.css";
+@import "./styles/concord/work.css";
+@import "./styles/concord/evidence.css";
+@import "./styles/concord/surfaces.css";
+@import "./styles/concord/secondary.css";
+@import "./styles/concord/entry.css";

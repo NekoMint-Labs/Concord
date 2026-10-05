@@ -9,7 +9,14 @@
 
 // Personal chrome only. Never include this in a project, profile, or sync payload.
 export const WORKSPACE_LAYOUT_KEY = "concord.workspace-layout.v1";
-export type WorkspaceLook = "graphite" | "light" | "hud";
+/**
+ * The workspace look is the material the window is drawn in, and there are two of
+ * them: the warm light studio and the warm charcoal instrument. The values the store
+ * writes are `light` and `dark`; `graphite` and `hud` are accepted only as legacy
+ * aliases on read, because a stored preference must never break a window that was left
+ * in an older build.
+ */
+export type WorkspaceLook = "light" | "dark";
 export type DockSide = "left" | "right";
 export type DockId = "tools" | "sheets" | "work";
 export type Layout = {
@@ -37,7 +44,7 @@ export const DEFAULT_LAYOUT: Readonly<Layout> = Object.freeze({
   work: "right",
   workWidth: 360,
   sheetWidth: 264,
-  look: "graphite",
+  look: "light",
   backlight: 45,
 });
 export const DOCKS: readonly DockId[] = Object.freeze([
@@ -52,8 +59,10 @@ export function normalizeLayout(value: unknown): Layout {
       ? (value as Record<string, unknown>)
       : {};
   const out: Layout = { ...DEFAULT_LAYOUT };
-  if (["graphite", "light", "hud"].includes(v.look as string))
-    out.look = v.look as WorkspaceLook;
+  // `graphite` and `hud` were the two dark looks of an earlier build; both resolve to
+  // the one dark material this product has.
+  if (v.look === "light" || v.look === "dark") out.look = v.look;
+  else if (v.look === "graphite" || v.look === "hud") out.look = "dark";
   if (typeof v.backlight === "number" && Number.isFinite(v.backlight))
     out.backlight = Math.round(Math.min(100, Math.max(0, v.backlight)));
   for (const key of DOCKS) {

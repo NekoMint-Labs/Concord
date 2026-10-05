@@ -38,7 +38,11 @@ it("clamps and rounds the work width, rejecting non-finite values and unknown do
   for (const workWidth of [NaN, Infinity, "400"]) {
     expect(normalizeLayout({ workWidth })).toEqual(DEFAULT_LAYOUT);
   }
-  /* The donor's `takeoffs` dock has no Concord counterpart; it is dropped. */
+  /*
+   * The donor's `takeoffs` dock has no Concord counterpart; it is dropped. The stored
+   * look is normalized with it: `hud` (and `graphite`) were the two dark looks of an
+   * earlier build and now resolve to the one dark material this product has.
+   */
   expect(
     normalizeLayout({
       work: "left",
@@ -55,11 +59,23 @@ it("clamps and rounds the work width, rejecting non-finite values and unknown do
     sheets: "right",
     work: "left",
     sheetWidth: 300,
-    look: "hud",
+    look: "dark",
   });
   expect(normalizeLayout({ work: "bottom", locked: "false" })).toEqual(
     DEFAULT_LAYOUT,
   );
+});
+
+it("resolves the two current looks and keeps the legacy graphite/hud aliases on dark", () => {
+  for (const look of ["light", "dark"] as const) {
+    expect(normalizeLayout({ look }).look).toBe(look);
+  }
+  /* A preference stored by an older build must still open a coherent window, not
+   * silently fall back to the default look. */
+  for (const legacy of ["graphite", "hud"])
+    expect(normalizeLayout({ look: legacy }).look).toBe("dark");
+  /* An unknown value is not a look: it resolves to the default. */
+  expect(normalizeLayout({ look: "neon" }).look).toBe(DEFAULT_LAYOUT.look);
 });
 
 it("falls back on invalid preferences and normalizes only eight valid named layouts", () => {
@@ -117,7 +133,7 @@ it("prevents locked moves and normalizes an unlocked move", () => {
     locked: false,
     work: "left",
     workWidth: 480,
-    look: "hud",
+    look: "dark",
   });
 });
 
