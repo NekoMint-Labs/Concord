@@ -1,0 +1,23 @@
+--- a/index.html
++++ b/index.html
+@@ -243,19 +243,9 @@
+     <!-- Self-hosted fonts (GDPR: no IP sent to Google's CDN). See /public/fonts.css -->
+     <link rel="preload" href="/fonts/geist-400.woff2" as="font" type="font/woff2" crossorigin />
+     <link rel="preload" href="/fonts/geist-500.woff2" as="font" type="font/woff2" crossorigin />
+-    <link rel="stylesheet" href="/fonts.css" />
++    <!-- Concord embed uses system fonts and does not register a service worker. -->
+   </head>
+   <script>
+-    if ('serviceWorker' in navigator) {
+-      navigator.serviceWorker
+-        .register('%BASE_URL%coi-serviceworker.js')
+-        .then(() => {
+-          if (!sessionStorage.getItem('coiReloaded')) {
+-            sessionStorage.setItem('coiReloaded', '1')
+-            location.reload()
+-          }
+-        })
+-    }
+     // Stale-chunk resilience: after a new deploy, an already-open client may
+     // request a lazy chunk hash that no longer exists (→ 404). Reload once to
+     // pick up the fresh index.html + chunk graph instead of crashing.

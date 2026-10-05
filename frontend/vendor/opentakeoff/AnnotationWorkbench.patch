@@ -1,0 +1,64 @@
+--- web/src/components/AnnotationWorkbench.jsx
++++ AnnotationWorkbench.jsx
+@@ -1,7 +1,6 @@
+ import React, { useEffect, useRef, useState } from 'react';
+-import { Icon } from '../brand/icons.jsx';
+-import { ANNOTATION_DEFAULTS, ANNOTATION_PRESETS, annotationStyle, annotationScene, pathString, box, bounds, intersects, markupBounds, shiftedMarkup, textMatches } from '../lib/annotationTools.js';
+-import ToolMenu from './ToolMenu.jsx';
++import { Icon } from './annotationIcons';
++import { ANNOTATION_DEFAULTS, ANNOTATION_PRESETS, annotationStyle, annotationScene, pathString, box, bounds, intersects, markupBounds, shiftedMarkup, textMatches } from './annotationTools.js';
+ import './AnnotationWorkbench.css';
+ 
+ const supported = m => !m.reference_only && ['arrow','highlight','callout','cloud','text'].includes(m.type);
+@@ -57,10 +56,10 @@
+ export function useAnnotationWorkbench(options) {
+   const current=useRef(options);current.current=options;
+   const [mode,setMode]=useState('arrow'), [selected,setSelected]=useState([]), [review,setReview]=useState(null), [editor,setEditor]=useState(null), [busy,setBusy]=useState(false);
+-  const [sweepKind,setSweepKind]=useState('symbols'), [presetOpen,setPresetOpen]=useState(false), [presetName,setPresetName]=useState('');
+-  const [saved]=useState(()=>{try {return JSON.parse(localStorage.getItem(options.storageKey)||'null')||{};}catch{return {};}});
++  const [sweepKind,setSweepKind]=useState('text'), [presetOpen,setPresetOpen]=useState(false), [presetName,setPresetName]=useState('');
++  const [saved]=useState(()=>{try {const data=localStorage.getItem(options.storageKey);return data&&data.length<=65536?JSON.parse(data)||{}:{};}catch{return {};}});
+   const [styles,setStyles]=useState(()=>saved.styles||{});
+-  const [presets,setPresets]=useState(()=>Array.isArray(saved.presets)?saved.presets.slice(0,50):ANNOTATION_PRESETS);
++  const [presets,setPresets]=useState(()=>Array.isArray(saved.presets)?saved.presets.filter(p=>p&&typeof p.id==='string'&&p.id.length<=128&&typeof p.name==='string'&&p.name.length<=40&&tools.some(t=>t[0]===p.tool)).slice(0,50):ANNOTATION_PRESETS);
+   const gesture=useRef(null),anchor=useRef(null),preview=useRef(null),request=useRef(0),frame=useRef(0);
+   const active=options.tool==='annotation', style=annotationStyle(styles[mode]||{...ANNOTATION_DEFAULTS,...(mode==='highlighter'?{color:'#ffd60a'}:{})});
+   const state=useRef(null);state.current={mode,selected,review,editor,style,sweepKind,active};
+@@ -88,9 +87,7 @@
+   const arm=(next)=>{clear();options.resetDraft?.();setReview(null);setEditor(null);setSelected([]);options.setSelectedId(null);setMode(next);options.setTool('annotation');request.current++;setBusy(false);};
+   const commitNew=rows=>{
+     const o=current.current,now=new Date().toISOString();
+-    // a new annotation links to the ACTIVE condition, the canvas's addMarkup rule — it's
+-    // almost always about that condition, and a {{qty}} field (#474) needs the link to fill
+-    const made=rows.map(m=>({...m,id:id(),created_at:now,updated_at:now,condition_id:o.activeCondition||'',rfi_id:''}));
++    const made=rows.map(m=>({...m,id:id(),created_at:now,updated_at:now,}));
+     o.commit([...o.markups,...made]);setSelected(made.map(m=>m.id));o.setSelectedId(made[0]?.id||null);return made;
+   };
+   const commitEdit=rows=>{const o=current.current,by=new Map(rows.map(m=>[m.id,{...m,updated_at:new Date().toISOString()}]));o.commit(o.markups.map(m=>by.get(m.id)||m));};
+@@ -226,16 +223,7 @@
+   const controls=(active||selectedRows.length>0)&&!editor&&!review;
+   // Compact (workspace) chrome: the tool row folds into one split button in the
+   // Condition row — face re-arms the last tool, caret lists them all.
+-  const [lastKey,lastLabel,lastIcon]=tools.find(t=>t[0]===mode)||tools[0];
+-  const control=<span className="annotation-split" role="group" aria-label="Annotate">
+-    <button type="button" aria-pressed={active} disabled={!options.ready} onClick={()=>active?options.setTool('select'):arm(lastKey)} title={active?`${lastLabel} armed — click to put it down`:`Annotate — ${lastLabel}`}>{toolIcon(lastIcon)}<span>{lastLabel}</span></button>
+-    <ToolMenu title="All annotate tools" disabled={!options.ready} onOpenChange={options.onMenuDepth} faceStyle={{padding:'4px 5px'}} face={null} items={[
+-      {section:'Annotate'},
+-      ...tools.map(([key,label,icon])=>({id:key,checked:active&&mode===key,iconNode:toolIcon(icon),label,onSelect:()=>arm(key),title:key==='selection'?'Sweep a box to select editable markups; Shift-click adds individual marks':label})),
+-      'divider',
+-      {id:'favorites',checked:presetOpen,icon:'stamp',label:'Favorites',onSelect:()=>setPresetOpen(v=>!v),title:'Saved tool styles'},
+-    ]}/>
+-  </span>;
++  const control = null; // B owns workspace chrome; retain the donor tool row.
+   const hasRows=!options.compact||presetOpen||controls||editor||review;
+   const toolbar=!hasRows?null:<div className="annotation-workbench" onKeyDown={e=>e.stopPropagation()}>
+     {!options.compact&&<div className="annotation-tool-row" role="toolbar" aria-label="Annotation tools">
+@@ -260,7 +248,7 @@
+       {(mode==='arrow'||mode==='callout'||selectedRows.some(m=>m.type==='arrow'||m.type==='callout'))&&<><label>Head<select aria-label="Arrowhead" value={shownStyle.head} onChange={e=>setStyle({head:e.target.value})}>{['filled','open','none'].map(v=><option key={v}>{v}</option>)}</select></label><label><input type="checkbox" checked={shownStyle.both} onChange={e=>setStyle({both:e.target.checked})}/>Both ends</label></>}
+       {(mode==='highlighter'||selectedRows.some(m=>m.type==='highlight'))&&<><div className="annotation-segments">{['freehand','straight','text'].map(v=><button key={v} aria-pressed={shownStyle.mode===v} onClick={()=>{clear();setStyle({mode:v});}}>{v}</button>)}</div><label>Width<select aria-label="Marker width" value={shownStyle.width_pt} onChange={e=>setStyle({width_pt:+e.target.value})}>{[4,6,10,16,24,40].map(v=><option key={v} value={v}>{v} pt</option>)}</select></label><label>Opacity<input aria-label="Highlight opacity" type="range" min=".1" max=".75" step=".05" value={shownStyle.opacity} onChange={e=>setStyle({opacity:+e.target.value})}/></label></>}
+       {(mode==='callout'||mode==='cloud'||selectedRows.some(m=>['cloud','callout','text'].includes(m.type)))&&<label>Text<select aria-label="Note text size" value={shownStyle.font_pt} onChange={e=>setStyle({font_pt:+e.target.value})}>{[6,8,10,12,16,20,24].map(v=><option key={v} value={v}>{v} pt</option>)}</select></label>}
+-      {mode==='sweep'&&active&&<div className="annotation-segments">{[['symbols','Drawn symbols'],['text','PDF text']].map(([v,label])=><button key={v} aria-pressed={sweepKind===v} onClick={()=>{clear();setSweepKind(v);}}>{label}</button>)}</div>}
++      {mode==='sweep'&&active&&<div className="annotation-segments">{[['text','PDF text']].map(([v,label])=><button key={v} aria-pressed={sweepKind===v} onClick={()=>{clear();setSweepKind(v);}}>{label}</button>)}</div>}
+       {selectedRows.length===1&&!active&&['cloud','callout','text'].includes(selectedRows[0].type)&&<button onClick={()=>setEditor({markup:selectedRows[0],text:selectedRows[0].text||'',fresh:false})}>Edit note</button>}
+       <span className="annotation-hint">{!active?'Drag handles to reshape · Shift-click to add':mode==='sweep'?'Box one example → review matches → apply':mode==='selection'?'Box the markups to edit together':mode==='highlighter'&&style.mode==='freehand'?'Drag to highlight · Esc to finish':mode==='highlighter'&&style.mode==='text'?'Box native text to highlight its runs':mode==='arrow'?'Target first, then tail · Shift constrains angle':'Click two points or drag · Esc cancels'}</span>
+     </div>}

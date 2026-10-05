@@ -6,6 +6,7 @@ from app.adapters.actions_local import SimulatedActionExecutor
 from app.adapters.agent_offline import OfflineInvestigationEngine
 from app.adapters.demo import LocalGeoProvider, StructuredBIMProvider, demo_state
 from app.adapters.documents_light import LightweightDocumentParser
+from app.adapters.engineering_composition import build_engineering_capabilities
 from app.adapters.observability import Telemetry
 from app.adapters.observed_boundaries import (
     ObservedExecutor,
@@ -85,7 +86,7 @@ class Services:
 def build_services(
     settings: Settings,
     *,
-    engineering_capabilities: tuple[EngineeringCapability, ...] = (),
+    engineering_capabilities: tuple[EngineeringCapability, ...] | None = None,
     comparison_executors: tuple[ComparisonExecutor, ...] = (),
 ) -> Services:
     with ExitStack() as resources:
@@ -160,7 +161,12 @@ def build_services(
         workflow.capabilities = jobs
         artifacts = DerivedArtifacts(storage)
         rechecks = ReCheckService(factory, artifacts, runtime_name)
-        for capability in engineering_capabilities:
+        selected_capabilities = (
+            build_engineering_capabilities(settings)
+            if engineering_capabilities is None
+            else engineering_capabilities
+        )
+        for capability in selected_capabilities:
             rechecks.register(capability)
         workflow.rechecks = rechecks
         comparisons = ComparisonService(factory, storage, artifacts, runtime_name)

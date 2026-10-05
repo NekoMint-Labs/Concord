@@ -1,0 +1,199 @@
+--- a/src/lib/viewer.ts
++++ b/src/lib/viewer.ts
+@@ -1,3 +1,4 @@
++import { navigateNativeElements } from "./concord-navigation";
+ import { fragmentIndex, type FragmentIndex } from "./concord-fragment-index";
+ import { applyBcfCamera as restoreBcfCamera } from './concord-bcf-camera'
+ import type { BcfViewpoint } from '../types'
+@@ -479,6 +480,8 @@
+   captureExplodedLayers(layers: ExplodeLayer[], gap: number, scale?: number): Promise<string[]>
+   /** Frame camera on a set of elements. Targets the active model unless modelId is given. */
+   frameElements(ids: number[], modelId?: string): void
++  navigateElements(ids: number[], modelId: string): Promise<void>
++  clearTargetSelection(): Promise<void>
+   setValidationHighlights(issues: ValidationIssue[], enabled: boolean, options?: OverlayApplyOptions): void
+   /**
+    * Highlight IDS check failures in red. Shares the overlay channel with
+@@ -1687,6 +1690,7 @@
+   // Backward-compat reference: always points to the current model's type map
+   let expressIDToType: Map<number, string> = new Map()
+ 
++  let targetNavigationLive = true
+   let selectCallback: ((info: SelectedInfo | null) => void) | null = null
+   let contextMenuCallback: ((payload: { x: number; y: number; info: SelectedInfo } | null) => void) | null = null
+   let hoveredLocalId:  number | null = null
+@@ -2756,7 +2760,7 @@
+ 
+   // ─── API pública ──────────────────────────────────────────────────────────
+ 
+-  return {
++  const api: ViewerAPI = {
+ 
+     async loadIfc(file, onProgress) {
+       await initPromise
+@@ -3112,6 +3116,39 @@
+       )
+     },
+ 
++    async clearTargetSelection() {
++      await api.applyBcfSelection([])
++      removeSelectionBox()
++    },
++    async navigateElements(ids, modelId) {
++      const model = modelObjects.get(modelId)
++      if (!model) throw new Error('IFC target model is not loaded')
++      await navigateNativeElements(ids, {
++        current: () => targetNavigationLive && modelObjects.get(modelId) === model,
++        bounds: selected => model.getMergedBox(selected),
++        select: async selected => {
++          removeSelectionBox()
++          await api.applyBcfSelection(selected.map(expressId => ({modelId,expressId})))
++        },
++        fit: async box => {
++          await world.camera.controls.fitToBox(box, false)
++          world.camera.controls.update(0)
++          world.camera.three.updateMatrixWorld()
++        },
++        finish: async () => {
++          await fragmentsManager.core.update(true)
++          if (!targetNavigationLive || modelObjects.get(modelId) !== model)
++            throw new Error('IFC navigation model was removed or viewer was closed')
++          wr.render(world.scene.three,world.camera.three)
++          if (ids.length === 1) {
++            const rawType = typeMapByModel.get(modelId)?.get(ids[0]) ?? 'IFCELEMENT'
++            const canon = canonicalType(rawType)
++            clearInspectorTarget()
++            selectCallback?.({id:String(ids[0]),name:`${IFC_DISPLAY_NAMES[canon] ?? prettyType(canon)} #${ids[0]}`,type:rawType,storey:'',modelId})
++          }
++        },
++      })
++    },
+     frameElements(ids, modelId) {
+       const model = (modelId ? modelObjects.get(modelId) : null) ?? currentModel
+       if (!model || ids.length === 0) return
+@@ -4590,6 +4627,7 @@
+     },
+ 
+     dispose() {
++      targetNavigationLive = false
+       try { sceneGizmo?.dispose() } catch { /* ok */ }
+       sceneGizmo = null
+       try { videoInstance?.dispose() } catch { /* ok */ }
+@@ -4632,4 +4670,5 @@
+       components.dispose()
+     },
+   }
++  return api
+ }
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -2148,6 +2148,26 @@
+         }
+ 
+         // ── Query commands (reply with a `result` envelope) ──────────────────
++        case 'ifcviewer:navigate-elements': {
++          void respond(async () => {
++            const api = viewerApiRef.current
++            const modelId = typeof msg.modelId === 'string' ? msg.modelId : ''
++            if (!api || !useSceneStore.getState().models.some(m => m.id === modelId))
++              throw new Error('IFC target model is not loaded')
++            if (!Array.isArray(msg.ids)) throw new Error('Invalid IFC element selection')
++            await api.navigateElements(msg.ids, modelId)
++            return null
++          })
++          break
++        }
++        case 'ifcviewer:clear-target-selection':
++          void respond(async () => {
++            const api = viewerApiRef.current
++            if (!api) throw new Error('Viewer is not ready')
++            await api.clearTargetSelection()
++            return null
++          })
++          break
+         case 'ifcviewer:get-ids-by-guids': {
+           void respond(() => {
+             const modelId = typeof msg.modelId === 'string' ? msg.modelId : ''
+--- a/src/sdk/ifc-viewer-sdk.ts
++++ b/src/sdk/ifc-viewer-sdk.ts
+@@ -1024,6 +1024,14 @@
+   }
+ 
+   /** Fetch an element's IFC data (attributes + property/quantity sets), or null. */
++  /** Acknowledge native multi-element selection and framing only after completion. */
++  navigateElements(ids: number[], modelId: string): Promise<void> {
++    return this.request('ifcviewer:navigate-elements', { ids, modelId }, 30000)
++  }
++  clearTargetSelection(): Promise<void> {
++    return this.request('ifcviewer:clear-target-selection')
++  }
++
+   getIdsByGuids(guids: string[], modelId: string): Promise<(number | null)[]> {
+     return this.request('ifcviewer:get-ids-by-guids', { guids, modelId })
+   }
+--- a/src/sdk/ifc-viewer-sdk.test.ts
++++ b/src/sdk/ifc-viewer-sdk.test.ts
+@@ -20,6 +20,7 @@
+   window.dispatchEvent(new MessageEvent('message', {
+     data: { source: 'ifc-validator', ...data },
+     source: v.iframe.contentWindow as Window,
++    origin: new URL(v.iframe.src).origin,
+   }))
+ }
+ 
+@@ -345,7 +346,7 @@
+     const p = IfcViewer.create('#mount', { baseUrl: BASE })
+     await tick()
+     const iframe = document.querySelector<HTMLIFrameElement>('#mount iframe')!
+-    window.dispatchEvent(new MessageEvent('message', { data: { source: 'ifc-validator', type: 'ready' }, source: iframe.contentWindow as Window }))
++    window.dispatchEvent(new MessageEvent('message', { data: { source: 'ifc-validator', type: 'ready' }, source: iframe.contentWindow as Window, origin: new URL(iframe.src).origin }))
+     const v = await p
+     expect(v.isReady).toBe(true)
+     v.dispose()
+@@ -378,7 +379,7 @@
+       const onReady = vi.fn()
+       el.addEventListener('ifcviewer:ready', onReady)
+       const iframe = el.querySelector('iframe') as HTMLIFrameElement
+-      window.dispatchEvent(new MessageEvent('message', { data: { source: 'ifc-validator', type: 'ready', languages: ['en'] }, source: iframe.contentWindow as Window }))
++      window.dispatchEvent(new MessageEvent('message', { data: { source: 'ifc-validator', type: 'ready', languages: ['en'] }, source: iframe.contentWindow as Window, origin: new URL(iframe.src).origin }))
+       expect(onReady).toHaveBeenCalled()
+       el.remove()
+     })
+@@ -978,3 +979,37 @@
+     v.dispose()
+   })
+ })
++
++
++describe('Concord acknowledged navigation SDK boundary', () => {
++  beforeEach(() => { mount() })
++  it('rejects readiness and result messages from another origin', async () => {
++    const v = new IfcViewer('#mount', {baseUrl:BASE})
++    window.dispatchEvent(new MessageEvent('message', {source:v.iframe.contentWindow,origin:'https://untrusted.test',data:{source:'ifc-validator',type:'ready'}}))
++    expect(v.isReady).toBe(false)
++    emitFromIframe(v,{type:'ready'})
++    const post=spyPost(v)
++    let settled=false
++    const pending=v.navigateElements([1,2],'model').then(()=>{settled=true})
++    await tick()
++    const request=postsOfType(post,'ifcviewer:navigate-elements')[0]
++    expect(request).toMatchObject({ids:[1,2],modelId:'model'})
++    window.dispatchEvent(new MessageEvent('message', {source:v.iframe.contentWindow,origin:'https://untrusted.test',data:{source:'ifc-validator',type:'result',requestId:request.requestId,ok:true,data:null}}))
++    await tick(); expect(settled).toBe(false)
++    emitFromIframe(v,{type:'result',requestId:request.requestId,ok:true,data:null})
++    await pending; expect(settled).toBe(true); v.dispose()
++  })
++  it('propagates native fitting failures and awaits selection cleanup', async () => {
++    const v=new IfcViewer('#mount',{baseUrl:BASE}),post=spyPost(v)
++    emitFromIframe(v,{type:'ready'})
++    const pending=v.navigateElements([1,2],'model')
++    const rejected=expect(pending).rejects.toThrow('fit failed')
++    await tick()
++    emitFromIframe(v,{type:'result',requestId:lastRequestId(post),ok:false,error:'fit failed'})
++    await rejected
++    const cleared=v.clearTargetSelection();await tick()
++    expect(postsOfType(post,'ifcviewer:clear-target-selection')).toHaveLength(1)
++    emitFromIframe(v,{type:'result',requestId:lastRequestId(post),ok:true,data:null})
++    await cleared;v.dispose()
++  })
++})

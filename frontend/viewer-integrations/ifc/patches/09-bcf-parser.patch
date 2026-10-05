@@ -1,0 +1,73 @@
+--- a/src/workers/bcf-parser.worker.ts
++++ b/src/workers/bcf-parser.worker.ts
+@@ -114,7 +114,9 @@
+ 
+   // Perspective camera
+   const perspBlock = tagText(vpXml, 'PerspectiveCamera')
++  if (perspBlock && tagText(vpXml,'OrthogonalCamera')) throw new Error('BCF viewpoint must specify exactly one camera')
+   if (perspBlock) {
++    vp.cameraKind = 'perspective'
+     vp.cameraPosition  = parseFloat3(perspBlock, 'CameraViewPoint')
+     vp.cameraDirection = parseFloat3(perspBlock, 'CameraDirection')
+     vp.cameraUp        = parseFloat3(perspBlock, 'CameraUpVector')
+@@ -128,6 +130,10 @@
+   if (!vp.cameraPosition) {
+     const orthoBlock = tagText(vpXml, 'OrthogonalCamera')
+     if (orthoBlock) {
++      vp.cameraKind = 'orthogonal'
++      vp.viewToWorldScale = parseFloat(tagText(orthoBlock,'ViewToWorldScale'))
++      const aspect = parseFloat(tagText(orthoBlock,'AspectRatio'))
++      if (!isNaN(aspect)) vp.aspectRatio = aspect
+       vp.cameraPosition  = parseFloat3(orthoBlock, 'CameraViewPoint')
+       vp.cameraDirection = parseFloat3(orthoBlock, 'CameraDirection')
+       vp.cameraUp        = parseFloat3(orthoBlock, 'CameraUpVector')
+@@ -234,8 +240,21 @@
+ 
+ // ── Main parse function ───────────────────────────────────────────────────────
+ 
+-export function parseBcfZip(buffer: ArrayBuffer): { topics: BcfTopic[]; version: string } {
+-  const files = unzipSync(new Uint8Array(buffer))
++export function parseBcfZip(buffer: ArrayBuffer, strictVersion = false): { topics: BcfTopic[]; version: string } {
++  if (!buffer.byteLength || buffer.byteLength > 25*1024*1024) throw new Error('BCF byte limit exceeded')
++  let size=0,count=0
++  const seen = new Set<string>()
++  const files = unzipSync(new Uint8Array(buffer),{filter: file => {
++    size += file.originalSize
++    count++
++    const name=file.name
++    if (size>25*1024*1024 || count>5000) throw new Error('BCF archive expansion limit exceeded')
++    if (!name || name.startsWith('/') || /[\\:\x00]/.test(name) || name.split('/').some(p => p === '..' || p === '.') || name.includes('//') || seen.has(name.toLowerCase())) throw new Error('Unsafe or duplicate BCF archive member')
++    seen.add(name.toLowerCase())
++    return true
++  }})
++
++  if (strictVersion && !seen.has('bcf.version')) throw new Error('BCF version manifest is missing')
+ 
+   // Detect version
+   let version = '2.1'
+@@ -308,6 +327,7 @@
+     topics.push({ ...base, viewpoints, source: 'imported' })
+   }
+ 
++  if (topics.reduce((n,t)=>n+t.viewpoints.length,0)>1000) throw new Error('BCF viewpoint limit exceeded')
+   return { topics, version }
+ }
+ 
+@@ -317,14 +337,15 @@
+   type:   'parse'
+   id:     string
+   buffer: ArrayBuffer
++  strictVersion?: boolean
+ }
+ 
+ self.onmessage = (e: MessageEvent<ParseMessage>) => {
+-  const { type, id, buffer } = e.data
++  const { type, id, buffer, strictVersion } = e.data
+   if (type !== 'parse') return
+ 
+   try {
+-    const { topics, version } = parseBcfZip(buffer)
++    const { topics, version } = parseBcfZip(buffer, strictVersion)
+     self.postMessage({ type: 'done', id, topics, version })
+   } catch (err: unknown) {
+     const msg = err instanceof Error ? err.message : String(err)

@@ -6,11 +6,15 @@ from pathlib import Path
 
 import pytest
 from app.adapters.bim_ifc import IfcOpenShellBIMProvider, LocalIFCImporter
+from app.adapters.clash_result_mapping import clash_publication
 from app.adapters.demo import StructuredBIMProvider
 from app.adapters.demo_ids import DUCT_GUID, TRAY_GUID, WALL_GUID
 from app.adapters.documents_docling import DoclingDocumentParser
+from app.adapters.engineering_cache import ids_cache_key
+from app.adapters.ifc_clash import IfcClashAdapter
 from app.adapters.ifc_diff import OfficialIfcDiffEngine
 from app.adapters.ifc_fixture import generate_ifc_fixture
+from app.adapters.ifc_tester import IfcTesterAdapter
 from app.adapters.resolver_ortools import ORToolsResolver
 from app.adapters.scheduling_fixture import coordination_fixture
 from app.domain.errors import CapabilityUnavailable, ProviderError
@@ -186,3 +190,87 @@ def test_real_docling_pdf_preserves_physical_pages_and_rejects_truncation():
     assert all(chunk.location and chunk.parser == "docling-local-no-ocr" for chunk in chunks)
     with pytest.raises(ProviderError):
         DoclingDocumentParser(max_pages=1).parse(content, path.name)
+
+
+def test_ifctester_result_exposes_requirements_aware_cache_identity():
+    pytest.importorskip("ifcopenshell")
+    pytest.importorskip("ifctester")
+    fixture = Path(__file__).resolve().parents[3] / "fixtures" / "coordination-project"
+    ifc = (fixture / "R1" / "structure.ifc").read_bytes()
+    ids = (fixture / "R1" / "requirements.ids").read_bytes()
+    result = IfcTesterAdapter().validate(ifc, ids, source_id="structure", source_revision_id="R1")
+    assert result.cache_key == ids_cache_key(
+        source_hash=result.source_hash,
+        requirements_hash=result.requirements_hash,
+        engine=result.engine,
+        engine_version=result.engine_version,
+    )
+
+
+@pytest.mark.parametrize("mode", ["intersection", "collision", "clearance"])
+def test_real_ifc_clash_source_orientation_and_paired_publication(mode):
+    pytest.importorskip("ifcclash")
+    fixture = Path(__file__).resolve().parents[3] / "fixtures" / "coordination-project"
+    first = (fixture / "R2/structure.ifc").read_bytes()
+    second = (fixture / "R1/mep.ifc").read_bytes()
+    if mode == "collision":
+        # The baseline duct is fully contained in the beam. Collision checks
+        # surface crossings; use the existing qualified partially crossing placement.
+        import ifcopenshell
+        import ifcopenshell.api
+        import numpy as np
+
+        model = ifcopenshell.file.from_string(second.decode())
+        placement = np.eye(4)
+        placement[:3, 3] = (3.0, 0.1, 1.5)
+        ifcopenshell.api.run(
+            "geometry.edit_object_placement",
+            model,
+            product=model.by_type("IfcDuctSegment")[0],
+            matrix=placement,
+            is_si=True,
+        )
+        second = model.to_string().encode()
+    result = IfcClashAdapter().run(
+        first,
+        second,
+        source_id="structure",
+        source_revision_id="structure-r2",
+        comparison_source_id="mep",
+        comparison_revision_id="mep-r1",
+        selector_first="IfcBeam",
+        selector_second="IfcDuctSegment",
+        mode=mode,
+        clearance=0.1,
+    )
+    assert result.source_hash == hashlib.sha256(first).hexdigest()
+    assert result.comparison_source_hash == hashlib.sha256(second).hexdigest()
+    assert result.parameters.selector_second == "IfcDuctSegment"
+    assert len(result.evidence) == 1
+    output = clash_publication(result, snapshot_id="snapshot", operation_id="ifc-clash")
+    first_evidence, second_evidence = output.evidence
+    assert first_evidence.source_id == "structure"
+    assert first_evidence.viewer_target.global_ids == ("3M0KwyPFrBT9KwklhqZa8W",)
+    assert second_evidence.source_id == "mep"
+    assert second_evidence.viewer_target.global_ids == ("0wJm_7P3jD4uBWYGw9xyVx",)
+    assert first_evidence.source_revision == result.source_hash
+    assert second_evidence.source_revision == result.comparison_source_hash
+    assert clash_publication(result, snapshot_id="snapshot", operation_id="ifc-clash") == output
+
+
+@pytest.mark.parametrize("capability", ["clash", "ids", "configured-clash", "configured-ids"])
+def test_real_ifc_provider_recheck_acceptance(tmp_path, admin, capability):
+    """Make persisted C-provider acceptance mandatory in the existing IFC SDK lane."""
+    from test_engineering_provider_runtime import (
+        test_real_ids_selected_originals_positive_evidence_and_failure,
+        test_real_pair_publication_cache_parameter_restart_and_r3,
+    )
+
+    if capability.startswith("configured-"):
+        from test_engineering_startup_runtime import test_real_ifc_configured_startup_recovery
+
+        test_real_ifc_configured_startup_recovery(tmp_path, capability.removeprefix("configured-"))
+    elif capability == "clash":
+        test_real_pair_publication_cache_parameter_restart_and_r3(tmp_path, admin)
+    else:
+        test_real_ids_selected_originals_positive_evidence_and_failure(tmp_path, admin)

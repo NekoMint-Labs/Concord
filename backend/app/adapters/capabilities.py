@@ -4,6 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.adapters.capability_environment import fixed, model_credential, optional
+from app.adapters.engineering_environment import engineering_status
 from app.domain.runs import Capability
 
 
@@ -144,6 +145,22 @@ def capabilities(svc, probe: bool = False) -> list[Capability]:
                 "distributed runtime", "Temporal", "temporalio", settings.runtime == "temporal"
             ),
             optional("IFC import", "IfcOpenShell", "ifcopenshell", True),
+            *engineering_status(settings, svc.rechecks.capabilities),
+            optional(
+                "BCF transport",
+                "buildingSMART BCF client",
+                "bcf",
+                False,
+                distribution="bcf-client",
+            ),
+            optional(
+                "local OCR",
+                "RapidOCR / ONNX Runtime",
+                "rapidocr",
+                False,
+                distribution="rapidocr",
+                reason="Dependency inspection only; local ONNX models and OCR are not probed",
+            ),
             optional("optimization", "OR-Tools CP-SAT", "ortools", settings.optimization_enabled),
             optional(
                 "advanced documents", "Docling", "docling", settings.document_parser == "docling"

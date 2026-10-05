@@ -1,0 +1,27 @@
+--- a/src/lib/bcf.ts
++++ b/src/lib/bcf.ts
+@@ -186,7 +186,7 @@
+   const vp = viewpointToBcf(sceneVp)
+   const { cameraPosition: pos, cameraDirection: dir, cameraUp: up, fieldOfView: fov = 60 } = vp
+   if (!pos || !dir || !up) return ''
+-  // AspectRatio is required by the 3.0 PerspectiveCamera schema.
++  // AspectRatio is required by both 3.0 camera schemas.
+   const aspect = version === '3.0' ? `\n    <AspectRatio>${vp.aspectRatio ?? 1}</AspectRatio>` : ''
+   // Same element names in 2.1 and 3.0, after the camera in both schemas.
+   const clipping = vp.clippingPlanes && vp.clippingPlanes.length > 0 ? `
+@@ -204,12 +204,12 @@
+       ${vp.componentGuids.map((g) => `<Component IfcGuid="${g}" />`).join('\n      ')}
+     </Selection>
+   </Components>` : ''}
+-  <PerspectiveCamera>
++  <${vp.cameraKind === 'orthogonal' ? 'Orthogonal' : 'Perspective'}Camera>
+     <CameraViewPoint>${xyzXml(pos)}</CameraViewPoint>
+     <CameraDirection>${xyzXml(dir)}</CameraDirection>
+     <CameraUpVector>${xyzXml(up)}</CameraUpVector>
+-    <FieldOfView>${fov}</FieldOfView>${aspect}
+-  </PerspectiveCamera>${clipping}
++    ${vp.cameraKind === 'orthogonal' ? `<ViewToWorldScale>${vp.viewToWorldScale ?? 1}</ViewToWorldScale>` : `<FieldOfView>${fov}</FieldOfView>`}${aspect}
++  </${vp.cameraKind === 'orthogonal' ? 'Orthogonal' : 'Perspective'}Camera>${clipping}
+ </VisualizationInfo>`
+ }
+ 

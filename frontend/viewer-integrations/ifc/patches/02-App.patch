@@ -1,0 +1,63 @@
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1,3 +1,5 @@
++import { captureBcf, reopenBcf, disposeBcfRequests } from './lib/concord-bcf'
++import { indexDiagnostics } from './lib/concord-index-cache'
+ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+ import { useTranslation } from 'react-i18next'
+ import { AnimatePresence, motion } from 'framer-motion'
+@@ -2015,6 +2017,7 @@
+   useEffect(() => {
+     if (!isEmbedded()) return
+     const onMessage = (e: MessageEvent): void => {
++      if (e.source !== window.parent || e.origin !== window.location.origin) return
+       const data = e.data as { type?: unknown } | null
+       if (!data || typeof data.type !== 'string' || !data.type.startsWith('ifcviewer:')) return
+       const msg = data as { type: string; [k: string]: unknown }
+@@ -2145,6 +2148,37 @@
+         }
+ 
+         // ── Query commands (reply with a `result` envelope) ──────────────────
++        case 'ifcviewer:get-ids-by-guids': {
++          void respond(() => {
++            const modelId = typeof msg.modelId === 'string' ? msg.modelId : ''
++            if (!useSceneStore.getState().models.some(m => m.id === modelId)) throw new Error('Target model is not loaded')
++            const guids = msg.guids
++            if (!Array.isArray(guids) || guids.length > 1000 || !guids.every(g => typeof g === 'string' && /^[0-3][0-9A-Za-z_$]{21}$/.test(g))) throw new Error('Invalid IFC GlobalIds')
++            const viewer = viewerApiRef.current
++            if (!viewer) throw new Error('Viewer is not ready')
++            return viewer.getIdsByGuids(guids, modelId)
++          })
++          break
++        }
++        case 'ifcviewer:capture-bcf':
++          void respond(() => {
++            const api=viewerApiRef.current
++            if (!api) throw new Error('Viewer is not ready')
++            if (!Array.isArray(msg.modelIds) || !msg.modelIds.every(id=>typeof id==='string') || typeof msg.title!=='string' || typeof msg.author!=='string') throw new Error('Invalid BCF capture request')
++            return captureBcf(api,msg.modelIds,msg.title,msg.author)
++          })
++          break
++        case 'ifcviewer:reopen-bcf':
++          void respond(() => {
++            const api=viewerApiRef.current
++            if (!api) throw new Error('Viewer is not ready')
++            if (!(msg.bytes instanceof ArrayBuffer) || !Array.isArray(msg.modelIds) || !msg.modelIds.every(id=>typeof id==='string')) throw new Error('Invalid BCF reopen request')
++            return reopenBcf(api,msg.bytes,msg.modelIds,typeof msg.topicGuid==='string'?msg.topicGuid:undefined,typeof msg.viewpointGuid==='string'?msg.viewpointGuid:undefined)
++          })
++          break
++        case 'ifcviewer:engineering-diagnostics':
++          void respond(() => ({ ...indexDiagnostics }))
++          break
+         case 'ifcviewer:get-models':
+           void respond(() => useSceneStore.getState().models.map((m) => ({
+             id: m.id, fileName: m.fileName, elementCount: m.elementCount,
+@@ -3307,7 +3341,7 @@
+       }
+     }
+     window.addEventListener('message', onMessage)
+-    return () => window.removeEventListener('message', onMessage)
++    return () => { window.removeEventListener('message', onMessage); disposeBcfRequests() }
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [loadModelsFromUrls, loadModelFromBytes, handleRemoveModel, handleRestoreVisibility])
+ 

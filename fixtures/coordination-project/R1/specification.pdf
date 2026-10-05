@@ -1,0 +1,103 @@
+%PDF-1.3
+%“Œ‹ž ReportLab Generated PDF document (opensource)
+1 0 obj
+<<
+/F1 2 0 R
+>>
+endobj
+2 0 obj
+<<
+/BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font
+>>
+endobj
+3 0 obj
+<<
+/Contents 8 0 R /MediaBox [ 0 0 600 420 ] /Parent 7 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 /Trans <<
+
+>> 
+  /Type /Page
+>>
+endobj
+4 0 obj
+<<
+/Contents 9 0 R /MediaBox [ 0 0 600 420 ] /Parent 7 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 /Trans <<
+
+>> 
+  /Type /Page
+>>
+endobj
+5 0 obj
+<<
+/PageMode /UseNone /Pages 7 0 R /Type /Catalog
+>>
+endobj
+6 0 obj
+<<
+/Author (Concord synthetic fixture) /CreationDate (D:20000101000000+00'00') /Creator (anonymous) /Keywords () /ModDate (D:20000101000000+00'00') /Producer (ReportLab PDF Library - \(opensource\)) 
+  /Subject (unspecified) /Title (Golden coordination specification) /Trapped /False
+>>
+endobj
+7 0 obj
+<<
+/Count 2 /Kids [ 3 0 R 4 0 R ] /Type /Pages
+>>
+endobj
+8 0 obj
+<<
+/Length 411
+>>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+BT /F1 12 Tf 14.4 TL ET
+BT 1 0 0 1 35 355 Tm (Synthetic coordination specification) Tj T* ET
+BT 1 0 0 1 35 320 Tm (Level 01 beam BEAM-01 and duct DUCT-01) Tj T* ET
+BT 1 0 0 1 35 285 Tm (R1 beam depth: 300 mm. Maintain duct clearance.) Tj T* ET
+BT 1 0 0 1 35 250 Tm (Source marker: GOLDEN-SPEC-PAGE-1) Tj T* ET
+BT 1 0 0 1 35 40 Tm (Synthetic original / page 1) Tj T* ET
+ 
+endstream
+endobj
+9 0 obj
+<<
+/Length 404
+>>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+BT /F1 12 Tf 14.4 TL ET
+BT 1 0 0 1 35 355 Tm (Review rules) Tj T* ET
+BT 1 0 0 1 35 320 Tm (R2 design-change 023 deepens the beam to 900 mm.) Tj T* ET
+BT 1 0 0 1 35 285 Tm (Verify rerouted DUCT-01 against the revised structure.) Tj T* ET
+BT 1 0 0 1 35 250 Tm (Source marker: GOLDEN-SPEC-PAGE-2) Tj T* ET
+BT 1 0 0 1 35 40 Tm (Synthetic original / page 2) Tj T* ET
+ 
+endstream
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000061 00000 n 
+0000000092 00000 n 
+0000000199 00000 n 
+0000000392 00000 n 
+0000000585 00000 n 
+0000000653 00000 n 
+0000000955 00000 n 
+0000001020 00000 n 
+0000001481 00000 n 
+trailer
+<<
+/ID 
+[<9b6215503ab7aafe1a39a051a6303353><9b6215503ab7aafe1a39a051a6303353>]
+% ReportLab generated PDF document -- digest (opensource)
+
+/Info 6 0 R
+/Root 5 0 R
+/Size 10
+>>
+startxref
+1935
+%%EOF
