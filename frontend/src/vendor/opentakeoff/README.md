@@ -14,11 +14,21 @@ frontend, adopted as the Concord product shell instead of being re-designed.
 
 | File | sha256 (first 16) | bytes | Upstream path |
 | --- | --- | --- | --- |
-| `styles/tokens.css` | `9521e2ea2e9edfb8` | 11926 | `web/src/styles/tokens.css` |
 | `styles/app.css` | `d4fd2427fdc8bc98` | 7089 | `web/src/styles/app.css` |
 | `styles/premiumWorkspace.css` | `be88cc285f1f96d5` | 5337 | `web/src/styles/premiumWorkspace.css` |
 | `components/workspaceChrome.css` | `c7869495b383a291` | 13351 | `web/src/components/workspaceChrome.css` |
 | `components/workspacePanel.css` | `2ad05c6597325e7f` | 5449 | `web/src/components/workspacePanel.css` |
+
+## Adapted for local/offline-safe operation
+
+| File | sha256 (first 16) | bytes | Upstream path |
+| --- | --- | --- | --- |
+| `styles/tokens.css` | `4a613f978d02d3a7` | 11620 | `web/src/styles/tokens.css` |
+
+`styles/tokens.css` is not byte-identical to upstream. Its sole Concord
+adaptation is removal of the remote Google Fonts `@import` for local/offline-safe
+operation. All typography tokens and font-family fallback stacks are unchanged;
+no replacement font assets are added.
 
 These five stylesheets own the workspace look: surface, chrome, density,
 spacing, typography hierarchy and the docked panel geometry. Concord does not

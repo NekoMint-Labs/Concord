@@ -3,8 +3,6 @@
    surfaces on a cool field, cobalt the one saturated thing. Dark = "HUD" —
    true-black cockpit, electric blue, phosphor glow on the active instrument. */
 
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-
 :root {
   /* surfaces — role names kept from the paper era: bright = base surface,
      cream = raised card, shadow = hover/pressed */
