@@ -108,11 +108,20 @@ def test_desktop_resolves_only_installed_package_cli(tmp_path, monkeypatch, entr
             module.cli_command(tmp_path)
 
 
-def test_packaged_sidecar_collects_default_bim_comparison_dependencies(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    "adapter_present", [False, True], ids=["without-comparison-source", "with-comparison-source"]
+)
+def test_packaged_sidecar_collects_default_bim_comparison_dependencies(
+    tmp_path, monkeypatch, adapter_present
+):
     module = load("build_sidecar")
     collected = []
     discovered = []
     monkeypatch.setattr(module, "ROOT", tmp_path)
+    if adapter_present:
+        adapter = tmp_path / "backend/app/adapters/trusted_comparisons.py"
+        adapter.parent.mkdir(parents=True)
+        adapter.write_text("# Optional executor source fixture.\n")
     monkeypatch.setattr(module, "native_target", lambda: "test-target")
     monkeypatch.setattr(module.sys, "argv", ["build_sidecar.py"])
     monkeypatch.setattr(
@@ -137,6 +146,12 @@ def test_packaged_sidecar_collects_default_bim_comparison_dependencies(tmp_path,
         if argument == "--collect-all"
     }
     assert {"ifcopenshell", "ifcdiff"} <= collected_packages
+    hidden_imports = {
+        collected[index + 1]
+        for index, argument in enumerate(collected[:-1])
+        if argument == "--hidden-import"
+    }
+    assert ("app.adapters.trusted_comparisons" in hidden_imports) is adapter_present
 
 
 @pytest.mark.parametrize(

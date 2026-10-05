@@ -73,6 +73,21 @@ account before accepting a runtime. Missing engines must fail this qualification
 not skip. Keep application data backed up and intact when replacing assets. Roll
 back to the exact previous pack identity if resuming its saved jobs.
 
+## Packaged Python backend
+
+Build `scripts/build_sidecar.py` from the combined checkout that contains C's
+adapter. The adapter is loaded dynamically during configured startup; the build
+explicitly includes it when its source is present. An older editable Python
+installation must not cause the current checkout's executor to be omitted.
+The adapter remains absent when building a tree without C's delivery, and both
+comparison switches remain disabled by default.
+
+This includes the Python executor in the sidecar, not Node, Chromium or frontend
+assets. Provision the fixed external runtime above and pass its absolute paths
+and Playwright browser-cache configuration to the packaged process. Qualify the
+actual executable through startup, pending-job recovery, canonical publication
+and persisted warm reuse; a successful source test or build alone is insufficient.
+
 ## Ownership and acceptance
 
 A owns registration, runtime provisioning, restart/recovery configuration, notices

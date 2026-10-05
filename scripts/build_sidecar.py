@@ -82,6 +82,10 @@ def main() -> int:
         "uvicorn.lifespan.on",
     ]:
         command.extend(["--hidden-import", module])
+    # Explicitly retain the optional adapter loaded through import_module.
+    # Generic collection can inspect an older editable installation of app.
+    if (ROOT / "backend/app/adapters/trusted_comparisons.py").is_file():
+        command.extend(["--hidden-import", "app.adapters.trusted_comparisons"])
     for feature in features:
         command.extend(["--collect-all", feature])
     command.append(str(ROOT / "backend/sidecar_entry.py"))
