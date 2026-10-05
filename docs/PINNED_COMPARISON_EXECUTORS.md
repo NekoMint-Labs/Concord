@@ -1,10 +1,12 @@
 # Pinned trusted PDF/CAD executors — Issue #17
 
-This C-owned optional pack consumes A's `ComparisonExecutor` from Draft #26
-at `ed4f3a3`. It has been qualified in an isolated combination of C/#22
-`c1b7f51` and that platform interface. It does not enable a detector in ordinary
-startup and does not establish final Issue #17, native or product acceptance.
-Do not merge the dependent C work into main before the platform contract lands.
+This C-owned optional pack consumes A's `ComparisonExecutor` from merged #26
+(`main` commit `a32a676`). #22 has been rebased onto that main, retaining
+`engineering_capabilities=None` and `comparison_executors=()`, and consumes C's
+previously qualified `3048534` continuation. The original isolated qualification
+used C/#22 `c1b7f51` plus platform `ed4f3a3`; those results retain that scope.
+The pack does not enable a detector in ordinary startup and does not establish
+final Issue #17, native or product acceptance.
 
 ## Execution and ownership
 

@@ -1,12 +1,12 @@
 # Issue #17 engineering capability status
 
-Draft PR #22 tracks C's fork branch `feat/17-engineering-capabilities-rebased`, based on `main` with PRs #19, #20 and #23 merged. PR #21 preserves the pre-rebase history. Earlier heads and CI results below describe their own milestones; they do not qualify a later continuation.
+Draft PR #22 tracks C's fork branch `feat/17-engineering-capabilities-rebased`, based on `main` with PRs #19, #20, #23 and #26 merged. PR #21 preserves the pre-rebase history. Earlier heads and CI results below describe their own milestones; they do not qualify a later continuation.
 
 A's grouped ReCheck and versioned IDS seam is consumed by `IfcClashCapability` and `IfcTesterCapability`. The current continuation adds truthful positive verification: actual complete geometry coverage for the targeted model pair, and non-vacuous IDS applicability covering the requested scope. Structured Evidence preserves the complete pair or explicitly selected IDS configuration. Unknown conditions, missing/partial geometry, all-vacuous/skipped validation and inconsistent output remain reviewable. A still owns publication/current-input fences and explicit human Finding closure. See [positive verification](ENGINEERING_POSITIVE_VERIFICATION.md).
 
-B's product host is available in Draft #24 at `5fca9eb`, under `frontend/src/app/EvidenceWorkspaceHost.tsx`. B's latest reply confirms that #24 will wait for C's modules, qualify a pinned combined tree and rebase after #22 lands, without copying C-owned viewer code. Its quality check now passes; Web is blocked by the missing C modules on the isolated B branch. A pinned rehearsal of main `583d476`, C `7c179a8` plus the Host qualification continuation, and B `5fca9eb` now passes four-surface real Host/browser qualification. The four conflict resolutions remain provisional until B rebases after C lands. See [combined host qualification](EVIDENCE_HOST_QUALIFICATION.md); this does not establish final Golden product or native acceptance.
+B's product host is available in Draft #24 under `frontend/src/app/EvidenceWorkspaceHost.tsx`. Its latest head `b0287dc` removes the remote Google Fonts import and records that donor adaptation; Web remains blocked by C modules absent from B's standalone branch. B's agreed integration order is unchanged: consume C's final head and rebase after #22 lands. Earlier pinned rehearsals, including B `9336971`, passed real four-surface Host/browser checks; their exact scopes and provisional conflict choices are recorded in [combined host qualification](EVIDENCE_HOST_QUALIFICATION.md). Those results do not qualify the newest combined tree or final Golden/native acceptance.
 
-Issue #17 remains **incomplete**, despite its closed GitHub state. Configuration-driven `create_app` registration is implemented behind two disabled-by-default switches, with lazy SDK loading and registry-aware capability inspection; see `ENGINEERING_STARTUP.md`. Trusted PDF/CAD invocation/publication, native-host connectors, large-model/native and combined product/Golden acceptance remain outstanding. #22 remains Draft until acceptance and peer review are complete.
+Issue #17 is open and remains **incomplete**. Configuration-driven `create_app` registration is implemented behind two disabled-by-default switches, with lazy SDK loading and registry-aware capability inspection; see `ENGINEERING_STARTUP.md`. The trusted PDF/CAD executor continuation is now integrated against merged #26; explicit runtime provisioning/registration, native-host connectors and combined product/Golden acceptance remain outstanding. Scaled IFC viewer qualification is recorded below; it does not qualify packaged native hosts. #22 remains Draft until acceptance and peer review are complete.
 
 PDF comparison now rejects results invalidated by a cache reset, preserving the newer generation and existing worker cleanup. See [PDF comparison lifecycle qualification](PDF_COMPARISON_LIFECYCLE.md) for the reproduced races, bounded cache checks and real browser results.
 
@@ -952,3 +952,27 @@ this continuation integrates with main. See
 checks, supported settings and limitations. Native connectors, A-owned deployment
 registration/bundling, B's actual rebase and final persisted Golden acceptance
 remain open; green checks alone do not complete Issue #17.
+
+
+## October 5, 2026 merged platform integration
+
+PR #26 merged as `a32a676`. C rebased #22 onto that main and consumed the
+previously qualified executor commit `3048534`. The sole rebase conflict was
+`build_services`: it retains configured engineering provider selection through
+`engineering_capabilities=None` and explicit comparison injection through
+`comparison_executors=()`. Both registries are populated before runtime creation
+and queued recovery. No default PDF/CAD runtime enablement, product host change,
+new contract or competing lifecycle was introduced.
+
+Post-rebase qualification passed 116 related backend cases without skips,
+including real PDF/DXF workers, artifact publication/cache/fencing, configured
+IFC startup and real DBOS recovery. The 565 product frontend tests, 21 recipe/mapper tests, 38 transport/style
+checks and 16 real Drawing/CAD browser scenarios passed. Product/pack
+TypeScript checks, production build, Prettier, Ruff, full-project Pyright,
+generated API consistency and changed-Python formatting/whitespace checks passed. Historical counts above qualify their named trees only.
+
+The deployment registration/provisioning decision remains with A. B's #24 must
+consume the final C head and repeat the combined Host/product Golden gates after
+its actual rebase. Autodesk host connector delivery and packaged runtime/native
+qualification remain open. These results do not establish final Issue #17
+acceptance or authorize Ready/merge without peer review.
