@@ -138,12 +138,12 @@ isolated local integrations; product composition, authoritative publication and
 complete product qualification remain incomplete. Original licenses are kept
 beside vendored source. C-owned adaptation notes are in each vendor README.
 
-| Repository | Revision | License | Concord use |
-| --- | --- | --- | --- |
-| Kentucky-ai/opentakeoff | `60c82e34b389384401a083cefeb9389f89fbaae1` | Apache-2.0 | Unchanged geometry/preview/annotation helpers; adapted native annotation workbench and render/worker factories; bounded donor history; no estimating model imported |
-| a-subhaneel/pdf-diff-viewer | `96af1ce5caa0b27b3b4a2e14ef3c16aed0842170` | MIT | Vendored engine adapted for OffscreenCanvas workers, local PDF.js, bounded regions and Blob output |
-| mlightcad/cad-viewer | `250533a861e9fa1feca739b6783286ed4e91674a` | MIT | Independently locked SDK plus vendored diff widget; comparison moved to a worker; native entity selection/targeting; DXF-only; no DWG converter installed |
-| j03rul4nd/ifc-viewer-online | `5073adf1f5fadef76129460555482b6507c2be74` | MIT | Independently built self-hosted app and vendored SDK; native GUID lookup, same-origin messaging, local WASM/worker assets and hash/engine geometry/tree caches |
+| Repository                  | Revision                                   | License    | Concord use                                                                                                                                                         |
+| --------------------------- | ------------------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kentucky-ai/opentakeoff     | `60c82e34b389384401a083cefeb9389f89fbaae1` | Apache-2.0 | Unchanged geometry/preview/annotation helpers; adapted native annotation workbench and render/worker factories; bounded donor history; no estimating model imported |
+| a-subhaneel/pdf-diff-viewer | `96af1ce5caa0b27b3b4a2e14ef3c16aed0842170` | MIT        | Vendored engine adapted for OffscreenCanvas workers, local PDF.js, bounded regions and Blob output                                                                  |
+| mlightcad/cad-viewer        | `250533a861e9fa1feca739b6783286ed4e91674a` | MIT        | Independently locked SDK plus vendored diff widget; comparison moved to a worker; native entity selection/targeting; DXF-only; no DWG converter installed           |
+| j03rul4nd/ifc-viewer-online | `5073adf1f5fadef76129460555482b6507c2be74` | MIT        | Independently built self-hosted app and vendored SDK; native GUID lookup, same-origin messaging, local WASM/worker assets and hash/engine geometry/tree caches      |
 
 ### Native AEC connector boundary
 
@@ -156,7 +156,6 @@ Revit, AutoCAD, and Navisworks files are not parsed by reverse-engineered reader
 ### DWG boundary
 
 LibreDWG and other GPL-based DWG paths are not dependencies of Concord Core. DWG support remains an explicitly isolated optional capability or an approved native AutoCAD conversion path until licensing and distribution are separately approved.
-
 
 ## xmlschema 4.3.2
 
@@ -182,6 +181,12 @@ LibreDWG and other GPL-based DWG paths are not dependencies of Concord Core. DWG
 `data-model` 1.15.1; `mtext-parser` 1.5.3; `mtext-renderer` 0.13.2;
 Three.js 0.172.0 and lodash-es 4.17.21. These packages declare MIT licenses.
 The independent runtime does not replace Concord's existing Three/IFC versions.
+Asset copying makes one additional recorded adaptation to the published
+`mtext-renderer-worker.js`: its CDN font default is replaced with
+`new URL("./fonts/", self.location.href).href`. The pinned replacement is checked
+by `scripts/local-fonts.mjs` and the original package files remain unchanged.
+An empty local catalog ships by default; no CAD font files are redistributed.
+See the isolated CAD README for licensed local provisioning.
 No LibreDWG or proprietary DWG converter is installed or registered.
 
 The original cad-diff-viewer source is kept under the isolated viewer's `vendor/`

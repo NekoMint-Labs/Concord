@@ -32,6 +32,16 @@ prove equivalent nested block/layout contents or effective layer attributes.
 Font files must be legally supplied locally; missing font quality must remain
 explicit. No remote font repository should be contacted.
 
+The SDK base URL points to the local CAD asset directory. Its text worker can
+request fonts before asynchronous SDK configuration reaches the worker, so
+`local-fonts.mjs` replaces only the pinned worker's default font repository with
+`new URL("./fonts/", self.location.href).href` during asset copying. The build
+rejects a missing or ambiguous donor default; installed packages are unchanged.
+`fonts/fonts.json` is created as an empty catalog when absent. No licensed font
+files ship with this integration. A deployment may supply a licensed catalog and
+font files in that directory; rebuilding preserves an existing catalog. Empty
+catalogs are valid and missing glyph quality remains visible in the viewer.
+
 Install using pinned pnpm, frozen mode after the first resolution. Build runs
 into ignored `frontend/public/viewer/cad/`. B will consume the C-owned adapter
 after shared ViewerTarget contracts land. No product composition changes here.
