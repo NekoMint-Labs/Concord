@@ -23,7 +23,7 @@ from app.api import (
     runs,
 )
 from app.api.web import mount_web
-from app.bootstrap import build_services
+from app.bootstrap_comparisons import build_configured_services
 from app.domain.errors import DomainError
 from app.settings import Settings
 
@@ -36,7 +36,9 @@ def create_app(settings: Settings | None = None, service_override=None) -> FastA
     async def lifespan(app: FastAPI):
         import asyncio
 
-        app.state.services = service_override or await asyncio.to_thread(build_services, settings)
+        app.state.services = service_override or await asyncio.to_thread(
+            build_configured_services, settings
+        )
         try:
             yield
         finally:

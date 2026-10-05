@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     ifc_path: Path | None = None
     document_parser: Literal["lightweight", "docling"] = "lightweight"
     optimization_enabled: bool = False
+    pdf_comparison_enabled: bool = False
+    cad_comparison_enabled: bool = False
+    comparison_frontend_root: Path | None = None
+    comparison_node: Path | None = None
     vector_enabled: bool = False
     otel_enabled: bool = False
     otel_endpoint: str = "http://127.0.0.1:4318/v1/traces"
@@ -86,6 +90,21 @@ class Settings(BaseSettings):
         ):
             raise ValueError("Upload limits need a positive fallback and positive format limits")
         self.data_dir = self.data_dir.resolve()
+        if self.pdf_comparison_enabled or self.cad_comparison_enabled:
+            if (
+                self.comparison_frontend_root is None
+                or not self.comparison_frontend_root.is_absolute()
+            ):
+                raise ValueError("Configured comparisons require an absolute frontend pack path")
+            self.comparison_frontend_root = self.comparison_frontend_root.resolve()
+            if self.comparison_frontend_root.is_relative_to(self.data_dir):
+                raise ValueError("Comparison executable assets must be outside application data")
+            if self.comparison_node is not None:
+                if not self.comparison_node.is_absolute():
+                    raise ValueError("Comparison Node must be an absolute operator-owned path")
+                self.comparison_node = self.comparison_node.resolve()
+                if self.comparison_node.is_relative_to(self.data_dir):
+                    raise ValueError("Comparison Node must be outside application data")
         if not self.database_url:
             self.database_url = f"sqlite:///{self.data_dir / 'app.db'}"
         if not self.runtime_database_url:

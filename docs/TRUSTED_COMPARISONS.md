@@ -4,6 +4,9 @@ This is the A-owned execution/publication seam requested in Issue #17. C supplie
 the pinned donor executor and mapper. B consumes canonical Changes/Evidence. The
 default application has no registered PDF/CAD executor and reports that limitation;
 the endpoint returns `503`, rather than accepting browser-produced facts.
+Operators can explicitly enable C's fixed pack through ordinary startup using
+[`COMPARISON_DEPLOYMENT.md`](COMPARISON_DEPLOYMENT.md). The configuration stays
+disabled by default; installing assets alone does not register an executor.
 
 ## Product entry point
 
