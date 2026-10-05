@@ -8,6 +8,8 @@ B's product host is available in Draft #24 at `5fca9eb`, under `frontend/src/app
 
 Issue #17 remains **incomplete**, despite its closed GitHub state. Configuration-driven `create_app` registration is implemented behind two disabled-by-default switches, with lazy SDK loading and registry-aware capability inspection; see `ENGINEERING_STARTUP.md`. Trusted PDF/CAD invocation/publication, native-host connectors, large-model/native and combined product/Golden acceptance remain outstanding. #22 remains Draft until acceptance and peer review are complete.
 
+PDF comparison now rejects results invalidated by a cache reset, preserving the newer generation and existing worker cleanup. See [PDF comparison lifecycle qualification](PDF_COMPARISON_LIFECYCLE.md) for the reproduced races, bounded cache checks and real browser results.
+
 ## Implemented and locally qualified
 
 | Area           | Delivered boundary                                                                                                                                                                                                            | Evidence                                                                                                                                                                  |

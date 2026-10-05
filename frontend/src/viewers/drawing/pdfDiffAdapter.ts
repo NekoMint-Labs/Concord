@@ -1,4 +1,9 @@
-import { cachedPdfDiff, cachePdfDiff, pdfDiffCacheKey } from "./pdfDiffCache";
+import {
+  cachedPdfDiff,
+  cachePdfDiff,
+  pdfDiffCacheKey,
+  pdfDiffCacheGeneration,
+} from "./pdfDiffCache";
 import {
   normalizeOptions,
   sha256,
@@ -16,12 +21,18 @@ export async function comparePdfRevisions(
   options: PdfDiffOptions = {},
   signal?: AbortSignal,
 ): Promise<PdfDiffResult> {
+  const generation = pdfDiffCacheGeneration();
+  const assertCurrent = () => {
+    signal?.throwIfAborted();
+    if (generation !== pdfDiffCacheGeneration())
+      throw new Error("PDF comparison invalidated by cache reset");
+  };
   before = snapshotDrawingSource(before);
   after = snapshotDrawingSource(after);
   const normalized = structuredClone(normalizeOptions(options));
-  signal?.throwIfAborted();
+  assertCurrent();
   const hashes = await Promise.all([sha256(before.data), sha256(after.data)]);
-  signal?.throwIfAborted();
+  assertCurrent();
   if (hashes[0] !== before.sourceHash || hashes[1] !== after.sourceHash)
     throw new Error("PDF bytes do not match their source revision hashes");
   const key = pdfDiffCacheKey([hashes[0], hashes[1]], normalized);
@@ -33,7 +44,7 @@ export async function comparePdfRevisions(
       cacheHit: true,
     };
   const artifact = await runWorker(before, after, normalized, signal);
-  signal?.throwIfAborted();
+  assertCurrent();
   cachePdfDiff(key, artifact);
   return {
     artifact,

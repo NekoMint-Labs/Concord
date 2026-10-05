@@ -7,6 +7,10 @@ const artifacts = new Map<
 >();
 const MAX_BYTES = 32 * 1024 * 1024;
 let totalBytes = 0;
+let generation = 0;
+export function pdfDiffCacheGeneration() {
+  return generation;
+}
 export function pdfDiffCacheKey(
   hashes: [string, string],
   options: PdfDiffOptions,
@@ -49,6 +53,7 @@ export function cachePdfDiff(key: string, artifact: PdfDiffArtifact) {
   }
 }
 export function clearPdfDiffCache() {
+  ++generation;
   artifacts.clear();
   totalBytes = 0;
 }

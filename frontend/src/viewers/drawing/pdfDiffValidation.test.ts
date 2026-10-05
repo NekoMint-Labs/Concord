@@ -108,3 +108,45 @@ describe("PDF worker boundary", () => {
     expect(cachedPdfDiff("4")).toBeUndefined();
   });
 });
+
+it("bounds retained overlays and metadata, evicting by bytes as well as entry count", () => {
+  clearPdfDiffCache();
+  const artifact = {
+    engine: PDF_DIFF_ENGINE,
+    options: normalizeOptions(),
+    sourcePages: [[], []] as [[], []],
+    sourceHashes: ["a", "b"] as [string, string],
+    addedPages: [],
+    deletedPages: [],
+    warnings: [],
+    elapsedMs: 1,
+    pages: [
+      {
+        pageNumA: 1,
+        pageNumB: 1,
+        diffPixels: 1,
+        overlayA: new Blob([new Uint8Array(10 * 1024 * 1024)]),
+        overlayB: new Blob([new Uint8Array(10 * 1024 * 1024)]),
+        width: 1,
+        height: 1,
+        boxes: [],
+        wordHighlightsA: [],
+        wordHighlightsB: [],
+        alignment: { dx: 0, dy: 0 },
+      },
+    ],
+  };
+  cachePdfDiff("older", artifact);
+  cachePdfDiff("latest", artifact);
+  expect(cachedPdfDiff("older")).toBeUndefined();
+  expect(cachedPdfDiff("latest")).toBeDefined();
+  cachePdfDiff("latest", { ...artifact, warnings: ["replacement"] });
+  expect(cachedPdfDiff("latest")?.warnings).toEqual(["replacement"]);
+  cachePdfDiff("oversized", {
+    ...artifact,
+    warnings: ["x".repeat(13 * 1024 * 1024)],
+  });
+  expect(cachedPdfDiff("oversized")).toBeUndefined();
+  expect(cachedPdfDiff("latest")).toBeDefined();
+  clearPdfDiffCache();
+});
