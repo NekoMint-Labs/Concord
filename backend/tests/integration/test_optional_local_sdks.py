@@ -256,3 +256,17 @@ def test_real_ifc_clash_source_orientation_and_paired_publication(mode):
     assert first_evidence.source_revision == result.source_hash
     assert second_evidence.source_revision == result.comparison_source_hash
     assert clash_publication(result, snapshot_id="snapshot", operation_id="ifc-clash") == output
+
+
+@pytest.mark.parametrize("capability", ["clash", "ids"])
+def test_real_ifc_provider_recheck_acceptance(tmp_path, admin, capability):
+    """Make persisted C-provider acceptance mandatory in the existing IFC SDK lane."""
+    from test_engineering_provider_runtime import (
+        test_real_ids_selected_originals_positive_evidence_and_failure,
+        test_real_pair_publication_cache_parameter_restart_and_r3,
+    )
+
+    if capability == "clash":
+        test_real_pair_publication_cache_parameter_restart_and_r3(tmp_path, admin)
+    else:
+        test_real_ids_selected_originals_positive_evidence_and_failure(tmp_path, admin)

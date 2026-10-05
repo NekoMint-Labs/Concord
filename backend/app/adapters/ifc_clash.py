@@ -10,6 +10,7 @@ from math import isfinite
 from pathlib import Path
 from typing import Literal, cast
 
+from app.adapters.clash_geometry_scope import qualified_clasher
 from app.adapters.clash_provenance import orient_clash_row
 from app.adapters.engineering_results import (
     ClashParameters,
@@ -57,7 +58,7 @@ class IfcClashAdapter:
         ):
             raise DomainError("IfcClash requires source and revision identifiers")
         try:
-            from ifcclash.ifcclash import Clasher, ClashSet, ClashSettings, ClashSource
+            from ifcclash.ifcclash import ClashSet, ClashSettings, ClashSource
         except ImportError as exc:
             raise CapabilityUnavailable("Install the BIM extra for IfcClash") from exc
         started = time.perf_counter()
@@ -88,7 +89,7 @@ class IfcClashAdapter:
                     clash_set["allow_touching"] = allow_touching
                 else:
                     clash_set["clearance"] = clearance
-                clasher = Clasher(settings)
+                clasher = qualified_clasher(settings)
                 clasher.clash_sets = [clash_set]
                 clasher.clash()
                 rows = [
@@ -174,6 +175,8 @@ class IfcClashAdapter:
             engine_version=engine_version,
             mode=normalized_mode,
             elapsed_seconds=time.perf_counter() - started,
+            checked_global_ids_first=tuple(sorted(clasher.checked_global_ids.get("a", ()))),
+            checked_global_ids_second=tuple(sorted(clasher.checked_global_ids.get("b", ()))),
             changes=tuple(changes),
             evidence=tuple(evidence),
         )

@@ -60,6 +60,11 @@ def validate_inputs(request: CapabilityCheck, *, capability: str, models: int) -
         or request.dependency.source_id != first.source_id
         or request.dependency.source_revision_id != first.from_revision_id
         or (request.group_id and request.dependency.input_role != first.role)
+        or request.dependency.target.source_revision_id != first.from_revision_id
+        or request.dependency.target.model_copy(
+            update={"source_revision_id": first.source_revision_id}
+        )
+        != first.target
     ):
         raise DomainError("Engineering primary context differs from its bound model input")
 
@@ -93,6 +98,14 @@ def validate_ids_selection(request: CapabilityCheck) -> None:
     if request.dependency.requirements_kind != "ids" or selection is None:
         raise DomainError("IfcTester requires explicitly selected IDS requirements")
     model, rules = request.inputs
+    target = model.target
+    if (
+        not isinstance(target, BimTarget)
+        or len(target.global_ids) > 1000
+        or len(set(target.global_ids)) != len(target.global_ids)
+        or any(not re.fullmatch(r"[0-3][0-9A-Za-z_$]{21}", guid) for guid in target.global_ids)
+    ):
+        raise DomainError("IfcTester requires bounded, distinct valid target GlobalIds")
     if model.role == "requirements" or rules.role != "requirements":
         raise DomainError("IfcTester requires one model followed by its IDS input")
     if (

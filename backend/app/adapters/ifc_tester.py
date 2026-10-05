@@ -17,10 +17,12 @@ class IfcTesterAdapter:
         max_violations: int = 2000,
         max_bytes: int = 100 * 1024 * 1024,
         max_ids_bytes: int = 5 * 1024 * 1024,
+        max_applicable_entities: int = 100_000,
     ):
-        if min(max_violations, max_bytes, max_ids_bytes) < 1:
+        if min(max_violations, max_bytes, max_ids_bytes, max_applicable_entities) < 1:
             raise ValueError("IfcTester limits must be positive")
         self.max_violations = max_violations
+        self.max_applicable_entities = max_applicable_entities
         self.max_bytes, self.max_ids_bytes = max_bytes, max_ids_bytes
 
     def validate(
@@ -69,6 +71,17 @@ class IfcTesterAdapter:
                 )
                 requirement = ids.Ids().parse(decoded)
                 requirement.validate(model, should_filter_version=True, filepath=str(ifc_path))
+                applicable_counts = tuple(
+                    len(spec.applicable_entities) for spec in requirement.specifications
+                )
+                if sum(applicable_counts) > self.max_applicable_entities:
+                    raise DomainError("IDS applicability result exceeds the configured limit")
+                applicable_guids = {
+                    entity.GlobalId
+                    for spec in requirement.specifications
+                    for entity in spec.applicable_entities
+                    if getattr(entity, "GlobalId", None)
+                }
                 violations = []
                 for specification in requirement.specifications:
                     if specification.status is False and not specification.failed_entities:
@@ -132,6 +145,8 @@ class IfcTesterAdapter:
             passed_specifications=total - failed - skipped,
             skipped_specifications=skipped,
             failed_specifications=failed,
+            applicable_entity_counts=applicable_counts,
+            applicable_global_ids=tuple(sorted(applicable_guids)),
             violations=tuple(violations),
         )
 

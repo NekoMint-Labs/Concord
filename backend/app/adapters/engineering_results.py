@@ -70,6 +70,9 @@ class ClashRunResult(Model):
     engine_version: str
     mode: Literal["intersection", "collision", "clearance"]
     elapsed_seconds: float = Field(ge=0)
+    # Actual nonempty geometry inserted into the SDK clash tree, by source side.
+    checked_global_ids_first: tuple[str, ...] = ()
+    checked_global_ids_second: tuple[str, ...] = ()
     changes: tuple[EngineeringChange, ...] = ()
     evidence: tuple[EngineeringEvidence, ...] = ()
 
@@ -98,6 +101,9 @@ class IDSValidationResult(Model):
     passed_specifications: int
     failed_specifications: int
     skipped_specifications: int = 0
+    # SDK applicability, not inferred from the absence of violations.
+    applicable_entity_counts: tuple[int, ...] = ()
+    applicable_global_ids: tuple[str, ...] = ()
     violations: tuple[IDSViolation, ...] = ()
 
 

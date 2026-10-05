@@ -20,6 +20,11 @@ from app.adapters.engineering_capability_inputs import (
 )
 from app.adapters.engineering_result_mapping import ids_publication
 from app.adapters.engineering_results import ClashParameters, ClashRunResult, IDSValidationResult
+from app.adapters.engineering_verification import (
+    clash_verification,
+    ids_verification,
+    input_context,
+)
 from app.adapters.ifc_clash import IfcClashAdapter, _package_version
 from app.adapters.ifc_tester import IfcTesterAdapter, _version
 from app.domain.engineering import CapabilityCheck, CapabilityCheckResult
@@ -138,7 +143,7 @@ class IfcClashCapability:
                 "parameters": self.parameters.model_dump(mode="json"),
                 "ifcopenshell": _package_version("ifcopenshell"),
             },
-            adapter_version="targeted-clash-v2",
+            adapter_version="targeted-clash-v3",
         )
 
     def check(self, request: CapabilityCheck) -> CapabilityCheckResult:
@@ -197,10 +202,16 @@ class IfcClashCapability:
         satisfied = self.condition.evaluate(request.dependency.expected_condition, result)
         if satisfied is None:
             return _review("IfcClash expected condition is not supported by this adapter")
-        if not publication.evidence:
-            return _review(
-                "IfcClash produced no Evidence; resolution requires an evaluated condition "
-                "and a trusted publication"
+        if satisfied:
+            try:
+                evidence = clash_verification(request, result)
+            except DomainError as exc:
+                return _review(str(exc))
+            return CapabilityCheckResult(
+                outcome="RESOLVED",
+                explanation="IfcClash verified no clashes across the complete targeted model pair",
+                evidence=evidence,
+                expected_condition_satisfied=True,
             )
         return CapabilityCheckResult(
             outcome="STILL_OPEN",
@@ -230,7 +241,7 @@ class IfcTesterCapability:
         return capability_version(
             self._engine_version,
             {"ifcopenshell": _package_version("ifcopenshell"), "xmlschema": _version("xmlschema")},
-            adapter_version="selected-ids-v2",
+            adapter_version="selected-ids-v3",
         )
 
     def check(self, request: CapabilityCheck) -> CapabilityCheckResult:
@@ -271,14 +282,25 @@ class IfcTesterCapability:
         satisfied = self.condition.evaluate(request.dependency.expected_condition, result)
         if satisfied is None:
             return _review("IfcTester expected condition is not supported by this adapter")
-        if not publication.evidence:
-            return _review(
-                "IfcTester produced no violation Evidence; resolution requires an evaluated "
-                "condition and a trusted publication"
+        if satisfied:
+            try:
+                evidence = ids_verification(request, result)
+            except DomainError as exc:
+                return _review(str(exc))
+            return CapabilityCheckResult(
+                outcome="RESOLVED",
+                explanation="IfcTester verified all selected IDS requirements for the model scope",
+                evidence=evidence,
+                expected_condition_satisfied=True,
             )
+        if not publication.evidence:
+            return _review("IfcTester did not supply Evidence for the failed condition")
         return CapabilityCheckResult(
             outcome="STILL_OPEN",
             explanation="IfcTester reported IDS violations",
-            evidence=publication.evidence,
+            evidence=tuple(
+                item.model_copy(update={"fact": item.fact + "; inputs=" + input_context(request)})
+                for item in publication.evidence
+            ),
             expected_condition_satisfied=satisfied,
         )

@@ -193,20 +193,34 @@ def test_real_pair_publication_cache_parameter_restart_and_r3(tmp_path, admin):
         )
         r3, evidence = persisted_check(svc, project, finding, r3.id)
         assert len(second_adapter.calls) == 2
-        assert r3.outcome == "NEEDS_REVIEW" and not evidence
+        assert r3.outcome == "RESOLVED" and len(evidence) == 2
+        assert {e.source_id for e in evidence} == {structure.id, mep.id}
+        assert {e.element_ids for e in evidence} == {(BEAM,), (DUCT,)}
+        assert all("No clashes" in e.fact and '"clash_count": 0' in e.fact for e in evidence)
+        with svc.factory.open() as repo:
+            assert repo.finding(project.id, finding.id).state == "CONFIRMED"
+        warm_r3 = next(
+            c
+            for c in svc.rechecks.request(project.id, finding.id, admin, operation_id="warm-r3")
+            if c.request_id.startswith("manual:warm-r3:")
+        )
+        warm_r3, warm_evidence = persisted_check(svc, project, finding, warm_r3.id)
+        assert warm_r3.outcome == "RESOLVED" and len(warm_evidence) == 2
+        assert len(second_adapter.calls) == 2
         assert second_adapter.calls[-1][0] == (FIXTURE / "R2/structure.ifc").read_bytes()
         assert second_adapter.calls[-1][1] == (FIXTURE / "R3/mep.ifc").read_bytes()
         assert second_adapter.calls[-1][2]["selector_first"] == BEAM
         assert second_adapter.calls[-1][2]["selector_second"] == DUCT
-        with pytest.raises(Conflict):
-            svc.findings.decide(
-                project.id, finding.id, FindingDecision(decision="CLOSED", recheck_id=r3.id), admin
-            )
+        svc.findings.decide(
+            project.id, finding.id, FindingDecision(decision="CLOSED", recheck_id=r3.id), admin
+        )
+        with svc.factory.open() as repo:
+            assert repo.finding(project.id, finding.id).state == "CLOSED"
     finally:
         svc.close()
 
 
-def test_real_ids_selected_originals_and_no_empty_resolution(tmp_path, admin):
+def test_real_ids_selected_originals_positive_evidence_and_failure(tmp_path, admin):
     pytest.importorskip("ifctester")
     adapter = CountingTester()
     svc = build_services(
@@ -276,7 +290,12 @@ def test_real_ids_selected_originals_and_no_empty_resolution(tmp_path, admin):
         with svc.factory.open() as repo:
             check = repo.rechecks(project.id, finding.id)[0]
         assert check.ids_requirements == selection
-        assert check.outcome == "NEEDS_REVIEW" and not check.evidence_ids
+        assert check.outcome == "RESOLVED" and len(check.evidence_ids) == 1
+        check, positive = persisted_check(svc, project, finding, check.id)
+        assert positive[0].viewer_target == target
+        assert selected_revision.id in positive[0].fact and selection.id in positive[0].fact
+        with svc.factory.open() as repo:
+            assert repo.finding(project.id, finding.id).state == "CONFIRMED"
         # A real SDK failure is mapped, then persisted with the unchanged selected IDS provenance.
         import ifcopenshell
 
@@ -294,6 +313,13 @@ def test_real_ids_selected_originals_and_no_empty_resolution(tmp_path, admin):
         assert len(evidence) == 1 and evidence[0].element_ids == (BEAM,)
         assert evidence[0].source_revision_id == failed.inputs[0].source_revision_id
         assert selection.sha256 in evidence[0].fact
+        with pytest.raises(Conflict, match="superseded"):
+            svc.findings.decide(
+                project.id,
+                finding.id,
+                FindingDecision(decision="CLOSED", recheck_id=check.id),
+                admin,
+            )
         newer = svc.sources.upload(
             project.id, rules.id, "requirements.ids", original + b"\n", admin
         ).revision
@@ -302,6 +328,26 @@ def test_real_ids_selected_originals_and_no_empty_resolution(tmp_path, admin):
             project.id, IDSRequirementsRequest(source_id=rules.id, revision_id=newer.id), admin
         )
         assert len(adapter.calls) == 3 and adapter.calls[-1][1] == original + b"\n"
+        restored = svc.sources.upload(
+            project.id,
+            model.id,
+            "structure.ifc",
+            (FIXTURE / "R1/structure.ifc").read_bytes() + b"\n",
+            admin,
+        ).revision
+        with svc.factory.open() as repo:
+            fresh = next(
+                c
+                for c in repo.rechecks(project.id, finding.id)
+                if c.outcome == "RESOLVED" and c.inputs[0].source_revision_id == restored.id
+            )
+            assert repo.finding(project.id, finding.id).state == "CONFIRMED"
+        assert len(adapter.calls) == 4
+        svc.findings.decide(
+            project.id, finding.id, FindingDecision(decision="CLOSED", recheck_id=fresh.id), admin
+        )
+        with svc.factory.open() as repo:
+            assert repo.finding(project.id, finding.id).state == "CLOSED"
     finally:
         svc.close()
 

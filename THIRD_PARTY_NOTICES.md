@@ -83,7 +83,7 @@ explicit.
 - Package: https://pypi.org/project/ifcclash/0.8.5/
 - License: GNU Lesser General Public License v3.0 or later
 - Use: targeted intersection, collision, and clearance runs behind `IfcClashAdapter`
-- Modification: none; SDK records are normalized into project-owned changes and evidence
+- Modification: no SDK source changes; a C-owned per-instance tree recorder wraps the pinned SDK geometry insertion call to verify actual GlobalId coverage. The native collision routines remain unchanged; SDK records are normalized into project-owned changes and evidence
 
 ## IfcTester 0.8.5
 
@@ -92,7 +92,7 @@ explicit.
 - Package: https://pypi.org/project/ifctester/0.8.5/
 - License: GNU Lesser General Public License v3.0 or later
 - Use: IDS parsing and validation behind `IfcTesterAdapter`
-- Modification: none; failures are normalized into project-owned IDS evidence
+- Modification: none; SDK failures, specification status and actual applicability are normalized into project-owned IDS results and verification evidence
 
 ## bcf-client 0.8.5
 

@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[2] / "fixtures/coordination-project"
         lambda: BCFAdapter(max_bytes=0),
         lambda: IfcClashAdapter(max_results=0),
         lambda: IfcTesterAdapter(max_violations=0),
+        lambda: IfcTesterAdapter(max_applicable_entities=0),
     ],
 )
 def test_resource_limits_cannot_be_disabled(factory):
@@ -197,3 +198,28 @@ def test_document_normalization_is_bounded_and_ignores_blank_items(monkeypatch):
     markdown = NS(export_to_markdown=lambda doc: "structured source text", prov=[])
     chunk = normalize_document(NS(iterate_items=lambda: [(markdown, 0)]), "hash")[0]
     assert chunk.text == "structured source text"
+
+
+def test_ids_applicability_overflow_cannot_publish_partial_success():
+    pytest.importorskip("ifctester")
+    with pytest.raises(DomainError, match="applicability result exceeds"):
+        IfcTesterAdapter(max_applicable_entities=1).validate(
+            (ROOT / "R1/structure.ifc").read_bytes(),
+            _repeated_beam_ids(),
+            source_id="structure",
+            source_revision_id="R1",
+        )
+
+
+def _repeated_beam_ids():
+    from ifctester import ids
+    from ifctester.ids import Attribute, Entity, Specification
+    from test_engineering_adapters import local_ids_xml
+
+    document = ids.Ids(title="Bounded applicability")
+    for name in ("First beam rule", "Second beam rule"):
+        specification = Specification(name=name, minOccurs=1, ifcVersion=["IFC4"])
+        specification.applicability = [Entity(name="IFCBEAM")]
+        specification.requirements = [Attribute(name="Name", value="BEAM-01")]
+        document.specifications.append(specification)
+    return local_ids_xml(document)

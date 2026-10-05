@@ -281,7 +281,8 @@ def test_engineering_modules_do_not_load_optional_engines_on_import():
         [
             sys.executable,
             "-c",
-            "import sys; from app.adapters import bcf, ifc_clash, ifc_tester, documents_docling; "
+            "import sys; from app.adapters import bcf, ifc_clash, ifc_tester, documents_docling, "
+            "engineering_verification, clash_geometry_scope, engineering_capabilities; "
             "assert not {'bcf', 'ifcclash', 'ifctester', 'ifcopenshell', "
             "'docling', 'rapidocr', 'onnxruntime'} "
             ".intersection(sys.modules)",
