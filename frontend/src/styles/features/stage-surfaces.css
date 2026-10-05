@@ -39,7 +39,7 @@
 /* One mono readout in the GIS context band. */
 .gis-status {
   flex-shrink: 0;
-  font-family: var(--f-mono);
+  font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--ink-muted);
   white-space: nowrap;
@@ -61,7 +61,7 @@
   border-radius: var(--r-1);
   background: transparent;
   color: var(--ink);
-  font-family: var(--f-mono);
+  font-family: var(--font-mono);
   font-size: var(--fs-xs);
   letter-spacing: 0.06em;
   white-space: nowrap;

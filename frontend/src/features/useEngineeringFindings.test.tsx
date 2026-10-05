@@ -72,21 +72,26 @@ const evidence = (id: string): Evidence => ({
   quality: "structured",
   viewer_target: null,
 });
-const recheck = (outcome: ReCheck["outcome"] = null): ReCheck => ({
-  id: "check",
-  project_id: "p",
-  finding_id: "f",
-  source_id: "source",
-  source_revision_id: "r2",
-  dependencies: [],
-  finding_updated_at: timestamp,
-  request_id: "operation",
-  outcome,
-  evidence_ids: outcome ? ["fresh"] : [],
-  explanation: "Capability result",
-  created_at: timestamp,
-  completed_at: outcome ? timestamp : null,
-});
+const recheck = (outcome: ReCheck["outcome"] = null) => {
+  const check = {
+    id: "check",
+    project_id: "p",
+    finding_id: "f",
+    source_id: "source",
+    source_revision_id: "r2",
+    dependencies: [],
+    finding_updated_at: timestamp,
+    request_id: "operation",
+    outcome,
+    evidence_ids: outcome ? ["fresh"] : [],
+    explanation: "Capability result",
+    created_at: timestamp,
+    completed_at: outcome ? timestamp : null,
+    inputs: [],
+    ids_requirements: null,
+  };
+  return check satisfies ReCheck;
+};
 const run = (status: AgentRun["status"] = "QUEUED"): AgentRun => ({
   id: "check",
   project_id: "p",

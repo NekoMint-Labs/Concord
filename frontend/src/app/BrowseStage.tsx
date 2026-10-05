@@ -40,7 +40,12 @@ import {
   demoDiscipline,
   demoWorkPackageName,
 } from "../ui/demo/demoPresentation";
-import { documentLocation, shortDate, sourceKindLabel, statusLabel } from "../ui/labels";
+import {
+  documentLocation,
+  shortDate,
+  sourceKindLabel,
+  statusLabel,
+} from "../ui/labels";
 import "../styles/features/browse.css";
 
 /** Object kinds in a source's own words are named by `sourceKindLabel` (ui/labels). */
@@ -93,13 +98,7 @@ export function browseNavigatorItems(input: {
   /** Project documents live behind `api.documents`, not on `Workspace`. */
   documents?: DTO<"DocumentMetadata">[];
 }): StageNavigatorItem[] {
-  const {
-    data,
-    sources,
-    findings = [],
-    revisions,
-    documents = [],
-  } = input;
+  const { data, sources, findings = [], revisions, documents = [] } = input;
   const items: StageNavigatorItem[] = [];
 
   for (const status of sources) {
@@ -157,7 +156,9 @@ export function browseNavigatorItems(input: {
   }
 
   for (const workPackage of data.state.work_packages) {
-    const area = data.state.areas.find((item) => item.id === workPackage.area_id);
+    const area = data.state.areas.find(
+      (item) => item.id === workPackage.area_id,
+    );
     const count = findings.filter(
       (finding) => finding.work_package_id === workPackage.id,
     ).length;
@@ -288,7 +289,11 @@ function SourceStage({
           <div>
             <dt className="t-label">最新版本</dt>
             <dd className="t-mono-data">
-              {sourceRevisionLabel(revisions, sourceId, current.latest_revision_id)}
+              {sourceRevisionLabel(
+                revisions,
+                sourceId,
+                current.latest_revision_id,
+              )}
             </dd>
           </div>
           <div>
@@ -309,7 +314,9 @@ function SourceStage({
           </div>
           <div>
             <dt className="t-label">处理状态</dt>
-            <dd className="browse-value">{processingLabel(latestProcessing)}</dd>
+            <dd className="browse-value">
+              {processingLabel(latestProcessing)}
+            </dd>
           </div>
         </dl>
 
@@ -398,7 +405,9 @@ function DocumentStage({
       <StageHead
         kind="文档"
         title={meta?.filename ?? "文档"}
-        meta={meta ? `${meta.parser} · ${shortDate(meta.created_at)}` : undefined}
+        meta={
+          meta ? `${meta.parser} · ${shortDate(meta.created_at)}` : undefined
+        }
         actions={
           <Button variant="ghost" size="sm" onClick={() => onTab("documents")}>
             在文档工作区打开
@@ -500,7 +509,11 @@ function WorkPackageStage({
         title={demoWorkPackageName(workPackage.id, workPackage.name)}
         meta={`${demoAreaName(workPackage.area_id, area?.name ?? workPackage.area_id)} · ${demoDiscipline(workPackage.discipline)}`}
         actions={
-          <Button variant="ghost" size="sm" onClick={() => onTab("work-packages")}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onTab("work-packages")}
+          >
             打开工作包目录
           </Button>
         }
@@ -671,9 +684,13 @@ function FindingStage({
       <div className="browse-stage-body">
         <section className="browse-section" aria-label="工程判断摘要">
           <h3 className="t-label">变化</h3>
-          <p className="browse-copy">{item.what_changed || "未记录变更描述。"}</p>
+          <p className="browse-copy">
+            {item.what_changed || "未记录变更描述。"}
+          </p>
           <h3 className="t-label">影响</h3>
-          <p className="browse-copy">{item.why_it_matters || "未记录影响描述。"}</p>
+          <p className="browse-copy">
+            {item.why_it_matters || "未记录影响描述。"}
+          </p>
           <p className="browse-quiet">
             {item.evidence_ids.length} 条依据 · 判断与编辑在「工作」中进行。
           </p>

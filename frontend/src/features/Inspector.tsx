@@ -34,6 +34,7 @@ export function Inspector({
   selected,
   selectedConstraint,
   selectedEvidenceId,
+  selectedProposalId,
   view,
   perform,
   onClose,
@@ -45,6 +46,7 @@ export function Inspector({
   selected: string;
   selectedConstraint: string;
   selectedEvidenceId?: string;
+  selectedProposalId?: string;
   view: InspectorView;
   perform: (operation: () => Promise<unknown>) => Promise<void>;
   onClose: () => void;
@@ -59,7 +61,9 @@ export function Inspector({
     (item) => item.work_package_id === selected && item.blocking,
   );
   const proposal = workspace.proposals.find(
-    (item) => item.work_package_id === selected,
+    (item) =>
+      item.work_package_id === selected &&
+      (!selectedProposalId || item.id === selectedProposalId),
   );
   const actionRun = proposal
     ? [workspace.analysis_run, workspace.run].find(

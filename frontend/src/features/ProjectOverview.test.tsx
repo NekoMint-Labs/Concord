@@ -1,297 +1,285 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
-import { Manager, Panel, PanelSection, Table } from "@thatopen/ui";
-import { donorButton, donorText } from "../../tests/donor-dom";
-import { afterEach, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
-import { api, type ProjectSourceStatus, type Workspace } from "../api/client";
-import { ProjectHome } from "../app/ProjectHome";
-import type { ProjectContext } from "../app/useProjectContext";
-import { ProjectContextPane } from "./ProjectContextPane";
+import { api, type DTO, type Workspace } from "../api/client";
+import { BrowseStage, browseNavigatorItems } from "../app/BrowseStage";
+import { ContextInspector } from "../app/ContextInspector";
+import { WorkspaceNavigator } from "../app/WorkspaceChrome";
+import { stageKey, stageObject, type StageObject } from "../app/stageContracts";
+import { ProjectExplorer } from "./ProjectExplorer";
 
-Manager.init("", false);
-
-// These tests own disclosure placement and destinations; Radix popup mechanics are primitive/browser-covered.
-vi.mock("../components/ui/AppMenu", () => ({
-  AppMenu: function Menu({
-    label,
-    children,
-  }: {
-    label: string;
-    children: ReactNode;
-  }) {
-    const [open, setOpen] = useState(false);
-    return (
-      <div>
-        <button aria-expanded={open} onClick={() => setOpen(!open)}>
-          {label}
-        </button>
-        {open && <div role="menu">{children}</div>}
-      </div>
-    );
-  },
-  AppMenuItem: ({
-    children,
-    onSelect,
-  }: {
-    children: ReactNode;
-    onSelect: () => void;
-  }) => (
-    <button role="menuitem" onClick={onSelect}>
-      {children}
-    </button>
-  ),
+// The former overview/disclosure layout is gone; use the navigator -> stage -> inspector flow.
+const data = structuredClone(fixture.waiting) as unknown as Workspace;
+const project = data.state.project.id;
+const timestamp = "2026-01-01T00:00:00Z";
+const documents: DTO<"DocumentMetadata">[] = [
+  ["drawing-1", "East-wing drawing.pdf"],
+  ["method-2", "Installation method.pdf"],
+].map(([id, filename]) => ({
+  id,
+  project_id: project,
+  filename,
+  content_hash: `hash-${id}`,
+  parser: "Docling",
+  created_at: timestamp,
 }));
-
-const model: ProjectSourceStatus = {
-  source: {
-    id: "model",
-    project_id: fixture.waiting.state.project.id,
-    name: "MEP",
-    kind: "BIM",
-    created_at: "2026-01-01T00:00:00Z",
-  },
-  latest_revision_id: "r2",
-  accepted_revision_id: "r1",
-  baseline_id: "b1",
-  has_pending_revision: true,
+const finding: DTO<"Finding"> = {
+  id: "finding-opaque",
+  project_id: project,
+  work_package_id: "WP-200",
+  state: "CONFIRMED",
+  snapshot_id: "snapshot",
+  title: "Review duct clearance",
+  conclusion: "Clearance requires review",
+  what_changed: "Duct moved in the issued revision",
+  why_it_matters: "Clearance is below the requirement",
+  reasoning_summary: "Compare the engineering records",
+  confidence: 0.9,
+  evidence_ids: ["evidence-opaque"],
+  change_ids: [],
+  dependencies: [],
+  limitations: [],
+  suggested_action: "Coordinate route",
+  suggested_discipline: "MEP",
+  impact: null,
+  created_at: timestamp,
+  updated_at: timestamp,
 };
 
+beforeEach(() => {
+  vi.spyOn(api, "documents").mockResolvedValue(documents);
+  vi.spyOn(api, "chunks").mockResolvedValue([]);
+  vi.spyOn(api, "engineeringFindings").mockResolvedValue([finding]);
+  vi.spyOn(api, "engineeringFinding").mockResolvedValue(finding);
+});
 afterEach(() => vi.restoreAllMocks());
 
-function mount(workspace: Workspace, sources: ProjectSourceStatus[] = []) {
-  vi.spyOn(api, "capabilities").mockResolvedValue({ capabilities: [] });
-  vi.spyOn(api, "baselines").mockResolvedValue([]);
-  vi.spyOn(api, "documents").mockResolvedValue([]);
-  vi.spyOn(api, "sourceStatuses").mockResolvedValue(sources);
-  vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
-  vi.spyOn(api, "bimBindings").mockResolvedValue([]);
-  vi.spyOn(api, "comparisons").mockResolvedValue([]);
-  const cache = new QueryClient({
+function mount(initial: StageObject | null = null) {
+  const onTab = vi.fn();
+  const onWorkPackage = vi.fn();
+  const onOpenFinding = vi.fn();
+  function Host() {
+    const [object, setObject] = useState(initial);
+    return (
+      <>
+        <WorkspaceNavigator
+          open
+          title="浏览"
+          label="浏览对象"
+          placeholder="搜索对象"
+          empty="还没有项目对象"
+          emptySearch="没有匹配的项目对象"
+          footerLabel="项目资料"
+          items={browseNavigatorItems({
+            data,
+            sources: [],
+            documents,
+            findings: [finding],
+          })}
+          current={object ? stageKey(object) : undefined}
+          onSelect={(key) => setObject(stageObject(key))}
+          onClose={vi.fn()}
+          onFooter={() => onTab("project")}
+        />
+        <BrowseStage
+          project={project}
+          data={data}
+          sources={[]}
+          object={object}
+          perform={async () => {}}
+          onOpen={setObject}
+          onTab={onTab}
+          onWorkPackage={onWorkPackage}
+          onOpenFinding={onOpenFinding}
+          onSource={vi.fn()}
+          onInvestigate={vi.fn()}
+        />
+        <ContextInspector
+          project={project}
+          data={data}
+          sources={[]}
+          object={object}
+          onClose={() => setObject(null)}
+          onOpen={setObject}
+          onWorkPackage={onWorkPackage}
+          onTab={onTab}
+        />
+      </>
+    );
+  }
+  const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
-  const onTab = vi.fn();
-  const onPackage = vi.fn();
-  const onStructure = vi.fn();
-  const view = render(
-    <QueryClientProvider client={cache}>
-      <ProjectHome
-        workspace={workspace}
-        sources={sources}
-        onTab={onTab}
-        onPackage={onPackage}
-        onStructure={onStructure}
-      />
+  render(
+    <QueryClientProvider client={client}>
+      <Host />
     </QueryClientProvider>,
   );
-  return { ...view, onTab, onPackage, onStructure };
+  return { onTab, onWorkPackage, onOpenFinding };
 }
 
-it("keeps state, the source header and baseline, then packages without duplicate inventories", async () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  const { container, onTab, onPackage } = mount(workspace, [model]);
-  const state = screen.getByRole("region", { name: "当前状态" });
-  expect(within(state).getAllByRole("button")).toHaveLength(1);
-  expect(state).toHaveTextContent("有新版本待检查");
-  expect(state).toHaveTextContent(
-    "施工判断仍依据当前基线，不代表新版本已经可施工",
-  );
-  fireEvent.click(
-    within(state).getByRole("button", { name: "核对待审核模型 →" }),
-  );
-  expect(onTab).toHaveBeenLastCalledWith("sources");
-  const baseline = await screen.findByRole("region", { name: "当前基线" });
-  const sourcesHeading = screen.getByRole("heading", { name: "资料" });
-  const ledger = screen.getByRole("region", { name: "工作包状态" });
+it("opens the exact document from search and replaces the selected document rather than falling back to the first one", async () => {
+  const { onTab } = mount();
   expect(
-    state.compareDocumentPosition(sourcesHeading) &
-      Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
-  expect(
-    sourcesHeading.compareDocumentPosition(baseline) &
-      Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
-  expect(
-    baseline.compareDocumentPosition(ledger) & Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
-  expect(
-    container.querySelector(".project-state-footer"),
-  ).not.toHaveTextContent("项目文件");
-  expect(screen.queryByRole("region", { name: "模型与版本" })).toBeNull();
-  expect(screen.queryByRole("region", { name: "版本记录" })).toBeNull();
-  expect(screen.queryByRole("region", { name: "最近活动" })).toBeNull();
-  expect(screen.queryByRole("menuitem", { name: "项目设置" })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "项目操作" }));
-  fireEvent.click(await screen.findByRole("menuitem", { name: "项目设置" }));
-  expect(onTab).toHaveBeenLastCalledWith("settings");
-  const packageTable = ledger.querySelector<Table>("bim-table")!;
-  expect(packageTable.data).toHaveLength(workspace.state.work_packages.length);
-  const wp = workspace.state.work_packages[0];
-  await waitFor(() =>
-    expect(
-      donorButton(`打开 ${packageTable.data[0].data.工作包}`, ledger),
-    ).toBeDefined(),
-  );
-  fireEvent.click(
-    donorButton(`打开 ${packageTable.data[0].data.工作包}`, ledger)!,
-  );
-  expect(onPackage).toHaveBeenCalledExactlyOnceWith(wp.id);
-  const records = screen.getByRole("navigation", { name: "项目内容" });
-  fireEvent.click(within(records).getByRole("button", { name: /文档/ }));
-  expect(onTab).toHaveBeenLastCalledWith("documents");
-  fireEvent.click(within(records).getByRole("button", { name: /历史/ }));
-  expect(onTab).toHaveBeenLastCalledWith("history");
-  await waitFor(() => expect(donorButton("打开 MEP", container)).toBeDefined());
-  expect(donorText("MEP", container)).toBeDefined();
-  fireEvent.click(donorButton("打开 MEP", container)!);
-  expect(
-    await screen.findByRole("complementary", { name: "资料上下文" }),
+    screen.getByRole("heading", { name: "在导航中选择对象" }),
   ).toBeVisible();
-});
-
-it("does not render an empty sidebar inventory or a ready conclusion for an empty project", () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  workspace.state.work_packages = [];
-  workspace.events = [];
-  workspace.analysis = null;
-  const { onStructure, container } = mount(workspace);
+  const navigator = within(
+    screen.getByRole("complementary", { name: "浏览对象" }),
+  );
+  fireEvent.change(navigator.getByRole("textbox"), {
+    target: { value: "  INSTALLATION  " },
+  });
   expect(
-    screen.queryByRole("complementary", { name: "项目上下文" }),
+    navigator.queryByRole("button", { name: /East-wing drawing.pdf/ }),
   ).toBeNull();
-  expect(screen.queryByRole("region", { name: "项目文件" })).toBeNull();
-  expect(screen.queryByRole("region", { name: "工作包状态" })).toBeNull();
-  expect(screen.queryByRole("region", { name: "当前基线" })).toBeNull();
-  expect(screen.getByRole("navigation", { name: "项目内容" })).toBeVisible();
-  expect(screen.queryByRole("region", { name: "基线记录" })).toBeNull();
-  const state = screen.getByRole("region", { name: "当前状态" });
-  expect(state).toHaveTextContent("还没有工作包");
-  expect(within(state).getByRole("heading")).not.toHaveTextContent("可施工");
-  expect(state).toHaveTextContent("当前缺少工程检查范围，尚不能判断施工条件");
-  expect(within(state).getAllByRole("button")).toHaveLength(1);
-  fireEvent.click(within(state).getByRole("button", { name: "添加工作包 →" }));
-  expect(onStructure).toHaveBeenCalledOnce();
-  expect(container.querySelector(".project-workspace > aside")).toBeNull();
-});
-
-it("keeps document previews behind disclosure without changing exact-document navigation or fallback", async () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  workspace.events = [];
-  const context: ProjectContext = {
-    baseline: undefined,
-    baselines: [],
-    models: [],
-    pendingModels: [],
-    documents: [
-      {
-        id: "drawing",
-        project_id: workspace.state.project.id,
-        filename: "Drawing.pdf",
-        content_hash: "hash",
-        parser: "Docling",
-        created_at: "2026-01-01T00:00:00Z",
-      },
-    ],
-    revisionsFor: () => [],
-    revisionNo: () => "—",
-    recordsError: null,
-    recordsPending: false,
-    retryRecords: vi.fn(),
-  };
-  const onTab = vi.fn();
-  const onDocument = vi.fn();
-  const view = render(
-    <ProjectContextPane
-      workspace={workspace}
-      context={context}
-      onTab={onTab}
-      onPackage={vi.fn()}
-      onDocument={onDocument}
-    />,
-  );
-  expect(screen.queryByText("Drawing.pdf")).toBeNull();
-  expect(screen.queryByRole("region", { name: "基线记录" })).toBeNull();
-  expect(screen.queryByRole("region", { name: "最近活动" })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "项目记录详情" }));
-  fireEvent.click(await screen.findByRole("button", { name: /Drawing.pdf/ }));
-  expect(onDocument).toHaveBeenCalledExactlyOnceWith("drawing");
+  const method = navigator.getByRole("button", {
+    name: /Installation method.pdf/,
+  });
+  method.focus();
+  expect(method).toHaveFocus();
+  fireEvent.click(method);
+  expect(
+    await screen.findByRole("heading", { name: "Installation method.pdf" }),
+  ).toBeVisible();
+  expect(api.chunks).toHaveBeenCalledWith("method-2");
+  const inspector = screen.getByRole("complementary", { name: "检查器" });
+  expect(inspector).toHaveTextContent("文档编号method-2");
+  expect(inspector).toHaveTextContent("document:method-2");
+  expect(method).toHaveAttribute("aria-current", "page");
   expect(onTab).not.toHaveBeenCalled();
-  view.rerender(
-    <ProjectContextPane
-      workspace={workspace}
-      context={context}
-      onTab={onTab}
-      onPackage={vi.fn()}
-    />,
+
+  fireEvent.change(navigator.getByRole("textbox"), {
+    target: { value: "drawing" },
+  });
+  fireEvent.click(
+    navigator.getByRole("button", { name: /East-wing drawing.pdf/ }),
   );
-  fireEvent.click(screen.getByRole("button", { name: /Drawing.pdf/ }));
+  expect(
+    await screen.findByRole("heading", { name: "East-wing drawing.pdf" }),
+  ).toBeVisible();
+  expect(api.chunks).toHaveBeenCalledWith("drawing-1");
+  expect(inspector).toHaveTextContent("document:drawing-1");
+  expect(
+    screen.queryByRole("heading", { name: "Installation method.pdf" }),
+  ).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "在文档工作区打开" }));
   expect(onTab).toHaveBeenCalledExactlyOnceWith("documents");
-  expect(onDocument).toHaveBeenCalledOnce();
 });
 
-it("projects engineering content into visible donor panel and section headers", async () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  const { container, onTab } = mount(workspace, [model]);
-  await screen.findByRole("region", { name: "当前基线" });
-  const panel = container.querySelector<Panel>("bim-panel.project-primary")!;
-  const context = container.querySelector<Panel>(
-    "bim-panel.project-context-surface",
-  )!;
-  const sections = [
-    ...container.querySelectorAll<PanelSection>("bim-panel-section"),
-  ];
-  await Promise.all(
-    [panel, context, ...sections].map((element) => element.updateComplete),
+it("keeps document loading, failed extraction reads and successful empty content distinct", async () => {
+  let reject!: (reason: Error) => void;
+  vi.mocked(api.chunks).mockImplementationOnce(
+    () =>
+      new Promise((_, rejectQuery) => {
+        reject = rejectQuery;
+      }),
   );
-  expect(panel.headerHidden).toBe(false);
-  expect(
-    panel.shadowRoot!.querySelector(".header bim-label"),
-  ).toHaveTextContent("项目");
-  expect(panel.querySelector("h1")!.closest("[slot]")).toHaveAttribute(
-    "slot",
-    "header-start",
+  mount({ kind: "document", id: "method-2" });
+  expect(screen.getByText("正在读取文档依据…")).toBeVisible();
+  expect(screen.queryByText("当前文档没有解析内容")).toBeNull();
+  reject(new Error("Extraction unavailable"));
+  expect(await screen.findByRole("alert")).toHaveTextContent("文档依据不可用");
+  expect(screen.queryByText("当前文档没有解析内容")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "关闭检查器" }));
+  const navigator = within(
+    screen.getByRole("complementary", { name: "浏览对象" }),
   );
-  expect(context.headerHidden).toBe(false);
+  fireEvent.click(
+    navigator.getByRole("button", { name: /East-wing drawing.pdf/ }),
+  );
+  expect(await screen.findByText("当前文档没有解析内容")).toBeVisible();
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+it("opens the persisted Finding in Work and its exact work-package context without changing engineering facts", async () => {
+  const before = structuredClone(data);
+  const { onWorkPackage, onOpenFinding } = mount();
+  const navigator = within(
+    screen.getByRole("complementary", { name: "浏览对象" }),
+  );
+  fireEvent.click(
+    navigator.getByRole("button", { name: /Review duct clearance/ }),
+  );
   expect(
-    context.shadowRoot!.querySelector(".header bim-label"),
-  ).toHaveTextContent("项目记录");
-  expect(sections.map((section) => section.label).filter(Boolean)).toEqual([
-    "当前状态",
-    "1 份",
-    `${workspace.state.work_packages.length} 个`,
-  ]);
-  for (const section of sections.filter((section) => section.label)) {
-    expect(section.fixed).toBe(true);
-    expect(section.collapsed).not.toBe(true);
-    expect(section.shadowRoot!.querySelector(".header")).not.toBeNull();
-    expect(
-      section
-        .shadowRoot!.querySelector<HTMLSlotElement>("slot:not([name])")!
-        .assignedElements().length,
-    ).toBeGreaterThan(0);
+    await screen.findByRole("heading", { name: finding.title }),
+  ).toBeVisible();
+  expect(api.engineeringFinding).toHaveBeenCalledWith(project, finding.id);
+  const inspector = screen.getByRole("complementary", { name: "检查器" });
+  expect(
+    await within(inspector).findByText(finding.what_changed),
+  ).toBeVisible();
+  expect(within(inspector).getByText(finding.suggested_action!)).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "在「工作」中打开" }));
+  expect(onOpenFinding).toHaveBeenCalledExactlyOnceWith(finding.id);
+  fireEvent.click(
+    within(inspector).getByRole("button", { name: "在工作面板处理 →" }),
+  );
+  expect(onWorkPackage).toHaveBeenCalledExactlyOnceWith("WP-200");
+  fireEvent.click(
+    within(inspector).getByRole("button", { name: "查看工作包上下文 →" }),
+  );
+  expect(
+    await screen.findByRole("heading", { name: "东翼风管安装" }),
+  ).toBeVisible();
+  expect(inspector).toHaveTextContent("work-package:WP-200");
+  const elements = screen.getByRole("region", { name: "关联构件" });
+  for (const id of data.state.work_packages.find(
+    (item) => item.id === "WP-200",
+  )!.element_ids) {
+    expect(within(elements).getByText(id)).toBeVisible();
   }
-  expect(screen.getByRole("heading", { name: "资料" })).toHaveAttribute(
-    "slot",
-    "header-start",
+  expect(data).toEqual(before);
+});
+
+it("does not invent project inventories or readiness for an empty project", () => {
+  const empty = structuredClone(data);
+  empty.state.work_packages = [];
+  empty.state.sources = [];
+  empty.analysis = null;
+  expect(browseNavigatorItems({ data: empty, sources: [] })).toEqual([]);
+  const onOpen = vi.fn();
+  render(
+    <ProjectExplorer
+      workspace={empty}
+      sources={[]}
+      onOpen={onOpen}
+      onTab={vi.fn()}
+    />,
   );
-  expect(screen.getByRole("heading", { name: "工作包" })).toHaveAttribute(
-    "slot",
-    "header-start",
+  expect(screen.getByText("0 个项目对象")).toBeVisible();
+  expect(screen.queryByRole("region", { name: "工作包" })).toBeNull();
+  expect(screen.queryByRole("region", { name: "资料" })).toBeNull();
+  expect(screen.queryByText("就绪")).toBeNull();
+  expect(onOpen).not.toHaveBeenCalled();
+});
+
+it("keeps the retained compact explorer's real source and package targets exact", () => {
+  const onOpen = vi.fn();
+  const source = {
+    source: {
+      id: "model",
+      project_id: project,
+      name: "MEP",
+      kind: "BIM" as const,
+      created_at: timestamp,
+    },
+    latest_revision_id: "r2",
+    accepted_revision_id: "r1",
+    baseline_id: "b1",
+    has_pending_revision: true,
+  };
+  render(
+    <ProjectExplorer
+      workspace={data}
+      sources={[source]}
+      onOpen={onOpen}
+      onTab={vi.fn()}
+    />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "查看全部 →" }));
-  expect(onTab).toHaveBeenLastCalledWith("work-packages");
-  await waitFor(() => expect(donorButton("打开 MEP", container)).toBeDefined());
-  fireEvent.click(donorButton("打开 MEP", container)!);
-  await screen.findByRole("complementary", { name: "资料上下文" });
-  await waitFor(() => expect(context.label).toBe("资料上下文"));
-  await context.updateComplete;
-  expect(
-    context.shadowRoot!.querySelector(".header bim-label"),
-  ).toHaveTextContent("资料上下文");
+  fireEvent.click(screen.getByRole("button", { name: /^MEP/ }));
+  expect(onOpen).toHaveBeenLastCalledWith({ kind: "source", id: "model" });
+  fireEvent.click(screen.getByRole("button", { name: /^东翼风管安装/ }));
+  expect(onOpen).toHaveBeenLastCalledWith({ kind: "package", id: "WP-200" });
 });

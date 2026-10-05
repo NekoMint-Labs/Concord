@@ -35,7 +35,6 @@ vi.mock("./app/WorkspaceViews", () => ({
         data-mapping={props.mappingMode}
         data-element={props.selectedElement}
         data-source={props.mappingContext?.sourceId}
-        data-finding-entries={JSON.stringify(props.findingEntries ?? [])}
         data-history-report={props.report?.answer.summary ?? ""}
         data-history-revision={props.investigationContext.revisionId ?? ""}
         data-history-work-package={
@@ -54,17 +53,6 @@ vi.mock("./app/WorkspaceViews", () => ({
         Inspect source impact
       </button>
       <button onClick={() => props.onDetailsOpen(true)}>Open inspector</button>
-      {props.findingEntries?.map((entry) => (
-        <button
-          key={`${entry.target.id}-${entry.title}`}
-          onClick={() => {
-            if (entry.target.kind === "finding")
-              props.onOpenFinding?.(entry.target.id, entry.target.evidenceId);
-          }}
-        >
-          {entry.title}
-        </button>
-      ))}
       {props.tab === "bim" && (
         <SourceContextPane
           project={props.project}
@@ -343,7 +331,7 @@ it("discards WP, source, element, mapping and inspector context when switching c
   expect(screen.getByTestId("rail")).toHaveAttribute("data-tab", "work");
   await waitFor(() => expect(currentPackage()).toHaveValue("new-package"));
 
-  // A WorkspaceViews destination shows the reset context and the new project's Findings.
+  // A WorkspaceViews destination shows the reset context.
   fireEvent.click(screen.getByRole("button", { name: "模型工作区" }));
   const reset = await screen.findByTestId("context");
   expect(reset).toHaveAttribute("data-project", "project-b");
@@ -351,23 +339,25 @@ it("discards WP, source, element, mapping and inspector context when switching c
   expect(reset).toHaveAttribute("data-mapping", "false");
   expect(reset).toHaveAttribute("data-element", "");
   expect(reset).not.toHaveAttribute("data-source");
-  await waitFor(() =>
-    expect(reset).toHaveAttribute(
-      "data-finding-entries",
-      expect.stringContaining(findingB.title),
-    ),
-  );
-  expect(reset).not.toHaveAttribute(
-    "data-finding-entries",
-    expect.stringContaining(findingA.id),
-  );
 
-  // The new project's Finding is selectable from its own WorkspaceViews entries.
-  fireEvent.click(
-    within(reset.parentElement!).getByText(findingB.title, {
-      selector: "button",
-    }),
+  // App owns Finding command entries; WorkspaceViews does not receive that list.
+  fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+  const projectCommand = within(
+    screen.getByRole("dialog", { name: "查找对象或操作" }),
   );
+  fireEvent.change(
+    projectCommand.getByRole("combobox", { name: "搜索对象或操作" }),
+    { target: { value: "engineering finding" } },
+  );
+  const currentFinding = await projectCommand.findByRole("option", {
+    name: new RegExp(`^${findingB.title}`),
+  });
+  expect(
+    projectCommand.queryByRole("option", {
+      name: new RegExp(`^${findingA.title}`),
+    }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(currentFinding);
   await waitFor(() =>
     expect(screen.getByTestId("work-context")).toHaveAttribute(
       "data-finding-id",
@@ -375,6 +365,10 @@ it("discards WP, source, element, mapping and inspector context when switching c
     ),
   );
   expect(screen.getByTestId("rail")).toHaveAttribute("data-tab", "work");
+  expect(screen.getByTestId("work-context")).toHaveAttribute(
+    "data-finding-evidence",
+    "",
+  );
   expect(api.engineeringFindings).toHaveBeenCalledWith("project-a");
   expect(api.engineeringFindings).toHaveBeenCalledWith("project-b");
   cache.clear();

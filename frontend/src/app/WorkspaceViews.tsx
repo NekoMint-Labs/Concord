@@ -10,7 +10,7 @@
  * App inside `[data-canvas-workspace]`, exactly as the donor mounts its
  * WorkspacePanel beside the canvas.
  */
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 
 import { ViewerBoundary } from "../components/ViewerBoundary";
 import { WorkspaceState } from "../components/WorkspaceState";
@@ -29,6 +29,9 @@ import { ModelWorkspaceView } from "./ModelWorkspaceView";
 import { BrowseStage } from "./BrowseStage";
 import { ProjectStage } from "./ProjectStage";
 import { ContextInspector } from "./ContextInspector";
+import { InvestigationInspector } from "../features/InvestigationInspector";
+import { Inspector } from "../features/Inspector";
+import { reportMatchesRun } from "../features/agentContext";
 import type { StageObject } from "./stageContracts";
 import { useWorkspaceNavigation } from "./useWorkspaceNavigation";
 import type { WorkspaceViewsProps } from "./WorkspaceViewsProps";
@@ -73,6 +76,20 @@ export function WorkspaceViews(props: StageProps) {
     onOpenFinding,
   } = props;
   const navigation = useWorkspaceNavigation(props);
+  const [reviewProposalId, setReviewProposalId] = useState<string>();
+  const reportProposal =
+    run?.project_id === project && reportMatchesRun(report, run)
+      ? data.proposals.find(
+          (proposal) =>
+            proposal.project_id === project &&
+            proposal.run_id === report!.run_id &&
+            proposal.generation === report!.generation &&
+            (!report!.scope.work_package_ids.length ||
+              report!.scope.work_package_ids.includes(
+                proposal.work_package_id,
+              )),
+        )
+      : undefined;
   const width = usePaneWidth();
   const condensed = condensedFor(width, detailsOpen);
   const stackedInspector = detailsOpen && width <= 1120;
@@ -243,33 +260,72 @@ export function WorkspaceViews(props: StageProps) {
         <Pane
           id="inspector-pane"
           className="inspector-pane pane-stack"
-          defaultSize={
-            stackedInspector ? "250px" : inspectorWidthFor(width)
-          }
+          defaultSize={stackedInspector ? "250px" : inspectorWidthFor(width)}
           minSize={stackedInspector ? "180px" : "240px"}
           maxSize={stackedInspector ? "50%" : "480px"}
         >
-          <ContextInspector
-            project={project}
-            data={data}
-            sources={modelSources}
-            object={
-              stage ??
-              (selected ? { kind: "work-package" as const, id: selected } : null)
-            }
-            report={report}
-            run={run}
-            context={props.investigationContext}
-            busy={props.busy}
-            perform={perform}
-            onClose={() => onDetailsOpen(false)}
-            onOpen={onStage}
-            onWorkPackage={(id) => {
-              props.onSelected(id);
-              onTab("coordination");
-            }}
-            onTab={onTab}
-          />
+          {props.inspectorView === "investigation" ? (
+            <InvestigationInspector
+              project={project}
+              report={report}
+              run={run}
+              context={props.investigationContext}
+              onClose={() => onDetailsOpen(false)}
+              proposal={reportProposal}
+              onReview={
+                reportProposal
+                  ? () => {
+                      setReviewProposalId(reportProposal.id);
+                      navigation.openWorkPackage(
+                        reportProposal.work_package_id,
+                      );
+                      onStage?.({
+                        kind: "work-package",
+                        id: reportProposal.work_package_id,
+                      });
+                      props.onInspectorView("action");
+                      onDetailsOpen(true);
+                    }
+                  : undefined
+              }
+            />
+          ) : props.inspectorView === "action" ? (
+            <Inspector
+              workspace={data}
+              selected={selected}
+              selectedConstraint={props.selectedConstraint}
+              selectedProposalId={reviewProposalId}
+              view="action"
+              busy={props.busy}
+              perform={perform}
+              onClose={() => onDetailsOpen(false)}
+              onView={props.onInspectorView}
+            />
+          ) : (
+            <ContextInspector
+              project={project}
+              data={data}
+              sources={modelSources}
+              object={
+                stage ??
+                (selected
+                  ? { kind: "work-package" as const, id: selected }
+                  : null)
+              }
+              report={report}
+              run={run}
+              context={props.investigationContext}
+              busy={props.busy}
+              perform={perform}
+              onClose={() => onDetailsOpen(false)}
+              onOpen={onStage}
+              onWorkPackage={(id) => {
+                props.onSelected(id);
+                onTab("coordination");
+              }}
+              onTab={onTab}
+            />
+          )}
         </Pane>
       )}
     </PaneSplit>

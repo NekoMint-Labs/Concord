@@ -18,7 +18,7 @@ import {
   type DockSide,
   type Layout,
   type WorkspacePreferences,
-} from "./workspaceLayout";
+} from "./workspaceLayoutState";
 
 // Personal preferences survive project-keyed remounts even without storage.
 let sessionPreferences: WorkspacePreferences | null = null;

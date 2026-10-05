@@ -3,11 +3,8 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { api, type DTO } from "../api/client";
 import { BaselineHistory, baselineEntryLabel } from "./BaselineHistory";
-import {
-  ProjectSources,
-  freshCheckAfterImport,
-  revisionState,
-} from "./ProjectSources";
+import { freshCheckAfterImport, revisionState } from "./useProjectSources";
+import { ProjectSourceRegister } from "./ProjectSourceRegister";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -166,40 +163,73 @@ it("groups the empty baseline explanation with one existing Open Project action"
   expect(onProject).toHaveBeenCalledOnce();
 });
 
-it("keeps history loading, error/retry, and successful empty states distinct", async () => {
-  let rejectHistory!: (reason: Error) => void;
+it("keeps register loading, error/retry, and successful empty states distinct", async () => {
+  let rejectSources!: (reason: Error) => void;
   vi.spyOn(api, "capabilities").mockResolvedValue({ capabilities: [] });
-  vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
-  const history = vi
-    .spyOn(api, "baselines")
+  vi.spyOn(api, "baselines").mockResolvedValue([]);
+  const sources = vi
+    .spyOn(api, "sourceStatuses")
     .mockImplementationOnce(
       () =>
         new Promise((_, reject) => {
-          rejectHistory = reject;
+          rejectSources = reject;
         }),
     )
     .mockResolvedValueOnce([]);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
-  const onProject = vi.fn();
+  const onSelectSource = vi.fn();
   render(
     <QueryClientProvider client={client}>
-      <ProjectSources project="project" historyOnly onProject={onProject} />
+      <ProjectSourceRegister
+        project="project"
+        onSelectSource={onSelectSource}
+      />
     </QueryClientProvider>,
   );
-  expect(screen.getByRole("status")).toHaveTextContent("正在读取基线历史…");
-  expect(screen.queryByText("尚未确认项目基线")).not.toBeInTheDocument();
-  rejectHistory(new Error("历史暂时无法读取"));
+  expect(screen.getByRole("status")).toHaveTextContent("正在读取资料…");
+  expect(screen.queryByText(/还没有资料。/)).toBeNull();
+  rejectSources(new Error("资料暂时无法读取"));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "资料暂时无法读取",
+  );
+  expect(screen.queryByText(/还没有资料。/)).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "重新读取" }));
+  expect(await screen.findByText(/还没有资料。添加 IFC/)).toBeVisible();
+  expect(sources).toHaveBeenCalledTimes(2);
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByRole("region", { name: "当前基线" })).toBeNull();
+  expect(onSelectSource).not.toHaveBeenCalled();
+});
+
+it("reports failed baseline history reads in the replacement register rather than fabricating an empty baseline", async () => {
+  vi.spyOn(api, "capabilities").mockResolvedValue({ capabilities: [] });
+  vi.spyOn(api, "sourceStatuses").mockResolvedValue([source]);
+  vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
+  const history = vi
+    .spyOn(api, "baselines")
+    .mockRejectedValueOnce(new Error("历史暂时无法读取"))
+    .mockResolvedValueOnce([baseline]);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <ProjectSourceRegister project="project" onSelectSource={vi.fn()} />
+    </QueryClientProvider>,
+  );
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "历史暂时无法读取",
   );
-  expect(screen.queryByText("尚未确认项目基线")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "重试读取历史" }));
-  expect(
-    await screen.findByRole("heading", { name: "尚未确认项目基线" }),
-  ).toBeVisible();
+  expect(screen.queryByText("尚未确认项目基线")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "重新读取" }));
+  expect(await screen.findByText("B1")).toBeVisible();
   expect(history).toHaveBeenCalledTimes(2);
-  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  expect(screen.getAllByRole("button", { name: "打开项目 →" })).toHaveLength(1);
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByText("确认人 reviewer")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "基线记录与操作" }));
+  expect(screen.getByText("确认人 reviewer")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "B1 · 1 个资料版本" }));
+  expect(screen.getByText("MEP model：Rr1")).toBeVisible();
 });
