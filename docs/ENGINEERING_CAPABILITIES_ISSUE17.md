@@ -937,3 +937,18 @@ A's trusted PDF/CAD invocation/publication handoff and platform review, B's font
 cleanup and actual integration/rebase, native connectors and final persisted
 Golden acceptance remain outstanding. #22 remains Draft; these results do not
 complete Issue #17 or constitute a final approval.
+
+## October 5, 2026 trusted PDF/CAD execution continuation
+
+C's opt-in pinned executor now consumes Draft #26 in an isolated A+C tree.
+Real Golden PDF/DXF workers supply bounded raw output; canonical mappers and
+extracted Evidence retain exact ordered revision/hash, engine/settings, snapshot
+and immutable artifact provenance. Authorized cache reuse, identical-operation
+replay, missing-cache recomputation, explicit failures and stale-pair rejection
+are qualified through the platform lifecycle. No default registration or B-owned
+product composition is changed. The dependency remains Draft and must land before
+this continuation integrates with main. See
+[`PINNED_COMPARISON_EXECUTORS.md`](PINNED_COMPARISON_EXECUTORS.md) for provisioning,
+checks, supported settings and limitations. Native connectors, A-owned deployment
+registration/bundling, B's actual rebase and final persisted Golden acceptance
+remain open; green checks alone do not complete Issue #17.

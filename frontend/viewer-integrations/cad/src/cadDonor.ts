@@ -4,7 +4,11 @@ import {
   type AcApDocument,
 } from "@mlightcad/cad-simple-viewer";
 import { AcApDiffViewer } from "../vendor/AcApDiffViewer";
-import { disposeCadComparisons, registerCadDatabase } from "./cadCompareClient";
+import {
+  compareCadDatabases,
+  disposeCadComparisons,
+  registerCadDatabase,
+} from "./cadCompareClient";
 import { AcDbEntity, AcGeBox2d } from "@mlightcad/data-model";
 import type { CadNavigation, CadViewBounds } from "./cadTypes";
 import { validateCadTarget, verifyCadSource } from "./cadTypes";
@@ -166,4 +170,21 @@ export async function navigateCadEntity(
     ...(layer ? { layer } : {}),
     viewBounds,
   };
+}
+
+/** Trusted C-owned worker entry; SDK databases remain inside the isolated adapter. */
+export function compareLoadedCadSources(
+  beforeRevision: string,
+  afterRevision: string,
+  options: import("../vendor/compare").AcApDiffCompareOptions,
+) {
+  const before = bindings.get(beforeRevision),
+    after = bindings.get(afterRevision);
+  if (!viewer || !before || !after || beforeRevision === afterRevision)
+    return Promise.reject(new Error("Trusted CAD revisions are not loaded"));
+  return compareCadDatabases(
+    before.document.database,
+    after.document.database,
+    options,
+  );
 }

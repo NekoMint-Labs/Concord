@@ -63,3 +63,14 @@ pnpm --dir frontend exec playwright test --config playwright.engineering.config.
 `vendor/AcApDiffViewer.patch` record the complete source adaptations against
 the pinned donor revision. The donor source and license remain under the
 isolated vendor boundary; no production dependency is changed by this seam.
+
+## Trusted backend execution entry
+
+`trusted.html` and `src/trustedExecution.ts` expose a separate C-owned entry for
+the optional fixed Node/headless-browser executor. It opens the verified ordered
+originals using the same native parser, waits for donor initialization and uses
+`compareLoadedCadSources` for non-default settings against those databases.
+No browser-result write API or second parser is added; raw output and canonical
+publication go through A's ComparisonExecutor lifecycle. The interactive viewer
+entry and host messages are unchanged. Provisioning, pinned browser identity,
+limits and qualification are in `docs/PINNED_COMPARISON_EXECUTORS.md`.

@@ -252,3 +252,17 @@ Navisworks IFC staging is unavailable until a real host conversion path is
 qualified. The pinned Speckle Sharp Connectors reference inspected above has no
 Navisworks implementation. Revit/AutoCAD staging is exported-byte validation;
 these boundaries are not redistributed native Autodesk SDKs or host installers.
+
+## Optional trusted comparison runner
+
+Issue #17's C-owned Node/headless-browser pack reuses the existing locked
+Playwright 1.63.0 (Apache-2.0) and its Chromium 153.0.8010.12 distribution
+(Playwright revision 1243; Chromium BSD-style and bundled third-party licenses).
+Install the browser with the pinned Playwright package and preserve its notices
+in any future redistributed runtime. This change does not commit or redistribute
+a browser binary, add an npm dependency, or qualify native installer packaging.
+No Playwright or Chromium source is modified. Both runtime versions join the
+executor identity and mismatches fail explicitly. The PDF/CAD donor licenses and
+recorded source adaptations above continue to apply. A separate C-owned CAD entry
+reuses the native database/parser and comparison worker; the donor matcher and
+renderer are unchanged. See `docs/PINNED_COMPARISON_EXECUTORS.md`.
