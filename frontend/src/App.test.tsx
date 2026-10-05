@@ -104,21 +104,27 @@ vi.mock("./features/FindingWorkbench", () => ({
 }));
 
 vi.mock("./features/ConcordAgent", () => ({
-  ConcordAgent: ({
-    context,
-    currentRun,
-    report,
-  }: {
-    context: {
-      sourceId?: string;
-      fromRevisionId?: string;
-      revisionId?: string;
-      workPackageId?: string;
-      elementIds: string[];
-    };
-    currentRun?: { id: string } | null;
-    report?: { answer: { summary: string } } | null;
-  }) => (
+  ConcordAgent: AgentContextProbe,
+  /* The docked Work panel mounts the same surface; the probe stands in for both so the
+   * context assertions hold whichever surface is rendering. */
+  ConcordAgentSurface: AgentContextProbe,
+}));
+function AgentContextProbe({
+  context,
+  currentRun,
+  report,
+}: {
+  context: {
+    sourceId?: string;
+    fromRevisionId?: string;
+    revisionId?: string;
+    workPackageId?: string;
+    elementIds: string[];
+  };
+  currentRun?: { id: string } | null;
+  report?: { answer: { summary: string } } | null;
+}) {
+  return (
     <output
       data-testid="agent-context"
       data-source={context.sourceId ?? ""}
@@ -129,8 +135,8 @@ vi.mock("./features/ConcordAgent", () => ({
       data-run={currentRun?.id ?? ""}
       data-report={report?.answer.summary ?? ""}
     />
-  ),
-}));
+  );
+}
 vi.mock("./api/stream", () => ({ useRunStream: () => [] }));
 vi.mock("./layout/PaneSplit", () => ({
   PaneSplit: ({ children }: { children: import("react").ReactNode }) => (
@@ -315,7 +321,7 @@ it("discards WP, source, element, mapping and inspector context when switching c
   expect(beforeSwitch).toHaveAttribute("data-element", "old-element");
   expect(beforeSwitch).toHaveAttribute("data-inspector", "true");
 
-  fireEvent.click(screen.getByRole("button", { name: "打开" }));
+  fireEvent.click(screen.getByRole("button", { name: "打开或新建项目" }));
   const chooser = await screen.findByRole("dialog", { name: "打开项目" });
   fireEvent.click(within(chooser).getByRole("button", { name: /项目 B/ }));
 

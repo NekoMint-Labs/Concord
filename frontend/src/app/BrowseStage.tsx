@@ -22,7 +22,6 @@ import { stageKey } from "./stageContracts";
 import type { WorkspaceTab } from "./destinations";
 import { WorkspaceState } from "../components/WorkspaceState";
 import { WorkspaceInlineState } from "../components/WorkspaceInlineState";
-import { Button } from "../components/ui/button";
 import { SourceDetailRevisionHistory } from "../features/SourceDetailRevisionHistory";
 import { RevisionImpact } from "../features/RevisionImpact";
 import {
@@ -46,7 +45,25 @@ import {
   sourceKindLabel,
   statusLabel,
 } from "../ui/labels";
+import { StageBand, StageFact } from "./StageBand";
 import "../styles/features/browse.css";
+
+type ChipTone = "neutral" | "positive" | "warning" | "danger";
+
+/** A state chip inside a band or a row: the product's one informational badge. */
+function StateChip({
+  tone,
+  children,
+}: {
+  tone: ChipTone;
+  children: ReactNode;
+}) {
+  return (
+    <span className="concord-chip" data-tone={tone}>
+      {children}
+    </span>
+  );
+}
 
 /** Object kinds in a source's own words are named by `sourceKindLabel` (ui/labels). */
 const revisionRoles = {
@@ -65,6 +82,13 @@ const sourceStateText = (status: ProjectSourceStatus): string =>
       : status.has_pending_revision
         ? "新版本待检查"
         : "当前基线";
+
+const sourceStateTone = (status: ProjectSourceStatus): ChipTone =>
+  !status.latest_revision_id
+    ? "neutral"
+    : status.has_pending_revision || !status.accepted_revision_id
+      ? "warning"
+      : "positive";
 
 /**
  * A revision sequence is shown as `R{n}` only when a loaded catalog or the
@@ -111,6 +135,7 @@ export function browseNavigatorItems(input: {
       : null;
     items.push({
       key: stageKey({ kind: "source", id: status.source.id }),
+      kind: "source",
       label: status.source.name,
       file: `${sourceKindLabel(status.source.kind)} · ${tag ?? "尚未上传"} · ${sourceStateText(status)}`,
       group: "资料",
@@ -130,12 +155,18 @@ export function browseNavigatorItems(input: {
       if (!revisionId || seen.has(revisionId)) continue;
       seen.add(revisionId);
       const role = revisionState(status, revisionId);
+      /* A revision is a child of its source, not a peer of it. The row states its
+       * own class (`kind` becomes `data-kind` on the DOM row) and the navigator
+       * draws it indented, one tier quieter - so the source stays the parent and
+       * the revision reads as the thing that came out of it, instead of two equal
+       * rows carrying the same name. */
       items.push({
         key: stageKey({
           kind: "revision",
           sourceId: status.source.id,
           id: revisionId,
         }),
+        kind: "revision",
         label: `${status.source.name} · ${revisionTag(
           sequenceOf(data, revisions, revisionId),
           role,
@@ -149,6 +180,7 @@ export function browseNavigatorItems(input: {
   for (const document of documents) {
     items.push({
       key: stageKey({ kind: "document", id: document.id }),
+      kind: "document",
       label: document.filename,
       file: `${document.parser} · ${shortDate(document.created_at)}`,
       group: "文档",
@@ -164,6 +196,7 @@ export function browseNavigatorItems(input: {
     ).length;
     items.push({
       key: stageKey({ kind: "work-package", id: workPackage.id }),
+      kind: "work-package",
       label: demoWorkPackageName(workPackage.id, workPackage.name),
       file: `${demoAreaName(workPackage.area_id, area?.name ?? workPackage.area_id)} · ${demoDiscipline(workPackage.discipline)}`,
       count: count || undefined,
@@ -174,6 +207,7 @@ export function browseNavigatorItems(input: {
   for (const finding of findings) {
     items.push({
       key: stageKey({ kind: "finding", id: finding.id }),
+      kind: "finding",
       label: finding.title,
       file: `${findingStateLabels[finding.state]} · ${
         finding.suggested_discipline
@@ -194,27 +228,26 @@ type InvestigateInput = {
   elementIds?: string[];
 };
 
-/** Identity line of the selected object. Not a page header, the object's own. */
-function StageHead({
-  kind,
-  title,
-  meta,
-  actions,
+/** A section card: an object on the work plane with its own head, on the width. */
+function StageSection({
+  label,
+  count,
+  children,
 }: {
-  kind: string;
-  title: string;
-  meta?: ReactNode;
-  actions?: ReactNode;
+  label: string;
+  count?: number | string;
+  children: ReactNode;
 }) {
   return (
-    <header className="browse-stage-head">
-      <div className="browse-identity">
-        <span className="t-label browse-kind">{kind}</span>
-        <h2>{title}</h2>
-        {meta && <p className="browse-head-meta">{meta}</p>}
-      </div>
-      {actions && <div className="browse-head-actions">{actions}</div>}
-    </header>
+    <section className="stage-card" aria-label={label}>
+      <header className="stage-card-head">
+        <span className="t-label">{label}</span>
+        {count !== undefined && (
+          <span className="stage-card-count">{count}</span>
+        )}
+      </header>
+      <div className="stage-card-body">{children}</div>
+    </section>
   );
 }
 
@@ -251,10 +284,12 @@ function SourceStage({
 
   if (!current)
     return (
-      <div className="browse-stage-body">
-        <WorkspaceInlineState title="正在读取资料…">
-          正在准备该资料的版本、基线与处理状态。
-        </WorkspaceInlineState>
+      <div className="workspace-stage-body stage-body">
+        <div className="stage-canvas">
+          <WorkspaceInlineState title="正在读取资料…">
+            正在准备该资料的版本、基线与处理状态。
+          </WorkspaceInlineState>
+        </div>
       </div>
     );
 
@@ -262,15 +297,30 @@ function SourceStage({
   const baseline = baselines.at(-1);
   return (
     <>
-      <StageHead
+      <StageBand
         kind="资料"
         title={current.source.name}
-        meta={`${sourceKindLabel(current.source.kind)} · ${sourceStateText(current)}`}
+        meta={
+          <>
+            <StageFact label="类型">
+              {sourceKindLabel(current.source.kind)}
+            </StageFact>
+            <StageFact label="最新版本">
+              {sourceRevisionLabel(
+                revisions,
+                sourceId,
+                current.latest_revision_id,
+              )}
+            </StageFact>
+            <StateChip tone={sourceStateTone(current)}>
+              {sourceStateText(current)}
+            </StateChip>
+          </>
+        }
         actions={
           latestRevisionId && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               onClick={() =>
                 onOpen({
                   kind: "revision",
@@ -280,103 +330,113 @@ function SourceStage({
               }
             >
               查看最新版本
-            </Button>
+            </button>
           )
         }
       />
-      <div className="browse-stage-body">
-        <dl className="browse-meta">
-          <div>
-            <dt className="t-label">最新版本</dt>
-            <dd className="t-mono-data">
-              {sourceRevisionLabel(
-                revisions,
-                sourceId,
-                current.latest_revision_id,
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="t-label">当前基线</dt>
-            <dd className="t-mono-data">
-              {baseline ? `B${baseline.sequence}` : "尚未确认"}
-            </dd>
-          </div>
-          <div>
-            <dt className="t-label">基线版本</dt>
-            <dd className="t-mono-data">
-              {sourceRevisionLabel(
-                revisions,
-                sourceId,
-                current.accepted_revision_id,
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="t-label">处理状态</dt>
-            <dd className="browse-value">
-              {processingLabel(latestProcessing)}
-            </dd>
-          </div>
-        </dl>
+      <div className="workspace-stage-body stage-body">
+        <div className="stage-canvas">
+          <div className="stage-split is-aside">
+            <StageSection label="版本状态">
+              <dl className="stage-facts is-spec">
+                <div>
+                  <dt className="t-label">最新版本</dt>
+                  <dd className="t-mono-data">
+                    {sourceRevisionLabel(
+                      revisions,
+                      sourceId,
+                      current.latest_revision_id,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="t-label">当前基线</dt>
+                  <dd className="t-mono-data">
+                    {baseline ? `B${baseline.sequence}` : "尚未确认"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="t-label">基线版本</dt>
+                  <dd className="t-mono-data">
+                    {sourceRevisionLabel(
+                      revisions,
+                      sourceId,
+                      current.accepted_revision_id,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="t-label">处理状态</dt>
+                  <dd>{processingLabel(latestProcessing)}</dd>
+                </div>
+              </dl>
+            </StageSection>
 
-        {current.source.kind === "BIM" && (
-          <section className="browse-section" aria-label="版本比较">
-            <h3 className="t-label">版本比较</h3>
-            <RevisionImpact
-              project={project}
-              source={sourceId}
-              revisions={revisions}
-              comparisons={sourceData.comparisons.data ?? []}
-              comparing={sourceData.compare.isPending}
-              imported={
-                latestRevision
-                  ? processing.states.get(latestRevision.id)?.run?.status ===
-                    "COMPLETED"
-                  : false
-              }
-              acceptedRevisionId={current.accepted_revision_id}
-              error={sourceData.comparisons.error}
-              onCompare={(from, to) =>
-                sourceData.compare.mutate({
-                  from_revision_id: from,
-                  to_revision_id: to,
-                })
-              }
-              onSelectComparison={() => {}}
-              onInvestigate={(comparison, elementIds) =>
-                onInvestigate({
-                  sourceId,
-                  revisionId: comparison.to_revision_id,
-                  fromRevisionId: comparison.from_revision_id,
-                  elementIds,
-                })
-              }
-              onInspect={(input) => onWorkPackage(input.workPackageId)}
-              workPackages={data.state.work_packages}
-            />
-          </section>
-        )}
+            <div className="stage-stack">
+              {current.source.kind === "BIM" && (
+                <StageSection label="版本比较">
+                  <RevisionImpact
+                    project={project}
+                    source={sourceId}
+                    revisions={revisions}
+                    comparisons={sourceData.comparisons.data ?? []}
+                    comparing={sourceData.compare.isPending}
+                    imported={
+                      latestRevision
+                        ? processing.states.get(latestRevision.id)?.run
+                            ?.status === "COMPLETED"
+                        : false
+                    }
+                    acceptedRevisionId={current.accepted_revision_id}
+                    error={sourceData.comparisons.error}
+                    onCompare={(from, to) =>
+                      sourceData.compare.mutate({
+                        from_revision_id: from,
+                        to_revision_id: to,
+                      })
+                    }
+                    onSelectComparison={() => {}}
+                    onInvestigate={(comparison, elementIds) =>
+                      onInvestigate({
+                        sourceId,
+                        revisionId: comparison.to_revision_id,
+                        fromRevisionId: comparison.from_revision_id,
+                        elementIds,
+                      })
+                    }
+                    onInspect={(input) => onWorkPackage(input.workPackageId)}
+                    workPackages={data.state.work_packages}
+                  />
+                </StageSection>
+              )}
 
-        <section className="browse-section" aria-label="版本历史与处理">
-          <SourceDetailRevisionHistory
-            project={project}
-            current={current}
-            revisions={revisions}
-            baselines={baselines}
-            loading={sourceData.revisions.isPending}
-            processing={processing}
-            focusRevisionId={focusRevisionId}
-            onInvestigate={(sid, revisionId, fromRevisionId, elementIds) =>
-              onInvestigate({
-                sourceId: sid,
-                revisionId,
-                fromRevisionId,
-                elementIds,
-              })
-            }
-          />
-        </section>
+              <StageSection label="版本历史与处理">
+                <SourceDetailRevisionHistory
+                  project={project}
+                  current={current}
+                  revisions={revisions}
+                  baselines={baselines}
+                  loading={sourceData.revisions.isPending}
+                  processing={processing}
+                  focusRevisionId={focusRevisionId}
+                  onInvestigate={(
+                    sid,
+                    revisionId,
+                    fromRevisionId,
+                    elementIds,
+                  ) =>
+                    onInvestigate({
+                      sourceId: sid,
+                      revisionId,
+                      fromRevisionId,
+                      elementIds,
+                    })
+                  }
+                />
+              </StageSection>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -402,50 +462,56 @@ function DocumentStage({
   });
   return (
     <>
-      <StageHead
+      <StageBand
         kind="文档"
         title={meta?.filename ?? "文档"}
         meta={
-          meta ? `${meta.parser} · ${shortDate(meta.created_at)}` : undefined
+          meta && (
+            <StageFact label="解析">
+              {`${meta.parser} · ${shortDate(meta.created_at)}`}
+            </StageFact>
+          )
         }
         actions={
-          <Button variant="ghost" size="sm" onClick={() => onTab("documents")}>
+          <button type="button" onClick={() => onTab("documents")}>
             在文档工作区打开
-          </Button>
+          </button>
         }
       />
-      <div className="browse-stage-body">
-        {documents.isError || chunks.isError ? (
-          <WorkspaceInlineState title="文档依据不可用" alert>
-            未能读取该文档或它的解析内容。
-          </WorkspaceInlineState>
-        ) : documents.isPending || chunks.isPending ? (
-          <WorkspaceInlineState title="正在读取文档依据…">
-            正在准备解析内容。
-          </WorkspaceInlineState>
-        ) : !chunks.data?.length ? (
-          <WorkspaceState
-            kind="empty"
-            title="当前文档没有解析内容"
-            description="导入或重新解析文档后，抽取内容会显示在这里。"
-          />
-        ) : (
-          chunks.data.map((chunk) => (
-            <article className="browse-chunk" key={chunk.id}>
-              <header className="browse-chunk-head">
-                <span className="t-label">页码</span>
-                <span className="t-mono-data">{chunk.page ?? "—"}</span>
-                <span className="t-label">位置</span>
-                <span className="t-mono-data">
-                  {documentLocation(chunk.location)}
-                </span>
-              </header>
-              <div className="browse-chunk-body">
-                <pre>{chunk.text.replace(/^#{1,6} /gm, "")}</pre>
-              </div>
-            </article>
-          ))
-        )}
+      <div className="workspace-stage-body stage-body">
+        <div className="stage-canvas is-reading">
+          {documents.isError || chunks.isError ? (
+            <WorkspaceInlineState title="文档依据不可用" alert>
+              未能读取该文档或它的解析内容。
+            </WorkspaceInlineState>
+          ) : documents.isPending || chunks.isPending ? (
+            <WorkspaceInlineState title="正在读取文档依据…">
+              正在准备解析内容。
+            </WorkspaceInlineState>
+          ) : !chunks.data?.length ? (
+            <WorkspaceState
+              kind="empty"
+              title="当前文档没有解析内容"
+              description="导入或重新解析文档后，抽取内容会显示在这里。"
+            />
+          ) : (
+            chunks.data.map((chunk) => (
+              <article className="browse-chunk" key={chunk.id}>
+                <header className="browse-chunk-head">
+                  <span className="t-label">页码</span>
+                  <span className="t-mono-data">{chunk.page ?? "—"}</span>
+                  <span className="t-label">位置</span>
+                  <span className="t-mono-data">
+                    {documentLocation(chunk.location)}
+                  </span>
+                </header>
+                <div className="browse-chunk-body">
+                  <pre>{chunk.text.replace(/^#{1,6} /gm, "")}</pre>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
       </div>
     </>
   );
@@ -478,10 +544,12 @@ function WorkPackageStage({
 
   if (!workPackage)
     return (
-      <div className="browse-stage-body">
-        <WorkspaceInlineState title="未找到该工作包">
-          当前项目状态里没有这个工作包的记录。
-        </WorkspaceInlineState>
+      <div className="workspace-stage-body stage-body">
+        <div className="stage-canvas">
+          <WorkspaceInlineState title="未找到该工作包">
+            当前项目状态里没有这个工作包的记录。
+          </WorkspaceInlineState>
+        </div>
       </div>
     );
 
@@ -501,128 +569,153 @@ function WorkPackageStage({
   );
   const area = data.state.areas.find((item) => item.id === workPackage.area_id);
   const elements = workPackage.element_ids;
+  const readinessLabel = data.stale
+    ? statusLabel("STALE")
+    : statusLabel(readiness?.status ?? "UNCHECKED");
+  const readinessTone: ChipTone = data.stale
+    ? "warning"
+    : readiness?.status === "READY"
+      ? "positive"
+      : readiness?.status === "BLOCKED"
+        ? "danger"
+        : "neutral";
 
   return (
     <>
-      <StageHead
+      <StageBand
         kind="工作包"
         title={demoWorkPackageName(workPackage.id, workPackage.name)}
-        meta={`${demoAreaName(workPackage.area_id, area?.name ?? workPackage.area_id)} · ${demoDiscipline(workPackage.discipline)}`}
+        meta={
+          <>
+            <StageFact label="区域">
+              {demoAreaName(
+                workPackage.area_id,
+                area?.name ?? workPackage.area_id,
+              )}
+            </StageFact>
+            <StageFact label="专业">
+              {demoDiscipline(workPackage.discipline)}
+            </StageFact>
+            <StageFact
+              label="就绪状态"
+              tone={
+                readinessTone === "positive"
+                  ? "positive"
+                  : readinessTone === "neutral"
+                    ? undefined
+                    : "attention"
+              }
+            >
+              {readinessLabel}
+            </StageFact>
+            <StageFact label="关联构件">{elements.length}</StageFact>
+          </>
+        }
         actions={
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onTab("work-packages")}
-          >
+          <button type="button" onClick={() => onTab("work-packages")}>
             打开工作包目录
-          </Button>
+          </button>
         }
       />
-      <div className="browse-stage-body">
-        <dl className="browse-meta">
-          <div>
-            <dt className="t-label">就绪状态</dt>
-            <dd className="browse-value">
-              {data.stale
-                ? statusLabel("STALE")
-                : statusLabel(readiness?.status ?? "UNCHECKED")}
-            </dd>
-          </div>
-          <div>
-            <dt className="t-label">关联构件</dt>
-            <dd className="t-mono-data">{elements.length}</dd>
-          </div>
-          <div>
-            <dt className="t-label">相关判断</dt>
-            <dd className="t-mono-data">{relatedFindings.length}</dd>
-          </div>
-          <div>
-            <dt className="t-label">相关资料</dt>
-            <dd className="t-mono-data">{relatedSources.length}</dd>
-          </div>
-        </dl>
-
-        <section className="browse-section" aria-label="关联构件">
-          <h3 className="t-label">关联构件</h3>
-          {elements.length ? (
-            <ul className="browse-chips">
-              {elements.slice(0, 24).map((elementId) => (
-                <li className="browse-chip t-mono-data" key={elementId}>
-                  {elementId}
-                </li>
-              ))}
-              {elements.length > 24 && (
-                <li className="browse-chip browse-chip-more t-mono-data">
-                  +{elements.length - 24}
-                </li>
+      <div className="workspace-stage-body stage-body">
+        <div className="stage-canvas">
+          <div className="stage-split">
+            <StageSection label="关联构件" count={elements.length}>
+              {elements.length ? (
+                <ul className="browse-chips">
+                  {elements.slice(0, 24).map((elementId) => (
+                    <li className="browse-chip t-mono-data" key={elementId}>
+                      {elementId}
+                    </li>
+                  ))}
+                  {elements.length > 24 && (
+                    <li className="browse-chip browse-chip-more t-mono-data">
+                      +{elements.length - 24}
+                    </li>
+                  )}
+                </ul>
+              ) : (
+                <p className="browse-quiet">尚未关联构件。</p>
               )}
-            </ul>
-          ) : (
-            <p className="browse-quiet">尚未关联构件。</p>
-          )}
-        </section>
+            </StageSection>
 
-        <section className="browse-section" aria-label="相关工程判断">
-          <h3 className="t-label">相关工程判断</h3>
-          {findings.isError ? (
-            <p className="browse-quiet">无法读取工程判断，请稍后重试。</p>
-          ) : findings.isPending ? (
-            <p className="browse-quiet" role="status">
-              正在读取工程判断…
-            </p>
-          ) : relatedFindings.length ? (
-            <ul className="browse-links">
-              {relatedFindings.map((finding) => (
-                <li key={finding.id}>
-                  <button
-                    type="button"
-                    className="row browse-row"
-                    onClick={() => onOpen({ kind: "finding", id: finding.id })}
-                  >
-                    <span className="browse-link-copy">
-                      <strong>{finding.title}</strong>
-                      <small>
-                        {findingStateLabels[finding.state]}
-                        {finding.suggested_discipline
-                          ? ` · ${demoDiscipline(finding.suggested_discipline)}`
-                          : ""}
-                      </small>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="browse-quiet">暂无与工程判断关联的记录。</p>
-          )}
-        </section>
+            <div className="stage-stack">
+              <StageSection label="相关工程判断" count={relatedFindings.length}>
+                {findings.isError ? (
+                  <p className="browse-quiet">无法读取工程判断，请稍后重试。</p>
+                ) : findings.isPending ? (
+                  <p className="browse-quiet" role="status">
+                    正在读取工程判断…
+                  </p>
+                ) : relatedFindings.length ? (
+                  <div className="stage-rows">
+                    {relatedFindings.map((finding) => (
+                      <button
+                        type="button"
+                        key={finding.id}
+                        className="stage-row"
+                        onClick={() =>
+                          onOpen({ kind: "finding", id: finding.id })
+                        }
+                      >
+                        <span className="stage-row-main">
+                          <strong className="stage-row-title">
+                            {finding.title}
+                          </strong>
+                          <span className="stage-row-meta">
+                            {finding.suggested_discipline
+                              ? demoDiscipline(finding.suggested_discipline)
+                              : "专业未标注"}
+                          </span>
+                        </span>
+                        <StateChip
+                          tone={
+                            finding.state === "CONFIRMED"
+                              ? "positive"
+                              : "warning"
+                          }
+                        >
+                          {findingStateLabels[finding.state]}
+                        </StateChip>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="browse-quiet">暂无与工程判断关联的记录。</p>
+                )}
+              </StageSection>
 
-        <section className="browse-section" aria-label="相关资料">
-          <h3 className="t-label">相关资料</h3>
-          {relatedSources.length ? (
-            <ul className="browse-links">
-              {relatedSources.map((status) => (
-                <li key={status.source.id}>
-                  <button
-                    type="button"
-                    className="row browse-row"
-                    onClick={() => onSource(status.source.id)}
-                  >
-                    <span className="browse-link-copy">
-                      <strong>{status.source.name}</strong>
-                      <small>
-                        {sourceKindLabel(status.source.kind)} ·{" "}
-                        {sourceStateText(status)}
-                      </small>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="browse-quiet">尚无与工作包关联的资料依据。</p>
-          )}
-        </section>
+              <StageSection label="相关资料" count={relatedSources.length}>
+                {relatedSources.length ? (
+                  <div className="stage-rows">
+                    {relatedSources.map((status) => (
+                      <button
+                        type="button"
+                        key={status.source.id}
+                        className="stage-row"
+                        onClick={() => onSource(status.source.id)}
+                      >
+                        <span className="stage-row-main">
+                          <strong className="stage-row-title">
+                            {status.source.name}
+                          </strong>
+                          <span className="stage-row-meta">
+                            {sourceKindLabel(status.source.kind)}
+                          </span>
+                        </span>
+                        <StateChip tone={sourceStateTone(status)}>
+                          {sourceStateText(status)}
+                        </StateChip>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="browse-quiet">尚无与工作包关联的资料依据。</p>
+                )}
+              </StageSection>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -644,57 +737,68 @@ function FindingStage({
 
   if (finding.isError)
     return (
-      <div className="browse-stage-body">
-        <WorkspaceInlineState title="无法读取该工程判断" alert>
-          未能读取这条工程判断；可在「工作」中重试。
-        </WorkspaceInlineState>
+      <div className="workspace-stage-body stage-body">
+        <div className="stage-canvas">
+          <WorkspaceInlineState title="无法读取该工程判断" alert>
+            未能读取这条工程判断；可在「工作」中重试。
+          </WorkspaceInlineState>
+        </div>
       </div>
     );
 
   if (finding.isPending || !finding.data)
     return (
-      <div className="browse-stage-body">
-        <WorkspaceInlineState title="正在读取工程判断…">
-          正在准备这条判断的内容。
-        </WorkspaceInlineState>
+      <div className="workspace-stage-body stage-body">
+        <div className="stage-canvas">
+          <WorkspaceInlineState title="正在读取工程判断…">
+            正在准备这条判断的内容。
+          </WorkspaceInlineState>
+        </div>
       </div>
     );
 
   const item = finding.data;
   return (
     <>
-      <StageHead
+      <StageBand
         kind="工程判断"
         title={item.title}
-        meta={`${findingStateLabels[item.state]}${
-          item.suggested_discipline
-            ? ` · ${demoDiscipline(item.suggested_discipline)}`
-            : ""
-        }`}
+        meta={
+          <>
+            <StateChip
+              tone={item.state === "CONFIRMED" ? "positive" : "warning"}
+            >
+              {findingStateLabels[item.state]}
+            </StateChip>
+            {item.suggested_discipline && (
+              <StageFact label="建议专业">
+                {demoDiscipline(item.suggested_discipline)}
+              </StageFact>
+            )}
+          </>
+        }
         actions={
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => onOpenFinding(item.id)}
-          >
+          <button type="button" onClick={() => onOpenFinding(item.id)}>
             在「工作」中打开
-          </Button>
+          </button>
         }
       />
-      <div className="browse-stage-body">
-        <section className="browse-section" aria-label="工程判断摘要">
-          <h3 className="t-label">变化</h3>
-          <p className="browse-copy">
-            {item.what_changed || "未记录变更描述。"}
-          </p>
-          <h3 className="t-label">影响</h3>
-          <p className="browse-copy">
-            {item.why_it_matters || "未记录影响描述。"}
-          </p>
-          <p className="browse-quiet">
-            {item.evidence_ids.length} 条依据 · 判断与编辑在「工作」中进行。
-          </p>
-        </section>
+      <div className="workspace-stage-body stage-body">
+        <div className="stage-canvas is-reading">
+          <StageSection label="工程判断摘要">
+            <h4>变化</h4>
+            <p className="stage-copy">
+              {item.what_changed || "未记录变更描述。"}
+            </p>
+            <h4>影响</h4>
+            <p className="stage-copy">
+              {item.why_it_matters || "未记录影响描述。"}
+            </p>
+            <p className="stage-quiet">
+              {item.evidence_ids.length} 条依据 · 判断与编辑在「工作」中进行。
+            </p>
+          </StageSection>
+        </div>
       </div>
     </>
   );
@@ -734,7 +838,7 @@ export function BrowseStage(props: {
     <main className="workspace-stage-surface" aria-busy={props.busy}>
       <div className="browse-stage">
         {object === null ? (
-          <div className="browse-stage-body browse-stage-empty">
+          <div className="workspace-stage-body stage-body browse-stage-empty">
             <WorkspaceState
               kind="empty"
               title="在导航中选择对象"
@@ -785,10 +889,12 @@ export function BrowseStage(props: {
             onOpenFinding={onOpenFinding}
           />
         ) : (
-          <div className="browse-stage-body">
-            <WorkspaceInlineState title="在模型工作区中查看">
-              这个对象没有可在此显示的工程上下文。
-            </WorkspaceInlineState>
+          <div className="workspace-stage-body stage-body">
+            <div className="stage-canvas">
+              <WorkspaceInlineState title="在模型工作区中查看">
+                这个对象没有可在此显示的工程上下文。
+              </WorkspaceInlineState>
+            </div>
           </div>
         )}
       </div>

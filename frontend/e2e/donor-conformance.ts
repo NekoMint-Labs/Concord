@@ -1,11 +1,52 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
 /** Assert live Lit instances and their rendered substrate, not inert tag names. */
-/** The donor's single accent per vendored look (`tokens.css` light,
- * `premiumWorkspace.css` graphite/hud). Concord's petrol `#2b6671` is never a
- * donor accent, so it never satisfies these assertions. */
-export const DONOR_ACCENTS = ["#1f3fc7", "#82b4ff"];
-export const DONOR_ACCENT_RGB = ["rgb(31, 63, 199)", "rgb(130, 180, 255)"];
+/**
+ * The product's single accent, per look. It is read from the palette at assert time
+ * rather than pinned here, because the accent is an art-direction decision: what this
+ * helper protects is that the donor components render the *product's* accent - the
+ * one `--c-accent` declares - and not a private colour of their own. A hard-coded
+ * list would turn the next palette decision into a test failure.
+ */
+export const PRODUCT_ACCENT_TOKENS = [
+  "--c-accent",
+  "--c-accent-deep",
+  "--c-accent-bright",
+] as const;
+
+/** Every `--c-*` colour the palette declares for the active look. */
+export async function paletteColours(page: Page) {
+  return page.evaluate(() => {
+    const out = new Set<string>();
+    const hexToRgb = (hex: string) => {
+      const value = hex.replace("#", "");
+      const full =
+        value.length === 3
+          ? [...value].map((d) => d + d).join("")
+          : value;
+      const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+      return `rgb(${r}, ${g}, ${b})`;
+    };
+    for (const sheet of document.styleSheets) {
+      let rules: CSSRuleList;
+      try {
+        rules = sheet.cssRules;
+      } catch {
+        continue;
+      }
+      for (const rule of rules) {
+        if (!(rule instanceof CSSStyleRule)) continue;
+        for (const [, name, value] of rule.style.cssText.matchAll(
+          /(--c-[a-z0-9-]+):\s*(#[0-9a-fA-F]{3,8})/g,
+        )) {
+          void name;
+          out.add(hexToRgb(value));
+        }
+      }
+    }
+    return [...out];
+  });
+}
 
 export async function expectDonor(
   locator: Locator,
@@ -97,40 +138,54 @@ export async function expectDonor(
   // the Concord shell around them uses a different CJK face, so the donor tree
   // is checked for one consistent font rather than for the shell's root font.
   expect(styles.font).toContain("Inter");
-  // The single donor accent, in whichever vendored workspace look is active:
-  // `#1f3fc7` outside the workspace scope (tokens.css light) and `#82b4ff`
-  // inside `[data-workspace-look="graphite"]`/`hud` (premiumWorkspace.css).
-  // What matters is that it is the donor cobalt and not Concord's petrol
-  // `#2b6671`, which no longer owns any action surface.
-  expect(DONOR_ACCENTS).toContain(styles.accent);
+  // The accent the Lit components render is the *product's* accent: the value the
+  // palette declares, in whichever look is active.
+  const accentTokens = await locator.evaluate(
+    (element, tokens) => {
+      const style = getComputedStyle(element);
+      return (tokens as string[]).map((token) =>
+        style.getPropertyValue(token).trim(),
+      );
+    },
+    [...PRODUCT_ACCENT_TOKENS],
+  );
+  expect(accentTokens).toContain(styles.accent);
   for (const font of styles.uiFonts) expect(font).toBe(styles.font);
   for (const duration of styles.durations)
     expect(duration.seconds, JSON.stringify(duration)).toBeLessThanOrEqual(
       0.00001,
     );
-  // Planes follow the active workspace look: the light product's planes are
-  // light, and the graphite/hud look's planes are dark. A media "well" stays
-  // light in every look; an explicitly selected donor action uses the workspace
-  // accent. What is rejected is a mid-tone plane that belongs to neither look.
-  const darkLook = styles.look === "graphite" || styles.look === "hud";
+  /*
+   * Every surface the Lit tree renders is a plane the palette declares.
+   *
+   * This used to assert a numeric band - "in the light look every plane has all three
+   * channels above 224" - which was a proxy for "the product's planes are light". The
+   * material now has a dark instrument frame and a mid-value drafting field inside the
+   * light look, so the band would flag legitimate planes and pass a literal nobody
+   * declared. Asserting membership in the palette is both stricter and truthful: it
+   * rejects any colour the product cannot account for, and it cannot drift when the
+   * palette changes.
+   */
+  const declared = new Set(await paletteColours(locator.page()));
   for (const { color, selectedAction } of styles.backgrounds) {
-    if (selectedAction && DONOR_ACCENT_RGB.includes(color)) continue;
+    if (selectedAction && accentTokens.map(hexToRgb).includes(color)) continue;
     const channels = color.match(/[\d.]+/g)?.map(Number) ?? [];
     if (!(channels.length === 3 || channels[3] === 1)) continue;
-    const rgb = channels.slice(0, 3);
-    const light = rgb.every((channel) => channel >= 224);
-    const dark = rgb.every((channel) => channel <= 112);
-    if (darkLook)
-      expect(light || dark, JSON.stringify({ look: styles.look, color })).toBe(
-        true,
-      );
-    else
-      for (const channel of rgb)
-        expect(
-          channel,
-          JSON.stringify({ look: styles.look, color }),
-        ).toBeGreaterThanOrEqual(224);
+    if (color === "rgb(0, 0, 0)" || color === "rgba(0, 0, 0, 0)") continue;
+    expect(
+      declared.has(color),
+      JSON.stringify({ look: styles.look, color }),
+    ).toBe(true);
   }
+}
+
+/** `#rrggbb` to the `rgb(r, g, b)` form `getComputedStyle` reports. */
+function hexToRgb(hex: string) {
+  const value = hex.replace("#", "");
+  const full =
+    value.length === 3 ? [...value].map((d) => d + d).join("") : value;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 /**

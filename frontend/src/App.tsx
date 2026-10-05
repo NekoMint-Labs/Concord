@@ -8,6 +8,7 @@ import { AppTooltip } from "./components/ui/AppTooltip";
 import {
   AppMenu,
   AppMenuItem,
+  AppMenuLabel,
   AppMenuSeparator,
 } from "./components/ui/AppMenu";
 import { EventComposer } from "./features/EventComposer";
@@ -34,7 +35,8 @@ import {
   ProjectSettingsDialog,
   ProjectStructureDialog,
 } from "./app/ProjectDialogs";
-import { ConcordAgent } from "./features/ConcordAgent";
+import { ConcordAgent, ConcordAgentSurface } from "./features/ConcordAgent";
+import type { ConcordContext } from "./features/ConcordAgent";
 import { ContextRunProgress } from "./features/ContextRunProgress";
 import { useConcordAgent } from "./features/useConcordAgent";
 import type { BimMappingContext } from "./features/BimMappingWorkspace";
@@ -113,7 +115,11 @@ function ProjectApplication({
   const [structureOpen, setStructureOpen] = useState(false);
   const [mappingMode, setMappingMode] = useState(false);
   const [mappingContext, setMappingContext] = useState<BimMappingContext>();
-  const [navOpen, setNavOpen] = useState(true);
+  /* `null` means "no explicit choice yet": the navigator opens by default on the
+   * surfaces where the object list *is* the work (Project, Browse) and stays closed on
+   * Work, where the dock already carries the working list and the stage needs the width
+   * for the evidence. A click sets an explicit choice that then persists. */
+  const [navOpen, setNavOpen] = useState<boolean | null>(null);
   const [findingId, setFindingId] = useState("");
   const [findingEvidenceId, setFindingEvidenceId] = useState<string>();
   /* One selected engineering object for the whole workspace: the navigator sets
@@ -125,12 +131,16 @@ function ProjectApplication({
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [workOpen, setWorkOpen] = useState(true);
-  const [workButtonRef, setWorkButtonRef] = useState<HTMLButtonElement | null>(
-    null,
-  );
   const prefs = useWorkspaceLayout();
   const [focusMode, setFocusMode] = useState(getFocusMode);
   useEffect(() => onFocusModeChange(setFocusMode), []);
+  // The palette is keyed on the document, not only on the shell, because dialogs,
+  // menus, popovers and tooltips are portalled out of the shell and would otherwise
+  // resolve the light look inside a dark window.
+  useEffect(() => {
+    document.documentElement.dataset.concordLook =
+      prefs.layout.look === "light" ? "light" : "dark";
+  }, [prefs.layout.look]);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || document.querySelector('[role="dialog"]'))
@@ -501,7 +511,10 @@ function ProjectApplication({
               sources: sourceCatalog.data ?? [],
             }),
           };
-  const navigatorOpen = !focusMode && (navOpen || tab === "browse");
+  /* The navigator defaults to open everywhere except Work, where the dock already
+   * carries the working list and the stage needs the width for the evidence. An
+   * explicit toggle then wins over the default. */
+  const navigatorOpen = !focusMode && (navOpen ?? tab !== "work");
   const workSurface = {
     workspace: data,
     sources: sourceCatalog.data ?? [],
@@ -526,6 +539,25 @@ function ProjectApplication({
       setDetailsOpen(true);
     },
     onProject: () => navigate("project"),
+  };
+
+  const agentProps = {
+    project,
+    finding:
+      tab === "work" && !!findingId
+        ? findings.data?.find((item) => item.id === findingId)
+        : undefined,
+    context: agent.context,
+    currentRun: agent.contextualRun,
+    report: agent.contextualReport,
+    onRun: agent.rememberRun,
+    onInvestigate: (instruction: string, context: ConcordContext) =>
+      agent.startInvestigation(instruction, context),
+    onOpenReport: () => {
+      if (tab === "work") navigate("coordination");
+      setInspectorView("investigation");
+      setDetailsOpen(true);
+    },
   };
 
   return (
@@ -556,8 +588,8 @@ function ProjectApplication({
           title={projectName}
           subtitle={`${surfaceLabels[tab] ?? tab}${wp ? ` · ${demoWorkPackageName(wp.id, wp.name)}` : ""}`}
           onOpen={() => setOpenProjectOpen(true)}
-          onNavigate={() => setNavOpen((value) => !value)}
-          navigationOpen={navOpen}
+          onNavigate={() => setNavOpen(!navigatorOpen)}
+          navigationOpen={navigatorOpen}
           navigationLabel={
             tab === "work"
               ? "工作包"
@@ -565,97 +597,74 @@ function ProjectApplication({
                 ? "对象"
                 : "项目对象"
           }
-          onWork={() => setWorkOpen((value) => !value)}
-          workOpen={workOpen}
-          workButtonRef={setWorkButtonRef}
-          pending={pendingFindings}
-          running={agent.contextualRun?.status === "RUNNING"}
-          onReport={() => {
-            navigate("coordination");
-            setInspectorView("investigation");
-            setDetailsOpen(true);
-          }}
-          onFocus={toggleFocusMode}
-          onControls={() => setControlsOpen((value) => !value)}
-          controlsOpen={controlsOpen}
           onSearch={() => setCommandOpen(true)}
+          busyLabel={busy ? "正在提交…" : undefined}
+          /*
+           * One disclosure on the identity block, not three separate menu buttons:
+           * switching project, creating one, opening the structure and reading settings
+           * are the same question - "what am I inside of".
+           */
           fileMenu={
-            <AppMenu label="项目" trigger={<span>项目</span>}>
+            <AppMenu
+              label="项目菜单"
+              className="concord-project-menu"
+              trigger={<Icon name="chevronDown" size={14} />}
+            >
+              <AppMenuLabel>当前项目</AppMenuLabel>
               <AppMenuItem
                 active
                 onSelect={() => lifecycle.openProject(project)}
               >
                 {projectName}
-                {project === "harbor-east" && " · 示例项目"}
+                <span className="menu-item-hint">
+                  {project === "harbor-east"
+                    ? "示例项目"
+                    : data.state.project.timezone}
+                </span>
               </AppMenuItem>
+              {(lifecycle.recent ?? [])
+                .filter((item) => item.id !== project)
+                .map((item) => (
+                  <AppMenuItem
+                    key={item.id}
+                    onSelect={() => lifecycle.openProject(item.id)}
+                  >
+                    {demoProjectName(item.id, item.name)}
+                  </AppMenuItem>
+                ))}
               <AppMenuSeparator />
               <AppMenuItem onSelect={() => setNewProjectOpen(true)}>
-                新建项目
+                新建项目…
               </AppMenuItem>
               <AppMenuItem onSelect={() => setOpenProjectOpen(true)}>
                 打开项目…
               </AppMenuItem>
-              <AppMenuItem onSelect={() => setSettingsOpen(true)}>
-                项目设置
-              </AppMenuItem>
+              <AppMenuSeparator />
               <AppMenuItem onSelect={() => setStructureOpen(true)}>
                 项目结构
+                <span className="menu-item-hint">区域、工作包与资料归属</span>
               </AppMenuItem>
-              <AppMenuSeparator />
-              <AppMenuItem onSelect={() => setWorkOpen((value) => !value)}>
-                工作与审核面板
-              </AppMenuItem>
-              <AppMenuItem onSelect={() => setLayoutOpen(true)}>
-                工作区布局…
+              <AppMenuItem onSelect={() => setSettingsOpen(true)}>
+                项目设置
+                <span className="menu-item-hint">名称、时区与默认基线</span>
               </AppMenuItem>
             </AppMenu>
           }
-          pinControl={
-            <ConcordAgent
-              key={project}
-              project={project}
-              finding={
-                tab === "work" && !!findingId
-                  ? findings.data?.find((item) => item.id === findingId)
-                  : undefined
-              }
-              context={agent.context}
-              currentRun={agent.contextualRun}
-              report={agent.contextualReport}
-              onRun={agent.rememberRun}
-              onInvestigate={(instruction, context) =>
-                agent.startInvestigation(instruction, context)
-              }
-              onOpenReport={() => {
-                if (tab === "work") navigate("coordination");
-                setInspectorView("investigation");
-                setDetailsOpen(true);
-              }}
-            />
-          }
-          layoutMenu={
-            <button
-              type="button"
-              onClick={() => setLayoutOpen(true)}
-              title="排列面板、锁定位置并保存布局"
+          /*
+           * Scope is the one global input: every surface below answers "within this
+           * working context". It is a control, not a label, so it is shaped like one.
+           */
+          scope={
+            <label
+              className="concord-scope"
+              htmlFor="workspace-package"
+              title="当前工作包 — 面板、检索与助手的作用范围"
             >
-              <Icon name="sliders" size={16} />
-              布局
-            </button>
-          }
-          conditionControl={
-            <>
-              <label
-                className="calm-condition-label"
-                htmlFor="workspace-package"
-              >
-                工作包
-              </label>
+              <span className="t-label">工作包</span>
               <select
                 id="workspace-package"
                 value={selected}
                 onChange={(e) => selectPackage(e.target.value)}
-                title="当前工作包 — 面板与检索的作用范围"
               >
                 {!data.state.work_packages.length && (
                   <option value="">无工作包</option>
@@ -666,106 +675,122 @@ function ProjectApplication({
                   </option>
                 ))}
               </select>
-              <button
-                type="button"
-                onClick={() => setStructureOpen(true)}
-                title="打开项目结构"
-                aria-label="打开项目结构"
-              >
-                <Icon name="plus" size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                title="当前工作包与项目的属性"
-              >
-                属性
-              </button>
-            </>
+            </label>
           }
-          history={
-            <button
-              type="button"
-              onClick={() =>
-                void perform(() => api.recheck(project), "重新检查已提交。")
-              }
-              title="提交重新检查 — 重新核对当前项目资料"
-            >
-              <Icon name="revisions" size={16} />
-              重新检查
-            </button>
-          }
-          aids={
-            <>
-              <button
-                type="button"
-                aria-pressed={tab === "bim"}
-                onClick={() => navigate("bim")}
-                title="在模型中查看当前工作包"
-              >
-                <Icon name="target" size={15} />
-                模型
-              </button>
-              <button
-                type="button"
-                aria-pressed={tab === "documents"}
-                onClick={() => navigate("documents")}
-                title="在文档中查看当前工作包"
-              >
-                <Icon name="document" size={15} />
-                文档
-              </button>
-            </>
-          }
+          assistant={<ConcordAgent key={project} {...agentProps} />}
           action={
-            <>
-              {wp && tab === "coordination" && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setEventDialog(true)}
-                >
-                  记录变更
-                </button>
-              )}
-              {wp && tab === "bim" && !mappingMode && (
-                <button
-                  type="button"
-                  disabled={!!localIfcFile || !projectModels.length}
-                  title={
-                    localIfcFile
-                      ? "本地 IFC 仅用于预览；添加到项目并处理后才能关联"
-                      : !projectModels.length
-                        ? "请先添加并处理项目 IFC 模型"
-                        : undefined
-                  }
-                  onClick={() => {
-                    setMappingContext(undefined);
-                    setMappingMode(true);
-                  }}
-                >
-                  关联 BIM
-                </button>
-              )}
-            </>
-          }
-          scaleMenu={
-            latest ? (
+            wp && tab === "coordination" ? (
               <button
                 type="button"
-                onClick={() => navigate("sources")}
-                title="当前模型版本与已确认基线"
+                className="concord-action"
+                disabled={busy}
+                onClick={() => setEventDialog(true)}
               >
-                最新版本 R{latest.sequence}
-                {baseline ? ` · 基线 B${baseline.sequence}` : " · 尚未确认基线"}
+                记录变更
+              </button>
+            ) : tab === "project" ? (
+              <button
+                type="button"
+                className="concord-action"
+                disabled={busy}
+                onClick={() => setStructureOpen(true)}
+              >
+                添加资料
+              </button>
+            ) : tab === "work" && agent.investigation.data ? (
+              <button
+                type="button"
+                className="concord-action"
+                onClick={() => {
+                  setInspectorView("investigation");
+                  setDetailsOpen(true);
+                }}
+              >
+                查看报告
+              </button>
+            ) : tab === "bim" && !mappingMode ? (
+              <button
+                type="button"
+                className="concord-action"
+                disabled={!!localIfcFile || !projectModels.length}
+                title={
+                  localIfcFile
+                    ? "本地 IFC 仅用于预览；添加到项目并处理后才能关联"
+                    : !projectModels.length
+                      ? "请先添加并处理项目 IFC 模型"
+                      : "把工作包构件关联到模型对象"
+                }
+                onClick={() => {
+                  setMappingContext(undefined);
+                  setMappingMode(true);
+                }}
+              >
+                关联 BIM
               </button>
             ) : null
+          }
+          overflow={
+            <AppMenu
+              label="更多"
+              className="concord-more"
+              trigger={<Icon name="sliders" size={16} />}
+            >
+              <AppMenuLabel>项目状态</AppMenuLabel>
+              <AppMenuItem onSelect={() => navigate("project")}>
+                {latest ? `最新版本 R${latest.sequence}` : "尚无模型版本"}
+                <span className="menu-item-hint">
+                  {baseline
+                    ? `已确认基线 B${baseline.sequence}`
+                    : "尚未确认基线"}
+                </span>
+              </AppMenuItem>
+              <AppMenuItem
+                disabled={busy}
+                onSelect={() =>
+                  void perform(() => api.recheck(project), "重新检查已提交。")
+                }
+              >
+                提交重新检查
+                <span className="menu-item-hint">
+                  重新核对当前项目资料与判断
+                </span>
+              </AppMenuItem>
+              <AppMenuSeparator />
+              <AppMenuLabel>工作区</AppMenuLabel>
+              <AppMenuItem onSelect={() => navigate("bim")}>
+                模型工作区
+              </AppMenuItem>
+              <AppMenuItem onSelect={() => navigate("documents")}>
+                文档工作区
+              </AppMenuItem>
+              <AppMenuItem onSelect={() => setStructureOpen(true)}>
+                项目结构…
+              </AppMenuItem>
+              <AppMenuSeparator />
+              <AppMenuItem
+                active={controlsOpen}
+                onSelect={() => setControlsOpen((value) => !value)}
+              >
+                {controlsOpen ? "收起控制面板" : "控制面板…"}
+                <span className="menu-item-hint">全部工作区控件与演示操作</span>
+              </AppMenuItem>
+              <AppMenuItem onSelect={() => setLayoutOpen(true)}>
+                工作区布局…
+                <span className="menu-item-hint">面板位置、尺寸与外观</span>
+              </AppMenuItem>
+              <AppMenuItem onSelect={toggleFocusMode} hint="F">
+                专注模式
+                <span className="menu-item-hint">
+                  隐藏全部 chrome，只留当前工作区
+                </span>
+              </AppMenuItem>
+            </AppMenu>
           }
         />
       )}
       {controlsOpen && !focusMode && (
-        <div className="calm-context" aria-label="所有控件">
-          <div className="calm-context-scroll">
+        <div className="concord-band" aria-label="控制面板">
+          <div className="concord-band-scroll">
             <AdvancedMenu
               tab={tab}
               onTab={navigate}
@@ -855,16 +880,7 @@ function ProjectApplication({
           aria-label="工作区"
           style={{
             order: prefs.layout.tools === "right" ? 30 : -30,
-            width: "var(--rail-w)",
             flexShrink: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "var(--sp-1)",
-            paddingTop: "var(--sp-2)",
-            borderRight: "1px solid var(--ink-faint)",
-            background: "var(--paper-bright)",
-            overflowY: "auto",
             overflowX: "visible",
           }}
         >
@@ -878,7 +894,10 @@ function ProjectApplication({
           <ProjectSidebar
             tab={tab}
             onTab={navigate}
+            attention={pendingFindings}
             onProjectSettings={() => setSettingsOpen(true)}
+            onLayout={() => setLayoutOpen(true)}
+            onDiagnostics={() => navigate("capabilities")}
           />
         </nav>
         {tab === "work" ? (
@@ -887,9 +906,9 @@ function ProjectApplication({
             key={project}
             project={project}
             open={workOpen}
+            agent={<ConcordAgentSurface {...agentProps} />}
             onClose={() => {
               setWorkOpen(false);
-              workButtonRef?.focus();
             }}
             selectedId={findingId}
             evidenceId={findingEvidenceId}
@@ -1064,32 +1083,16 @@ function ProjectApplication({
           </main>
         )}
       </div>
-      {/* The donor's instrument strip (TakeoffCanvas.jsx `footer.ink-panel.ticks`),
-       * bound to the Concord workspace verbs and counts. */}
-      <footer
-        className="ink-panel ticks"
-        style={{
-          height: "var(--status-h)",
-          flex: "0 0 auto",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "0 14px",
-          fontFamily: "var(--f-mono)",
-          fontSize: "var(--fs-xs)",
-          fontVariantNumeric: "tabular-nums",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          userSelect: "none",
-        }}
-      >
-        <span style={{ color: "var(--status-acc)" }}>
-          {surfaceLabels[tab] ?? tab}
-        </span>
-        <span style={{ opacity: 0.25 }} aria-hidden="true">
-          |
-        </span>
-        <span aria-hidden="true" style={{ minWidth: 150 }}>
+      {/*
+       * The readout strip. It is the instrument's own instrumentation: mode, scope and
+       * project state, in the same dark material as the bar, so the frame closes around
+       * the workspace instead of trailing off in a third colour. Facts only - every verb
+       * here also exists somewhere deliberate.
+       */}
+      <footer className="concord-status" aria-label="工作区状态">
+        <span className="concord-status-mode">{surfaceLabels[tab] ?? tab}</span>
+        <span className="concord-status-item">
+          <span className="t-label">范围</span>
           {wp
             ? `${demoAreaName(
                 wp.area_id,
@@ -1098,25 +1101,28 @@ function ProjectApplication({
               )} · ${demoWorkPackageName(wp.id, wp.name)}`
             : "未选择工作包"}
         </span>
-        <span style={{ opacity: 0.25 }} aria-hidden="true">
-          |
+        <span className="concord-status-item">
+          <span className="t-label">基线</span>
+          {baseline ? `B${baseline.sequence} 已确认` : "尚未确认基线"}
         </span>
-        <span>
-          {latest ? `最新版本 R${latest.sequence}` : "尚无模型版本"}
-          {baseline ? ` · 基线 B${baseline.sequence}` : " · 尚未确认基线"}
+        <span className="concord-status-item">
+          <span className="t-label">版本</span>
+          {latest ? `R${latest.sequence}` : "—"}
         </span>
-        {busy && <span style={{ color: "var(--c-warning)" }}>正在提交…</span>}
-        <span
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            gap: 12,
-            opacity: 0.75,
-          }}
-          aria-live="polite"
-        >
+        {busy && (
+          <span className="concord-status-busy" role="status">
+            正在提交…
+          </span>
+        )}
+
+        <span className="concord-status-tail" aria-live="polite">
           <span>{workNavigatorItems.length} 工作包</span>
           <span>{(sourceCatalog.data ?? []).length} 资料</span>
+          {pendingFindings > 0 ? (
+            <span className="concord-status-attention">
+              {pendingFindings} 项待人工判断
+            </span>
+          ) : null}
         </span>
       </footer>
       {wp && eventDialog && (

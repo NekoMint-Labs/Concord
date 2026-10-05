@@ -266,19 +266,11 @@ export function WorkspaceLayoutDialog({
             aria-label="工作区外观"
             value={layout.look}
             onChange={(e) =>
-              update({
-                look:
-                  e.target.value === "light"
-                    ? "light"
-                    : e.target.value === "hud"
-                      ? "hud"
-                      : "graphite",
-              })
+              update({ look: e.target.value === "dark" ? "dark" : "light" })
             }
           >
-            <option value="graphite">石墨仪表面（深色）</option>
-            <option value="light">工作室白光</option>
-            <option value="hud">仪表 HUD</option>
+            <option value="light">暖白工作室</option>
+            <option value="dark">深色仪表面</option>
           </select>
         </label>
         <label>

@@ -70,7 +70,6 @@ export function WorkPanel({
   onFindingSelect,
   onSelectionChange,
   detail,
-  children,
   ...actions
 }: WorkActions & {
   open?: boolean;
@@ -85,12 +84,10 @@ export function WorkPanel({
   selectedFindingId?: string;
   onFindingSelect?: (id: string) => void;
   onSelectionChange?: (selection: WorkPanelSelection | null) => void;
-  /** Selected Finding receipt. Findings own their session; this panel owns the list. */
+  /** Selected Finding receipt. Findings own their session; the Work surface owns the
+   * list and renders the receipt in the pane beside this one. */
   detail?: (findingId: string) => ReactNode;
-  /** The donor's second tab. Concord supplies its agent surface here. */
-  children?: ReactNode;
 }) {
-  const [tab, setTab] = useState<"work" | "agent">("work");
   const [filter, setFilter] = useState<"all" | "needs" | "done">("all");
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(50);
@@ -263,9 +260,16 @@ export function WorkPanel({
       <header className="workspace-heading">
         {dockHandle}
         <div>
-          <span className="workspace-eyebrow">共享工作区</span>
+          <span className="workspace-eyebrow">工程判断与依据</span>
           <h2>工作与审核</h2>
         </div>
+        <em
+          className="workspace-count"
+          title={`共 ${total} 项工作事项`}
+          aria-label={`共 ${total} 项工作事项`}
+        >
+          {total}
+        </em>
         {onClose && (
           <button
             type="button"
@@ -276,95 +280,13 @@ export function WorkPanel({
           </button>
         )}
       </header>
-      <div className="workspace-summary">
-        <div>
-          <strong>{total}</strong>
-          <span>工作事项</span>
-        </div>
-        <div>
-          <strong>{needs}</strong>
-          <span>需要处理</span>
-        </div>
-        <div>
-          <strong>{findingRows.length}</strong>
-          <span>工程判断</span>
-        </div>
-      </div>
-      <div
-        className="workspace-tabs"
-        role="tablist"
-        aria-label="工作区视图"
-        onKeyDown={(e) => {
-          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key))
-            return;
-          e.preventDefault();
-          const next =
-            e.key === "Home"
-              ? "work"
-              : e.key === "End"
-                ? "agent"
-                : tab === "work"
-                  ? "agent"
-                  : "work";
-          setTab(next);
-          document.getElementById(`workspace-${next}-tab`)?.focus();
-        }}
-      >
-        <button
-          type="button"
-          role="tab"
-          tabIndex={tab === "work" ? 0 : -1}
-          id="workspace-work-tab"
-          aria-controls="workspace-work-view"
-          aria-selected={tab === "work"}
-          onClick={() => setTab("work")}
-        >
-          工作事项
-        </button>
-        <button
-          type="button"
-          role="tab"
-          tabIndex={tab === "agent" ? 0 : -1}
-          id="workspace-agent-tab"
-          aria-controls="workspace-agent-view"
-          aria-selected={tab === "agent"}
-          onClick={() => setTab("agent")}
-        >
-          代理
-        </button>
-      </div>
-      <div
-        id="workspace-agent-view"
-        role="tabpanel"
-        aria-labelledby="workspace-agent-tab"
-        hidden={tab !== "agent"}
-        className="workspace-agent-view"
-      >
-        {children}
-      </div>
-      <div
-        id="workspace-work-view"
-        role="tabpanel"
-        aria-labelledby="workspace-work-tab"
-        hidden={tab !== "work"}
-        className="workspace-work-view"
-      >
+      <div id="workspace-work-view" className="workspace-work-view">
         <div className="workspace-filters">
-          <label className="workspace-search">
-            <span>查找工作</span>
-            <input
-              name="work-search"
-              aria-label="搜索工作"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="名称、来源、专业或编号"
-            />
-          </label>
           <div className="workspace-filter-buttons" aria-label="筛选工作">
             {(
               [
-                ["all", "全部"],
                 ["needs", `待处理 · ${needs}`],
+                ["all", "全部"],
                 ["done", "已处理"],
               ] as const
             ).map(([id, label]) => (
@@ -378,6 +300,16 @@ export function WorkPanel({
               </button>
             ))}
           </div>
+          <label className="workspace-search">
+            <span>查找工作</span>
+            <input
+              name="work-search"
+              aria-label="搜索工作"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="名称、来源、专业或编号"
+            />
+          </label>
         </div>
         <div className="workspace-list" aria-label="工作事项">
           {findings.isPending && !total && (
@@ -422,6 +354,7 @@ export function WorkPanel({
                 type="button"
                 className="workspace-row"
                 key={row.key}
+                data-state={finding?.state ?? undefined}
                 aria-pressed={activeKey === row.key}
                 onClick={() => select(row)}
               >

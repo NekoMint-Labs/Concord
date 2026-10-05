@@ -2,8 +2,8 @@
  *
  * The shell owns navigation, the tool rail and the one contextual inspector.
  * This surface owns only the project's engineering state in the same shell:
- * a compact mono identity band, a plain action row, and — inside one scrolling
- * body — the selected object's context. It never owns navigation, a page
+ * a StageBand that names the project and its facts, and — inside one scrolling
+ * body — the project's objects as section cards. It never owns navigation, a page
  * header, a tab strip, a KPI grid or a dashboard grid. Donor vocabulary only:
  * tokens, hairline rules and mono metadata labels.
  */
@@ -34,7 +34,10 @@ import {
   type StageObject,
 } from "./stageContracts";
 import type { WorkspaceTab } from "./destinations";
+import { StageBand, StageFact } from "./StageBand";
 import "../styles/features/project-stage.css";
+
+type ChipTone = "neutral" | "positive" | "warning" | "danger";
 
 const sourceKindLabel = (
   kind: ProjectSourceStatus["source"]["kind"],
@@ -59,6 +62,15 @@ const sourceStateText = (item: ProjectSourceStatus): string => {
   return "尚未确认基线";
 };
 
+const sourceStateTone = (item: ProjectSourceStatus): ChipTone =>
+  !item.latest_revision_id
+    ? "neutral"
+    : item.has_pending_revision
+      ? "warning"
+      : item.accepted_revision_id
+        ? "positive"
+        : "warning";
+
 const isOpenFinding = (finding: DTO<"Finding">): boolean =>
   finding.state === "PROPOSED" || finding.state === "CONFIRMED";
 
@@ -78,6 +90,7 @@ export function projectNavigatorItems({
   for (const item of sources) {
     items.push({
       key: stageKey({ kind: "source", id: item.source.id }),
+      kind: "source",
       label: item.source.name,
       file: `${sourceKindLabel(item.source.kind)} · ${
         item.latest_revision_id ? "最新版本" : "无版本"
@@ -96,6 +109,7 @@ export function projectNavigatorItems({
     );
     items.push({
       key: stageKey({ kind: "work-package", id: workPackage.id }),
+      kind: "work-package",
       label: demoWorkPackageName(workPackage.id, workPackage.name),
       file: `${demoAreaName(
         workPackage.area_id,
@@ -171,76 +185,77 @@ export function ProjectStage({
 
   return (
     <main className="workspace-stage-surface" aria-label="项目">
-      <header className="workspace-stage-band">
-        <strong title={data.state.project.name}>
-          {demoProjectName(project, data.state.project.name)}
-        </strong>
-        <span className="dot-leader" aria-hidden="true" />
-        <small>
-          当前基线 <b>{baseline ? `B${baseline.sequence}` : "尚未确认"}</b>
-        </small>
-        <small>
-          模型 <b>{modelMeta}</b>
-        </small>
-        <span
-          className={`badge project-stage-state${attention ? " is-attention" : ""}`}
-        >
-          {stateLabel}
-        </span>
-      </header>
+      <StageBand
+        kind="项目"
+        title={demoProjectName(project, data.state.project.name)}
+        meta={
+          <>
+            <StageFact label="当前基线">
+              {baseline ? `B${baseline.sequence}` : "尚未确认"}
+            </StageFact>
+            <StageFact label="模型">{modelMeta}</StageFact>
+            <StageFact label="状态" tone={attention ? "attention" : undefined}>
+              {stateLabel}
+            </StageFact>
+          </>
+        }
+        actions={
+          <>
+            <button type="button" disabled={busy} onClick={onRecheck}>
+              重新检查
+            </button>
+            <button type="button" disabled={busy} onClick={onStructure}>
+              项目结构
+            </button>
+            <button type="button" onClick={() => onTab("sources")}>
+              添加资料
+            </button>
+          </>
+        }
+      />
 
-      <div className="project-stage-actions">
-        <button type="button" disabled={busy} onClick={onRecheck}>
-          重新检查
-        </button>
-        <button type="button" disabled={busy} onClick={onStructure}>
-          项目结构
-        </button>
-        <button type="button" onClick={() => onTab("sources")}>
-          添加资料
-        </button>
-      </div>
-
-      <div className="workspace-stage-body">
-        {object === null ? (
-          <ProjectStateList
-            data={data}
-            sources={sources}
-            baseline={baseline}
-            findings={findingsList}
-            onSource={onSource}
-            onWorkPackage={onWorkPackage}
-            onOpenFinding={onOpenFinding}
-            onTab={onTab}
-          />
-        ) : object.kind === "source" || object.kind === "revision" ? (
-          <SourceStage
-            project={project}
-            sourceId={sourceId}
-            focusRevisionId={focusRevisionId}
-            sources={sources}
-            onSource={onSource}
-          />
-        ) : object.kind === "work-package" ? (
-          <WorkPackageStage
-            data={data}
-            sources={sources}
-            id={object.id}
-            findings={findingsList}
-            onOpen={onOpen}
-            onOpenFinding={onOpenFinding}
-          />
-        ) : (
-          <p className="stage-empty">
-            在导航器中选择一份资料、一个版本或一个工作包；该对象的完整来源与依据在检查器中查看。
-          </p>
-        )}
+      <div className="workspace-stage-body stage-body">
+        <div className="stage-canvas">
+          {object === null ? (
+            <ProjectStateList
+              data={data}
+              sources={sources}
+              baseline={baseline}
+              findings={findingsList}
+              onSource={onSource}
+              onWorkPackage={onWorkPackage}
+              onOpenFinding={onOpenFinding}
+              onTab={onTab}
+            />
+          ) : object.kind === "source" || object.kind === "revision" ? (
+            <SourceStage
+              project={project}
+              sourceId={sourceId}
+              focusRevisionId={focusRevisionId}
+              sources={sources}
+              onSource={onSource}
+            />
+          ) : object.kind === "work-package" ? (
+            <WorkPackageStage
+              data={data}
+              sources={sources}
+              id={object.id}
+              findings={findingsList}
+              onOpen={onOpen}
+              onOpenFinding={onOpenFinding}
+            />
+          ) : (
+            <p className="stage-empty">
+              在导航器中选择一份资料、一个版本或一个工作包；该对象的完整来源与依据在检查器中查看。
+            </p>
+          )}
+        </div>
       </div>
     </main>
   );
 }
 
-/** The project at a glance: a short, dense list, one donor row per object. */
+/** The project at a glance: the current revision, then its objects as cards. */
 function ProjectStateList({
   data,
   sources,
@@ -275,106 +290,173 @@ function ProjectStateList({
     );
     return statusLabel(readiness?.status ?? "UNCHECKED");
   };
+  const readinessTone = (id: string): ChipTone => {
+    if (data.stale) return "warning";
+    const status = data.analysis?.readiness.find(
+      (item) => item.work_package_id === id,
+    )?.status;
+    if (status === "READY") return "positive";
+    if (status === "BLOCKED") return "danger";
+    return "neutral";
+  };
 
   return (
-    <section className="project-stage-list" aria-label="项目工程状态">
-      <button
-        type="button"
-        className="row project-stage-row"
-        onClick={() => onTab("history")}
-      >
-        <span>
-          <strong>
-            当前基线 {baseline ? `B${baseline.sequence}` : "尚未确认"}
-          </strong>
-          <small>
-            {baseline
-              ? `${baseline.accepted_by || "未记录确认人"} · ${shortDate(baseline.created_at)}`
-              : "尚未人工确认资料版本集合"}
-          </small>
-        </span>
-        <em className="t-mono-data">{baseline ? "已确认" : "待确认"}</em>
-      </button>
-
-      <h3 className="t-label">资料 · {sources.length}</h3>
-      {sources.map((item) => (
-        <button
-          key={item.source.id}
-          type="button"
-          className="row project-stage-row"
-          onClick={() => onSource(item.source.id)}
-        >
-          <span>
-            <strong>{item.source.name}</strong>
-            <small>
-              {sourceKindLabel(item.source.kind)} ·{" "}
-              {item.latest_revision_id ? "最新版本" : "无版本"}
-            </small>
+    <section className="stage-overview" aria-label="项目工程状态">
+      <section className="stage-card" aria-label="当前基线">
+        <header className="stage-card-head">
+          <span className="t-label">工程基线</span>
+          <span className="stage-card-count">
+            {baseline ? `B${baseline.sequence}` : "未确认"}
           </span>
-          <em className="t-mono-data">{sourceStateText(item)}</em>
-        </button>
-      ))}
-      {!sources.length && (
-        <p className="project-stage-empty">
-          还没有资料。添加 IFC 或当前服务支持的工程文档。
-        </p>
-      )}
-
-      <h3 className="t-label">工作包 · {packages.length}</h3>
-      {packages.map((workPackage) => {
-        const area = data.state.areas.find(
-          (item) => item.id === workPackage.area_id,
-        );
-        return (
+        </header>
+        <div className="stage-rows">
           <button
-            key={workPackage.id}
             type="button"
-            className="row project-stage-row"
-            onClick={() => onWorkPackage(workPackage.id)}
+            className="stage-row"
+            onClick={() => onTab("history")}
           >
-            <span>
-              <strong>
-                {demoWorkPackageName(workPackage.id, workPackage.name)}
+            <span className="stage-row-main">
+              <strong className="stage-row-title">
+                当前基线 {baseline ? `B${baseline.sequence}` : "尚未确认"}
               </strong>
-              <small>
-                {demoAreaName(
-                  workPackage.area_id,
-                  area?.name ?? workPackage.area_id,
-                )}{" "}
-                · {demoDiscipline(workPackage.discipline)} ·{" "}
-                {workPackage.element_ids.length} 构件
-              </small>
+              <span className="stage-row-meta">
+                {baseline
+                  ? `${baseline.accepted_by || "未记录确认人"} · ${shortDate(
+                      baseline.created_at,
+                    )}`
+                  : "尚未人工确认资料版本集合"}
+              </span>
             </span>
-            <em className="t-mono-data">{readinessText(workPackage.id)}</em>
+            <span
+              className="concord-chip"
+              data-tone={baseline ? "positive" : "warning"}
+            >
+              {baseline ? "已确认" : "待确认"}
+            </span>
           </button>
-        );
-      })}
-      {!packages.length && (
-        <p className="project-stage-empty">还没有工作包。</p>
-      )}
+        </div>
+      </section>
 
-      <h3 className="t-label">未解决事项 · {openFindings.length}</h3>
-      {openFindings.map((finding) => (
-        <button
-          key={finding.id}
-          type="button"
-          className="row project-stage-row"
-          onClick={() => onOpenFinding(finding.id, finding.evidence_ids[0])}
-        >
-          <span>
-            <strong>{finding.title}</strong>
-            <small>
-              {packageName(finding.work_package_id)} ·{" "}
-              {findingStateLabels[finding.state]}
-            </small>
-          </span>
-          <em className="t-mono-data">
-            {finding.state === "CONFIRMED" ? "已确认" : "待判断"}
-          </em>
-        </button>
-      ))}
-      {!openFindings.length && (
-        <p className="project-stage-empty">当前没有未解决的工程判断。</p>
+      <div className="stage-split">
+        <section className="stage-card" aria-label="资料">
+          <header className="stage-card-head">
+            <span className="t-label">资料</span>
+            <span className="stage-card-count">{sources.length}</span>
+          </header>
+          <div className="stage-rows">
+            {sources.map((item) => (
+              <button
+                key={item.source.id}
+                type="button"
+                className="stage-row"
+                onClick={() => onSource(item.source.id)}
+              >
+                <span className="stage-row-main">
+                  <strong className="stage-row-title">
+                    {item.source.name}
+                  </strong>
+                  <span className="stage-row-meta">
+                    {sourceKindLabel(item.source.kind)} ·{" "}
+                    {item.latest_revision_id ? "最新版本" : "无版本"}
+                  </span>
+                </span>
+                <span
+                  className="concord-chip"
+                  data-tone={sourceStateTone(item)}
+                >
+                  {sourceStateText(item)}
+                </span>
+              </button>
+            ))}
+            {!sources.length && (
+              <p className="stage-empty-note">
+                还没有资料。添加 IFC 或当前服务支持的工程文档。
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section className="stage-card" aria-label="工作包">
+          <header className="stage-card-head">
+            <span className="t-label">工作包</span>
+            <span className="stage-card-count">{packages.length}</span>
+          </header>
+          <div className="stage-rows">
+            {packages.map((workPackage) => {
+              const area = data.state.areas.find(
+                (item) => item.id === workPackage.area_id,
+              );
+              return (
+                <button
+                  key={workPackage.id}
+                  type="button"
+                  className="stage-row"
+                  onClick={() => onWorkPackage(workPackage.id)}
+                >
+                  <span className="stage-row-main">
+                    <strong className="stage-row-title">
+                      {demoWorkPackageName(workPackage.id, workPackage.name)}
+                    </strong>
+                    <span className="stage-row-meta">
+                      {demoAreaName(
+                        workPackage.area_id,
+                        area?.name ?? workPackage.area_id,
+                      )}{" "}
+                      · {demoDiscipline(workPackage.discipline)} ·{" "}
+                      {workPackage.element_ids.length} 构件
+                    </span>
+                  </span>
+                  <span
+                    className="concord-chip"
+                    data-tone={readinessTone(workPackage.id)}
+                  >
+                    {readinessText(workPackage.id)}
+                  </span>
+                </button>
+              );
+            })}
+            {!packages.length && (
+              <p className="stage-empty-note">还没有工作包。</p>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {!!openFindings.length && (
+        <section className="stage-card" aria-label="未解决事项">
+          <header className="stage-card-head">
+            <span className="t-label">未解决事项</span>
+            <span className="stage-card-count">{openFindings.length}</span>
+          </header>
+          <div className="stage-rows">
+            {openFindings.map((finding) => (
+              <button
+                key={finding.id}
+                type="button"
+                className="stage-row"
+                onClick={() =>
+                  onOpenFinding(finding.id, finding.evidence_ids[0])
+                }
+              >
+                <span className="stage-row-main">
+                  <strong className="stage-row-title">{finding.title}</strong>
+                  <span className="stage-row-meta">
+                    {packageName(finding.work_package_id)} ·{" "}
+                    {findingStateLabels[finding.state]}
+                  </span>
+                </span>
+                <span
+                  className="concord-chip"
+                  data-tone={
+                    finding.state === "CONFIRMED" ? "positive" : "warning"
+                  }
+                >
+                  {finding.state === "CONFIRMED" ? "已确认" : "待判断"}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
     </section>
   );
@@ -403,25 +485,29 @@ function SourceStage({
     data.sources.data?.find((item) => item.source.id === sourceId);
 
   return (
-    <div className="project-stage-stack">
-      <section className="project-stage-section" aria-label="资料登记">
-        <ProjectSourceRegister
-          project={project}
-          sourceId={sourceId}
-          onSelectSource={onSource}
-        />
+    <div className="stage-stack">
+      <section className="stage-card" aria-label="资料登记">
+        <div className="stage-card-body is-flush">
+          <ProjectSourceRegister
+            project={project}
+            sourceId={sourceId}
+            onSelectSource={onSource}
+          />
+        </div>
       </section>
       {current && (
-        <section className="project-stage-section" aria-label="版本历史">
-          <SourceDetailRevisionHistory
-            project={project}
-            current={current}
-            revisions={revisions}
-            baselines={baselines}
-            loading={data.revisions.isPending}
-            processing={processing}
-            focusRevisionId={focusRevisionId}
-          />
+        <section className="stage-card" aria-label="版本历史">
+          <div className="stage-card-body">
+            <SourceDetailRevisionHistory
+              project={project}
+              current={current}
+              revisions={revisions}
+              baselines={baselines}
+              loading={data.revisions.isPending}
+              processing={processing}
+              focusRevisionId={focusRevisionId}
+            />
+          </div>
         </section>
       )}
     </div>
@@ -474,97 +560,122 @@ function WorkPackageStage({
     : statusLabel(readiness?.status ?? "UNCHECKED");
 
   return (
-    <div className="project-stage-stack">
-      <section className="project-stage-section" aria-label="工作包">
-        <h3 className="t-label">工作包</h3>
-        <div className="project-stage-facts">
+    <div className="stage-stack">
+      <section className="stage-card" aria-label="工作包">
+        <header className="stage-card-head">
+          <span className="t-label">工作包</span>
+          <span className="stage-card-count">{workPackage.id}</span>
+        </header>
+        <dl className="stage-facts">
           <div>
-            <span className="t-label">编号</span>
-            <span className="t-mono-data">{workPackage.id}</span>
-          </div>
-          <div>
-            <span className="t-label">区域</span>
-            <span>
+            <dt className="t-label">区域</dt>
+            <dd>
               {demoAreaName(
                 workPackage.area_id,
                 area?.name ?? workPackage.area_id,
               )}
-            </span>
+            </dd>
           </div>
           <div>
-            <span className="t-label">专业</span>
-            <span>{demoDiscipline(workPackage.discipline)}</span>
+            <dt className="t-label">专业</dt>
+            <dd>{demoDiscipline(workPackage.discipline)}</dd>
           </div>
           <div>
-            <span className="t-label">负责人</span>
-            <span>{workPackage.owner || "未指定"}</span>
+            <dt className="t-label">负责人</dt>
+            <dd>{workPackage.owner || "未指定"}</dd>
           </div>
           <div>
-            <span className="t-label">构件</span>
-            <span className="t-mono-data">
-              {workPackage.element_ids.length}
-            </span>
+            <dt className="t-label">构件</dt>
+            <dd className="t-mono-data">{workPackage.element_ids.length}</dd>
           </div>
           <div>
-            <span className="t-label">当前判断</span>
-            <span className={data.stale ? "is-attention" : undefined}>
+            <dt className="t-label">当前判断</dt>
+            <dd data-tone={data.stale ? "attention" : undefined}>
               {readinessText}
-            </span>
+            </dd>
           </div>
-        </div>
+        </dl>
         {!!constraints.length && (
-          <p className="project-stage-note">
+          <p className="stage-empty-note">
             {constraints.length} 个未解决的阻塞条件：
             {constraints.map((item) => item.description).join("；")}
           </p>
         )}
       </section>
 
-      <section className="project-stage-section" aria-label="相关资料">
-        <h3 className="t-label">相关资料 · {relatedSources.length}</h3>
-        {relatedSources.map((item) => (
-          <button
-            key={item.source.id}
-            type="button"
-            className="row project-stage-row"
-            onClick={() => onOpen({ kind: "source", id: item.source.id })}
-          >
-            <span>
-              <strong>{item.source.name}</strong>
-              <small>{sourceKindLabel(item.source.kind)}</small>
-            </span>
-            <em className="t-mono-data">
-              {item.latest_revision_id ? "已导入版本" : "尚无版本"}
-            </em>
-          </button>
-        ))}
-        {!relatedSources.length && (
-          <p className="project-stage-empty">暂无与本工作包直接关联的资料。</p>
-        )}
-      </section>
+      <div className="stage-split">
+        <section className="stage-card" aria-label="相关资料">
+          <header className="stage-card-head">
+            <span className="t-label">相关资料</span>
+            <span className="stage-card-count">{relatedSources.length}</span>
+          </header>
+          <div className="stage-rows">
+            {relatedSources.map((item) => (
+              <button
+                key={item.source.id}
+                type="button"
+                className="stage-row"
+                onClick={() => onOpen({ kind: "source", id: item.source.id })}
+              >
+                <span className="stage-row-main">
+                  <strong className="stage-row-title">
+                    {item.source.name}
+                  </strong>
+                  <span className="stage-row-meta">
+                    {sourceKindLabel(item.source.kind)}
+                  </span>
+                </span>
+                <span
+                  className="concord-chip"
+                  data-tone={item.latest_revision_id ? "positive" : "neutral"}
+                >
+                  {item.latest_revision_id ? "已导入版本" : "尚无版本"}
+                </span>
+              </button>
+            ))}
+            {!relatedSources.length && (
+              <p className="stage-empty-note">暂无与本工作包直接关联的资料。</p>
+            )}
+          </div>
+        </section>
 
-      <section className="project-stage-section" aria-label="相关工程判断">
-        <h3 className="t-label">相关工程判断 · {relatedFindings.length}</h3>
-        {relatedFindings.map((finding) => (
-          <button
-            key={finding.id}
-            type="button"
-            className="row project-stage-row"
-            onClick={() => onOpenFinding(finding.id, finding.evidence_ids[0])}
-          >
-            <span>
-              <strong>{finding.title}</strong>
-              <small>{findingStateLabels[finding.state]}</small>
-            </span>
-            <em className="t-mono-data">
-              {finding.state === "CONFIRMED" ? "已确认" : "待判断"}
-            </em>
-          </button>
-        ))}
-        {!relatedFindings.length && (
-          <p className="project-stage-empty">没有与该工作包相关的工程判断。</p>
-        )}
-      </section>
+        <section className="stage-card" aria-label="相关工程判断">
+          <header className="stage-card-head">
+            <span className="t-label">相关工程判断</span>
+            <span className="stage-card-count">{relatedFindings.length}</span>
+          </header>
+          <div className="stage-rows">
+            {relatedFindings.map((finding) => (
+              <button
+                key={finding.id}
+                type="button"
+                className="stage-row"
+                onClick={() =>
+                  onOpenFinding(finding.id, finding.evidence_ids[0])
+                }
+              >
+                <span className="stage-row-main">
+                  <strong className="stage-row-title">{finding.title}</strong>
+                  <span className="stage-row-meta">
+                    {findingStateLabels[finding.state]}
+                  </span>
+                </span>
+                <span
+                  className="concord-chip"
+                  data-tone={
+                    finding.state === "CONFIRMED" ? "positive" : "warning"
+                  }
+                >
+                  {finding.state === "CONFIRMED" ? "已确认" : "待判断"}
+                </span>
+              </button>
+            ))}
+            {!relatedFindings.length && (
+              <p className="stage-empty-note">没有与该工作包相关的工程判断。</p>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

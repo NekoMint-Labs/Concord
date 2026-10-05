@@ -39,9 +39,9 @@ it("retains donor command filtering, active-descendant navigation and disabled a
   expect(screen.getByText(/没有匹配项/)).toBeVisible();
 });
 
-it("carries the current project, surface and navigation toggle in its own header", () => {
+it("carries project identity, one search entry, scope and the mode action in one bar", () => {
   const onNavigate = vi.fn();
-  const onWork = vi.fn();
+  const onSearch = vi.fn();
   render(
     <WorkspaceChrome
       title="A 栋项目"
@@ -49,16 +49,12 @@ it("carries the current project, surface and navigation toggle in its own header
       onOpen={() => {}}
       onNavigate={onNavigate}
       navigationOpen
-      onWork={onWork}
-      workOpen={false}
-      pending={2}
-      running={false}
-      onReport={() => {}}
-      onFocus={() => {}}
-      onControls={() => {}}
-      controlsOpen={false}
-      onSearch={() => {}}
-      conditionControl={<span>东翼风管安装</span>}
+      onSearch={onSearch}
+      fileMenu={<button type="button">项目菜单</button>}
+      scope={<span>东翼风管安装</span>}
+      assistant={<button type="button">询问 Concord</button>}
+      action={<button type="button">记录变更</button>}
+      overflow={<button type="button">更多</button>}
     />,
   );
 
@@ -66,19 +62,30 @@ it("carries the current project, surface and navigation toggle in its own header
   expect(within(header).getByText("A 栋项目")).toBeVisible();
   expect(within(header).getByText("模型 · 东翼风管安装")).toBeVisible();
 
-  // The navigation toggle replaces the old sidebar collapse control.
-  const navigate = within(header).getByRole("button", { name: "资料" });
+  // One search entry for every object and action.
+  const search = within(header).getByRole("button", {
+    name: /查找对象、判断、资料或操作/,
+  });
+  fireEvent.click(search);
+  expect(onSearch).toHaveBeenCalledOnce();
+
+  // The navigation toggle is the only second navigation affordance in the bar.
+  const navigate = within(header).getByRole("button", { name: "对象导航" });
   expect(navigate).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(navigate);
   expect(onNavigate).toHaveBeenCalledOnce();
 
-  // Work stays in the header, expanded state and pending count are its own.
-  const work = within(header).getByRole("button", { name: /工作/ });
-  expect(work).toHaveAttribute("aria-expanded", "false");
-  expect(work).toHaveTextContent("2");
-  fireEvent.click(work);
-  expect(onWork).toHaveBeenCalledOnce();
-
-  // The current location and work package live in the context band.
-  expect(screen.getByText("东翼风管安装")).toBeVisible();
+  // Scope, the assistant, the committed action and the overflow all live in the bar,
+  // and the bar carries no second mode switcher: mode belongs to the rail.
+  expect(within(header).getByText("东翼风管安装")).toBeVisible();
+  expect(
+    within(header).getByRole("button", { name: "询问 Concord" }),
+  ).toBeVisible();
+  expect(
+    within(header).getByRole("button", { name: "记录变更" }),
+  ).toBeVisible();
+  expect(within(header).getByRole("button", { name: "更多" })).toBeVisible();
+  expect(
+    within(header).getByRole("button", { name: "项目菜单" }),
+  ).toBeVisible();
 });

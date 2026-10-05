@@ -1,0 +1,590 @@
+/*
+ * ── Concord secondary surfaces ──────────────────────────────────────────────
+ *
+ * The rest of the workspace: activity and runs, capability diagnostics, the spatial
+ * surfaces (impact and issues), the work-package coordination view, history, and the
+ * source detail and comparison panes.
+ *
+ * These are *the same product* as Work, Browse and Project, so they are built from the
+ * same three things and nothing else: a plane, a seam and a table. Where a feature sheet
+ * already declares the grammar with its reasoning, this file aligns it rather than
+ * restating it; where a view predates the material, this file supplies the missing
+ * planes and edges. No new component type is introduced anywhere below.
+ */
+
+/* ── activity and runs ────────────────────────────────────────────────────── */
+/*
+ * Two regions side by side: the console that starts a check, and the record of what has
+ * run. The console is a dock (its own plane) and the record is the work surface, so the
+ * seam between them is the pane edge - not padding on a shared background, which is what
+ * left the console looking like a floating slab.
+ */
+.app-shell .operations-workspace {
+  background: var(--c-work);
+}
+.app-shell .operations-stage-body {
+  flex: 1 1 auto;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.app-shell .operations-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.app-shell .operation-console {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  padding: var(--space-4);
+  border-right: 1px solid var(--hairline);
+  background: var(--c-nav);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.app-shell .operation-tool {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+}
+.app-shell .operation-tool > h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 600;
+}
+.app-shell .operation-tool > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.65;
+}
+.app-shell .operation-tool textarea {
+  width: 100%;
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-inset);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  resize: vertical;
+}
+/*
+ * An unavailable capability is stated where the action would be, in the warning family,
+ * and it is a *statement* rather than a band: it explains why the button is missing
+ * instead of drawing attention to itself.
+ */
+.app-shell .operation-unavailable {
+  display: block;
+  margin-top: var(--space-1);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--warn-fg);
+  color: var(--warn-fg);
+  font-size: var(--fs-label);
+  line-height: 1.55;
+}
+.app-shell .operation-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.app-shell .operation-filters button {
+  min-height: 26px;
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+}
+.app-shell .operation-filters button:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.app-shell .operation-filters button[aria-pressed="true"] {
+  border-color: var(--c-tint-accent-strong);
+  background: var(--c-tint-accent);
+  color: var(--c-accent-deep);
+}
+.app-shell .run-history {
+  min-height: 0;
+  background: var(--c-work);
+}
+.app-shell .run-detail {
+  background: var(--c-work);
+}
+/* The register is a dock: one plane below the record, with the rows as full-bleed bands. */
+.app-shell .run-register {
+  border-right: 1px solid var(--hairline);
+  background: var(--c-nav);
+}
+.app-shell .run-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+.app-shell .run-list > * {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3) !important;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0 !important;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.app-shell .run-list > *:hover {
+  background: var(--hover);
+}
+.app-shell .run-list > *.selected {
+  position: relative;
+  background: var(--c-tint-accent);
+}
+.app-shell .run-list > *.selected::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 3px;
+  background: var(--accent);
+}
+.app-shell .run-list span > strong {
+  display: block;
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 500;
+}
+.app-shell .run-list span > small {
+  display: block;
+  margin-top: 1px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+}
+.app-shell .run-list-state {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--face-raised);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+}
+
+/* ── spatial surfaces (impact, issues, model, map) ────────────────────────── */
+/*
+ * These mount a 3D or a map viewer, and the viewer owns its own field. The shell's job
+ * is the frame around it: a dark band that names what is being looked at, a docked
+ * inspector on the same material as every other dock, and the viewer's own toolbar
+ * reading as an instrument inside the viewport rather than as a row of outlined boxes.
+ */
+.app-shell .spatial-stage,
+.app-shell .spatial-workspace,
+.app-shell .model-workspace-view,
+.app-shell .bim-workspace {
+  background: var(--c-work);
+}
+.app-shell .spatial-context,
+.app-shell .spatial-context-controls,
+.app-shell .spatial-stage-band {
+  border-color: var(--hairline);
+  background: var(--c-chrome-band);
+}
+.app-shell .spatial-context {
+  border-right: 1px solid var(--hairline);
+  border-left: 0;
+  background: var(--c-nav);
+}
+.app-shell .spatial-context-pane,
+.app-shell .spatial-inspector,
+.app-shell .bim-inspector,
+.app-shell .model-inspector {
+  border-left: 1px solid var(--hairline);
+  background: var(--c-nav);
+}
+.app-shell .spatial-context-controls button,
+.app-shell .spatial-source-actions button,
+.app-shell .bim-workspace-toolbar button,
+.app-shell .map-controls button {
+  min-height: 26px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-sm);
+  background: var(--face-raised);
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+}
+.app-shell .spatial-context-controls button:hover,
+.app-shell .bim-workspace-toolbar button:hover,
+.app-shell .map-controls button:hover {
+  border-color: var(--line-control);
+  color: var(--ink);
+}
+.app-shell .spatial-context-controls button[aria-pressed="true"],
+.app-shell .bim-workspace-toolbar button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--c-tint-accent);
+  color: var(--c-accent-deep);
+}
+.app-shell .spatial-context-tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+}
+/*
+ * A viewer toolbar is an instrument: it floats over the field it controls, on the
+ * product's chrome, with a real edge - so it never reads as content at the top of the
+ * viewport.
+ */
+.app-shell .model-workspace-viewport [data-toolbar],
+.app-shell .bim-workspace-toolbar {
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--c-chrome-band);
+  box-shadow: var(--c-shadow-2);
+}
+.app-shell .viewport-state,
+.app-shell .spatial-scrim {
+  border-radius: var(--radius-md);
+  background: var(--c-chrome-band);
+  color: var(--ink);
+  box-shadow: var(--c-shadow-2);
+}
+
+/* ── the work-package coordination view ───────────────────────────────────── */
+
+.app-shell .coordination-workspace {
+  background: var(--c-work);
+}
+.app-shell .coordination-detail,
+.app-shell .coordination-section,
+.app-shell .overview-inspector {
+  border-color: var(--hairline);
+  background: var(--c-nav);
+}
+.app-shell .coordination-section-heading,
+.app-shell .overview-inspector-header {
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+}
+
+/* ── history ──────────────────────────────────────────────────────────────── */
+/*
+ * Version history is read as a column of rows against a time axis, so it is a table with
+ * a rail: the rail is the axis, the rows are records.
+ */
+.app-shell .baseline-register > button,
+.app-shell .revision-row,
+.app-shell .source-revision-row,
+.app-shell .history-row {
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+}
+.app-shell .baseline-register > button:hover,
+.app-shell .revision-row:hover,
+.app-shell .source-revision-row:hover,
+.app-shell .history-row:hover {
+  background: var(--hover);
+}
+.app-shell .baseline-register > button.selected,
+.app-shell .revision-row[aria-selected="true"],
+.app-shell .history-row[aria-current="true"] {
+  position: relative;
+  background: var(--c-tint-accent);
+}
+.app-shell .baseline-register > button.selected::before,
+.app-shell .revision-row[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  background: var(--accent);
+}
+.app-shell .revision-table-header,
+.app-shell .source-detail-heading {
+  border-bottom: 1px solid var(--line-control-soft);
+  background: var(--face-inset);
+}
+
+/* ── source detail, comparison and the mapping dock ───────────────────────── */
+/*
+ * A source's own facts strip is the same cell grammar as Project's: read across, cells
+ * with hairlines, value in ink and label in the quiet tier.
+ */
+.app-shell .source-detail-facts,
+.app-shell .comparison-facts {
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+}
+.app-shell .impact-heading,
+.app-shell .compare-heading,
+.app-shell .mapping-controls > header {
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+}
+.app-shell .revision-impact,
+.app-shell .baseline-register,
+.app-shell .source-register,
+.app-shell .comparison-pane,
+.app-shell .mapping-dock {
+  border-color: var(--line-control-soft);
+  background: var(--face-raised);
+}
+.app-shell .comparison-column,
+.app-shell .mapping-row {
+  border-bottom: 1px solid var(--line-soft);
+}
+/* A changed element is a marked row, not a repainted one. */
+.app-shell [data-change="added"] {
+  border-left: 3px solid var(--c-positive);
+}
+.app-shell [data-change="removed"] {
+  border-left: 3px solid var(--c-danger);
+}
+.app-shell [data-change="modified"] {
+  border-left: 3px solid var(--c-warning);
+}
+
+/* ── diagnostics ──────────────────────────────────────────────────────────── */
+
+.app-shell .profile-summary {
+  border: 1px solid var(--line-control-soft);
+  background: var(--face-inset);
+}
+.app-shell .capability-table td:last-child {
+  color: var(--muted);
+}
+
+/*
+ * ── round 2: the model workspace as an engineering object ───────────────────
+ *
+ * Round 1 gave the model a row of five unlabelled icons floating on a bright field in
+ * the top-left corner and nothing else. The band above it now says which model, which
+ * revision, how many elements changed and how many issues block. What is left is the
+ * instrument around the field:
+ *
+ *  · the field is a *viewport* - an inset, framed drafting surface on the canvas plane,
+ *    so the viewer's own neutral field reads as the model's field and not as the page;
+ *  · the tool shelf and the 2D/3D switch are the same charcoal instrument as the frame,
+ *    floating over the field they control, because they belong to the application and
+ *    not to the model;
+ *  · labels on the field are product chips, not donor callouts with 10px type;
+ *  · the inspector beside it is a docked panel with a real head, real tabs and a facts
+ *    table, on the same material as every other dock in the product.
+ */
+
+.app-shell .model-workspace {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--c-canvas);
+}
+.app-shell .model-workspace-viewport {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  margin: var(--space-3) var(--space-4) var(--space-4);
+  border: 1px solid var(--c-line-float);
+  border-radius: var(--radius-lg);
+  background: var(--c-canvas);
+  box-shadow: var(--c-shadow-2);
+  overflow: hidden;
+}
+.app-shell .model-workspace-viewport > * {
+  border-radius: inherit;
+}
+
+/* the shelf: the frame's material, floating over the field it controls */
+.app-shell .model-workspace .viewer-actions,
+.app-shell .bim-workspace .viewer-actions {
+  top: var(--space-3);
+  left: var(--space-3);
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--band-line);
+  border-radius: var(--radius-md);
+  background: var(--band);
+  box-shadow: var(--c-shadow-2);
+}
+.app-shell .model-workspace .viewer-actions button,
+.app-shell .bim-workspace .viewer-actions button {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  color: var(--band-ink-2);
+}
+.app-shell .model-workspace .viewer-actions button:hover,
+.app-shell .bim-workspace .viewer-actions button:hover {
+  background: var(--band-select);
+  color: var(--band-ink);
+}
+.app-shell .model-workspace .viewer-actions button.is-active,
+.app-shell .bim-workspace .viewer-actions button.is-active {
+  background: var(--band-select);
+  color: var(--band-focus);
+}
+.app-shell .model-workspace .viewer-actions button:focus-visible,
+.app-shell .bim-workspace .viewer-actions button:focus-visible {
+  outline: 2px solid var(--band-focus);
+  outline-offset: 1px;
+}
+
+/* the 2D/3D switch: a segmented control, not a pill of loose icons */
+.app-shell .model-workspace .viewer-bottom-tools,
+.app-shell .bim-workspace .viewer-bottom-tools {
+  bottom: var(--space-3);
+  height: auto;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--band-line);
+  border-radius: var(--radius-md);
+  background: var(--band);
+  box-shadow: var(--c-shadow-2);
+}
+.app-shell .model-workspace .viewer-bottom-tools button,
+.app-shell .bim-workspace .viewer-bottom-tools button {
+  width: 40px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  color: var(--band-ink-2);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.app-shell .model-workspace .viewer-bottom-tools button:hover,
+.app-shell .bim-workspace .viewer-bottom-tools button:hover {
+  background: var(--band-select);
+  color: var(--band-ink);
+}
+.app-shell .model-workspace .viewer-bottom-tools button.is-active,
+.app-shell .bim-workspace .viewer-bottom-tools button.is-active {
+  background: var(--band-focus);
+  color: var(--band);
+}
+
+/* labels on the field: product chips at the reading floor, never 10px callouts */
+.app-shell .model-workspace .viewer-object-label,
+.app-shell .bim-workspace .viewer-object-label {
+  padding: 4px 8px 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--band);
+  color: var(--band-ink);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  box-shadow: var(--c-shadow-2);
+  border-left: 2px solid var(--band-focus);
+}
+.app-shell .model-workspace .viewer-issue-label,
+.app-shell .bim-workspace .viewer-issue-label {
+  gap: var(--space-2);
+  max-width: 240px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--c-danger);
+  border-radius: var(--radius-md);
+  background: var(--c-danger-surface);
+  color: var(--c-danger);
+  font-size: var(--fs-label);
+  line-height: 1.45;
+  box-shadow: var(--c-shadow-2);
+}
+
+/* state plates: the same treatment as every other product state */
+.app-shell .model-workspace .viewer-message:not([hidden]),
+.app-shell .bim-workspace .viewer-message:not([hidden]) {
+  border: 1px solid var(--line-float);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+  color: var(--ink);
+  font-size: var(--fs-meta);
+  box-shadow: var(--c-shadow-2);
+}
+
+/* the readout the model carries: counts, as chips on the field's own floor */
+.app-shell .model-workspace .spatial-stage-band {
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+}
+.app-shell .model-workspace .spatial-stage-band > * {
+  padding: 3px var(--space-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--face-raised);
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--c-shadow-1);
+}
+
+/* the inspector: a docked panel like every other dock */
+.app-shell .model-workspace .spatial-inspector,
+.app-shell .bim-workspace .spatial-inspector {
+  background: var(--c-nav);
+  border-left: var(--panel-edge);
+  box-shadow: inset 1px 0 0 var(--c-band-shade);
+}
+.app-shell .model-workspace .spatial-inspector-head,
+.app-shell .bim-workspace .spatial-inspector-head {
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 52px;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--panel-edge);
+  background: var(--face-inset);
+  color: var(--ink);
+}
+.app-shell .model-workspace .spatial-inspector-head h2 {
+  font-size: var(--fs-section);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.app-shell .model-workspace .spatial-inspector-head > div {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.app-shell .model-workspace .spatial-context-tabs button,
+.app-shell .bim-workspace .spatial-context-tabs button {
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+}
+.app-shell .model-workspace .spatial-context-tabs button:hover,
+.app-shell .bim-workspace .spatial-context-tabs button:hover {
+  color: var(--ink);
+}
+.app-shell .model-workspace .spatial-context-tabs button[aria-selected="true"],
+.app-shell .bim-workspace .spatial-context-tabs button[aria-selected="true"] {
+  border-color: var(--line-control-soft);
+  background: var(--face-raised);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--c-shadow-1);
+}

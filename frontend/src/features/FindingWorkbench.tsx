@@ -3,7 +3,13 @@
  * Finding session, the human decisions and the evidence host. One list, one
  * selection, one receipt: no second search, queue or inspector.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight } from "lucide-react";
 import {
@@ -74,6 +80,7 @@ export function FindingWorkbench({
   prefs,
   project,
   open = true,
+  agent,
   onClose,
   selectedId = "",
   evidenceId,
@@ -84,6 +91,9 @@ export function FindingWorkbench({
   prefs: ReturnType<typeof useWorkspaceLayout>;
   project: string;
   open?: boolean;
+  /** The Concord surface for the dock's second tab. It reads the same selection the
+   * receipt does, so the AI is part of this panel rather than a window beside it. */
+  agent?: ReactNode;
   onClose: () => void;
   selectedId?: string;
   evidenceId?: string;
@@ -180,20 +190,29 @@ export function FindingWorkbench({
       selectedFindingId={selectedId}
       onFindingSelect={onSelect}
       onSelectionChange={applySelection}
-      detail={(findingId) =>
-        findingId !== id ? (
-          <WorkspaceInlineState title="正在读取 Finding 详情…">
-            正在切换工程判断。
-          </WorkspaceInlineState>
-        ) : (
-          <FindingDetail
-            key={`${project}:${findingId}`}
-            session={session}
-            activeId={activeId}
-            onEvidence={selectEvidence}
-            sources={sources}
-          />
-        )
+      /*
+       * The receipt is a pane of its own in the wide composition, and only falls back
+       * into the dock when the window cannot afford three columns (see `stacked`). A
+       * list and a long engineering receipt stacked in one 360px column is the reason
+       * the round-1 Work surface read as a form rather than as a workbench.
+       */
+      detail={
+        stacked
+          ? (findingId) =>
+              findingId !== id ? (
+                <WorkspaceInlineState title="正在读取 Finding 详情…">
+                  正在切换工程判断。
+                </WorkspaceInlineState>
+              ) : (
+                <FindingDetail
+                  key={`${project}:${findingId}`}
+                  session={session}
+                  activeId={activeId}
+                  onEvidence={selectEvidence}
+                  sources={sources}
+                />
+              )
+          : undefined
       }
     />
   );
@@ -264,11 +283,64 @@ export function FindingWorkbench({
       )}
     </main>
   );
+  /*
+   * The judgement pane. It is the third column of the Work mode and it sits *beside*
+   * the list, not below it: the receipt, the human decision and the Concord surface all
+   * read the one selection, so they belong together on the other side of the evidence
+   * they are judging. `order` keeps it adjacent to the dock whichever side the dock is
+   * docked to.
+   */
+  const judgementPanel = (
+    <aside
+      key="finding-judgement"
+      className="work-judgement"
+      aria-label="工程判断详情与人工决策"
+      style={{
+        width: Math.max(340, prefs.layout.workWidth),
+        order: side === "left" ? -8 : 8,
+      }}
+    >
+      {id ? (
+        <FindingDetail
+          key={`${project}:${id}`}
+          session={session}
+          activeId={activeId}
+          onEvidence={selectEvidence}
+          sources={sources}
+        />
+      ) : (
+        <div className="work-judgement-empty">
+          <WorkspaceInlineState title="选择一项工程判断">
+            检查变更、影响与依据，再作人工判断。
+          </WorkspaceInlineState>
+        </div>
+      )}
+      {agent ? (
+        /*
+         * The assistant is docked in the judgement pane, under a disclosure that names
+         * the context it will be given. Open by default it would take a third of the
+         * column the receipt needs; closed, it is still the first thing under the
+         * evidence - a capability sitting inside the engineering context rather than a
+         * tool someone has to go and find. The instrument bar carries the other entry.
+         */
+        <details className="work-judgement-agent">
+          <summary>
+            <span className="work-agent-mark" aria-hidden="true" />
+            <strong>Concord 工程助手</strong>
+            <span className="work-agent-scope">
+              {session.finding.data?.title ?? "当前工程上下文"}
+            </span>
+          </summary>
+          <div className="work-agent-body">{agent}</div>
+        </details>
+      ) : null}
+    </aside>
+  );
   return (
     <>
-      {!stacked && side === "left"
-        ? [workPanel, evidencePanel]
-        : [evidencePanel, workPanel]}
+      {stacked
+        ? [evidencePanel, workPanel]
+        : [workPanel, judgementPanel, evidencePanel]}
       <DockTargets dragging={dragging} />
     </>
   );
@@ -373,7 +445,7 @@ function FindingDetail({
       );
     });
   return (
-    <div className="workspace-work-view">
+    <div className="finding-receipt-view">
       <section
         className="workspace-inspector finding-receipt"
         aria-label="Finding 详情"

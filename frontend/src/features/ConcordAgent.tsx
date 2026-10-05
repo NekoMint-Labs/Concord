@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScanSearch } from "lucide-react";
@@ -38,16 +38,7 @@ export type ConcordContext = {
   elementIds: string[];
 };
 
-export function ConcordAgent({
-  project,
-  context,
-  finding,
-  currentRun,
-  report,
-  onRun,
-  onOpenReport,
-  onInvestigate,
-}: {
+export type ConcordAgentProps = {
   project: string;
   context: ConcordContext;
   finding?: DTO<"Finding">;
@@ -59,9 +50,64 @@ export function ConcordAgent({
     instruction: string,
     context: ConcordContext,
   ) => Promise<AgentRun | void> | AgentRun | void;
-}) {
+};
+
+/**
+ * Concord in the instrument bar: the same surface, reachable from anywhere in the
+ * application. It is the shortcut, not the home - the copy inside the Work judgement
+ * pane is the one that reads the selected Finding with its evidence still in view.
+ */
+export function ConcordAgent(props: ConcordAgentProps) {
+  return (
+    <AppPopover
+      label="询问 Concord"
+      side="bottom"
+      trigger={
+        <Button
+          variant="ghost"
+          size="sm"
+          className="concord-assistant"
+          aria-label="询问 Concord"
+        >
+          <ScanSearch {...icon} />
+          <span>询问 Concord</span>
+        </Button>
+      }
+    >
+      <ConcordAgentSurface {...props} />
+    </AppPopover>
+  );
+}
+
+/*
+ * Concord, presented as a capability of the workspace rather than a tool box.
+ *
+ * Three things changed from the round-1 surface, and they are the whole point:
+ *
+ *  · It opens by stating *what it is looking at*. "当前上下文" is the scope it will be
+ *    given — the finding, the model revision, the selected elements — printed before a
+ *    field appears. A reader should never have to guess what an assistant can see.
+ *  · The question field is the second thing on the surface, not the last. Suggestions
+ *    sit under it as chips that fill the field rather than as a menu of commands.
+ *  · The fence is part of the frame, not a footnote: this surface explains, finds
+ *    relations and suggests, and it says so in the same breath as it offers to help.
+ *    An answer is never decorated as evidence and never as a human decision.
+ */
+export function ConcordAgentSurface({
+  project,
+  context,
+  finding,
+  currentRun,
+  report,
+  onRun,
+  onOpenReport,
+  onInvestigate,
+}: ConcordAgentProps) {
   const cache = useQueryClient();
   const [question, setQuestion] = useState("");
+  // Two surfaces can be mounted at once (the docked tab and the band popover), so
+  // the question field cannot carry a fixed id.
+  const questionId = useId();
   const contextKey = JSON.stringify([
     engineeringContextKey(project, context),
     finding?.id,
@@ -167,22 +213,13 @@ export function ConcordAgent({
   });
 
   return (
-    <AppPopover
-      label="询问 Concord"
-      side="bottom"
-      trigger={
-        <Button variant="ghost" size="sm" aria-label="询问 Concord">
-          <ScanSearch {...icon} />
-        </Button>
-      }
-    >
-      <div className="agent-surface">
-        <header className="agent-header">
-          <div>
-            <span className="eyebrow">Concord</span>
-            <h3>询问与检查</h3>
-          </div>
-        </header>
+    <div className="agent-surface">
+      <header className="agent-header">
+        <span className="agent-mark" aria-hidden="true" />
+        <div>
+          <span className="eyebrow">Concord</span>
+          <h3>工程助手</h3>
+        </div>
         <AppDisclosure label="调查方式">
           <label>
             <span>模式</span>
@@ -203,205 +240,204 @@ export function ConcordAgent({
             />
           </label>
         </AppDisclosure>
+      </header>
 
-        <section className="agent-context-block">
-          <span className="section-label">调查范围</span>
-          <strong>
-            {context.workPackageName ??
-              context.sourceName ??
-              context.projectName}
-          </strong>
-          <p>
-            {[
-              context.sourceName,
-              context.fromRevisionLabel && context.revisionLabel
-                ? `${context.fromRevisionLabel} → ${context.revisionLabel}`
-                : context.revisionLabel,
-              context.elementIds.length
-                ? `${context.elementIds.length} 个构件`
-                : undefined,
-            ]
-              .filter(Boolean)
-              .join(" · ") || "当前项目"}
-          </p>
-        </section>
+      {/* What the assistant is given. Printed first, because an assistant you cannot
+          scope is an assistant you cannot trust. */}
+      <section className="agent-context-block">
+        <span className="section-label">当前上下文</span>
+        <strong>
+          {context.workPackageName ?? context.sourceName ?? context.projectName}
+        </strong>
+        <p>
+          {[
+            context.sourceName,
+            context.fromRevisionLabel && context.revisionLabel
+              ? `${context.fromRevisionLabel} → ${context.revisionLabel}`
+              : context.revisionLabel,
+            context.elementIds.length
+              ? `${context.elementIds.length} 个构件`
+              : undefined,
+          ]
+            .filter(Boolean)
+            .join(" · ") || "当前项目"}
+        </p>
+        {finding && <p className="agent-fence">{finding.title}</p>}
+      </section>
 
-        {finding && (
-          <section className="finding-context-questions">
-            <strong>{finding.title}</strong>
-            <p>
-              仅解释当前 Finding；多源依赖的完整判定请查看工程 Evidence。AI
-              不能作出人工决策。
-            </p>
-            {[
-              "这项判断有哪些依据？",
-              "为什么建议此专业？",
-              "什么发生了变化？",
-            ].map((text) => (
-              <Button
-                key={text}
-                variant="secondary"
-                size="sm"
-                onClick={() => setQuestion(text)}
-              >
-                {text}
-              </Button>
-            ))}
-          </section>
-        )}
-        <form
-          className="agent-ask"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (question.trim() && !scopeTooLarge && !askPending)
-              ask.mutate({
-                identity: askContext.current,
-                project,
-                context: { ...context, elementIds: [...context.elementIds] },
-                instruction: contextualInstruction(question.trim()),
-              });
-          }}
-        >
-          <label className="section-label" htmlFor="context-question">
-            询问当前工程问题
-          </label>
-          <div className="agent-ask-row">
-            <input
-              id="context-question"
-              maxLength={2000}
-              placeholder="例如：当前为什么不能施工？"
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-            />
-            <Button
-              type="submit"
-              size="sm"
-              disabled={!question.trim() || askPending || scopeTooLarge}
-            >
-              {askPending ? "查询中" : "询问"}
-            </Button>
-          </div>
-        </form>
-
-        {scopeTooLarge && <p role="alert">{AGENT_ELEMENT_LIMIT_MESSAGE}</p>}
-
-        {answer && (
-          <section className="agent-answer">
-            <p>{demoInvestigationText(answer.answer.summary)}</p>
-            <small>即时只读回答 · 不写入项目依据</small>
-            {answer.answer.limitations.map((item) => (
-              <small key={item}>{item}</small>
-            ))}
-          </section>
-        )}
-
-        <section className="agent-investigate">
-          <div>
-            <span className="section-label">调查</span>
-            <strong>Concord 核对影响、原因和判断依据</strong>
-          </div>
+      <form
+        className="agent-ask"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (question.trim() && !scopeTooLarge && !askPending)
+            ask.mutate({
+              identity: askContext.current,
+              project,
+              context: { ...context, elementIds: [...context.elementIds] },
+              instruction: contextualInstruction(question.trim()),
+            });
+        }}
+      >
+        <label className="section-label" htmlFor={questionId}>
+          询问当前工程问题
+        </label>
+        <div className="agent-ask-row">
+          <input
+            id={questionId}
+            maxLength={2000}
+            placeholder="例如：当前为什么不能施工？"
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+          />
           <Button
+            type="submit"
             size="sm"
-            disabled={investigate.isPending || scopeTooLarge}
-            onClick={() => investigate.mutate(submittedInstruction)}
+            disabled={!question.trim() || askPending || scopeTooLarge}
           >
-            {investigate.isPending
-              ? "正在启动"
-              : question.trim()
-                ? "保存为工程调查"
-                : investigation.label}
+            {askPending ? "查询中" : "询问"}
           </Button>
+        </div>
+      </form>
+
+      {finding && (
+        <section className="finding-context-questions">
+          <p>围绕当前工程判断，可以先问：</p>
+          {[
+            "这项判断有哪些依据？",
+            "为什么建议此专业？",
+            "什么发生了变化？",
+          ].map((text) => (
+            <Button
+              key={text}
+              variant="secondary"
+              size="sm"
+              onClick={() => setQuestion(text)}
+            >
+              {text}
+            </Button>
+          ))}
         </section>
+      )}
 
-        {validRun && (
-          <section className="agent-current-run">
-            <div className="agent-run-heading">
-              <span className="section-label">Concord 调查状态</span>
-              <Status value={validRun.status} />
-            </div>
-            <PropertyTable>
-              {validReport && (
-                <PropertyRow
-                  label="判断依据"
-                  value={`${validReport.evidence.length} 条`}
-                />
-              )}
-            </PropertyTable>
+      {scopeTooLarge && <p role="alert">{AGENT_ELEMENT_LIMIT_MESSAGE}</p>}
+
+      {answer && (
+        <section className="agent-answer">
+          <span className="section-label">回答</span>
+          <p>{demoInvestigationText(answer.answer.summary)}</p>
+          <small>即时只读回答 · 不写入项目依据 · 不代替人工判断</small>
+          {answer.answer.limitations.map((item) => (
+            <small key={item}>{item}</small>
+          ))}
+        </section>
+      )}
+
+      <section className="agent-investigate">
+        <div>
+          <span className="section-label">深入调查</span>
+          <strong>核对影响、原因与判断依据，并保存为工程记录</strong>
+        </div>
+        <Button
+          size="sm"
+          disabled={investigate.isPending || scopeTooLarge}
+          onClick={() => investigate.mutate(submittedInstruction)}
+        >
+          {investigate.isPending
+            ? "正在启动"
+            : question.trim()
+              ? "保存为工程调查"
+              : investigation.label}
+        </Button>
+      </section>
+
+      {validRun && (
+        <section className="agent-current-run">
+          <div className="agent-run-heading">
+            <span className="section-label">Concord 调查状态</span>
+            <Status value={validRun.status} />
+          </div>
+          <PropertyTable>
             {validReport && (
-              <>
-                <p>{demoInvestigationText(validReport.answer.summary)}</p>
-                {onOpenReport && (
-                  <AppPopoverClose>
-                    <Button size="sm" variant="ghost" onClick={onOpenReport}>
-                      查看调查结果
-                    </Button>
-                  </AppPopoverClose>
-                )}
-              </>
+              <PropertyRow
+                label="判断依据"
+                value={`${validReport.evidence.length} 条`}
+              />
             )}
-            {validRun.status === "FAILED" && (
-              <div className="agent-run-failure">
-                <p role="alert">调查未完成，请从当前工程位置重试。</p>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={retry.isPending}
-                  onClick={() => retry.mutate()}
-                >
-                  {retry.isPending ? "正在恢复" : "重试调查"}
-                </Button>
-              </div>
-            )}
-            {!!stream.events.length && (
-              <ol className="agent-run-timeline" aria-label="调查进度">
-                {stream.events.slice(-5).map((event) => (
-                  <li key={event.sequence}>
-                    <span>
-                      {event.type === "RUN_FINISHED"
-                        ? "运行已完成"
-                        : event.type === "RUN_ERROR"
-                          ? "运行失败"
-                          : event.type === "CUSTOM"
-                            ? (event.name ?? "已记录活动")
-                            : event.type === "STEP_FINISHED"
-                              ? "读取步骤已完成"
-                              : "运行进行中"}
-                    </span>
-                    {event.stepName && <small>{event.stepName}</small>}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
-        )}
+          </PropertyTable>
+          {validReport && (
+            <>
+              <p>{demoInvestigationText(validReport.answer.summary)}</p>
+              {onOpenReport && (
+                <AppPopoverClose>
+                  <Button size="sm" variant="ghost" onClick={onOpenReport}>
+                    查看调查结果
+                  </Button>
+                </AppPopoverClose>
+              )}
+            </>
+          )}
+          {validRun.status === "FAILED" && (
+            <div className="agent-run-failure">
+              <p role="alert">调查未完成，请从当前工程位置重试。</p>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={retry.isPending}
+                onClick={() => retry.mutate()}
+              >
+                {retry.isPending ? "正在恢复" : "重试调查"}
+              </Button>
+            </div>
+          )}
+          {!!stream.events.length && (
+            <ol className="agent-run-timeline" aria-label="调查进度">
+              {stream.events.slice(-5).map((event) => (
+                <li key={event.sequence}>
+                  <span>
+                    {event.type === "RUN_FINISHED"
+                      ? "运行已完成"
+                      : event.type === "RUN_ERROR"
+                        ? "运行失败"
+                        : event.type === "CUSTOM"
+                          ? (event.name ?? "已记录活动")
+                          : event.type === "STEP_FINISHED"
+                            ? "读取步骤已完成"
+                            : "运行进行中"}
+                  </span>
+                  {event.stepName && <small>{event.stepName}</small>}
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
 
-        {!!notices.data?.length && (
-          <section className="agent-notices">
-            <span className="section-label">需要关注</span>
-            {notices.data.slice(-3).map((notice) => (
-              <div key={notice.id}>
-                <span>发现待审核的模型版本</span>
-              </div>
-            ))}
-          </section>
-        )}
+      {!!notices.data?.length && (
+        <section className="agent-notices">
+          <span className="section-label">需要关注</span>
+          {notices.data.slice(-3).map((notice) => (
+            <div key={notice.id}>
+              <span>发现待审核的模型版本</span>
+            </div>
+          ))}
+        </section>
+      )}
 
-        {(askError ||
-          investigate.error ||
-          retry.error ||
-          configure.error ||
-          stream.error) && (
-          <p className="alert" role="alert">
-            {retry.error || investigate.error
-              ? "调查无法启动或恢复，请重试。"
-              : askError
-                ? "暂时无法回答，请重试。"
-                : stream.error
-                  ? "调查进度暂时不可用。"
-                  : "设置未保存，请重试。"}
-          </p>
-        )}
-      </div>
-    </AppPopover>
+      {(askError ||
+        investigate.error ||
+        retry.error ||
+        configure.error ||
+        stream.error) && (
+        <p className="alert" role="alert">
+          {retry.error || investigate.error
+            ? "调查无法启动或恢复，请重试。"
+            : askError
+              ? "暂时无法回答，请重试。"
+              : stream.error
+                ? "调查进度暂时不可用。"
+                : "设置未保存，请重试。"}
+        </p>
+      )}
+    </div>
   );
 }

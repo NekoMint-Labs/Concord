@@ -1,0 +1,1351 @@
+/*
+ * ── The Work dock ───────────────────────────────────────────────────────────
+ *
+ * One list, one selection, one receipt, and the AI's own surface beside them. This
+ * is the product's home view: an engineer lands here, reads what changed, opens the
+ * evidence, and decides.
+ *
+ * The dock is a panel plane (one step below the work surface) with full-bleed rows,
+ * because it is read as a column of like things - a card per row would break the
+ * column and cost two lines of height per item. The *selected* row is the exception
+ * and is the only one that gets material of its own.
+ */
+
+.workspace-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: calc(var(--props-w) + var(--sp-8) * 3);
+  background: var(--c-nav);
+  border-left: 1px solid var(--hairline);
+  color: var(--ink);
+  font-size: var(--fs-body);
+}
+.workspace-panel[data-dock-side="left"] {
+  border-left: 0;
+  border-right: 1px solid var(--hairline);
+}
+.workspace-panel[hidden] {
+  display: none;
+}
+
+/* ── the dock header ──────────────────────────────────────────────────────── */
+
+.workspace-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+}
+.workspace-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.workspace-heading h2 {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--fs-action);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.workspace-eyebrow {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.workspace-heading > button {
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+}
+.workspace-heading > button:hover {
+  background: var(--hover-strong);
+  color: var(--ink);
+}
+
+/*
+ * ── the scope bar ──────────────────────────────────────────────────────────
+ *
+ * The dock used to open with three stacked rows of chrome - a three-cell readout, a
+ * two-way tab bar, and a three-way filter that repeated the readout's own numbers -
+ * before a single finding appeared. All of it answered one question: what am I looking
+ * at, and which part of it. It is now one bar, and the round-2 rules for it are at the
+ * end of this sheet.
+ */
+
+/* ── filters ──────────────────────────────────────────────────────────────── */
+
+.workspace-filters {
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--hairline);
+}
+.workspace-search {
+  display: block;
+}
+.workspace-search > span {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.workspace-search input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+  color: var(--ink);
+  font-size: var(--fs-meta);
+}
+.workspace-filter-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+.workspace-filter-buttons button {
+  min-height: 26px;
+  padding: 0 var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.workspace-filter-buttons button:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.workspace-filter-buttons button[aria-pressed="true"] {
+  border-color: var(--c-tint-accent-strong);
+  background: var(--c-tint-accent);
+  color: var(--c-accent-deep);
+  font-weight: 600;
+}
+
+/* ── the list ─────────────────────────────────────────────────────────────── */
+
+/*
+ * The list yields to the receipt. A dock shows one selection *and* its detail, and
+ * when a detail is open the list is the index to it rather than the main event - so it
+ * is bounded and the receipt gets the room. With nothing selected the list takes the
+ * whole dock, which is what makes scanning fifty findings comfortable.
+ */
+.workspace-list {
+  flex: 1 1 auto;
+  min-height: 90px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.workspace-work-view:has(.finding-receipt) .workspace-list {
+  flex: 0 0 auto;
+  max-height: 34%;
+}
+.workspace-work-view:has(.finding-receipt) .finding-receipt-view {
+  display: flex;
+  /* a zero basis, not `auto`: with `auto` the view's height would be derived from a
+     receipt whose own max-height is a percentage of that view */
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+}
+.workspace-work-view:has(.finding-receipt) .finding-receipt {
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 0;
+}
+.workspace-panel .workspace-row {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: var(--space-3) var(--space-3) var(--space-2) var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.workspace-panel .workspace-row:hover {
+  background: var(--hover);
+}
+.workspace-row[aria-pressed="true"] {
+  background: var(--c-tint-accent);
+  box-shadow: inset 3px 0 var(--accent);
+}
+.workspace-row[aria-pressed="true"]:hover {
+  background: var(--c-tint-accent-strong);
+}
+.workspace-row-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.workspace-row-top strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: var(--fs-action);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink);
+  white-space: normal;
+}
+.workspace-row[aria-pressed="true"] .workspace-row-top strong {
+  font-weight: 600;
+  color: var(--c-accent-deep);
+}
+/*
+ * The state chip. A row's state is the first thing a reviewer scans for, so it is
+ * material rather than a grey word, and its tone follows the state: proposed is the
+ * accent (it is asking), confirmed is neutral, closed is healthy, dismissed is
+ * quiet.
+ */
+.workspace-quantity {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--face-inset);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+[data-state="PROPOSED"] > .workspace-row-top > .workspace-quantity {
+  border-color: var(--c-tint-accent-strong);
+  background: var(--c-tint-accent);
+  color: var(--c-accent-deep);
+}
+[data-state="CONFIRMED"] > .workspace-row-top > .workspace-quantity {
+  border-color: var(--line-control-soft);
+  background: var(--c-info-surface);
+  color: var(--c-info);
+}
+[data-state="CLOSED"] > .workspace-row-top > .workspace-quantity {
+  border-color: var(--c-tint-positive);
+  background: var(--c-positive-surface);
+  color: var(--c-positive);
+}
+[data-state="DISMISSED"] > .workspace-row-top > .workspace-quantity {
+  border-color: var(--line-soft);
+  background: transparent;
+  color: var(--muted);
+}
+.workspace-sheet {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin: var(--space-1) 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.55;
+  white-space: normal;
+}
+.workspace-row-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.workspace-row-bottom > span {
+  overflow: hidden;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--face-raised);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-row-bottom > time {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.workspace-panel .workspace-more {
+  width: 100%;
+  min-height: 30px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: var(--face-inset);
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+}
+.workspace-panel .workspace-more:hover {
+  background: var(--hover-strong);
+  color: var(--ink);
+}
+.workspace-empty {
+  padding: var(--space-6) var(--space-4);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.7;
+}
+.workspace-empty h3 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-section);
+  font-weight: 600;
+  color: var(--ink);
+}
+.workspace-empty button {
+  margin-top: var(--space-3);
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+  color: var(--ink);
+  font-size: var(--fs-meta);
+}
+.workspace-empty button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── the receipt ──────────────────────────────────────────────────────────── */
+/*
+ * The selected object, read as a document: title, the three questions a reviewer
+ * actually asks (what changed, why it matters, what to do next), the evidence, and
+ * the inference that is *not* evidence - then the decision area.
+ *
+ * Every section carries its own heading and its own body; the seams are hairlines so
+ * the eye can jump between sections without a card per section.
+ */
+.workspace-panel .finding-receipt {
+  max-height: 62%;
+  min-height: 240px;
+  padding: var(--space-3) var(--space-4) 0;
+  border-top: 1px solid var(--line-control-soft);
+  background: var(--c-work);
+}
+.workspace-panel .finding-receipt .finding-receipt-title h2 {
+  margin: 0;
+  font-size: var(--fs-section);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.workspace-receipt-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+}
+.workspace-receipt-note::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+.finding-section {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}
+.finding-receipt .finding-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.finding-receipt .finding-section h3.t-label {
+  display: block;
+  margin: 0 0 var(--space-1);
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.finding-receipt .finding-section p {
+  margin-top: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-body);
+  line-height: 1.7;
+}
+.finding-receipt .finding-section .finding-help {
+  color: var(--text-faint);
+  font-size: var(--fs-label);
+  line-height: 1.6;
+}
+/*
+ * The next step is the one section a reviewer acts on, so it is called out with a
+ * plane of its own and a copper rail. It is not a button and not an alert: it is the
+ * recommendation, and the human decision about it is made at the foot of the panel.
+ */
+.finding-next-action {
+  padding: var(--space-3);
+  border: 1px solid var(--c-tint-accent);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--c-tint-accent);
+  margin-top: var(--space-3);
+}
+.finding-next-action h3.t-label {
+  color: var(--c-accent-deep) !important;
+}
+.finding-next-action p {
+  color: var(--ink) !important;
+  font-weight: 500;
+}
+.finding-next-action .workspace-receipt-note {
+  font-family: var(--font-ui);
+  color: var(--muted);
+}
+.finding-next-action .workspace-receipt-note::before {
+  display: none;
+}
+
+/* ── evidence rows ────────────────────────────────────────────────────────── */
+/*
+ * One row per piece of evidence: what it says, which source and target it came
+ * from, and how good it is. It is a card rather than a list row because each one is
+ * an object the reader may open, and the quality chip has to be separable from the
+ * claim at a glance.
+ */
+.finding-evidence-link {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  height: auto;
+  min-height: 34px;
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+  color: var(--ink);
+  text-align: left;
+}
+.finding-evidence-link.button {
+  height: auto;
+  min-height: 34px;
+}
+.finding-evidence-link:hover {
+  border-color: var(--line-control);
+  background: var(--face-raised);
+}
+.finding-evidence-link[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--c-tint-accent);
+  box-shadow: inset 3px 0 var(--accent);
+}
+.finding-evidence-link strong {
+  display: block;
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.finding-evidence-link small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+}
+.finding-quality {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 3px;
+  max-width: 118px;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--face-inset);
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+}
+.finding-evidence-link[aria-pressed="true"] .finding-quality {
+  border-color: var(--c-tint-accent-strong);
+  background: var(--face-raised);
+  color: var(--c-accent-deep);
+}
+/*
+ * Inference is not evidence, and the section has to say so without shouting. The
+ * surface is a warning tint at a quarter strength with a dashed seam: a different
+ * *material* from the verified block above it, so the two can never be confused
+ * when a reader is scanning rather than reading.
+ */
+.finding-inference {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px dashed var(--c-tint-warning);
+  border-left: 3px solid var(--warn-fg);
+  border-radius: var(--radius-md);
+  background: var(--c-warning-surface);
+}
+.finding-inference h3.t-label {
+  color: var(--warn-fg) !important;
+}
+.finding-inference .finding-help {
+  color: var(--ink-2) !important;
+}
+.finding-inference .finding-evidence-link {
+  background: var(--face-raised);
+}
+
+/* ── the decision area ────────────────────────────────────────────────────── */
+/*
+ * The foot of the receipt, where a human disposes of the object. It is a raised band
+ * at the bottom of the panel - the only place in the dock with elevation - because
+ * this is the band the panel exists for: everything above it is reading, this is
+ * acting.
+ */
+.finding-decision-area {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: var(--space-3) calc(var(--space-4) * -1) 0;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  border-top: 1px solid var(--line-control-soft);
+  background: var(--c-chrome-band);
+  box-shadow: var(--c-shadow-band);
+}
+.finding-decision-area .workspace-inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.finding-decision-inline,
+.finding-gap-notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+  box-shadow: var(--shadow-float);
+}
+.finding-decision-inline-title {
+  margin: 0;
+  font-size: var(--fs-action);
+  font-weight: 600;
+}
+.finding-decision-inline-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+.finding-decision-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.finding-decision-field > span {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.finding-decision-field input,
+.finding-decision-field textarea,
+.finding-decision-field select {
+  width: 100%;
+  min-height: 28px;
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+}
+.finding-decision-status {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-style: normal;
+}
+
+/* ── the dock footer ──────────────────────────────────────────────────────── */
+
+.workspace-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  border-top: 1px solid var(--hairline);
+  background: var(--face-inset);
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.workspace-footer span {
+  font-family: var(--font-mono);
+  color: var(--muted);
+}
+.workspace-footer button {
+  min-height: 24px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+.workspace-footer button:hover {
+  color: var(--accent-deep);
+}
+/* ── the AI surface, docked ───────────────────────────────────────────────── */
+/*
+ * Concord is part of this panel, not a chat window beside it: the docked tab reads the
+ * same selected object the receipt does, states the scope it will be given, and says
+ * what it is not allowed to do. It never becomes the place a decision is made.
+ *
+ * `features/projects.css` carries an older agent block (a fixed 420px column, a
+ * space-between header, a grey box per section) that predates this dock. Every property
+ * it sets is restated here rather than edited there, because the surface is now laid out
+ * by the panel it lives in and has to work at any dock width.
+ */
+.workspace-agent-view {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.agent-surface {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: auto;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+}
+.agent-surface > header,
+.agent-surface .agent-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  padding: 0 0 var(--space-2);
+  border-bottom: 1px solid var(--hairline);
+  background: none;
+}
+.agent-surface .agent-header::before {
+  content: "";
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-top: 3px;
+  background: var(--accent);
+}
+.agent-surface .agent-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.agent-surface .agent-header h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 600;
+}
+.agent-context-block,
+.agent-investigate,
+.agent-current-run,
+.agent-notices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-inset);
+}
+.agent-context-block strong,
+.agent-investigate strong {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 600;
+}
+.agent-context-block p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  line-height: 1.6;
+}
+.agent-investigate {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.agent-investigate > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.agent-investigate strong {
+  font-weight: 500;
+}
+.finding-context-questions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--c-tint-accent);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--c-tint-accent);
+}
+.finding-context-questions strong {
+  display: block;
+  color: var(--c-accent-deep);
+  font-size: var(--fs-action);
+  font-weight: 600;
+}
+.finding-context-questions p {
+  margin: 0 0 var(--space-1);
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  line-height: 1.6;
+}
+.finding-context-questions .button {
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  min-height: 26px;
+  padding: 3px var(--space-2);
+  border-color: var(--c-tint-accent-strong);
+  background: var(--face-raised);
+  color: var(--ink);
+  white-space: normal;
+  text-align: left;
+}
+.agent-ask,
+.agent-ask-row {
+  display: flex;
+  gap: var(--space-1);
+}
+.agent-ask {
+  flex-direction: column;
+}
+.agent-ask-row {
+  flex-direction: row;
+}
+.agent-ask-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 30px;
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+}
+.agent-answer,
+.agent-current-run,
+.agent-notices {
+  border: 1px solid var(--line-control-soft);
+  background: var(--face-raised);
+}
+.agent-answer {
+  border-left: 3px solid var(--accent);
+  color: var(--ink);
+  font-size: var(--fs-meta);
+  line-height: 1.7;
+}
+.agent-answer p,
+.agent-current-run p {
+  margin: 0;
+  font-size: var(--fs-meta);
+  line-height: 1.7;
+}
+.agent-answer small,
+.agent-current-run small {
+  color: var(--muted);
+  font-size: var(--fs-label);
+  line-height: 1.6;
+}
+.agent-current-run .property-table {
+  margin: 0;
+}
+.agent-run-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.agent-run-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.agent-run-timeline li {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+}
+.agent-run-timeline li small {
+  margin-left: auto;
+  overflow: visible;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  white-space: normal;
+}
+.agent-run-failure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.agent-run-failure p {
+  color: var(--danger-fg);
+  font-size: var(--fs-label);
+}
+.agent-notices > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+}
+
+/* ── the AI popover in the band ───────────────────────────────────────────── */
+
+.popover .agent-surface {
+  max-height: min(620px, 70vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/*
+ * ── round 2: the Work mode as a three-pane workbench ────────────────────────
+ *
+ * The round-1 Work surface stacked a list and a long engineering receipt in one
+ * 360px column, with a tab bar on top. Read at a glance it was a form. The evidence
+ * - the thing the whole product exists to show - was squeezed between them, and the
+ * receipt scrolled out of sight below four rows.
+ *
+ * The composition is now three panes with a single reading order:
+ *
+ *   the list        what needs attention           (a dock, full-bleed rows)
+ *   the evidence    what actually changed           (the stage, the drafting field)
+ *   the judgement   what it means, and what a human decides (a panel of its own)
+ *
+ * The rules below are the material for that: the dock's scope bar, the row anatomy,
+ * the judgement pane, and the assistant's own surface.
+ */
+
+/* ── the dock: one header row and one scope row ───────────────────────────── */
+
+.app-shell .workspace-panel {
+  background: var(--c-nav);
+  border-left: var(--panel-edge);
+  box-shadow: inset 1px 0 0 var(--c-band-shade);
+}
+.app-shell .workspace-panel[data-dock-side="left"] {
+  border-left: 0;
+  border-right: var(--panel-edge);
+  box-shadow: inset -1px 0 0 var(--c-band-shade);
+}
+
+.app-shell .workspace-heading {
+  min-height: 52px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border-bottom: var(--panel-edge);
+  background: var(--face-inset);
+}
+.app-shell .workspace-heading h2 {
+  font-size: var(--fs-section);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.app-shell .workspace-eyebrow {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+/*
+ * The count badge. One number, stated once, next to the title - instead of three
+ * cells that the filter row then repeated.
+ */
+.app-shell .workspace-count {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--c-tint-accent);
+  color: var(--c-accent-deep);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.app-shell .workspace-heading > button {
+  margin-left: 0;
+}
+
+.app-shell .workspace-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-bottom: var(--panel-edge);
+  background: var(--c-nav);
+}
+.app-shell .workspace-search {
+  display: block;
+  margin: 0;
+}
+.app-shell .workspace-search > span {
+  display: none;
+}
+.app-shell .workspace-search input {
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+  color: var(--ink);
+  font-size: var(--fs-meta);
+}
+.app-shell .workspace-search input:focus-visible {
+  border-color: var(--focus);
+  outline: 2px solid var(--focus);
+  outline-offset: -1px;
+}
+.app-shell .workspace-filter-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-inset);
+}
+.app-shell .workspace-filter-buttons button {
+  min-height: 26px;
+  padding: 0 var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.app-shell .workspace-filter-buttons button:hover {
+  color: var(--ink);
+}
+.app-shell .workspace-filter-buttons button[aria-pressed="true"] {
+  border-color: var(--line-control-soft);
+  background: var(--face-raised);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--c-shadow-1);
+}
+
+/* ── the row: three tiers in a column of like things ──────────────────────── */
+/*
+ * A finding row is the object this whole mode is about, so its title is real ink at
+ * the action step and its state is a chip you can read from the edge of the screen.
+ * The meta line exists to qualify the title, and it stays quiet.
+ */
+.app-shell .workspace-panel .workspace-row {
+  border-bottom: 1px solid var(--line-soft);
+  padding: var(--space-3);
+  transition: background var(--motion-fast) var(--ease);
+}
+.app-shell .workspace-row-top strong {
+  font-size: var(--fs-action);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.app-shell .workspace-sheet {
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.45;
+}
+.app-shell .workspace-row-bottom {
+  margin-top: var(--space-1);
+  font-size: var(--fs-label);
+}
+.app-shell .workspace-row-bottom > time {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── the judgement pane ───────────────────────────────────────────────────── */
+/*
+ * The third column of the Work mode: the receipt, the human decision, the assistant.
+ * It is a panel, like the dock, because it is read as a document beside the evidence
+ * rather than as part of it.
+ */
+.app-shell .work-judgement {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--c-detail);
+  border-left: var(--panel-edge);
+  box-shadow: inset 1px 0 0 var(--c-band-shade);
+}
+.app-shell .work-judgement > .finding-receipt-view,
+.app-shell .work-judgement .finding-receipt {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+.app-shell .work-judgement-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: var(--space-6);
+}
+.app-shell .work-judgement-agent {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--line-control-soft);
+  background: var(--c-nav);
+}
+.app-shell .work-judgement-agent > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.app-shell .work-judgement-agent > summary::-webkit-details-marker {
+  display: none;
+}
+.app-shell .work-judgement-agent > summary:hover {
+  background: var(--hover);
+}
+.app-shell .work-judgement-agent > summary::after {
+  content: "展开";
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 500;
+}
+.app-shell .work-judgement-agent[open] > summary::after {
+  content: "收起";
+}
+.app-shell .work-agent-mark {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  background: var(--c-accent);
+  box-shadow: 0 0 0 3px var(--c-tint-accent);
+}
+.app-shell .work-agent-scope {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .work-agent-body {
+  max-height: 420px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--c-work);
+  overflow-y: auto;
+}
+
+/* ── the assistant's surface ──────────────────────────────────────────────── */
+/*
+ * Concord opens by stating the scope it is given, then offers a field, then suggests
+ * questions. It reads as a capability that is already inside the engineering context
+ * rather than as a tool someone has to open first.
+ */
+.app-shell .agent-surface {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+.app-shell .agent-surface .agent-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.app-shell .agent-surface .agent-mark {
+  width: 8px;
+  height: 8px;
+  margin-top: 2px;
+  flex: 0 0 auto;
+  background: var(--c-accent);
+  box-shadow: 0 0 0 3px var(--c-tint-accent);
+}
+.app-shell .agent-surface .agent-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.app-shell .agent-surface .agent-header h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-section);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.app-shell .agent-surface .agent-header .eyebrow {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.app-shell .agent-surface .agent-header > *:last-child:not(div) {
+  margin-left: auto;
+}
+.app-shell .agent-surface .agent-context-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-inset);
+}
+.app-shell .agent-surface .agent-context-block strong {
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 600;
+}
+.app-shell .agent-surface .agent-context-block p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+}
+.app-shell .agent-surface .agent-fence {
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--line-control-soft);
+  color: var(--ink-2) !important;
+}
+.app-shell .agent-surface .agent-ask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.app-shell .agent-surface .agent-ask-row {
+  display: flex;
+  gap: var(--space-2);
+}
+.app-shell .agent-surface .agent-ask-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--control-h-lg);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+  color: var(--ink);
+  font-size: var(--fs-body);
+}
+.app-shell .agent-surface .agent-ask-row input:focus-visible {
+  border-color: var(--focus);
+  outline: 2px solid var(--focus);
+  outline-offset: -1px;
+}
+.app-shell .agent-surface .finding-context-questions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.app-shell .agent-surface .finding-context-questions p {
+  flex: 1 0 100%;
+  margin: 0 0 var(--space-1);
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.app-shell .agent-surface .agent-answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-left: 2px solid var(--c-accent);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+}
+.app-shell .agent-surface .agent-answer p {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  line-height: 1.65;
+}
+.app-shell .agent-surface .agent-answer small {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.app-shell .agent-surface .agent-investigate {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-inset);
+}
+.app-shell .agent-surface .agent-investigate > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.app-shell .agent-surface .agent-investigate strong {
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.app-shell .agent-surface .agent-investigate > .button,
+.app-shell .agent-surface .agent-investigate > button {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.app-shell .agent-surface .section-label {
+  color: var(--muted);
+  font-size: var(--fs-label);
+  letter-spacing: 0.04em;
+}
+/* The bar entry: the assistant is a capability of the frame, so it wears the frame's
+   own material and the accent mark, and it is never the loudest thing in the row. */
+.app-shell .concord-bar-tools button.concord-assistant {
+  border-color: var(--band-line);
+  color: var(--band-ink);
+}
+.app-shell .concord-bar-tools button.concord-assistant:hover {
+  border-color: var(--band-focus);
+}
+.app-shell .concord-bar-tools button.concord-assistant svg {
+  color: var(--band-focus);
+}
+
+/*
+ * ── round 2: the judgement pane reads as a document, and disposes at its foot ─
+ *
+ * Two things were wrong with the receipt once it moved into a pane of its own.
+ *
+ *  1. In the dock it was bounded to 62% of a 360px column because the list above it
+ *     needed the rest. In its own pane it is the whole column, so the bound is
+ *     removed and the receipt fills the pane from the title down.
+ *  2. The decision band sat wherever the last section ended, which - with a short
+ *     finding - left the one band the pane exists for floating in the middle of an
+ *     empty column. It is now the pane's foot: pinned to the bottom edge, so the
+ *     document grows into the space above it and the verb is always in the same place
+ *     on every finding, however long the receipt is.
+ */
+.app-shell .work-judgement .finding-receipt {
+  max-height: none;
+  min-height: 0;
+  padding: var(--space-4) var(--space-4) 0;
+  border-top: 0;
+  background: var(--c-detail);
+}
+.app-shell .work-judgement .finding-receipt-view {
+  display: flex;
+  flex-direction: column;
+}
+.app-shell .work-judgement .finding-receipt {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+.app-shell .work-judgement .finding-receipt-title h2 {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+.app-shell .work-judgement .finding-decision-area {
+  margin-top: auto;
+  padding: var(--space-3) var(--space-4);
+  background: var(--c-chrome-band);
+}
+.app-shell .work-judgement .finding-section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+}
+.app-shell .work-judgement .finding-receipt .finding-section:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+}
+.app-shell .work-judgement .finding-receipt .finding-section h3.t-label {
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+}
+/*
+ * The pane has a floor even when the finding is short: the receipt body grows and the
+ * decision band is pushed to the foot by `margin-top: auto`, so the column is anchored
+ * at both ends instead of trailing into an empty plane.
+ */
