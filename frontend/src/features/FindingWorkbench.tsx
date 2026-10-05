@@ -22,7 +22,7 @@ import {
   DockTargets,
   type useWorkspaceLayout,
 } from "../layout/WorkspaceLayout";
-import type { DockId } from "../layout/workspaceLayout";
+import type { DockId } from "../layout/workspaceLayoutState";
 import {
   EvidenceWorkspaceHost,
   evidenceLabel,

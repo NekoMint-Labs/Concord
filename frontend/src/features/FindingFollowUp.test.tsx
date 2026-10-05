@@ -31,12 +31,15 @@ const check = {
   dependencies: [dependency],
   finding_updated_at: timestamp,
   request_id: "request-opaque",
-  outcome: "STILL_OPEN",
+  outcome: "STILL_OPEN" as const,
   explanation: "净高仍低于设计要求",
   evidence_ids: ["evidence-opaque"],
   created_at: timestamp,
   completed_at: timestamp,
-} satisfies DTO<"ReCheck">;
+  inputs: [],
+  ids_requirements: null,
+};
+check satisfies DTO<"ReCheck">;
 const evidence = {
   id: "evidence-opaque",
   snapshot_id: "snapshot-opaque",

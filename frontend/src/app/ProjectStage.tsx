@@ -36,7 +36,9 @@ import {
 import type { WorkspaceTab } from "./destinations";
 import "../styles/features/project-stage.css";
 
-const sourceKindLabel = (kind: ProjectSourceStatus["source"]["kind"]): string => {
+const sourceKindLabel = (
+  kind: ProjectSourceStatus["source"]["kind"],
+): string => {
   switch (kind) {
     case "BIM":
       return "IFC 模型";
@@ -165,8 +167,7 @@ export function ProjectStage({
       : object?.kind === "revision"
         ? object.sourceId
         : "";
-  const focusRevisionId =
-    object?.kind === "revision" ? object.id : undefined;
+  const focusRevisionId = object?.kind === "revision" ? object.id : undefined;
 
   return (
     <main className="workspace-stage-surface" aria-label="项目">
@@ -446,13 +447,9 @@ function WorkPackageStage({
   const workPackage = data.state.work_packages.find((item) => item.id === id);
   if (!workPackage)
     return (
-      <p className="stage-empty">
-        该工作包不在当前工程状态中，可能已被移除。
-      </p>
+      <p className="stage-empty">该工作包不在当前工程状态中，可能已被移除。</p>
     );
-  const area = data.state.areas.find(
-    (item) => item.id === workPackage.area_id,
-  );
+  const area = data.state.areas.find((item) => item.id === workPackage.area_id);
   const readiness = data.analysis?.readiness.find(
     (item) => item.work_package_id === id,
   );
@@ -542,9 +539,7 @@ function WorkPackageStage({
           </button>
         ))}
         {!relatedSources.length && (
-          <p className="project-stage-empty">
-            暂无与本工作包直接关联的资料。
-          </p>
+          <p className="project-stage-empty">暂无与本工作包直接关联的资料。</p>
         )}
       </section>
 
@@ -567,9 +562,7 @@ function WorkPackageStage({
           </button>
         ))}
         {!relatedFindings.length && (
-          <p className="project-stage-empty">
-            没有与该工作包相关的工程判断。
-          </p>
+          <p className="project-stage-empty">没有与该工作包相关的工程判断。</p>
         )}
       </section>
     </div>

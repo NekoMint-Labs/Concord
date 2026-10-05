@@ -17,7 +17,7 @@
      beside it, which is what tells the reader where the work is happening. */
   background: var(--surface-workspace);
   color: var(--ink);
-  font-family: var(--f-body);
+  font-family: var(--font-ui);
   font-size: var(--fs-m);
 }
 
@@ -173,7 +173,7 @@
   min-width: 0;
 }
 .browse-link-copy strong {
-  font-family: var(--f-body);
+  font-family: var(--font-ui);
   font-weight: 600;
   text-transform: none;
   letter-spacing: 0;
@@ -223,7 +223,7 @@
 }
 .browse-chunk-body pre {
   margin: 0;
-  font-family: var(--f-body);
+  font-family: var(--font-ui);
   font-size: var(--fs-s);
   line-height: 1.6;
   white-space: pre-wrap;

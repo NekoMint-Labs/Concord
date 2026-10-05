@@ -23,11 +23,7 @@ import {
 import { WorkspaceViews } from "./app/WorkspaceViews";
 import { browseNavigatorItems } from "./app/BrowseStage";
 import { projectNavigatorItems } from "./app/ProjectStage";
-import {
-  stageKey,
-  stageObject,
-  type StageObject,
-} from "./app/stageContracts";
+import { stageKey, stageObject, type StageObject } from "./app/stageContracts";
 import type { WorkspaceTab } from "./app/destinations";
 import { useWorkspace } from "./app/useWorkspace";
 import { useWorkspaceMutation } from "./app/useWorkspaceMutation";
@@ -228,7 +224,8 @@ function ProjectApplication({
     if (!data.state.work_packages.length) {
       setSelected("");
       return;
-    }    if (!data.state.work_packages.some((item) => item.id === selected)) {
+    }
+    if (!data.state.work_packages.some((item) => item.id === selected)) {
       let remembered: string | null = null;
       try {
         remembered = localStorage.getItem(`concord:package:${project}`);
@@ -312,7 +309,8 @@ function ProjectApplication({
     }
     if (next !== "bim") setMappingMode(false);
     if (next === "work") agent.clearScope();
-    if (next !== tab || inspectorView === "investigation") setDetailsOpen(false);
+    if (next !== tab || inspectorView === "investigation")
+      setDetailsOpen(false);
     setTab(next);
   }
 
@@ -523,6 +521,7 @@ function ProjectApplication({
     onRecheck: () =>
       void perform(() => api.recheck(project), "重新检查已提交。"),
     onReport: () => {
+      navigate("coordination");
       setInspectorView("investigation");
       setDetailsOpen(true);
     },

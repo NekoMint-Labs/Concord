@@ -89,7 +89,10 @@ export function ContextInspector({
       case "document":
         return object.id;
       case "finding":
-        return findings.data?.find((item) => item.id === object.id)?.title ?? object.id;
+        return (
+          findings.data?.find((item) => item.id === object.id)?.title ??
+          object.id
+        );
       case "work-package":
       case "work-package-model": {
         const item = packageFor(object.id);
@@ -105,7 +108,10 @@ export function ContextInspector({
 
   const rows: [string, string][] = [];
   const evidence: DTO<"Evidence">[] = [];
-  if (object?.kind === "work-package" || object?.kind === "work-package-model") {
+  if (
+    object?.kind === "work-package" ||
+    object?.kind === "work-package-model"
+  ) {
     const item = packageFor(object.id);
     if (item) {
       rows.push(
@@ -210,7 +216,9 @@ export function ContextInspector({
             </section>
             <section className="context-section">
               <h3 className="t-label">下一步 · 建议</h3>
-              <p>{finding.suggested_action || "先检查关联依据，再作人工判断。"}</p>
+              <p>
+                {finding.suggested_action || "先检查关联依据，再作人工判断。"}
+              </p>
             </section>
           </>
         )}
@@ -222,9 +230,7 @@ export function ContextInspector({
                 type="button"
                 className="context-evidence"
                 key={item.id}
-                onClick={() =>
-                  onOpen?.({ kind: "finding", id: finding!.id })
-                }
+                onClick={() => onOpen?.({ kind: "finding", id: finding!.id })}
               >
                 <strong>{item.fact || "工程依据"}</strong>
                 <small>
@@ -244,9 +250,7 @@ export function ContextInspector({
                 className="context-evidence"
                 key={item.id}
                 onClick={() => onOpen?.({ kind: "finding", id: item.id })}
-                aria-current={
-                  finding?.id === item.id ? "true" : undefined
-                }
+                aria-current={finding?.id === item.id ? "true" : undefined}
               >
                 <strong>{item.title}</strong>
                 <small>
@@ -272,8 +276,7 @@ export function ContextInspector({
               {run?.status === "RUNNING"
                 ? "调查正在运行。"
                 : report
-                  ? report.answer.summary ||
-                    "调查已完成；结论与依据分别记录。"
+                  ? report.answer.summary || "调查已完成；结论与依据分别记录。"
                   : "尚未开始调查。"}
             </p>
             {context?.workPackageName && (
@@ -293,11 +296,7 @@ export function ContextInspector({
             object && object.kind !== "work-package"
               ? onWorkPackage(
                   finding?.work_package_id ||
-                    (object.kind === "work-package-model"
-                      ? object.id
-                      : object.kind === "work-package"
-                        ? object.id
-                        : ""),
+                    (object.kind === "work-package-model" ? object.id : ""),
                 )
               : onTab("work")
           }

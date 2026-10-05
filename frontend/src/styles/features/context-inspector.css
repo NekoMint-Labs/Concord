@@ -46,7 +46,7 @@
   min-height: 0;
   height: 100%;
   color: var(--ink);
-  font-family: var(--f-body);
+  font-family: var(--font-ui);
   font-size: var(--fs-m);
 }
 
@@ -76,7 +76,7 @@
 }
 
 .workspace-stage-band > strong {
-  font-family: var(--f-body);
+  font-family: var(--font-ui);
   font-size: var(--fs-l);
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -86,7 +86,7 @@
 }
 
 .workspace-stage-band small {
-  font-family: var(--f-mono);
+  font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--ink-muted);
   white-space: nowrap;
@@ -107,7 +107,7 @@
   min-width: 0;
   background: var(--paper-bright);
   color: var(--ink);
-  font-family: var(--f-body);
+  font-family: var(--font-ui);
   font-size: var(--fs-m);
   border-left: var(--rule-soft);
 }
@@ -191,7 +191,7 @@
 .context-section dt {
   flex-shrink: 0;
   width: 7.5em;
-  font-family: var(--f-mono);
+  font-family: var(--font-mono);
   font-size: var(--fs-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -233,7 +233,7 @@
 }
 
 .context-evidence small {
-  font-family: var(--f-mono);
+  font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--ink-muted);
 }
@@ -276,7 +276,7 @@
 
 .context-inspector-footer code {
   margin-left: auto;
-  font-family: var(--f-mono);
+  font-family: var(--font-mono);
   font-size: var(--fs-2xs);
   color: var(--ink-muted);
   overflow: hidden;

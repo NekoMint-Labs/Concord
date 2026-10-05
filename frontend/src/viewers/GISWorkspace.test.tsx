@@ -135,9 +135,8 @@ it("presents the site map as product copy with context and a MapLibre locale pat
   await act(async () => {
     driver.instances[0].handlers.load();
   });
-  // Toolbar: user copy, not developer copy.
-  expect(screen.getByText("现场地图")).toBeInTheDocument();
-  expect(screen.getByText("项目现场与工作包位置")).toBeInTheDocument();
+  // The workspace owns the title; the viewer owns the map semantics and readiness.
+  expect(screen.getByLabelText("项目现场地图")).toBeVisible();
   expect(screen.getByRole("status")).toHaveTextContent("地图已就绪");
   // Minimum context: what the polygon and the points are.
   expect(screen.getByText("作业区域")).toBeInTheDocument();

@@ -118,23 +118,26 @@ const source: DTO<"ProjectSourceStatus"> = {
   baseline_id: null,
   has_pending_revision: true,
 };
-const makeCheck = (
-  outcome: DTO<"ReCheck">["outcome"] = null,
-): DTO<"ReCheck"> => ({
-  id: "check-1",
-  project_id: "project-a",
-  finding_id: "finding/opaque-73",
-  source_id: "source-model",
-  source_revision_id: "r2",
-  dependencies: makeFinding().dependencies,
-  finding_updated_at: timestamp,
-  request_id: "operation-1",
-  outcome,
-  evidence_ids: outcome ? ["recheck-evidence"] : [],
-  explanation: "Engineering capability result, not an AI resolution",
-  created_at: timestamp,
-  completed_at: outcome ? timestamp : null,
-});
+const makeCheck = (outcome: DTO<"ReCheck">["outcome"] = null) => {
+  const check = {
+    id: "check-1",
+    project_id: "project-a",
+    finding_id: "finding/opaque-73",
+    source_id: "source-model",
+    source_revision_id: "r2",
+    dependencies: makeFinding().dependencies,
+    finding_updated_at: timestamp,
+    request_id: "operation-1",
+    outcome,
+    evidence_ids: outcome ? ["recheck-evidence"] : [],
+    explanation: "Engineering capability result, not an AI resolution",
+    created_at: timestamp,
+    completed_at: outcome ? timestamp : null,
+    inputs: [],
+    ids_requirements: null,
+  };
+  return check satisfies DTO<"ReCheck">;
+};
 const makeRun = (
   status: DTO<"AgentRun">["status"] = "COMPLETED",
 ): DTO<"AgentRun"> => ({

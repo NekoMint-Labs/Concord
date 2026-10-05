@@ -13,7 +13,10 @@
  */
 import type { ProjectSourceStatus, Workspace } from "../api/client";
 import type { WorkspaceTab } from "../app/destinations";
-import { demoDiscipline, demoWorkPackageName } from "../ui/demo/demoPresentation";
+import {
+  demoDiscipline,
+  demoWorkPackageName,
+} from "../ui/demo/demoPresentation";
 import "../styles/features/browse.css";
 
 export type ExplorerTarget =
@@ -38,11 +41,7 @@ type IndexItem = {
 };
 
 const kindText = (kind: ProjectSourceStatus["source"]["kind"]): string =>
-  kind === "BIM"
-    ? "IFC 模型"
-    : kind === "DRAWING"
-      ? "工程图纸"
-      : "工程文档";
+  kind === "BIM" ? "IFC 模型" : kind === "DRAWING" ? "工程图纸" : "工程文档";
 
 /** A compact, non-navigating index of the same objects the Browse stage shows. */
 export function ProjectExplorer({

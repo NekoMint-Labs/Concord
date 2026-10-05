@@ -40,9 +40,7 @@
 .app-shell.premium-workspace[data-workspace-look="hud"] {
   --glow: none;
 }
-.app-shell.premium-workspace
-  [data-tool-rail]
-  button[aria-pressed="true"] {
+.app-shell.premium-workspace [data-tool-rail] button[aria-pressed="true"] {
   background: var(--tint-select) !important;
   border-color: transparent !important;
   box-shadow: none !important;
@@ -160,7 +158,9 @@
 }
 .app-shell.premium-workspace .calm-header button:hover,
 .app-shell.premium-workspace .calm-context button:hover,
-.app-shell.premium-workspace .calm-navigator button:not([aria-current="page"]):hover {
+.app-shell.premium-workspace
+  .calm-navigator
+  button:not([aria-current="page"]):hover {
   color: var(--ink);
 }
 .app-shell.premium-workspace .calm-header button[aria-pressed="true"],

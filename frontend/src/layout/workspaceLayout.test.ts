@@ -15,7 +15,7 @@ import {
   moveDock,
   normalizeLayout,
   readWorkspacePreferences,
-} from "./workspaceLayout";
+} from "./workspaceLayoutState";
 import {
   DockHandle,
   DockTargets,

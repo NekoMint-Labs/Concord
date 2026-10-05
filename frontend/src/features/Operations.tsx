@@ -76,102 +76,102 @@ export function Operations({
         <div className="operations-layout">
           <section className="operation-console" aria-label="启动检查">
             <div className="operation-tool">
-            {tool === "schedule" && (
-              <section aria-labelledby="schedule-tool">
-                <h4 id="schedule-tool">约束排程</h4>
-                <p>
-                  使用具备资质的班组、共享设备、前置关系和时间窗求解；服务端会独立校验返回指派。
-                </p>
-                <Button
-                  disabled={busy || !enabled("optimization") || !fixture.data}
-                  onClick={() =>
-                    void submit(() =>
-                      api.optimize(
-                        project,
-                        JSON.parse(
-                          problem || JSON.stringify(fixture.data),
-                        ) as DTO<"SchedulingProblem-Input">,
-                      ),
-                    )
-                  }
-                >
-                  启动排程检查
-                </Button>
-                <AppDisclosure label="高级排程输入">
-                  <label className="form-label">
-                    排程问题 JSON
-                    <textarea
-                      aria-label="排程问题 JSON"
-                      rows={7}
-                      value={
-                        problem ||
-                        (fixture.data
-                          ? JSON.stringify(fixture.data, null, 2)
-                          : "")
-                      }
-                      onChange={(event) => setProblem(event.target.value)}
+              {tool === "schedule" && (
+                <section aria-labelledby="schedule-tool">
+                  <h4 id="schedule-tool">约束排程</h4>
+                  <p>
+                    使用具备资质的班组、共享设备、前置关系和时间窗求解；服务端会独立校验返回指派。
+                  </p>
+                  <Button
+                    disabled={busy || !enabled("optimization") || !fixture.data}
+                    onClick={() =>
+                      void submit(() =>
+                        api.optimize(
+                          project,
+                          JSON.parse(
+                            problem || JSON.stringify(fixture.data),
+                          ) as DTO<"SchedulingProblem-Input">,
+                        ),
+                      )
+                    }
+                  >
+                    启动排程检查
+                  </Button>
+                  <AppDisclosure label="高级排程输入">
+                    <label className="form-label">
+                      排程问题 JSON
+                      <textarea
+                        aria-label="排程问题 JSON"
+                        rows={7}
+                        value={
+                          problem ||
+                          (fixture.data
+                            ? JSON.stringify(fixture.data, null, 2)
+                            : "")
+                        }
+                        onChange={(event) => setProblem(event.target.value)}
+                      />
+                    </label>
+                  </AppDisclosure>
+                  {!enabled("optimization") && (
+                    <small className="operation-unavailable">
+                      排程扩展未启用；不会生成模拟结果。
+                    </small>
+                  )}
+                </section>
+              )}
+
+              {tool === "vision" && (
+                <section aria-labelledby="vision-tool">
+                  <h4 id="vision-tool">现场图像观察</h4>
+                  <p>
+                    仅上传有权分享的安全图像。元数据会被剥离，但画面仍可能包含人员或商业信息。
+                  </p>
+                  <label className="file-field">
+                    <span>现场图像</span>
+                    <input
+                      aria-label="视觉图像"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(event) => {
+                        setImage(event.target.files?.[0] ?? null);
+                        setConsent(false);
+                      }}
                     />
                   </label>
-                </AppDisclosure>
-                {!enabled("optimization") && (
-                  <small className="operation-unavailable">
-                    排程扩展未启用；不会生成模拟结果。
-                  </small>
-                )}
-              </section>
-            )}
+                  <label className="consent">
+                    <input
+                      type="checkbox"
+                      checked={consent}
+                      onChange={(event) => setConsent(event.target.checked)}
+                    />
+                    我同意将所选、已净化的图像发送到已配置的模型。
+                  </label>
+                  <Button
+                    disabled={busy || !image || !consent || !enabled("vision")}
+                    onClick={() =>
+                      image &&
+                      void submit(() => api.vision(project, image, consent))
+                    }
+                  >
+                    启动图像检查
+                  </Button>
+                  {!enabled("vision") && (
+                    <small className="operation-unavailable">
+                      图像能力未配置或不可用。
+                    </small>
+                  )}
+                </section>
+              )}
 
-            {tool === "vision" && (
-              <section aria-labelledby="vision-tool">
-                <h4 id="vision-tool">现场图像观察</h4>
-                <p>
-                  仅上传有权分享的安全图像。元数据会被剥离，但画面仍可能包含人员或商业信息。
-                </p>
-                <label className="file-field">
-                  <span>现场图像</span>
-                  <input
-                    aria-label="视觉图像"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={(event) => {
-                      setImage(event.target.files?.[0] ?? null);
-                      setConsent(false);
-                    }}
-                  />
-                </label>
-                <label className="consent">
-                  <input
-                    type="checkbox"
-                    checked={consent}
-                    onChange={(event) => setConsent(event.target.checked)}
-                  />
-                  我同意将所选、已净化的图像发送到已配置的模型。
-                </label>
-                <Button
-                  disabled={busy || !image || !consent || !enabled("vision")}
-                  onClick={() =>
-                    image &&
-                    void submit(() => api.vision(project, image, consent))
-                  }
-                >
-                  启动图像检查
-                </Button>
-                {!enabled("vision") && (
-                  <small className="operation-unavailable">
-                    图像能力未配置或不可用。
-                  </small>
-                )}
-              </section>
-            )}
-
-            {tool === "retrieval" && (
-              <SemanticRetrieval
-                project={project}
-                enabled={enabled("vector retrieval")}
-                perform={perform}
-                onRun={setPreferredRun}
-              />
-            )}
+              {tool === "retrieval" && (
+                <SemanticRetrieval
+                  project={project}
+                  enabled={enabled("vector retrieval")}
+                  perform={perform}
+                  onRun={setPreferredRun}
+                />
+              )}
             </div>
           </section>
 
