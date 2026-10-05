@@ -57,6 +57,50 @@ processor in this run and did not generate an external request. B should remove
 that remote import before relying on a different stylesheet order or native
 profile. Existing bundle-size warnings remain; no limit was increased.
 
+## Second-round product workspace rehearsal — October 5, 2026
+
+The requested pinned combination of main `583d476`, C `1c08e62`, and B
+`9336971` passes 717 frontend tests, 49 transport/style tests, typecheck,
+production build, and all ten real Host/browser cases. Adding C's Drawing
+preparation reset fix `6b2ebb3` passes 726 frontend tests, typecheck/build,
+and all ten real Host/browser cases. Both runs use the actual B host and C
+surfaces, with real Golden originals and Docling extraction. All successful
+open/reopen paths retain the external-request assertions and worker cleanup.
+
+Two rehearsal failures were reproduced and resolved without changing product
+behavior or dropping assertions:
+
+- B's `useViewerChromeLocalization` changes the visible `Sheet` label to
+  `图纸`. The Drawing input inherits that accessible name from its label.
+  The C-owned Host test now scopes to the real Drawing region and accepts
+  exactly either label on its spinbutton, still requiring page 1, a rendered
+  canvas and the requested source region. Revision/hash, reopen, failure,
+  native navigation and cleanup checks remain unchanged.
+- The provisional merge had retained C's older `ProjectSourceRegister` test,
+  which searched for the former native source-row button. B's frozen test
+  already exercises the real donor table. The scratch tree now uses B's
+  complete `9336971` test file, including both Response and DOM Blob download
+  cases and its long-name wrapping case. This is a conflict resolution for
+  the rehearsal, not a modification pushed to either product branch.
+
+There are five conflict areas to review during the actual integration:
+`THIRD_PARTY_NOTICES.md`, `docs/EVIDENCE_VIEWER_ADAPTERS.md`,
+`frontend/package.json`, `frontend/pnpm-lock.yaml`, and
+`frontend/src/features/ProjectSourceRegister.test.tsx`. The rehearsal keeps
+both parties' dependencies/notices and the pinned C PDF dependency; its frozen
+combined lock matches the earlier qualification environment. No dependency or
+lock change is included in this test continuation.
+
+B's tracked token stylesheet still contains the Google Fonts remote import,
+and both the browser server and production build report its import-order
+warning. B must remove it rather than depend on the tested CSS processor
+ignoring it. Passing browser network assertions does not establish that this
+stylesheet is safe under every ordering or native profile.
+
+These results update the source/browser rehearsal only. They do not complete
+trusted PDF/CAD publication, native connector delivery, large-model/native
+qualification, or persisted R1/R2/R3 product acceptance. Both PRs remain Draft.
+
 ## Reproduction
 
 Use an isolated agreed main + C + B rehearsal with the frozen dependency sets.

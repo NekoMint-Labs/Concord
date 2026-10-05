@@ -48,7 +48,12 @@ async function ready(page: Page, kind: Kind) {
   );
   if (kind === "drawing") {
     await expect(page.getByLabel("Requested source region")).toBeVisible();
-    await expect(page.getByLabel("Sheet", { exact: true })).toHaveValue("1");
+    // B localizes the label text; the C surface and selected page stay real.
+    await expect(
+      page
+        .getByRole("region", { name: "Drawing viewer", exact: true })
+        .getByRole("spinbutton", { name: /^(Sheet|图纸)$/ }),
+    ).toHaveValue("1");
     await expect
       .poll(() =>
         page
