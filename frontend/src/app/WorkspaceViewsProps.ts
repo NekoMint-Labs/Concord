@@ -8,7 +8,7 @@ import type {
 import type { BimMappingContext } from "../features/BimMappingWorkspace";
 import type { ConcordContext } from "../features/ConcordAgent";
 import type { WorkspaceInspectorView } from "../features/InvestigationInspector";
-import type { WorkList } from "../features/WorkList";
+import type { WorkPanel } from "../features/WorkPanel";
 import type { WorkspaceTab } from "./destinations";
 
 /** Existing workspace inputs; ownership stays with App and feature controllers. */
@@ -77,7 +77,7 @@ export type WorkspaceViewsProps = {
   onProjectSourceSelected?: (id: string) => void;
   onLinkBim?: () => void;
   onInvestigateWorkPackage?: (id: string) => void;
-  onInvestigateWork?: ComponentProps<typeof WorkList>["onInvestigate"];
+  onInvestigateWork?: ComponentProps<typeof WorkPanel>["onInvestigate"];
   investigationProgress?: ReactNode;
   investigationError?: string;
   onRetryInvestigation?: () => void;

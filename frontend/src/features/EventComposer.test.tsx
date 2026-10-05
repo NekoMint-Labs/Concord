@@ -1,10 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { EventComposer } from "./EventComposer";
 import type { WorkPackage } from "../api/client";
 import fixture from "../../tests/fixtures/inspector.json";
 
-it("records a user-confirmed engineering revision without fixed demo labels", () => {
+it("records a user-confirmed engineering revision without fixed demo labels", async () => {
   const wp = {
     ...fixture.waiting.state.work_packages[0],
     id: "real-wp",
@@ -22,9 +28,17 @@ it("records a user-confirmed engineering revision without fixed demo labels", ()
     />,
   );
   const submit = screen.getByRole("button", { name: "提交并分析" });
-  expect(submit).toBeDisabled();
-  expect(screen.getByRole("textbox", { name: "新版本" })).toHaveValue("");
-  fireEvent.change(screen.getByRole("textbox", { name: "新版本" }), {
+  expect(submit).toHaveAttribute("aria-disabled", "true");
+  const host = document.querySelector("bim-text-input")!;
+  await waitFor(() =>
+    expect(host.shadowRoot?.querySelector("input")).toBeDefined(),
+  );
+  const input = within(host.shadowRoot as unknown as HTMLElement).getByRole(
+    "textbox",
+    { name: "新版本" },
+  );
+  expect(input).toHaveValue("");
+  fireEvent.input(input, {
     target: { value: "MEP Model R2" },
   });
   fireEvent.change(

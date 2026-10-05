@@ -1,0 +1,248 @@
+/* Browse destination stage.
+ *
+ * One full-bleed central work surface for the selected engineering object. Only
+ * the donor vocabulary is used (vendor/opentakeoff/styles/tokens.css): paper,
+ * ink, cobalt, the four-pixel spacing grid, the type stops and the hairlines.
+ * The stage itself never scrolls; the inner body owns the scroll. Squares only —
+ * no gradients, no glass, no rounded cards, no stat cards.
+ */
+
+.workspace-stage-surface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  /* The work plane: one step lighter than the navigator and the inspector
+     beside it, which is what tells the reader where the work is happening. */
+  background: var(--surface-workspace);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-m);
+}
+
+.browse-stage {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* The object's own identity line: kind, name, one metadata sentence. */
+.browse-stage-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-6);
+  border-bottom: var(--rule-soft);
+  background: var(--paper-bright);
+}
+.browse-identity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.browse-identity h2 {
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.browse-head-meta {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-s);
+  overflow-wrap: anywhere;
+}
+.browse-head-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+/* The scroller: stage never scrolls as a page. */
+.browse-stage-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+}
+.browse-stage-empty {
+  justify-content: flex-start;
+}
+
+/* Hairline metadata grid — square, no card, no shadow. */
+.browse-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--ink-faint);
+  background: var(--ink-faint);
+}
+/* One notch under the 4px grid: the fact cells read as one column, not tiles. */
+.browse-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: 10px;
+  background: var(--paper-bright);
+}
+.browse-meta dt {
+  margin: 0;
+}
+.browse-meta dd {
+  margin: 0;
+}
+.browse-value {
+  font-size: var(--fs-m);
+  color: var(--ink);
+}
+
+/* Same notch as the fact cells; the object's blocks stay one column. */
+.browse-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.browse-section > h3 {
+  margin: 0;
+}
+.browse-copy {
+  margin: 0;
+  /* One step tighter leading: dense engineering prose still breathes. */
+  line-height: 1.6;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.browse-quiet {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-s);
+}
+
+/* Linked objects (findings, sources): text rows, one hairline between. */
+.browse-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--ink-faint);
+}
+.browse-links > li + li {
+  border-top: var(--rule-soft);
+}
+.browse-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.browse-row:hover {
+  background: var(--paper-shadow);
+}
+.browse-row:focus-visible {
+  outline: 2px solid var(--cobalt);
+  outline-offset: -2px;
+}
+.browse-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-muted);
+}
+.browse-link-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+.browse-link-copy strong {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.browse-link-copy small {
+  color: var(--ink-muted);
+  font-size: var(--fs-xs);
+}
+
+/* Affected-element chips: mono, hairline, square. */
+.browse-chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin: 0;
+  padding: 0;
+}
+.browse-chip {
+  border: 1px solid var(--ink-faint);
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.browse-chip-more {
+  color: var(--cobalt);
+}
+
+/* Extracted document content: one reading column, page gutter, hairlines. */
+.browse-chunk {
+  border: 1px solid var(--ink-faint);
+  background: var(--paper-cream);
+}
+.browse-chunk-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-1) var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: var(--rule-soft);
+  background: var(--paper-bright);
+}
+.browse-chunk-body {
+  padding: var(--sp-3);
+}
+.browse-chunk-body pre {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--fs-s);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+/* Reused feature surfaces keep their own grammar; only their margins relax. */
+.browse-stage .sources-context-history,
+.browse-stage .revision-impact {
+  margin: 0;
+}
+.browse-stage .sources-context-revision:last-of-type {
+  border-bottom: 0;
+}
+
+@media (max-width: 1000px) {
+  .browse-stage-head,
+  .browse-stage-body {
+    padding-inline: var(--sp-4);
+  }
+}

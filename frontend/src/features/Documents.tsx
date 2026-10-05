@@ -347,14 +347,15 @@ export function Documents({
       </header>
       <div className="document-filters" aria-label="文档类型">
         {(["all", "text", "pdf"] as const).map((type) => (
-          <button
+          <Button
+            variant="ghost"
             type="button"
             key={type}
             aria-pressed={fileType === type}
             onClick={() => setFileType(type)}
           >
             {type === "all" ? "全部文件" : type === "pdf" ? "PDF" : "文本"}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="pane-body">
@@ -366,7 +367,8 @@ export function Documents({
           (frontend/src/components/ui/icon.ts states the rule).
         */}
         {listed?.map((doc) => (
-          <button
+          <Button
+            variant="ghost"
             className={current === doc.id ? "selected" : ""}
             onClick={() => {
               setSelected(doc.id);
@@ -380,7 +382,7 @@ export function Documents({
                 {new Date(doc.created_at).toLocaleDateString("zh-CN")}
               </small>
             </span>
-          </button>
+          </Button>
         ))}
         {!!documents.data?.length && !listed?.length && (
           <p className="quiet-message">
@@ -391,12 +393,17 @@ export function Documents({
     </Pane>
   );
   return (
-    <div
-      className={`documents-view${emptyWorkspace ? " documents-view-empty" : ""}`}
+    <main
+      className={`workspace-stage-surface documents-view${emptyWorkspace ? " documents-view-empty" : ""}`}
     >
-      <div className="view-toolbar">
-        <h2>文档</h2>
-        {!emptyWorkspace && (
+      {/* The stage band is the donor instrument line: one row, mono, no page
+          heading. The source name and its count identify the reading surface
+          beneath it; the search and import controls are plain donor controls. */}
+      {!emptyWorkspace && (
+        <header className="workspace-stage-band">
+          <strong title={subject}>{meta?.filename ?? "文档"}</strong>
+          <small>{count} 份文档</small>
+          <span className="dot-leader" aria-hidden="true" />
           <form
             className="documents-search"
             role="search"
@@ -412,48 +419,43 @@ export function Documents({
               onChange={(event) => setSearch(event.target.value)}
               placeholder="搜索文档与解析内容"
             />
-            <Button type="submit" variant="secondary" size="sm">
-              搜索
-            </Button>
+            <button type="submit">搜索</button>
             {query && (
-              <Button
+              <button
                 type="button"
-                size="sm"
-                variant="ghost"
                 onClick={() => {
                   setQuery("");
                   setSearch("");
                 }}
               >
                 清除
-              </Button>
+              </button>
             )}
           </form>
-        )}
-        <div className="view-toolbar-actions">
-          {!emptyWorkspace && (
-            <Button variant="secondary" size="sm" onClick={importDocument}>
-              <Upload {...icon} /> 导入文档
-            </Button>
-          )}
-          <input
-            ref={input}
-            type="file"
-            hidden
-            accept=".md,.txt,.csv,.log,.pdf,.docx,.pptx,.html"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
-              if (file)
-                void perform(async () => {
-                  const run = await api.upload(project, file);
-                  setRunId(run.id);
-                  await cache.invalidateQueries({ queryKey: ["documents"] });
-                });
-            }}
-          />
-        </div>
-      </div>
+          <button type="button" onClick={importDocument}>
+            <Upload {...icon} /> 导入文档
+          </button>
+        </header>
+      )}
+      {/* The hidden file input is always mounted: the empty state's own import
+          control reaches it through `importDocument`, so it cannot live inside
+          the band the empty state does not render. */}
+      <input
+        ref={input}
+        type="file"
+        hidden
+        accept=".md,.txt,.csv,.log,.pdf,.docx,.pptx,.html"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file)
+            void perform(async () => {
+              const run = await api.upload(project, file);
+              setRunId(run.id);
+              await cache.invalidateQueries({ queryKey: ["documents"] });
+            });
+        }}
+      />
       {run.data && (
         <div className="upload-status" role="status">
           {`导入 ${statusLabel(run.data.status)} / ${
@@ -461,33 +463,35 @@ export function Documents({
           }。详情见「运行」。`}
         </div>
       )}
-      {emptyWorkspace ? (
-        <section
-          className="documents-empty-workspace"
-          aria-labelledby="documents-empty-title"
-        >
-          <div className="workspace-empty">
-            <span className="object-kind">项目文档</span>
-            <h2 id="documents-empty-title">尚未导入文档</h2>
-            <p>
-              项目还没有工程文档，因此没有可读取的依据。导入文档后，可在本机搜索并核对来源。
-            </p>
-            <div className="workspace-empty-actions">
-              <Button size="sm" onClick={importDocument}>
-                <Upload {...icon} /> 导入文档
-              </Button>
+      <div className="workspace-stage-body documents-stage-body">
+        {emptyWorkspace ? (
+          <section
+            className="documents-empty-workspace"
+            aria-labelledby="documents-empty-title"
+          >
+            <div className="workspace-empty">
+              <span className="object-kind">项目文档</span>
+              <h2 id="documents-empty-title">尚未导入文档</h2>
+              <p>
+                项目还没有工程文档，因此没有可读取的依据。导入文档后，可在本机搜索并核对来源。
+              </p>
+              <div className="workspace-empty-actions">
+                <Button size="sm" onClick={importDocument}>
+                  <Upload {...icon} /> 导入文档
+                </Button>
+              </div>
             </div>
-          </div>
-        </section>
-      ) : condensed ? (
-        <PaneSplit id="documents-condensed">{reading}</PaneSplit>
-      ) : (
-        <PaneSplit id="documents-library" persist>
-          {sourceList}
-          <PaneDivider label="调整来源列表宽度" />
-          {reading}
-        </PaneSplit>
-      )}
-    </div>
+          </section>
+        ) : condensed ? (
+          <PaneSplit id="documents-condensed">{reading}</PaneSplit>
+        ) : (
+          <PaneSplit id="documents-library" persist>
+            {sourceList}
+            <PaneDivider label="调整来源列表宽度" />
+            {reading}
+          </PaneSplit>
+        )}
+      </div>
+    </main>
   );
 }

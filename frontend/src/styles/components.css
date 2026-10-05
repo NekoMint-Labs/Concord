@@ -47,21 +47,10 @@
   align-items: center;
   font-size: var(--fs-meta);
 }
-.alert button {
-  border: 0;
-  background: none;
+.alert bim-button {
   margin-left: auto;
-  color: inherit;
-  font-size: var(--fs-section);
-  line-height: 1;
 }
 .loading-view,
-.empty-state {
-  padding: 28px;
-  color: var(--muted);
-  line-height: 1.7;
-  font-size: var(--fs-body);
-}
 .loading-view {
   display: grid;
   place-items: center;
@@ -69,17 +58,15 @@
 }
 
 .workspace-state {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  align-content: center;
-  gap: 4px 12px;
+  display: flex;
+  align-items: center;
   width: min(520px, calc(100% - 48px));
   min-height: 100%;
   margin: 0 auto;
   padding: 32px 0;
   color: var(--muted);
 }
-.workspace-state > svg {
+.workspace-state-content > svg {
   grid-row: 1 / span 2;
   margin-top: 3px;
   color: var(--muted-2);
@@ -102,7 +89,7 @@
   grid-column: 2;
   margin-top: 10px;
 }
-.workspace-state.is-error > svg {
+.workspace-state.is-error .workspace-state-content > svg {
   color: var(--warning);
 }
 .workspace-state.is-compact {
@@ -194,12 +181,6 @@
 }
 .view-heading p,
 .table-view > p,
-.capability-view > p {
-  font-size: var(--fs-meta);
-  color: var(--muted);
-  line-height: 1.6;
-  margin-top: 6px;
-}
 /*
  * The import control is a `<label>` wrapping a file input, so it is not a
  * `<button>` and the shared control transition in base.css does not reach it: it
@@ -209,28 +190,6 @@
  * surface and the same boundary (`.button-secondary` below states why a secondary
  * control rests on a neutral rather than on white).
  */
-.import-button {
-  display: inline-flex;
-  cursor: pointer;
-  align-items: center;
-  gap: var(--icon-gap);
-  height: var(--control-h-sm);
-  padding: 0 9px;
-  border: 1px solid var(--line-control-soft);
-  border-radius: var(--radius-md);
-  background: var(--hover);
-  color: var(--ink-2);
-  font-size: var(--fs-action);
-  font-weight: 500;
-  transition:
-    background var(--motion-fast) var(--ease),
-    border-color var(--motion-fast) var(--ease),
-    color var(--motion-fast) var(--ease),
-    transform var(--motion-fast) var(--ease);
-}
-.import-button:hover {
-  background: var(--hover-strong);
-}
 
 /*
  * Controls. A control is identified by its own boundary and its surface, never
@@ -262,20 +221,10 @@
  * never ambiguous.
  */
 .icon-button {
-  display: grid;
-  place-items: center;
   width: 25px;
   height: 25px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--muted);
 }
-.icon-button:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-.button {
+button.button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -288,15 +237,15 @@
   font-weight: 500;
   white-space: nowrap;
 }
-.button svg {
+button.button svg {
   opacity: 0.9;
 }
-.button-primary {
+button.button-primary {
   background: var(--primary);
   color: var(--on-primary);
   border-color: var(--primary);
 }
-.button-primary:hover {
+button.button-primary:hover {
   background: var(--primary-hover);
   border-color: var(--primary-hover);
 }
@@ -319,32 +268,49 @@
  * the eye because it is no longer the only thing saying "this is a control", not
  * because it has been weakened.
  */
-.button-secondary {
+button.button-secondary {
   background: var(--hover);
   color: var(--ink-2);
   border-color: var(--line-control-soft);
 }
-.button-secondary:hover {
+button.button-secondary:hover {
   background: var(--hover-strong);
 }
-.button-ghost {
+button.button-ghost {
   background: transparent;
   color: var(--ink-2);
 }
-.button-ghost:hover {
+button.button-ghost:hover {
   background: var(--hover);
 }
-.button-danger {
+button.button-danger {
   background: var(--surface);
   color: var(--danger-fg);
   border-color: var(--line-control-soft);
 }
-.button-danger:hover {
+button.button-danger:hover {
   background: var(--danger-soft);
 }
-.button-sm {
+button.button-sm {
   height: var(--control-h-sm);
   padding: 0 9px;
+}
+/* Donor buttons own their hit surface, states and focus; host sizing is layout. */
+bim-button.button {
+  display: inline-block;
+  height: var(--control-h);
+}
+bim-button.button-sm {
+  height: var(--control-h-sm);
+}
+bim-button.button-primary:not([disabled]):not([loading]):not([active]) {
+  --bim-button--bgc: var(--bim-ui_main-base);
+  --bim-button--bgc-h: var(--primary-hover);
+  --bim-label--c: var(--bim-ui_main-contrast);
+}
+bim-button.button-danger:not([disabled]):not([loading]):not([active]) {
+  --bim-label--c: var(--danger-fg);
+  --bim-button--bgc-h: var(--danger-soft);
 }
 /*
  * Integrated view toolbar: one chrome row that owns a primary view's title, its
@@ -354,25 +320,7 @@
  * surface below it rather than by a rule.
  */
 .view-toolbar,
-.viewer-toolbar {
-  flex-shrink: 0;
-  /* a structural chrome band: square by declaration, not by omission */
-  border-radius: var(--radius-none);
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  /* a generous column gap, because the band's children are three different kinds
-     of thing - a view's own name, the view's inline controls, and its actions -
-     and 16px between them read as one crowded row rather than as three groups */
-  gap: var(--space-2) var(--space-5);
-  min-height: 42px;
-  padding: 6px 18px;
-  background: var(--surface-chrome);
-}
 .view-toolbar > h2,
-.viewer-toolbar > h2 {
-  font-size: var(--fs-title);
-}
 .view-toolbar-note,
 .viewer-toolbar-note {
   min-width: 0;
@@ -480,12 +428,6 @@
   color: var(--ink);
   text-decoration: underline;
 }
-.panel-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
 .count {
   margin-left: auto;
   color: var(--muted-2);
@@ -556,12 +498,6 @@
  * frontend/src/components/ui/AppDisclosure.tsx, which is where a future disclosed
  * *form* would have to be reconsidered.
  */
-.disclosure-body {
-  overflow: hidden;
-}
-.disclosure-body > .disclosure-inner {
-  padding-top: var(--space-3);
-}
 
 /* Shared property grammar: metadata reads consistently in workspaces and inspectors. */
 .shared-property-group {
@@ -615,65 +551,10 @@
 
 /* Shared dense list/table grammar for engineering records. */
 .data-list-header,
-.data-list-row {
-  display: grid;
-  grid-template-columns: var(--data-columns, minmax(220px, 1fr) 120px 100px);
-  gap: 12px;
-  align-items: center;
-}
-.data-list-header {
-  min-height: 30px;
-  padding: 0 10px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface-chrome);
-  color: var(--muted);
-  font-size: var(--fs-label);
-  font-weight: 500;
-}
-.data-list-row {
-  min-height: 54px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--ink-2);
-  font-size: var(--fs-meta);
-}
-.data-list-row:hover {
-  background: var(--hover);
-}
 .data-list-row.selected {
   background: var(--accent-muted);
 }
-.data-list-row > span {
-  min-width: 0;
-}
 .data-list-row strong,
-.data-list-row small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.data-list-row strong {
-  color: var(--ink);
-  font-size: var(--fs-action);
-  font-weight: 500;
-}
-.data-list-row small {
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: var(--fs-label);
-}
-.data-list-empty {
-  display: grid;
-  gap: 4px;
-  padding: 28px 10px;
-  color: var(--muted);
-}
-.data-list-empty strong {
-  color: var(--ink);
-  font-size: var(--fs-body);
-  font-weight: 600;
-}
 
 /* Shared empty/error state used by impact, sources and mapping views. */
 .impact-empty {

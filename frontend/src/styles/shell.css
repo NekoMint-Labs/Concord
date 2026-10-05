@@ -22,13 +22,6 @@
  * application the column a user works in beside other columns is a column the
  * user can size.
  */
-.application-shell {
-  height: 100dvh;
-  min-height: 560px;
-  display: flex;
-  overflow: hidden;
-  background: var(--workspace);
-}
 
 /* ---------- sidebar ---------- */
 
@@ -40,18 +33,12 @@
  * over the workspace beside it. The pane is the clip, rather than the window edge
  * being one.
  */
-.sidebar-pane {
-  overflow: hidden;
-}
 /*
  * The work plane is the split's second pane, and it has to paint over the column
  * beside it: both are flex items, and a background belonging to the earlier
  * sibling is drawn before the later one's, so the column would otherwise show
  * through the workspace that has taken its space.
  */
-.main-pane {
-  position: relative;
-}
 
 /*
  * 232px, down from 248. The sidebar carries no content below the work-package
@@ -121,52 +108,7 @@
  * band's right inset is 8px so the control's hover surface lines up with the
  * project picker and the work-package rows beneath it, all of which are inset 8px.
  */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  height: 42px;
-  padding: 0 8px 0 12px;
-}
 /* the identity pair: two sizes, one baseline, so the gloss hangs off the name */
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  border-radius: 5px;
-  background: var(--primary);
-  color: var(--on-primary);
-  font-size: 11px;
-  font-weight: 600;
-}
-.brand-name {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  min-width: 0;
-  margin-right: auto;
-}
-.brand-name strong {
-  color: var(--ink);
-  font-size: var(--fs-section);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.brand-name span {
-  color: var(--muted-2);
-  font-size: 9px;
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-}
-.sidebar-header {
-  flex-shrink: 0;
-}
-.project-picker {
-  padding: 0 8px 6px;
-}
 /*
  * The picker is a wide control, not a menu label: the trigger owns the row.
  *
@@ -187,26 +129,6 @@
  * sentence-long text label would otherwise have to describe. The height stays at
  * the shared `--control-h`, which is what keeps the hit area honest.
  */
-.project-trigger {
-  display: flex;
-  align-items: center;
-  gap: var(--icon-gap);
-  width: 100%;
-  height: 32px;
-  padding: 0 6px 0 8px;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--ink);
-  font-size: var(--fs-action);
-  font-weight: 500;
-  text-align: left;
-  transition: background var(--motion-fast) var(--ease);
-}
-.project-trigger:hover,
-.project-trigger[data-state="open"] {
-  background: var(--hover);
-}
 /*
  * The mark is a navigation cue and nothing more: one restrained building for the
  * project, at the same weight as the name beside it, stepping to the stronger
@@ -214,138 +136,19 @@
  * outlined, and not a badge - the exception colour belongs to blocking state and
  * the accent belongs to position.
  */
-.project-trigger .project-mark {
-  flex-shrink: 0;
-  color: var(--muted);
-  transition: color var(--motion-fast) var(--ease);
-}
 .project-trigger:hover .project-mark,
-.project-trigger[data-state="open"] .project-mark {
-  color: var(--ink-2);
-}
-.project-trigger .project-chevron {
-  flex-shrink: 0;
-  margin-left: auto;
-  color: var(--muted);
-  transition:
-    transform var(--motion-fast) var(--ease),
-    color var(--motion-fast) var(--ease);
-}
-.project-trigger:hover .project-chevron {
-  color: var(--ink-2);
-}
 /*
  * The chevron turns while the menu is open. It is the one rotation in the product,
  * and it is allowed because it is a disclosure rather than an effect: the mark
  * says which way the surface went, and the alternative is a chevron that keeps
  * pointing down at a list that is now above the pointer's own click.
  */
-.project-trigger[data-state="open"] .project-chevron {
-  transform: rotate(180deg);
-  color: var(--ink-2);
-}
-.project-trigger .project-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: 1.15;
-}
-.project-trigger .project-name small {
-  display: block;
-  margin-bottom: 1px;
-  color: var(--muted-2);
-  font-size: var(--fs-label);
-  font-weight: 400;
-}
-.project-trigger .project-name strong {
-  color: var(--ink);
-  font-size: var(--fs-action);
-  font-weight: 600;
-}
-.project-trigger .project-name > span {
-  margin-left: 6px;
-  color: var(--muted);
-  font-size: var(--fs-label);
-  font-weight: 400;
-}
-.sidebar-search {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  height: 30px;
-  margin: 0 8px 6px;
-  padding: 0 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface-search);
-  color: var(--muted-2);
-}
-.sidebar-search input {
-  min-width: 0;
-  width: 100%;
-  height: auto;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--ink);
-  font-size: var(--fs-meta);
-}
-.sidebar-search input::placeholder {
-  color: var(--muted-2);
-}
-.sidebar-content {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-}
-.sidebar-primary {
-  display: grid;
-  gap: 2px;
-  padding: 8px 8px 12px;
-  border-bottom: 1px solid var(--line-soft);
-}
-.sidebar-section-label {
-  padding: 0 8px 5px;
-  color: var(--muted-2);
-  font-size: var(--fs-label);
-  font-weight: 500;
-  letter-spacing: 0.08em;
-}
 .sidebar-primary button,
-.sidebar-footer button {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  width: 100%;
-  height: 30px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--ink-2);
-  font-size: var(--fs-action);
-  text-align: left;
-}
 .sidebar-primary button:hover,
-.sidebar-footer button:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
 .sidebar-primary button.active {
   background: var(--accent-muted);
   color: var(--ink);
   font-weight: 600;
-}
-.sidebar-footer {
-  flex-shrink: 0;
-  padding: 8px;
-  border-top: 1px solid var(--line);
-}
-.sidebar-group {
-  padding: 8px 8px 20px;
 }
 /*
  * Three levels, three treatments, so the hierarchy is legible without a single
@@ -367,45 +170,6 @@
  * is not touched on either - both carry Chinese product text, where a 500-to-600
  * difference renders as identical (frontend/src/styles/base.css).
  */
-.sidebar-group-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-height: 25px;
-  padding: 0 4px 6px 8px;
-  color: var(--muted-2);
-  font-size: var(--fs-label);
-  font-weight: 500;
-  letter-spacing: 0.08em;
-}
-.sidebar-group-create {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 25px;
-  width: 25px;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--ink-2);
-  font-size: var(--fs-label);
-  letter-spacing: 0;
-}
-.sidebar-group-create:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-.package-nav-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.sidebar-empty {
-  padding: 8px;
-}
 /*
  * The section opens the list with the largest gap in the column, and the group
  * gap is the next largest, so the vertical rhythm descends 18 / 14 / 5: a section
@@ -413,25 +177,9 @@
  * the hierarchy now that the plane no longer states the boundary, and none of
  * them is a rule.
  */
-.area-group {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  margin-top: 14px;
-}
 /* the eyebrow already owns the space above the first group, and owns more of it
    than a group boundary does, so the section reads as opening rather than as one
    more gap between groups */
-.area-group:first-of-type {
-  margin-top: 10px;
-}
-.area-title {
-  padding: 0 8px 5px;
-  color: var(--ink-2);
-  font-size: var(--fs-label);
-  font-weight: 500;
-  letter-spacing: 0.06em;
-}
 /*
  * A navigation row is a structural list row: square is wrong here and so is a
  * card. Selection is an accent-tinted surface with a small radius - the same
@@ -452,43 +200,14 @@
  * it: the indent moves the text, not the object, and the selected row therefore
  * stays contained in the column instead of becoming a stripe across it.
  */
-.package-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  width: 100%;
-  padding: 5px 8px 5px 14px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--ink);
-  text-align: left;
-  transition:
-    background var(--motion-fast) var(--ease),
-    color var(--motion-fast) var(--ease);
-}
 .package-nav:not(.selected):hover {
   background: var(--hover);
 }
 .package-nav.selected {
   background: var(--accent-muted);
 }
-.package-nav strong {
-  display: block;
-  font-size: var(--fs-action);
-  font-weight: 400;
-  line-height: 1.45;
-}
 .package-nav.selected strong {
   font-weight: 600;
-}
-.package-nav small {
-  display: block;
-  margin-top: 1px;
-  color: var(--muted-2);
-  font-size: var(--fs-label);
-  line-height: 1.35;
 }
 /*
  * Selection steps the whole row with it - the package id and the discipline are
@@ -510,18 +229,6 @@
 
 /* ---------- shell chrome ---------- */
 
-.main-shell {
-  min-width: 0;
-  /* the work plane fills the pane that owns it, the same way the navigation
-     column does (App.tsx marks this pane `pane-stack` too) */
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--chrome);
-  /* clips the detail pane as it enters from the surface's own right edge */
-  overflow: hidden;
-}
 /* Project context, destination navigation, and local actions are deliberately
  * separate. The first row answers where; the second answers where next and what
  * can be done here. */
@@ -581,23 +288,7 @@
 .crumb-sep {
   color: var(--muted-2);
 }
-.local-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  flex-shrink: 0;
-  min-height: 42px;
-  margin-left: auto;
-  padding-left: 10px;
-  border-left: 1px solid var(--line-soft);
-  background: color-mix(in srgb, var(--surface-detail) 52%, transparent);
-}
-.local-actions > .button {
-  color: var(--ink-2);
-}
-.advanced-menu-trigger {
-  color: var(--muted);
-}
+
 /*
  * The work surface is the left pane of the workspace split, and the detail pane
  * is the right one (frontend/src/layout/PaneSplit.tsx). A split keeps a minimum
@@ -983,11 +674,6 @@
   font-size: var(--fs-label);
 }
 .construction-conditions,
-.overview-basis {
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid var(--line-soft);
-}
 .condition-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1320,7 +1006,7 @@
   }
 }
 @media (max-width: 850px) {
-  .application-shell {
+  .app-shell {
     min-width: 720px;
   }
   .view-toolbar,
@@ -1330,38 +1016,6 @@
   }
 }
 
-/* Work is a scanable queue, not a second dashboard. */
-.work-list,
-.project-home {
-  padding: 28px 36px;
-  overflow: auto;
-  height: 100%;
-  color: var(--ink);
-}
-.work-list > header,
-.project-home > header {
-  margin-bottom: 26px;
-}
-.work-list h1,
-.project-home h1 {
-  margin: 4px 0 6px;
-  font-size: 22px;
-}
-.work-list header p,
-.project-home header p {
-  margin: 0;
-  color: var(--muted);
-}
-.work-list > section {
-  margin-bottom: 28px;
-}
-.work-list h2 {
-  font-size: var(--fs-section);
-  margin: 0 0 8px;
-}
-.work-list h2 .count {
-  margin-left: 8px;
-}
 .work-rows {
   border-top: 1px solid var(--line-soft);
 }
@@ -1394,31 +1048,6 @@
 .work-row button {
   flex-shrink: 0;
 }
-.project-home nav {
-  max-width: 760px;
-  border-top: 1px solid var(--line-soft);
-}
-.project-home nav button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 16px 4px;
-  border: 0;
-  border-bottom: 1px solid var(--line-soft);
-  background: transparent;
-  color: var(--ink);
-  text-align: left;
-  cursor: pointer;
-}
-.project-home nav button:hover,
-.project-home .work-row:hover {
+.work-row:hover {
   background: var(--hover);
-}
-.project-home nav button span:nth-child(2) {
-  color: var(--muted);
-  margin-left: auto;
-}
-.project-home nav button span:last-child {
-  color: var(--muted);
 }

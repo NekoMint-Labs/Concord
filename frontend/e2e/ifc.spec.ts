@@ -8,6 +8,7 @@ import {
   type Page,
 } from "@playwright/test";
 import type { Workspace } from "../src/api/client";
+import { openWorkPanel, selectDonorTab, toolRail } from "./donor-conformance";
 
 const headers = { Authorization: "Bearer local-demo-admin" };
 const project = "/api/projects/harbor-east";
@@ -33,8 +34,7 @@ async function workspace(request: APIRequestContext): Promise<Workspace> {
 
 /** Open the project sheet's source register, optionally selecting a source. */
 async function openSources(page: Page, sourceName?: string) {
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
+  await toolRail(page)
     .getByRole("button", { name: "项目", exact: true })
     .click();
   const register = page.getByRole("region", {
@@ -54,13 +54,12 @@ async function openSources(page: Page, sourceName?: string) {
 }
 
 async function openPackage(page: Page, name: string) {
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
+  await toolRail(page)
     .getByRole("button", { name: "项目", exact: true })
     .click();
   await page
     .getByRole("region", { name: "工作包状态" })
-    .getByRole("button", { name: "查看全部 →" })
+    .getByRole("button", { name: "查看全部 →", exact: true })
     .click();
   await page
     .getByRole("region", { name: "项目工作包" })
@@ -143,8 +142,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
       .getByRole("region", { name: "工作包概览" })
       .getByRole("heading", { level: 2, name: /已阻塞|待批准/ }),
   ).toBeVisible();
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
+  await toolRail(page)
     .getByRole("button", { name: "模型", exact: true })
     .click();
   const uploads: string[] = [];
@@ -244,8 +242,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     .poll(async () => (await pane.boundingBox())!.width)
     .toBeGreaterThan(keyboardWidth - 5);
   await page.reload();
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
+  await toolRail(page)
     .getByRole("button", { name: "模型", exact: true })
     .click();
   await expect
@@ -341,7 +338,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
     spatial.getByRole("button", { name: "技术详情" }),
   ).toHaveAttribute("aria-expanded", "true");
   const globalId = spatial
-    .locator(".disclosure-inner > .element-facts")
+    .locator(".element-facts")
     .getByText("GlobalId", { exact: true })
     .locator("..")
     .locator("dd");
@@ -369,7 +366,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   await page.getByRole("button", { name: "在模型中查看 →" }).click();
   await expect(page.getByRole("region", { name: "空间问题" })).toBeVisible();
   await page
-    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("toolbar", { name: "工作区" })
     .getByRole("button", { name: "模型", exact: true })
     .click();
   await expect(
@@ -377,7 +374,7 @@ test("real IFC renders, matches analysis GUIDs, imports, and downloads unchanged
   ).toContainText("送风管 E-01");
   await page.reload();
   await page
-    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("toolbar", { name: "工作区" })
     .getByRole("button", { name: "模型", exact: true })
     .click();
   await expect(viewer.getByRole("status")).toContainText("project-model.ifc");
@@ -402,17 +399,17 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     localStorage.removeItem("concord:recent-projects");
   });
   await page.goto("/");
+  // The empty startup view creates a project directly; once a workspace is open
+  // the same command is the header's 项目 menu → 新建项目.
   const createProject = page.getByRole("button", { name: "新建项目" });
-  const projectPicker = page.getByRole("button", {
-    name: "切换项目",
-    exact: true,
-  });
-  await expect(createProject.or(projectPicker).first()).toBeVisible();
-  if (await projectPicker.isVisible()) {
-    await projectPicker.click();
-    await page.getByRole("menuitem", { name: "新建项目" }).click();
-  } else {
+  if (await createProject.isVisible()) {
     await createProject.click();
+  } else {
+    await page
+      .locator(".calm-header")
+      .getByRole("button", { name: "项目", exact: true })
+      .click();
+    await page.getByRole("menuitem", { name: "新建项目" }).click();
   }
   await page.getByLabel("项目名称").fill(name);
   await page.getByLabel("说明").fill("Issue 10 browser qualification");
@@ -420,14 +417,9 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     .getByRole("dialog", { name: "新建项目" })
     .getByRole("button", { name: "创建项目" })
     .click();
-  await expect(
-    page
-      .getByRole("navigation", { name: "当前位置" })
-      .getByText(name, { exact: true }),
-  ).toBeVisible();
+  await expect(page.locator(".calm-project")).toContainText(name);
 
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
+  await toolRail(page)
     .getByRole("button", { name: "项目", exact: true })
     .click();
   await page
@@ -442,9 +434,14 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   await structure.getByLabel("楼层").fill("L02");
   await structure.getByRole("button", { name: "保存并使用此区域" }).click();
   const area = structure.getByRole("combobox", { name: "所属区域" });
-  await expect(area).toContainText("East wing");
+  await expect(area.locator("bim-label")).toHaveText("East wing");
   await area.click();
-  await page.getByRole("option", { name: "East wing" }).click();
+  await expect(
+    page.getByRole("option", { name: "East wing", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
+  await expect(area).toHaveAttribute("aria-expanded", "false");
+  await expect(structure).toBeVisible();
   await structure.getByLabel("工作包名称").fill("Ventilation");
   await structure.getByLabel("专业").fill("MEP");
   await structure.getByLabel("负责人").fill("Team A");
@@ -501,8 +498,7 @@ test("real project survives restart through source, BIM mapping, baseline, revis
     .toBe(200);
 
   await openPackage(page, "Ventilation");
-  await page
-    .getByRole("navigation", { name: "主要工作区" })
+  await toolRail(page)
     .getByRole("button", { name: "模型", exact: true })
     .click();
   await page.getByRole("button", { name: "关联 BIM" }).click();
@@ -543,14 +539,13 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   ).toBeVisible();
 
   await page.reload();
-  await expect(
-    page
-      .getByRole("navigation", { name: "当前位置" })
-      .getByText(name, { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("region", { name: "等待中" })).toContainText(
-    "Ventilation",
-  );
+  await expect(page.locator(".calm-project")).toContainText(name);
+  await openWorkPanel(page);
+  const waitingRow = page
+    .locator(".workspace-row")
+    .filter({ hasText: "Ventilation 尚未检查" });
+  await expect(waitingRow).toBeVisible();
+  await expect(waitingRow).toContainText("待检查");
   const reloadedRegister = await openSources(page, "MEP Model");
   await reloadedRegister
     .getByRole("button", { name: "基线记录与操作", exact: true })
@@ -573,6 +568,15 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   await page
     .getByRole("option", { name: "MEP Model · 添加版本", exact: true })
     .click();
+  await expect(
+    page.getByRole("option", { name: "MEP Model · 添加版本", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
+  await expect(secondDialog.getByRole("combobox")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(secondDialog).toBeVisible();
   const secondUpload = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
@@ -658,23 +662,23 @@ test("real project survives restart through source, BIM mapping, baseline, revis
   expect(report.persisted).toBe(true);
   expect(report.evidence.length).toBeGreaterThan(0);
   await page.reload();
-  await expect(
-    page
-      .getByRole("navigation", { name: "当前位置" })
-      .getByText(name, { exact: true }),
-  ).toBeVisible();
-  const completed = page.getByRole("region", { name: "最近完成" });
+  await expect(page.locator(".calm-project")).toContainText(name);
+  await openWorkPanel(page);
+  const completed = page.getByRole("complementary", { name: "工作与审核" });
+  await selectDonorTab(completed, "已处理");
   await expect(completed).toContainText("Concord 已完成调查");
   await completed.getByRole("button", { name: "Concord 已完成调查" }).click();
   await page
-    .getByRole("complementary", { name: "所选工作事项" })
+    .getByRole("region", { name: "所选工作事项" })
     .getByRole("button", { name: "查看调查依据" })
     .click();
   await expect(
     page.getByRole("complementary", { name: "工程调查详情" }),
   ).toContainText("判断依据");
 
-  const picker = page.getByRole("button", { name: "切换项目", exact: true });
+  const picker = page
+    .locator(".calm-header")
+    .getByRole("button", { name: "项目", exact: true });
   await picker.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("menuitem", { name: "新建项目" })).toBeVisible();

@@ -1,0 +1,635 @@
+/*
+ * ── Concord material palette ────────────────────────────────────────────────
+ *
+ * This file is the ONE place a colour value is written. Every other stylesheet -
+ * base.css, the feature sheets and the vendored OpenTakeoff workspace sheets -
+ * names a colour by what it is *for* and resolves it through the tokens declared
+ * here. frontend/tests/design-tokens.test.mjs holds that invariant.
+ *
+ * The material
+ * ------------
+ * An engineering instrument, not an admin console: warm paper, a dark charcoal
+ * instrument frame, one copper accent. Three ideas, and everything below is one
+ * of them.
+ *
+ *  · Warm paper, never cream. The neutral ladder is a stone family with a few
+ *    degrees of warmth - enough that the product has a temperature of its own,
+ *    not so much that it reads as a theme. Warmth lives in the planes and the
+ *    hairlines; the ink stays near-neutral so a long Chinese paragraph is
+ *    comfortable to read rather than brown.
+ *  · A dark frame around a paper body. The persistent instrument bands - the
+ *    header, the tool rail, the status strip - are dark in BOTH looks. A dark
+ *    band around a light work plane is what makes a professional tool legible at
+ *    a glance: it says where the application ends and the document begins, and it
+ *    is what stops a window of three panels reading as one pale slab. This is the
+ *    one deliberate reversal of the previous direction, which made every band the
+ *    same value as the plane beside it.
+ *  · One accent, warm, small. Copper marks position, selection, focus and the
+ *    committed action - and nothing else. It is never a region background and
+ *    never decoration. Exception is ochre, danger is rust, health is olive, so a
+ *    state can be read without hue being the only signal.
+ *
+ * Planes, ordered by recession. In the light look the work plane is the lightest
+ * structural plane and the window backdrop is the dimmest; in the dark look
+ * elevation runs the other way, so the work plane is the lightest of the dark
+ * planes and the backdrop the darkest. The paper well stays light in both: a
+ * drawing or an extracted document is read on paper, and a sheet has to look like
+ * a sheet.
+ *
+ *   light  backdrop → nav → work → raised        (with the dark frame outside)
+ *   dark   backdrop → nav → work → raised
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ── planes ───────────────────────────────────────────────────────────────
+     backdrop   the desk the window sits on (visible around panels and views)
+     nav        a docked column: the object navigator, the Work dock, a form
+     work       the plane you work on: the stage, the evidence host, a receipt
+     raised     an object on the work plane: a card, a popover, a dialog
+     canvas     the drafting field behind a sheet or a 3D view
+     well       the paper a drawing or an extracted document is read on
+     The steps are wide enough to be read as *materials* rather than as a
+     gradient: backdrop→nav (1.24:1), nav→work (1.17:1), work→raised (1.13:1),
+     and work→canvas (1.94:1) for the drafting field. A reader can tell "where I
+     am choosing" from "where I am working" from "what I am working on" with all
+     the text covered up, which is the point of having a ladder at all. */
+  --c-backdrop: #cec5b0;
+  --c-nav: #e2dbcb;
+  --c-detail: #e8e1d1;
+  --c-list: #f6f2e9;
+  --c-chrome-band: #f5f1e8;
+  --c-work: #f0ece2;
+  --c-raised: #fcfaf5;
+  --c-well: #fffdf7;
+  /* the ink a status-coloured surface takes: light in the light look, and the
+     window's own charcoal in the dark look, where a lifted status colour needs a dark
+     label to stay legible */
+  --c-on-status: var(--c-raised);
+  --c-canvas: #b5ac98;
+  --c-inset: #e5ded0;
+
+  /* ── hairlines and boundaries ─────────────────────────────────────────────
+     A rule is drawn on the plane it names, so its tone is a placement rule: the
+     content rule clears 1.15:1 on the work plane, the second-order rule is spent
+     on the darker panel plane. A control boundary clears WCAG 1.4.11 (3:1) on
+     every plane a control may land on; `-soft` may only be spent on the light
+     planes, where it is the quieter of the two. */
+  --c-line: #e0d9c9;
+  --c-line-soft: #dbd4c3;
+  --c-line-control: #6f6a62;
+  --c-line-control-soft: #78736a;
+  --c-line-float: #c8bfa9;
+
+  /* ── ink ──────────────────────────────────────────────────────────────────
+     Spaced against the darkest plane a token may land on (the panel plane). Two
+     quiet tiers exist because metadata and a section hint are different volumes
+     of reading, not because one of them may be illegible. */
+  --c-ink: #1b1916;
+  --c-ink-2: #3a3731;
+  --c-ink-3: #55523f;
+  --c-ink-4: #575041;
+  --c-text-faint: #837b69;
+
+  /* ── the instrument frame (dark in both looks) ────────────────────────── */
+  --c-chrome: #262421;
+  --c-chrome-raised: #302d29;
+  --c-chrome-line: #3d3934;
+  --c-chrome-ink: #eae4da;
+  --c-chrome-ink-2: #b0a89a;
+  --c-chrome-ink-3: #928b7d;
+  --c-chrome-select: #3b332a;
+  --c-chrome-focus: #dfa46d;
+
+  /* ── accent: copper ───────────────────────────────────────────────────── */
+  --c-accent: #9a4519;
+  /* The triplet is space-separated on purpose: `rgb(r, g, b / a)` is not valid CSS, so a
+     comma-separated triplet silently invalidates every tint built from it. */
+  --c-accent-rgb: 154 69 25;
+  --c-accent-deep: #7c3512;
+  --c-accent-bright: #b85c27;
+  --c-on-accent: #fff8f3;
+
+  /* ── status family ────────────────────────────────────────────────────── */
+  --c-positive: #3d6a44;
+  --c-positive-surface: #e8efe4;
+  --c-warning: #81530e;
+  --c-warning-surface: #f7efe1;
+  --c-danger: #9e3626;
+  --c-danger-surface: #f8e9e4;
+  --c-info: #4a6273;
+  --c-info-surface: #e8eef1;
+
+  /* ── tints and washes ─────────────────────────────────────────────────── */
+  --c-tint-accent: rgb(var(--c-accent-rgb) / 0.11);
+  --c-tint-accent-strong: rgb(var(--c-accent-rgb) / 0.2);
+  --c-tint-ink: rgb(46 38 26 / 0.045);
+  --c-tint-ink-strong: rgb(46 38 26 / 0.09);
+  --c-tint-positive: rgb(61 106 68 / 0.14);
+  --c-tint-warning: rgb(138 90 18 / 0.14);
+  --c-tint-danger: rgb(158 54 38 / 0.12);
+  --c-tint-canvas: rgb(46 38 26 / 0.05);
+  --c-grain: 46 38 26;
+  --c-grain-inverse: 255 250 242;
+  /* The three washes the material is made of. Each is the grain channel at one
+     strength: paper is a whisper, a panel is a touch stronger, and the drafting field
+     is the only place the lattice is meant to be *seen*. */
+  --c-wash-paper: rgb(var(--c-grain) / 0.03);
+  --c-wash-panel: rgb(var(--c-grain-inverse) / 0.035);
+  --c-wash-canvas: rgb(var(--c-grain) / 0.08);
+  /* The dark band's own lighting: one shade under its top edge, one highlight on it,
+     and a light wash for the grain. No gradients. */
+  --c-band-shade: rgb(0 0 0 / 0.2);
+  --c-band-highlight: rgb(255 255 255 / 0.06);
+  --c-band-topline: rgb(255 255 255 / 0.04);
+  --c-scrim: rgb(30 25 18 / 0.46);
+
+  /* ── elevation ────────────────────────────────────────────────────────── */
+  --c-shadow-1: 0 1px 2px rgb(58 47 32 / 0.07), 0 1px 1px rgb(58 47 32 / 0.05);
+  --c-shadow-2:
+    0 2px 4px rgb(58 47 32 / 0.08), 0 10px 26px rgb(58 47 32 / 0.14);
+  --c-shadow-3:
+    0 4px 12px rgb(58 47 32 / 0.12), 0 28px 70px rgb(58 47 32 / 0.24);
+  --c-shadow-band: 0 -1px 0 rgb(255 250 242 / 0.06);
+  --c-ring: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.26);
+}
+
+/*
+ * The dark look is a re-derivation, not an inversion: a warm charcoal window with
+ * the same paper well and the same copper identity, lifted so a state is legible
+ * against a dim field.
+ */
+:root[data-concord-look="dark"] {
+  color-scheme: dark;
+
+  --c-backdrop: #121110;
+  --c-nav: #242220;
+  --c-detail: #272522;
+  --c-list: #2a2724;
+  --c-chrome-band: #2d2a26;
+  --c-work: #2f2c28;
+  --c-raised: #3b3731;
+  --c-well: #f5f2ea;
+  --c-on-status: var(--c-backdrop);
+  --c-canvas: #0a0908;
+  --c-inset: #1a1917;
+
+  --c-line: #4a453d;
+  --c-line-soft: #413c35;
+  --c-line-control: #a8a094;
+  --c-line-control-soft: #948c80;
+  --c-line-float: #575148;
+
+  --c-ink: #ece6db;
+  --c-ink-2: #d3cbbd;
+  --c-ink-3: #aca496;
+  --c-ink-4: #aaa294;
+  --c-text-faint: #948c7d;
+
+  --c-chrome: #070605;
+  --c-chrome-raised: #171614;
+  --c-chrome-line: #2a2724;
+  --c-chrome-ink: #ece6db;
+  --c-chrome-ink-2: #b3aa9c;
+  --c-chrome-ink-3: #948c7e;
+  --c-chrome-select: #332d25;
+  --c-chrome-focus: #dfa46d;
+
+  --c-accent: #d98a4e;
+  --c-accent-rgb: 217 138 78;
+  --c-accent-deep: #e7a774;
+  --c-accent-bright: #eab389;
+  --c-on-accent: #1d1408;
+
+  --c-positive: #82bf8c;
+  --c-positive-surface: #1e2b21;
+  --c-warning: #e0ae62;
+  --c-warning-surface: #2e2718;
+  --c-danger: #e9907b;
+  --c-danger-surface: #2f1f1b;
+  --c-info: #9dbdd2;
+  --c-info-surface: #1e2831;
+
+  --c-tint-accent: rgb(var(--c-accent-rgb) / 0.15);
+  --c-tint-accent-strong: rgb(var(--c-accent-rgb) / 0.27);
+  --c-tint-ink: rgb(255 250 242 / 0.055);
+  --c-tint-ink-strong: rgb(255 250 242 / 0.1);
+  --c-tint-positive: rgb(130 191 140 / 0.16);
+  --c-tint-warning: rgb(224 174 98 / 0.16);
+  --c-tint-danger: rgb(233 144 123 / 0.14);
+  --c-tint-canvas: rgb(0 0 0 / 0.22);
+  --c-grain: 255 250 242;
+  --c-grain-inverse: 23 21 18;
+  --c-wash-paper: rgb(var(--c-grain) / 0.025);
+  --c-wash-panel: rgb(var(--c-grain-inverse) / 0.06);
+  --c-wash-canvas: rgb(var(--c-grain) / 0.05);
+  --c-band-shade: rgb(0 0 0 / 0.3);
+  --c-band-highlight: rgb(255 255 255 / 0.05);
+  --c-band-topline: rgb(255 250 242 / 0.03);
+  --c-scrim: rgb(8 7 6 / 0.68);
+
+  --c-shadow-1: 0 1px 2px rgb(0 0 0 / 0.42);
+  --c-shadow-2: 0 2px 6px rgb(0 0 0 / 0.46), 0 12px 30px rgb(0 0 0 / 0.52);
+  --c-shadow-3: 0 6px 18px rgb(0 0 0 / 0.52), 0 30px 80px rgb(0 0 0 / 0.62);
+  --c-shadow-band: 0 -1px 0 rgb(255 250 242 / 0.04);
+  --c-ring: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.42);
+}
+
+/*
+ * ── Token bridge ───────────────────────────────────────────────────────────
+ *
+ * Three vocabularies resolve from the palette above, and no value is restated:
+ *
+ *  1. Concord's own names (planes, lines, ink, accent) - what this product's own
+ *     stylesheets are written against.
+ *  2. The vendored OpenTakeoff names (`--paper-*`, `--ink-*`, `--cobalt`), which the
+ *     donor workspace sheets are written against and whose *values* this file owns,
+ *     because the vendored sheets are byte-pinned and may not be edited.
+ *  3. The `--concord-*` feature names that the feature sheets accumulated over several
+ *     passes. They are kept as aliases so no sheet has to be rewritten, and they now
+ *     all resolve onto one small set of tiers instead of 130 literals with no
+ *     relationship to each other.
+ *
+ * The list is declared TWICE, and both copies are load-bearing:
+ *
+ *  · on `:root`, so the surfaces that are portalled out of the shell - a dialog, a
+ *    menu, a popover, a tooltip, a toast - resolve the same material the window does.
+ *    These follow `[data-concord-look]`, which the application mirrors onto the
+ *    document element for exactly this reason;
+ *  · on the shell itself, because the vendored `premiumWorkspace.css` re-declares
+ *    `--cobalt`, `--paper-*`, `--ink-*` and `--stage` *per workspace look on the shell
+ *    element* — at `.premium-workspace[data-workspace-look=…]`, which outranks a plain
+ *    `:root` copy. Without this second copy the donor's cobalt would win inside the
+ *    window, which is precisely the failure this rewrite exists to fix.
+ *
+ * The declarations are identical because every value is a `var()` reference: the look
+ * is decided by the raw palette, not by the alias.
+ */
+:root {
+  /* planes: one step per structural role */
+  --bg-app: var(--c-backdrop);
+  --surface-nav: var(--c-nav);
+  --surface-detail: var(--c-detail);
+  --surface-list: var(--c-list);
+  --surface-chrome: var(--c-chrome-band);
+  --surface-workspace: var(--c-work);
+  --surface: var(--c-raised);
+  --surface-inset: var(--c-inset);
+  --surface-elevated: var(--c-raised);
+  --surface-pop: var(--c-raised);
+  --surface-search: var(--c-raised);
+  --well: var(--c-well);
+  --line: var(--c-line);
+  --line-soft: var(--c-line-soft);
+  --line-control: var(--c-line-control);
+  --line-control-soft: var(--c-line-control-soft);
+  --line-float: var(--c-line-float);
+  --ink-faint: var(--c-line);
+  --ink: var(--c-ink);
+  --ink-soft: var(--c-ink-2);
+  --ink-secondary: var(--c-ink-2);
+  --ink-muted: var(--c-ink-3);
+  --ink-2: var(--c-ink-2);
+  --muted: var(--c-ink-3);
+  --muted-2: var(--c-ink-4);
+  --text-muted: var(--c-ink-3);
+  --text-faint: var(--c-text-faint);
+  --divider-soft: var(--c-line-soft);
+  --cobalt: var(--c-accent);
+  --cobalt-deep: var(--c-accent-deep);
+  --accent: var(--c-accent);
+  --accent-muted: var(--c-tint-accent);
+  --accent-strong: var(--c-tint-accent-strong);
+  --accent-contrast: var(--c-on-accent);
+  --primary: var(--c-accent);
+  --primary-hover: var(--c-accent-deep);
+  --on-primary: var(--c-on-accent);
+  --focus: var(--c-accent);
+  --focus-ring: var(--c-accent);
+  --ring: var(--c-ring);
+  /* the donor's own interaction tints, spent on its rail tiles and its hover faces */
+  --tint-08: var(--c-tint-accent);
+  --tint-14: var(--c-tint-accent-strong);
+  --hover: var(--c-tint-ink);
+  --hover-strong: var(--c-tint-ink-strong);
+  --tint-select: var(--c-tint-accent);
+  --tint-active: var(--c-tint-positive);
+  --success: var(--c-positive);
+  --warn-fg: var(--c-warning);
+  --warn-bg: var(--c-warning-surface);
+  --warn-line: var(--c-tint-warning);
+  --danger-fg: var(--c-danger);
+  --danger-soft: var(--c-tint-danger);
+  --concord-danger-text: var(--c-danger);
+  --concord-warning-text: var(--c-warning);
+  --shadow-1: var(--c-shadow-1);
+  --shadow-2: var(--c-shadow-2);
+  --shadow-pop: var(--c-shadow-2);
+  --shadow-float: var(--c-shadow-2);
+  --shadow-modal: var(--c-shadow-3);
+  --scrim: var(--c-scrim);
+  --grain-rgb: var(--c-grain);
+  --grain-inverse-rgb: var(--c-grain-inverse);
+  --status-bg: var(--c-chrome);
+  --status-fg: var(--c-chrome-ink);
+  --status-acc: var(--c-chrome-focus);
+  --status-dim: var(--c-chrome-ink-3);
+  --workspace-face: var(--c-raised);
+  --workspace-active-face: var(--c-tint-accent);
+  --workspace-lit: var(--c-accent);
+  --workspace-glow: none;
+  --glow: none;
+  --hairline-warm: var(--c-warning-surface);
+  --paper-bright: var(--c-chrome-band);
+  --paper-cream: var(--c-work);
+  --paper-shadow: var(--c-inset);
+
+  /* ThatOpen components inherit the same material through their own bridge */
+  --bim-ui_bg-base: var(--c-work);
+  --bim-ui_bg-contrast-10: var(--c-detail);
+  --bim-ui_bg-contrast-20: var(--c-line);
+  --bim-ui_bg-contrast-30: var(--c-inset);
+  --bim-ui_bg-contrast-40: var(--c-line-control-soft);
+  --bim-ui_bg-contrast-50: var(--c-ink-3);
+  --bim-ui_bg-contrast-60: var(--c-ink-2);
+  --bim-ui_bg-contrast-70: var(--c-ink-2);
+  --bim-ui_bg-contrast-80: var(--c-ink);
+  --bim-ui_bg-contrast-90: var(--c-ink);
+  --bim-ui_bg-contrast-100: var(--c-ink);
+  --bim-ui_main-base: var(--c-accent);
+  --bim-ui_main-contrast: var(--c-on-accent);
+  --bim-ui_accent-base: var(--c-accent);
+  --bim-ui_accent-contrast: var(--c-on-accent);
+  --bim-ui_danger-base: var(--c-danger);
+  --bim-ui_danger-contrast: var(--c-on-status);
+  --bim-ui_warning-base: var(--c-warning);
+  --bim-ui_warning-contrast: var(--c-on-status);
+  --bim-ui_success-base: var(--c-positive);
+  --bim-ui_success-contrast: var(--c-on-status);
+  --bim-ui_info-base: var(--c-info);
+  --bim-ui_info-contrast: var(--c-on-status);
+}
+
+.app-shell.premium-workspace[data-workspace-look] {
+  /* planes: one step per structural role */
+  --bg-app: var(--c-backdrop);
+  --surface-nav: var(--c-nav);
+  --surface-detail: var(--c-detail);
+  --surface-list: var(--c-list);
+  --surface-chrome: var(--c-chrome-band);
+  --surface-workspace: var(--c-work);
+  --surface: var(--c-raised);
+  --surface-inset: var(--c-inset);
+  --surface-elevated: var(--c-raised);
+  --surface-pop: var(--c-raised);
+  --surface-search: var(--c-raised);
+  --well: var(--c-well);
+  --line: var(--c-line);
+  --line-soft: var(--c-line-soft);
+  --line-control: var(--c-line-control);
+  --line-control-soft: var(--c-line-control-soft);
+  --line-float: var(--c-line-float);
+  --ink-faint: var(--c-line);
+  --ink: var(--c-ink);
+  --ink-soft: var(--c-ink-2);
+  --ink-secondary: var(--c-ink-2);
+  --ink-muted: var(--c-ink-3);
+  --ink-2: var(--c-ink-2);
+  --muted: var(--c-ink-3);
+  --muted-2: var(--c-ink-4);
+  --text-muted: var(--c-ink-3);
+  --text-faint: var(--c-text-faint);
+  --divider-soft: var(--c-line-soft);
+  --cobalt: var(--c-accent);
+  --cobalt-deep: var(--c-accent-deep);
+  --accent: var(--c-accent);
+  --accent-muted: var(--c-tint-accent);
+  --accent-strong: var(--c-tint-accent-strong);
+  --accent-contrast: var(--c-on-accent);
+  --primary: var(--c-accent);
+  --primary-hover: var(--c-accent-deep);
+  --on-primary: var(--c-on-accent);
+  --focus: var(--c-accent);
+  --focus-ring: var(--c-accent);
+  --ring: var(--c-ring);
+  /* the donor's own interaction tints, spent on its rail tiles and its hover faces */
+  --tint-08: var(--c-tint-accent);
+  --tint-14: var(--c-tint-accent-strong);
+  --hover: var(--c-tint-ink);
+  --hover-strong: var(--c-tint-ink-strong);
+  --tint-select: var(--c-tint-accent);
+  --tint-active: var(--c-tint-positive);
+  --success: var(--c-positive);
+  --warn-fg: var(--c-warning);
+  --warn-bg: var(--c-warning-surface);
+  --warn-line: var(--c-tint-warning);
+  --danger-fg: var(--c-danger);
+  --danger-soft: var(--c-tint-danger);
+  --concord-danger-text: var(--c-danger);
+  --concord-warning-text: var(--c-warning);
+  --shadow-1: var(--c-shadow-1);
+  --shadow-2: var(--c-shadow-2);
+  --shadow-pop: var(--c-shadow-2);
+  --shadow-float: var(--c-shadow-2);
+  --shadow-modal: var(--c-shadow-3);
+  --scrim: var(--c-scrim);
+  --grain-rgb: var(--c-grain);
+  --grain-inverse-rgb: var(--c-grain-inverse);
+  --status-bg: var(--c-chrome);
+  --status-fg: var(--c-chrome-ink);
+  --status-acc: var(--c-chrome-focus);
+  --status-dim: var(--c-chrome-ink-3);
+  --workspace-face: var(--c-raised);
+  --workspace-active-face: var(--c-tint-accent);
+  --workspace-lit: var(--c-accent);
+  --workspace-glow: none;
+  --glow: none;
+  --hairline-warm: var(--c-warning-surface);
+  --paper-bright: var(--c-chrome-band);
+  --paper-cream: var(--c-work);
+  --paper-shadow: var(--c-inset);
+  /* the plane a viewer draws on is the one structural value the two looks place
+     differently: light sits the sheet on a dimmer table, dark keeps it on the window */
+  --stage: var(--c-canvas);
+
+  /* ThatOpen components inherit the same material through their own bridge */
+  --bim-ui_bg-base: var(--c-work);
+  --bim-ui_bg-contrast-10: var(--c-detail);
+  --bim-ui_bg-contrast-20: var(--c-line);
+  --bim-ui_bg-contrast-30: var(--c-inset);
+  --bim-ui_bg-contrast-40: var(--c-line-control-soft);
+  --bim-ui_bg-contrast-50: var(--c-ink-3);
+  --bim-ui_bg-contrast-60: var(--c-ink-2);
+  --bim-ui_bg-contrast-70: var(--c-ink-2);
+  --bim-ui_bg-contrast-80: var(--c-ink);
+  --bim-ui_bg-contrast-90: var(--c-ink);
+  --bim-ui_bg-contrast-100: var(--c-ink);
+  --bim-ui_main-base: var(--c-accent);
+  --bim-ui_main-contrast: var(--c-on-accent);
+  --bim-ui_accent-base: var(--c-accent);
+  --bim-ui_accent-contrast: var(--c-on-accent);
+  --bim-ui_danger-base: var(--c-danger);
+  --bim-ui_danger-contrast: var(--c-on-status);
+  --bim-ui_warning-base: var(--c-warning);
+  --bim-ui_warning-contrast: var(--c-on-status);
+  --bim-ui_success-base: var(--c-positive);
+  --bim-ui_success-contrast: var(--c-on-status);
+  --bim-ui_info-base: var(--c-info);
+  --bim-ui_info-contrast: var(--c-on-status);
+}
+
+/*
+ * The `--concord-*` feature names, collapsed onto the tiers above. Each family
+ * used to be a separate literal with no relationship to the next, which is how
+ * one window ended up with eleven near-identical greys; they are role aliases now,
+ * so a surface, a divider and a label cannot drift apart again.
+ */
+:root {
+  --concord-accent: var(--c-accent);
+  --concord-accent-strong: var(--c-accent-deep);
+  --concord-accent-tint: var(--c-tint-accent);
+  --concord-action-hover: var(--hover);
+  --concord-shell-surface: var(--c-chrome-band);
+  --concord-shell-divider: var(--c-line);
+  --concord-ink: var(--c-ink);
+  --concord-muted: var(--c-ink-3);
+  --concord-divider: var(--c-line);
+  --concord-brand-mark: var(--c-accent);
+  --concord-nav-text: var(--c-ink-2);
+  --concord-nav-selection: var(--c-tint-accent);
+  --concord-nav-active: var(--c-accent);
+  --concord-row-rail: var(--c-accent);
+  --concord-float-edge: var(--c-line-float);
+  --concord-float-shadow: var(--c-shadow-2);
+  --concord-stage-chip: var(--c-raised);
+  --concord-nav-divider: var(--c-line-soft);
+  --concord-area-label: var(--c-ink-3);
+  --concord-header-surface: var(--c-chrome-band);
+  --concord-header-divider: var(--c-line);
+  --concord-header-label: var(--c-ink-3);
+  --concord-header-control: var(--c-inset);
+  --concord-dark-ink: var(--c-ink);
+  --concord-ready-mark: var(--c-positive);
+  --concord-workspace-surface: var(--c-work);
+  --concord-model-surface: var(--c-canvas);
+  --concord-viewer-stage: var(--c-canvas);
+  --concord-context-divider: var(--c-line);
+  --concord-inspector-title: var(--c-ink);
+  --concord-inspector-subtitle: var(--c-ink-3);
+  --concord-inspector-divider: var(--c-line-soft);
+  --concord-tab-label: var(--c-ink-3);
+  --concord-tab-active: var(--c-ink);
+  --concord-count-surface: var(--c-inset);
+  --concord-quiet-metadata: var(--c-ink-4);
+  --concord-element-surface: var(--c-inset);
+  --concord-element-icon: var(--c-ink-3);
+  --concord-element-kind: var(--c-ink-3);
+  --concord-fact-label: var(--c-ink-3);
+  --concord-fact-value: var(--c-ink);
+  --concord-row-hover: var(--hover);
+  --concord-amber-mark: var(--c-warning);
+  --concord-red-mark: var(--c-danger);
+  --concord-technical-text: var(--c-ink-3);
+  --concord-context-label: var(--c-ink-3);
+  --concord-control-surface: var(--c-inset);
+  --concord-context-tab: var(--c-ink-3);
+  --concord-context-active: var(--c-ink);
+  --concord-table-label: var(--c-ink-3);
+  --concord-table-value: var(--c-ink-2);
+  --concord-table-action: var(--c-accent);
+  --concord-row-selected: var(--c-tint-accent);
+  --concord-warning-surface: var(--c-warning-surface);
+  --concord-warning-text: var(--c-warning);
+  --concord-danger-surface: var(--c-danger-surface);
+  --concord-danger-text: var(--c-danger);
+  --concord-empty-text: var(--c-ink-3);
+  --concord-control-shadow: var(--c-shadow-1);
+  --concord-viewer-shadow: var(--c-shadow-2);
+  --concord-viewer-text: var(--c-ink-2);
+  --concord-label-shadow: var(--c-shadow-1);
+  --concord-issue-border: var(--c-line);
+  --concord-issue-surface: var(--c-work);
+  --concord-issue-shadow: var(--c-shadow-1);
+  --concord-issue-text: var(--c-ink-2);
+  --concord-toolbar-shadow: var(--c-shadow-1);
+  --concord-toolbar-active: var(--c-accent);
+  --concord-disabled-tab: var(--c-text-faint);
+  --concord-ready-surface: var(--c-positive-surface);
+  --concord-ready-text: var(--c-positive);
+  --concord-comparison-border: var(--c-line-soft);
+  --concord-comparison-surface: var(--c-inset);
+  --concord-comparison-text: var(--c-ink-3);
+  --concord-issue-icon: var(--c-danger);
+  --concord-issue-body: var(--c-ink-2);
+  --concord-blocking-text: var(--c-danger);
+  --concord-issue-action: var(--c-ink-2);
+  --concord-filter-shadow: var(--c-shadow-1);
+  --concord-filter-count: var(--c-ink-3);
+  --concord-investigation-tab: var(--c-ink-3);
+  --concord-investigation-active: var(--c-ink);
+  --concord-investigation-count: var(--c-inset);
+  --concord-investigation-status: var(--c-info);
+  --concord-section-divider: var(--c-line-soft);
+  --concord-document-status: var(--c-ink-3);
+  --concord-document-meta: var(--c-ink-3);
+  --concord-eyebrow: var(--c-ink-3);
+  --concord-document-divider: var(--c-line-soft);
+  --concord-document-input: var(--c-raised);
+  --concord-document-region: var(--c-detail);
+  --concord-document-list: var(--c-list);
+  --concord-list-heading: var(--c-ink);
+  --concord-document-filter: var(--c-ink-3);
+  --concord-document-active: var(--c-accent);
+  --concord-document-filter-active: var(--c-tint-accent);
+  --concord-document-row-border: var(--c-line-soft);
+  --concord-document-selected: var(--c-tint-accent);
+  --concord-document-selected-border: var(--c-accent);
+  --concord-document-icon: var(--c-ink-3);
+  --concord-document-preview: var(--c-detail);
+  --concord-document-header-icon: var(--c-ink-3);
+  --concord-document-sheet-border: var(--c-line);
+  --concord-document-sheet-shadow: var(--c-shadow-1);
+  --concord-metadata-label: var(--c-ink-3);
+  --concord-worktab-text: var(--c-ink-3);
+  --concord-worktab-active: var(--c-accent);
+  --concord-package-description: var(--c-ink-3);
+  --concord-package-issue: var(--c-danger);
+  --concord-package-meta: var(--c-ink-3);
+  --concord-spatial-pane: var(--c-work);
+}
+
+/*
+ * The instrument-band vocabulary. The dark frame needs names of its own - a
+ * header is not a "surface", it is the frame the document sits in - so they are
+ * declared once here and spent by the shell and status layers.
+ */
+.app-shell,
+.app-shell.premium-workspace {
+  --band: var(--c-chrome);
+  --band-raised: var(--c-chrome-raised);
+  --band-line: var(--c-chrome-line);
+  --band-ink: var(--c-chrome-ink);
+  --band-ink-2: var(--c-chrome-ink-2);
+  --band-ink-3: var(--c-chrome-ink-3);
+  --band-select: var(--c-chrome-select);
+  --band-focus: var(--c-chrome-focus);
+  --canvas: var(--c-canvas);
+  --panel: var(--c-nav);
+  --panel-raised: var(--c-work);
+  --hairline: var(--c-line);
+  --hairline-strong: var(--c-line-float);
+  --wash: var(--c-tint-canvas);
+  --panel-shadow: var(--c-shadow-band);
+  --face-raised: var(--c-raised);
+  --face-inset: var(--c-inset);
+  --face-well: var(--c-well);
+  /* The window's structural geometry, one edit each. `--contextbar-h` is retained as the
+     name for a contextual band that sits *inside* a surface (the stage head), not as a
+     second chrome row: the round-2 shell has exactly one instrument band. */
+  --topbar-h: 50px;
+  --contextbar-h: 42px;
+  --status-h: 26px;
+  --rail-w: 68px;
+  --panel-edge: 1px solid var(--c-line-soft);
+}

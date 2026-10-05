@@ -1,0 +1,180 @@
+/* The Project destination as a workspace context mode.
+ *
+ * Donor vocabulary only: the tokens from
+ * `vendor/opentakeoff/styles/tokens.css` and the shared stage geometry from
+ * `styles/features/context-inspector.css` (`.workspace-stage-surface`,
+ * `.workspace-stage-band`, `.workspace-stage-body`). The surface is one
+ * full-bleed column — a mono identity band, a compact action row and one
+ * scrolling body. No card, no KPI grid, no gradient, no second navigation band.
+ */
+
+/* Self-contained so the surface keeps its mandated geometry even where the
+ * shared stage rules are not part of the bundle. */
+.workspace-stage-surface {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-m);
+}
+
+/* ── the action row: plain donor buttons, never a form ───────────────────── */
+
+.project-stage-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--paper-bright);
+  border-bottom: var(--rule-soft);
+}
+
+.project-stage-actions button {
+  min-height: var(--ctl-m);
+  padding: 0 var(--sp-3);
+  border: var(--rule-soft);
+  border-radius: var(--r-1);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.project-stage-actions button:hover {
+  background: var(--paper-shadow);
+}
+
+.project-stage-actions button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.project-stage-state {
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.project-stage-state.is-attention {
+  color: var(--cobalt);
+}
+
+/* ── the dense engineering lists ─────────────────────────────────────────── */
+
+.project-stage-list,
+.project-stage-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.project-stage-section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-bottom: var(--rule-soft);
+}
+
+/* Tighter top: a section heading belongs to the rows above it, not a new band. */
+.project-stage-list > h3,
+.project-stage-section > h3 {
+  margin: var(--sp-3) var(--sp-4) var(--sp-1);
+}
+
+.project-stage-section > :first-child {
+  margin-top: var(--sp-3);
+}
+
+.project-stage-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-2) var(--sp-4);
+  border: 0;
+  border-bottom: var(--rule-soft);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.project-stage-row:hover {
+  background: var(--paper-shadow);
+}
+
+.project-stage-row > span {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.project-stage-row strong {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-stage-row small {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--ink-muted);
+}
+
+.project-stage-row em {
+  flex-shrink: 0;
+  font-style: normal;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.project-stage-row[aria-current="true"] {
+  background: var(--ink-faint);
+  color: var(--cobalt);
+  box-shadow: inset 3px 0 0 var(--cobalt);
+}
+
+.project-stage-empty,
+.project-stage-note {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--ink-muted);
+  font-size: var(--fs-s);
+  line-height: 1.6;
+}
+
+/* ── the work-package fact grid: typography only, hairline separated ─────── */
+
+.project-stage-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.project-stage-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.project-stage-facts .is-attention {
+  color: var(--cobalt);
+}
+
+/* Reused donor records (source register, revision history, baseline records)
+   sit directly on the stage plane without a second chrome. */
+.project-stage-section > section {
+  min-width: 0;
+}

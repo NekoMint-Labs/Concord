@@ -1,0 +1,961 @@
+/*
+ * ── Concord shell ───────────────────────────────────────────────────────────
+ *
+ * The application frame: one instrument bar across the top, the tool rail down the
+ * side, the object navigator, the status readout, and the command palette.
+ *
+ * The frame is dark in both looks on purpose. A professional tool states where the
+ * application ends and the document begins, and the cheapest, most legible way to say
+ * it is one band of a different material around the work. Everything inside the frame
+ * is paper; everything that belongs to the instrument is charcoal.
+ *
+ * Two rules keep the frame from becoming noise:
+ *
+ *  · The instrument is one continuous shape. The bar, the rail and the status strip
+ *    share one material and are separated from the workspace by a single edge - not by
+ *    a coloured line each.
+ *  · Nothing in the instrument is sized to be "small". The reader scans the frame at a
+ *    glance, so its controls are 12-13px with real padding, and the only thing in the
+ *    bar that competes for attention is the one committed action.
+ *
+ * Rules here are scoped under `.app-shell` for two reasons. The vendored workspace
+ * sheets are written against `.premium-workspace` / `.workspace-calm` (both of which
+ * are on the shell element) and several of their rules carry `!important`; scoping to
+ * the shell puts this sheet at equal-or-higher specificity and, being imported last,
+ * at the end of the cascade. It also keeps the frame's material from leaking onto the
+ * entry screen, which is rendered before there is a shell.
+ */
+
+.app-shell {
+  background: var(--c-backdrop);
+}
+
+/* the one seam between instrument and document */
+.app-shell {
+  --seam: 1px solid var(--c-band-shade);
+}
+
+/* ── the instrument bar ───────────────────────────────────────────────────── */
+
+.app-shell .concord-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--topbar-h);
+  padding: 0 var(--space-3) 0 0;
+  background: var(--band);
+  color: var(--band-ink);
+  border-bottom: 1px solid var(--band-line);
+  box-shadow:
+    inset 0 -1px 0 var(--c-band-shade),
+    inset 0 1px 0 var(--c-band-topline);
+  user-select: none;
+}
+
+/*
+ * The brand is a button, not a caption: clicking the wordmark is how you open or
+ * create a project. The copper registration mark is the only decoration the frame
+ * carries, and it is 8px of it.
+ */
+.app-shell .concord-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: stretch;
+  padding: 0 var(--space-4) 0 var(--space-4);
+  border: 0;
+  border-right: 1px solid var(--band-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--band-ink);
+  cursor: pointer;
+}
+.app-shell .concord-brand:hover {
+  background: var(--band-raised);
+}
+.app-shell .concord-mark {
+  width: 8px;
+  height: 8px;
+  background: var(--band-focus);
+  box-shadow: 0 0 0 3px var(--c-band-highlight);
+}
+.app-shell .concord-wordmark {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.app-shell .concord-wordmark span {
+  color: var(--band-ink-3);
+  font-weight: 500;
+}
+
+/*
+ * Identity: which project, and where inside it. The name is the largest text in the
+ * frame because it answers the first question anyone asks of the window; the trail is
+ * one tier down and does not compete.
+ */
+.app-shell .concord-identity {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 30ch;
+}
+.app-shell .concord-identity > strong {
+  overflow: hidden;
+  font-size: var(--fs-action);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--band-ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .concord-trail {
+  overflow: hidden;
+  color: var(--band-ink-3);
+  font-size: var(--fs-label);
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .concord-project-menu {
+  flex: 0 0 auto;
+  margin-left: calc(var(--space-1) * -1);
+}
+
+/*
+ * The find surface: the widest control in the band, because it is the one a returning
+ * user reaches for. It reads as a field, not as a button, and it is centred between the
+ * identity on the left and the verbs on the right.
+ */
+.app-shell .concord-bar-mid {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
+}
+.app-shell .concord-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(420px, 100%);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--band-line);
+  border-radius: var(--radius-sm);
+  background: var(--band-select);
+  color: var(--band-ink-2);
+  font-size: var(--fs-meta);
+  text-align: left;
+  cursor: pointer;
+}
+.app-shell .concord-search > span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .concord-search:hover {
+  border-color: var(--band-focus);
+  background: var(--band-raised);
+  color: var(--band-ink);
+}
+.app-shell .concord-search kbd {
+  border-color: var(--band-line);
+  background: var(--band);
+  color: var(--band-ink-3);
+}
+
+/* Bar verbs. Quiet faces at rest; a filled plate under the pointer or when pressed. */
+.app-shell .concord-bar-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 0 0 auto;
+}
+.app-shell .concord-bar-btn,
+.app-shell .concord-bar-tools button,
+.app-shell .concord-bar-tools .quiet-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--icon-gap);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--band-ink-2);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.app-shell .concord-bar-tools button:hover,
+.app-shell .concord-bar-tools .quiet-trigger:hover {
+  background: var(--band-select);
+  color: var(--band-ink);
+}
+.app-shell .concord-bar-tools button[aria-pressed="true"],
+.app-shell .concord-bar-tools button[aria-expanded="true"],
+.app-shell .concord-bar-tools .quiet-trigger[data-state="open"] {
+  border-color: var(--band-line);
+  background: var(--band-select);
+  color: var(--band-ink);
+}
+.app-shell .concord-bar-tools button:focus-visible,
+.app-shell .concord-search:focus-visible,
+.app-shell .concord-brand:focus-visible {
+  outline: 2px solid var(--band-focus);
+  outline-offset: 1px;
+}
+.app-shell .concord-bar-tools button svg {
+  color: var(--band-ink-3);
+}
+.app-shell .concord-bar-tools button:hover svg,
+.app-shell .concord-bar-tools button[aria-pressed="true"] svg {
+  color: var(--band-focus);
+}
+.app-shell .concord-bar-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 var(--space-2);
+  background: var(--band-line);
+}
+
+/* Scope: one global input. It is a control, so it looks like one. */
+.app-shell .concord-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border: 1px solid var(--band-line);
+  border-radius: var(--radius-sm);
+  background: var(--band-select);
+}
+.app-shell .concord-scope > .t-label {
+  color: var(--band-ink-3);
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+}
+.app-shell .concord-scope select {
+  max-width: 22ch;
+  min-height: 26px;
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--band-ink);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+}
+.app-shell .concord-scope select:hover {
+  border-color: var(--band-line);
+  background: var(--band);
+}
+.app-shell .concord-scope select:focus-visible {
+  outline: 2px solid var(--band-focus);
+  outline-offset: 1px;
+}
+.app-shell .concord-scope select option {
+  background: var(--c-raised);
+  color: var(--c-ink);
+}
+
+/* The one committed action in the frame: a copper plate, spent once. */
+.app-shell .concord-bar-tools button.concord-action {
+  border-color: var(--band-focus);
+  background: var(--band-focus);
+  color: var(--band);
+  font-weight: 600;
+}
+.app-shell .concord-bar-tools button.concord-action:hover {
+  border-color: var(--c-accent-bright);
+  background: var(--c-accent-bright);
+  color: var(--band);
+}
+.app-shell .concord-bar-tools button.concord-action:disabled {
+  border-color: var(--band-line);
+  background: transparent;
+  color: var(--band-ink-3);
+  cursor: default;
+}
+.app-shell .concord-more {
+  padding-inline: var(--space-2);
+}
+.app-shell .concord-busy {
+  color: var(--band-focus);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+}
+
+/* ── the control panel band ───────────────────────────────────────────────── */
+/*
+ * The advanced surface, opened deliberately from 更多. It continues the instrument
+ * material rather than restarting a second light toolbar underneath the dark one - the
+ * exact seam this round removed.
+ */
+.app-shell .concord-band {
+  display: flex;
+  align-items: stretch;
+  min-height: var(--contextbar-h);
+  border-bottom: 1px solid var(--band-line);
+  background: var(--band-raised);
+  color: var(--band-ink-2);
+  box-shadow: inset 0 1px 0 var(--c-band-topline);
+}
+.app-shell .concord-band-scroll {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  overflow-x: auto;
+}
+.app-shell .concord-band button,
+.app-shell .concord-band select,
+.app-shell .concord-band input {
+  border-color: var(--band-line);
+  background: var(--band);
+  color: var(--band-ink);
+}
+.app-shell .concord-band label,
+.app-shell .concord-band span,
+.app-shell .concord-band .t-label {
+  color: var(--band-ink-2);
+}
+
+/* ── the tool rail ────────────────────────────────────────────────────────── */
+/*
+ * The application's spine, in three weights. A rail of ten identical faces has told the
+ * reader nothing about where to start, so:
+ *
+ *   primary     the three work modes. Taller, labelled, and the only tier that carries a
+ *               selected plate and a count.
+ *   secondary   the object and impact workspaces, one step quieter.
+ *   utility     one face whose menu holds administration and diagnostics.
+ *
+ * The tile rules have to beat the donor sheet's `!important` plate rules
+ * (`premiumWorkspace.css` treats every `[data-tool-rail] button[aria-pressed]` - and
+ * `aria-pressed` is always rendered - as a lit tile with a gradient face and a glow).
+ * This product has no gradients and no glow, so the face is flattened here and the
+ * current mode is stated with a plate plus the copper rail.
+ */
+.app-shell nav[data-tool-rail] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: var(--rail-w);
+  padding: var(--space-3) var(--space-2) var(--space-3) !important;
+  gap: var(--space-4) !important;
+  background: var(--band);
+  border-right: 1px solid var(--band-line);
+  border-left: 0;
+  color: var(--band-ink-3);
+  overflow-y: auto;
+  overflow-x: visible;
+}
+.app-shell nav[data-tool-rail][data-dock-side="right"] {
+  border-right: 0;
+  border-left: 1px solid var(--band-line);
+}
+.app-shell .rail-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  width: 100%;
+}
+.app-shell .rail-group > .t-label {
+  padding: 0 var(--space-2) var(--space-1);
+  color: var(--band-ink-3);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  opacity: 0.7;
+}
+.app-shell nav[data-tool-rail] button.rail-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: var(--space-2) 0;
+  border: 1px solid transparent !important;
+  border-radius: var(--radius-sm) !important;
+  background: transparent !important;
+  color: var(--band-ink-3) !important;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  line-height: 1;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease);
+}
+.app-shell nav[data-tool-rail] button.rail-tile > span {
+  color: inherit !important;
+}
+/* the primary tier is the one the eye lands on */
+.app-shell nav[data-tool-rail] .rail-group-primary button.rail-tile {
+  min-height: 52px;
+  gap: 5px;
+  font-size: var(--fs-meta);
+  font-weight: 500;
+}
+/*
+ * Tier is expressed by *size and grouping*, never by fading the label: the rail's ink
+ * is already the quiet tier of the frame, and an opacity on top of it dropped the
+ * administrative faces to 3:1 - legible-looking text that fails AA is worse than an
+ * honest third tier.
+ */
+.app-shell nav[data-tool-rail] .rail-group-secondary button.rail-tile {
+  min-height: 44px;
+}
+.app-shell nav[data-tool-rail] button.rail-tile:hover {
+  background: var(--band-select) !important;
+  color: var(--band-ink) !important;
+  opacity: 1;
+}
+.app-shell nav[data-tool-rail] button.rail-tile[aria-pressed="true"] {
+  border-color: var(--band-line) !important;
+  background: var(--band-select) !important;
+  color: var(--band-ink) !important;
+  opacity: 1;
+  box-shadow: none !important;
+}
+.app-shell nav[data-tool-rail] button.rail-tile svg {
+  filter: none !important;
+}
+.app-shell nav[data-tool-rail] button.rail-tile[aria-pressed="true"] svg {
+  color: var(--band-focus);
+}
+/* the copper rail: which mode the application is in */
+.app-shell nav[data-tool-rail] button.rail-tile[aria-pressed="true"]::before {
+  content: "";
+  position: absolute;
+  left: -9px;
+  top: 50%;
+  width: 3px;
+  height: 22px;
+  margin-top: -11px;
+  border-radius: 0 2px 2px 0;
+  background: var(--band-focus);
+}
+.app-shell nav[data-tool-rail] button.rail-tile:focus-visible {
+  outline: 2px solid var(--band-focus);
+  outline-offset: 1px;
+}
+.app-shell nav[data-tool-rail] .rail-count {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--band-focus);
+  color: var(--band);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1;
+}
+.app-shell .rail-spacer {
+  margin-top: auto;
+}
+.app-shell .rail-group-utility button.rail-tile[aria-expanded="true"] {
+  color: var(--band-ink) !important;
+}
+/*
+ * The disclosed administrative tier. It appears under the spacer, so it grows upward
+ * from the bottom of the rail and never pushes the work modes around. Faces are
+ * compact and quiet: these are reached deliberately, not scanned.
+ */
+.app-shell .rail-group-admin {
+  gap: 1px;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--band-line);
+  animation: rail-disclose var(--motion) var(--ease);
+}
+@keyframes rail-disclose {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.app-shell .rail-group-admin > .t-label {
+  color: var(--band-ink-3);
+}
+.app-shell nav[data-tool-rail] .rail-group-admin button.rail-tile {
+  min-height: 40px;
+  gap: 3px;
+  font-size: var(--fs-label);
+}
+.app-shell .rail-utility-note {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--icon-gap);
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+
+/* ── the object navigator ─────────────────────────────────────────────────── */
+/*
+ * The list of objects in the current mode: work packages, engineering objects, sources
+ * and revisions, findings. It is a panel one plane below the stage, and its rows are
+ * full-bleed bands separated by a hairline, because a navigator is read as a column of
+ * like things and a card per row would break the column.
+ */
+.app-shell .calm-navigator {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  background: var(--c-nav);
+  border-right: var(--panel-edge);
+  border-left: 0;
+  box-shadow: inset -1px 0 0 var(--c-band-shade);
+}
+.app-shell .calm-navigator[data-dock-side="right"] {
+  border-right: 0;
+  border-left: var(--panel-edge);
+  box-shadow: inset 1px 0 0 var(--c-band-shade);
+}
+.app-shell .calm-navigator > header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 38px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border-bottom: var(--panel-edge);
+  background: var(--face-inset);
+}
+.app-shell .calm-navigator > header strong {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--fs-action);
+  font-weight: 600;
+  color: var(--ink);
+}
+.app-shell .calm-navigator > header strong small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+}
+.app-shell .calm-navigator > header button {
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 15px;
+}
+.app-shell .calm-navigator > header button:hover {
+  background: var(--hover-strong);
+  color: var(--ink);
+}
+.app-shell .calm-navigator > label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) var(--space-3) var(--space-2);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-raised);
+  color: var(--muted);
+}
+.app-shell .calm-navigator > label:focus-within {
+  border-color: var(--focus);
+  outline: 2px solid var(--focus);
+  outline-offset: -1px;
+}
+.app-shell .calm-navigator > label input {
+  flex: 1;
+  min-width: 0;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-meta);
+}
+.app-shell .calm-navigator > label input:focus {
+  outline: none;
+}
+.app-shell .calm-sheet-list {
+  flex: 1;
+  min-height: 0;
+  padding: 0 0 var(--space-3);
+  overflow-y: auto;
+}
+.app-shell .calm-sheet-list > button {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.app-shell .calm-sheet-list > button > svg {
+  color: var(--muted);
+}
+.app-shell .calm-sheet-list > button > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.app-shell .calm-sheet-list > button strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .calm-sheet-list > button small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .calm-sheet-list > button em {
+  min-width: 20px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--face-inset);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-style: normal;
+  text-align: center;
+}
+/*
+ * A revision is a child of its source, never a peer of it.
+ *
+ * The navigator lists a source and then its revisions, and a revision row used to
+ * repeat the source's own name in the same 13px ink as the source row, so the two
+ * read as equal rows in one flat duplicate list. The child row now steps in under an
+ * indent guide, wears a shorter row and a smaller glyph, and drops its title to the
+ * quiet label step, while the source row keeps the heavier type at its own margin.
+ *
+ * The hook is the row's own `data-kind` attribute (`StageNavigatorItem.kind` in
+ * app/stageContracts.ts, emitted by the shell's navigator): a revision states what it
+ * is, and the row is styled from that rather than from text inside it. The item's
+ * label is left alone - it is the object's own name, and it is what selection and
+ * search round-trip on.
+ */
+.app-shell .calm-sheet-list > button[data-kind="revision"] {
+  position: relative;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  padding-left: calc(var(--space-4) + 14px);
+}
+/* the vertical guide, then the elbow that ties the row to the column above it */
+.app-shell .calm-sheet-list > button[data-kind="revision"]::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--space-4) - 4px);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line-soft);
+}
+.app-shell .calm-sheet-list > button[data-kind="revision"]::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--space-4) - 4px);
+  top: 50%;
+  width: 10px;
+  height: 1px;
+  background: var(--line-soft);
+}
+.app-shell .calm-sheet-list > button[data-kind="revision"] > svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.5;
+}
+.app-shell .calm-sheet-list > button[data-kind="revision"] strong {
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.app-shell .calm-sheet-list > button:hover {
+  background: var(--hover);
+}
+.app-shell .calm-sheet-list > button[aria-current="page"] {
+  position: relative;
+  border-bottom-color: transparent;
+  background: var(--c-tint-accent);
+}
+.app-shell .calm-sheet-list > button[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+}
+.app-shell .calm-sheet-list > button[aria-current="page"] > svg,
+.app-shell .calm-sheet-list > button[aria-current="page"] strong {
+  color: var(--c-accent-deep);
+  opacity: 1;
+}
+.app-shell .calm-sheet-list > button[aria-current="page"] em {
+  background: var(--c-tint-accent-strong);
+  color: var(--c-accent-deep);
+}
+.app-shell .calm-sheet-list > p {
+  padding: var(--space-4) var(--space-3);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.7;
+}
+.app-shell .calm-navigator > footer {
+  padding: var(--space-2) var(--space-3);
+  border-top: var(--panel-edge);
+  background: var(--face-inset);
+}
+.app-shell .calm-navigator > footer button {
+  justify-content: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 28px;
+  padding: 0 var(--space-1);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  cursor: pointer;
+}
+.app-shell .calm-navigator > footer button:hover {
+  background: transparent;
+  color: var(--accent);
+}
+
+/* ── the status readout ───────────────────────────────────────────────────── */
+/*
+ * The instrument's own instrumentation: mode, scope and project state, in the same dark
+ * material as the bar, so the frame closes around the workspace. Live values are mono
+ * and tabular - they are scanned, not read - and their labels are quiet mono captions.
+ */
+.app-shell > footer.concord-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: 0 0 auto;
+  height: var(--status-h);
+  padding: 0 var(--space-4);
+  border-top: 1px solid var(--band-line);
+  background: var(--band);
+  color: var(--band-ink-2);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+  overflow: hidden;
+  user-select: none;
+}
+.app-shell > footer.concord-status .t-label {
+  color: var(--band-ink-3);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}
+.app-shell > footer.concord-status .concord-status-mode {
+  padding-right: var(--space-3);
+  border-right: 1px solid var(--band-line);
+  color: var(--band-focus);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.app-shell > footer.concord-status .concord-status-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-shell > footer.concord-status .concord-status-busy {
+  color: var(--band-focus);
+  font-weight: 600;
+}
+.app-shell > footer.concord-status .concord-status-tail {
+  display: flex;
+  gap: var(--space-4);
+  margin-left: auto;
+  color: var(--band-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.app-shell > footer.concord-status .concord-status-attention {
+  color: var(--band-focus);
+  font-weight: 600;
+}
+
+/* ── the command palette ──────────────────────────────────────────────────── */
+/*
+ * The one way to reach any object or action by name, including the ones with no home
+ * in the rail. It is a dialog, so it floats; it is built from the same rows as the
+ * navigator, so learning one teaches the other. This block is deliberately NOT scoped
+ * to `.app-shell`: the palette is portalled to the document body.
+ */
+dialog.calm-command-menu {
+  width: min(680px, calc(100vw - 96px));
+  max-height: min(600px, calc(100vh - 120px));
+  padding: 0;
+  border: 1px solid var(--line-float);
+  border-radius: var(--radius-lg);
+  background: var(--face-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+}
+dialog.calm-command-menu::backdrop {
+  background: var(--scrim);
+}
+dialog.calm-command-menu > header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+  color: var(--muted);
+}
+dialog.calm-command-menu > header input {
+  flex: 1;
+  min-width: 0;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-section);
+}
+dialog.calm-command-menu > header input:focus {
+  outline: none;
+}
+dialog.calm-command-menu > header button {
+  min-height: 22px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  background: var(--face-raised);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+}
+.calm-command-results {
+  max-height: 440px;
+  padding: var(--space-2);
+  overflow-y: auto;
+}
+.calm-command-results > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-action);
+  text-align: left;
+  cursor: pointer;
+}
+.calm-command-results > button > span {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.calm-command-results > button small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.calm-command-results > button kbd {
+  flex-shrink: 0;
+}
+.calm-command-results > button.is-highlighted {
+  border-color: var(--c-tint-accent-strong);
+  background: var(--c-tint-accent);
+  color: var(--c-accent-deep);
+}
+.calm-command-results > button.is-highlighted small {
+  color: var(--c-accent-deep);
+}
+.calm-command-results > p {
+  padding: var(--space-5) var(--space-3);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  text-align: center;
+}
+dialog.calm-command-menu > footer {
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--hairline);
+  background: var(--face-inset);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.04em;
+}
+
+/* ── responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 1400px) {
+  .app-shell .concord-identity {
+    max-width: 20ch;
+  }
+  .app-shell .concord-search {
+    width: min(320px, 100%);
+  }
+}
+@media (max-width: 1250px) {
+  .app-shell .concord-search > span {
+    display: none;
+  }
+  .app-shell .concord-search {
+    width: auto;
+  }
+  .app-shell .concord-bar-tools .concord-bar-btn > span {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .app-shell .concord-identity {
+    max-width: 14ch;
+  }
+  .app-shell .concord-trail {
+    display: none;
+  }
+  .app-shell .concord-scope > .t-label {
+    display: none;
+  }
+}

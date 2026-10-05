@@ -1,0 +1,78 @@
+/*
+ * Stage-surface helpers shared by the advanced destinations (Operations,
+ * Capabilities, GIS). The stage geometry itself — `.workspace-stage-surface`,
+ * `.workspace-stage-band`, `.workspace-stage-body` — is the donor vocabulary in
+ * `styles/features/context-inspector.css`; this file only adds the per-surface
+ * behaviour a stage body needs when its child owns the region instead of
+ * scrolling, plus the plain donor controls a band is allowed to carry.
+ *
+ * Donor tokens only: `--paper-*`, `--ink*`, `--cobalt`, `--sp-*`, `--fs-*`,
+ * `--rule-soft`, `--ctl-m`, `--r-1`. No literal colour, no gradient, no card.
+ */
+
+/*
+ * A stage body that hosts a child which owns the region (a pane split, the run
+ * console, or the map canvas). The body is the region, not a scroll plane, so
+ * the child stretches to it. The compound selector is what guarantees these win
+ * over the shared `.workspace-stage-body` rule regardless of stylesheet order.
+ */
+.workspace-stage-surface > .workspace-stage-body.documents-stage-body,
+.workspace-stage-surface > .workspace-stage-body.operations-stage-body,
+.workspace-stage-surface > .workspace-stage-body.gis-stage-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Capabilities is local information inside the stage: the body owns the inset. */
+.capabilities-stage .workspace-stage-body {
+  padding: var(--sp-4) var(--sp-6) var(--sp-6);
+}
+
+/* The band title is meant to ellipsize (the shared rule declares it) but a flex
+ * item cannot shrink below its content without this, so a long name would push
+ * the band's controls off the row. */
+.workspace-stage-band > strong {
+  min-width: 0;
+}
+
+/* One mono readout in the GIS context band. */
+.gis-status {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/*
+ * A plain donor control inside a stage band: the same geometry the sibling stage
+ * action row uses (`.project-stage-actions button`), resolved from the donor
+ * tokens. No fill, no shadow — the band already has the chrome plane.
+ */
+.workspace-stage-band > button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex-shrink: 0;
+  min-height: var(--ctl-m);
+  padding: 0 var(--sp-2);
+  border: var(--rule-soft);
+  border-radius: var(--r-1);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.workspace-stage-band > button:hover {
+  background: var(--paper-shadow);
+}
+
+.workspace-stage-band > button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

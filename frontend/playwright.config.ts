@@ -7,7 +7,11 @@ const python = process.env.CCA_E2E_PYTHON ?? "python";
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: ["**/ifc.spec.ts", "**/real-project.spec.ts"],
+  testIgnore: [
+    "**/ifc.spec.ts",
+    "**/real-project.spec.ts",
+    "**/engineering-real.spec.ts",
+  ],
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,

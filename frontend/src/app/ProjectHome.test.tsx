@@ -1,6 +1,12 @@
 import type { ComponentProps } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
 import {
@@ -9,10 +15,16 @@ import {
   type ProjectSourceStatus,
   type Workspace,
 } from "../api/client";
-import { demoAreaName, demoDiscipline } from "../ui/demo/demoPresentation";
+import {
+  demoAreaName,
+  demoDiscipline,
+  demoWorkPackageName,
+} from "../ui/demo/demoPresentation";
 import { statusLabel } from "../ui/labels";
-import { ProjectHome } from "./ProjectHome";
+import { ProjectStage, projectNavigatorItems } from "./ProjectStage";
+import { donorButton } from "../../tests/donor-dom";
 
+// ProjectHome was retired; the project stage now owns these engineering facts.
 afterEach(() => vi.restoreAllMocks());
 
 const model: ProjectSourceStatus = {
@@ -29,252 +41,213 @@ const model: ProjectSourceStatus = {
   has_pending_revision: true,
 };
 
-function home(
-  workspace: Workspace,
-  props: Partial<ComponentProps<typeof ProjectHome>> = {},
-  documents: DTO<"DocumentMetadata">[] = [],
+function mount(
+  data: Workspace,
+  overrides: Partial<ComponentProps<typeof ProjectStage>> = {},
 ) {
   vi.spyOn(api, "baselines").mockResolvedValue([]);
-  vi.spyOn(api, "documents").mockResolvedValue(documents);
-  vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
-  vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
-  vi.spyOn(api, "bimBindings").mockResolvedValue([]);
+  vi.spyOn(api, "engineeringFindings").mockResolvedValue([]);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
-  const onPackage = vi.fn();
-  const onTab = vi.fn();
-  const onStructure = vi.fn();
-  const onDocument = vi.fn();
-  const onSource = vi.fn();
-  const onModel = vi.fn();
-  const content = (
-    overrides: Partial<ComponentProps<typeof ProjectHome>> = {},
-  ) => (
+  const props = {
+    project: data.state.project.id,
+    data,
+    sources: [],
+    object: null,
+    perform: vi.fn(async () => {}),
+    onOpen: vi.fn(),
+    onSource: vi.fn(),
+    onWorkPackage: vi.fn(),
+    onTab: vi.fn(),
+    onRecheck: vi.fn(),
+    onStructure: vi.fn(),
+    onOpenFinding: vi.fn(),
+    ...overrides,
+  } satisfies ComponentProps<typeof ProjectStage>;
+  const content = () => (
     <QueryClientProvider client={client}>
-      <ProjectHome
-        workspace={workspace}
-        sources={[]}
-        selected="WP-200"
-        onPackage={onPackage}
-        onTab={onTab}
-        onStructure={onStructure}
-        onDocument={onDocument}
-        onSource={onSource}
-        onModel={onModel}
-        {...props}
-        {...overrides}
-      />
+      <ProjectStage {...props} />
     </QueryClientProvider>
   );
   const view = render(content());
-  return {
-    onPackage,
-    onTab,
-    onStructure,
-    onDocument,
-    onSource,
-    onModel,
-    refresh: (overrides: Partial<ComponentProps<typeof ProjectHome>> = {}) =>
-      view.rerender(content(overrides)),
-  };
+  return { props, refresh: () => view.rerender(content()) };
 }
 
-it("keeps every package's facts in a lane and opens the real package with one click", () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  const { onPackage, onTab } = home(workspace);
-  const ledger = screen.getByRole("region", { name: "工作包状态" });
-  expect(within(ledger).getAllByRole("listitem")).toHaveLength(
-    workspace.state.work_packages.length,
-  );
-  expect(within(ledger).queryByRole("table")).toBeNull();
-
-  for (const wp of workspace.state.work_packages) {
-    const lane = within(ledger).getByRole("button", {
-      name: new RegExp(wp.id),
-    });
-    const area = workspace.state.areas.find((item) => item.id === wp.area_id);
-    expect(lane).toHaveTextContent(
-      `${demoAreaName(wp.area_id, area?.name ?? wp.area_id)} · ${demoDiscipline(wp.discipline)}`,
+it("keeps each package's real facts and opens its exact identity", () => {
+  const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  const { props } = mount(data);
+  const list = within(screen.getByRole("region", { name: "项目工程状态" }));
+  for (const wp of data.state.work_packages) {
+    const name = demoWorkPackageName(wp.id, wp.name);
+    const row = list.getByRole("button", { name: new RegExp(name) });
+    const area = data.state.areas.find((item) => item.id === wp.area_id);
+    expect(row).toHaveTextContent(
+      `${demoAreaName(wp.area_id, area?.name ?? wp.area_id)} · ${demoDiscipline(wp.discipline)} · ${wp.element_ids.length} 构件`,
     );
-    expect(lane).toHaveTextContent(`${wp.element_ids.length} 个构件`);
-    expect(lane).toHaveAttribute("aria-pressed", String(wp.id === "WP-200"));
-    const status =
-      workspace.analysis?.readiness.find(
-        (item) => item.work_package_id === wp.id,
-      )?.status ?? "UNCHECKED";
-    expect(lane).toHaveTextContent(statusLabel(status));
-    lane.focus();
-    expect(lane).toHaveFocus();
-    fireEvent.click(lane);
-    expect(onPackage).toHaveBeenLastCalledWith(wp.id);
+    expect(row).toHaveTextContent(
+      statusLabel(
+        data.analysis?.readiness.find((item) => item.work_package_id === wp.id)
+          ?.status ?? "UNCHECKED",
+      ),
+    );
+    row.focus();
+    expect(row).toHaveFocus();
+    fireEvent.click(row);
+    expect(props.onWorkPackage).toHaveBeenLastCalledWith(wp.id);
   }
-  expect(onPackage).toHaveBeenCalledTimes(workspace.state.work_packages.length);
-  fireEvent.click(within(ledger).getByRole("button", { name: "查看全部 →" }));
-  expect(onTab).toHaveBeenLastCalledWith("work-packages");
-  expect(
-    screen.getByRole("complementary", { name: "项目上下文" }),
-  ).toBeVisible();
+  expect(props.onWorkPackage).toHaveBeenCalledTimes(
+    data.state.work_packages.length,
+  );
+  expect(props.onRecheck).not.toHaveBeenCalled();
 });
 
 it("does not present stale, unchecked, or empty packages as ready", () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  workspace.stale = true;
-  const { refresh, onStructure } = home(workspace, {
-    sources: [{ ...model, has_pending_revision: false }],
-  });
-  const state = screen.getByRole("region", { name: "当前状态" });
-  expect(state).toHaveTextContent("当前判断待复核");
-  expect(state).toHaveTextContent("工程事实已更新，现有施工判断需要重新检查。");
-  expect(
-    within(state).getByRole("button", { name: "检查当前施工条件 →" }),
-  ).toBeVisible();
-  const ledger = screen.getByRole("region", { name: "工作包状态" });
-  expect(within(ledger).getAllByText("需复核")).toHaveLength(
-    workspace.state.work_packages.length,
-  );
-  expect(within(ledger).queryByText("可施工")).toBeNull();
+  const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  data.analysis!.readiness = data.analysis!.readiness.map((item) => ({
+    ...item,
+    status: "READY",
+  }));
+  data.stale = true;
+  const { refresh, props } = mount(data);
+  const stage = screen.getByRole("main", { name: "项目" });
+  expect(stage).toHaveTextContent("需要重新检查");
+  expect(within(stage).queryByText("就绪")).toBeNull();
+  for (const wp of data.state.work_packages) {
+    expect(
+      within(stage).getByRole("button", {
+        name: new RegExp(demoWorkPackageName(wp.id, wp.name)),
+      }),
+    ).toHaveTextContent("需要重新检查");
+  }
+  fireEvent.click(screen.getByRole("button", { name: "重新检查" }));
+  expect(props.onRecheck).toHaveBeenCalledOnce();
 
-  workspace.stale = false;
-  workspace.analysis = null;
+  data.stale = false;
+  data.analysis = null;
   refresh();
-  expect(state).toHaveTextContent("尚未检查施工条件");
-  expect(within(state).getByRole("heading")).not.toHaveTextContent("可施工");
-  expect(within(ledger).queryByText("可施工")).toBeNull();
-  expect(state).toHaveTextContent("尚未运行施工检查，当前没有可施工结论。");
-  expect(within(ledger).getAllByText("未检查")).toHaveLength(
-    workspace.state.work_packages.length,
-  );
+  expect(stage).toHaveTextContent("尚未检查");
+  for (const wp of data.state.work_packages) {
+    expect(
+      within(stage).getByRole("button", {
+        name: new RegExp(demoWorkPackageName(wp.id, wp.name)),
+      }),
+    ).toHaveTextContent("未检查");
+  }
+  expect(within(stage).queryByText("就绪")).toBeNull();
 
-  workspace.state.work_packages = [];
+  data.state.work_packages = [];
   refresh();
-  expect(state).toHaveTextContent("还没有工作包");
-  expect(within(state).getByRole("heading")).not.toHaveTextContent("可施工");
-  expect(screen.queryByRole("region", { name: "工作包状态" })).toBeNull();
-  fireEvent.click(within(state).getByRole("button", { name: "添加工作包 →" }));
-  expect(onStructure).toHaveBeenCalledOnce();
+  expect(stage).toHaveTextContent("还没有工作包。");
+  expect(within(stage).queryByText("就绪")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "项目结构" }));
+  expect(props.onStructure).toHaveBeenCalledOnce();
 });
 
-it("keeps full long package names without duplicate model or version panes", () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  const wp = workspace.state.work_packages[0];
+it("preserves a full long package name and does not trigger unrelated navigation", () => {
+  const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  const wp = data.state.work_packages[0];
   wp.id = "custom-package";
   wp.name =
     "Level 02 east-wing coordinated mechanical installation with a deliberately long real object name";
-  const source = model;
-  const project = workspace.state.project.id;
-  const client = new QueryClient({
-    defaultOptions: { queries: { staleTime: Infinity, gcTime: 0 } },
+  const { props } = mount(data, { sources: [model] });
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(wp.name) }));
+  expect(props.onWorkPackage).toHaveBeenCalledExactlyOnceWith(wp.id);
+  expect(screen.getByText(wp.name)).toBeVisible();
+  expect(props.onSource).not.toHaveBeenCalled();
+  expect(props.onTab).not.toHaveBeenCalled();
+});
+
+it("keeps pending model review separate from stale construction judgments", () => {
+  const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  data.stale = true;
+  data.analysis = null;
+  const { props } = mount(data, { sources: [model] });
+  expect(screen.getByRole("main")).toHaveTextContent("1 份模型待确认");
+  expect(screen.getByRole("main")).toHaveTextContent("需要重新检查");
+  const source = screen.getByRole("button", {
+    name: /MEP IFC 模型 · 最新版本 待确认/,
   });
-  client.setQueryData(["baselines", project], []);
-  client.setQueryData(["documents", project], []);
-  client.setQueryData(
-    ["source-revisions", project, "model"],
-    [
-      { id: "r1", sequence: 1, imported_at: "2026-01-01T00:00:00Z" },
-      { id: "r2", sequence: 2, imported_at: "2026-01-02T00:00:00Z" },
-    ],
-  );
-  const onTab = vi.fn();
-  const onPackage = vi.fn();
-  const onModel = vi.fn();
-  const onSource = vi.fn();
-  render(
-    <QueryClientProvider client={client}>
-      <ProjectHome
-        workspace={workspace}
-        sources={[source]}
-        selected={wp.id}
-        onTab={onTab}
-        onPackage={onPackage}
-        onModel={onModel}
-        onSource={onSource}
-      />
-    </QueryClientProvider>,
-  );
-  const lane = within(
-    screen.getByRole("region", { name: "工作包状态" }),
-  ).getByRole("button", { name: new RegExp(wp.id) });
-  expect(within(lane).getByTitle(wp.name)).toHaveTextContent(wp.name);
-  expect(lane).toHaveAttribute("aria-pressed", "true");
-  fireEvent.click(lane);
-  expect(onPackage).toHaveBeenCalledWith(wp.id);
-  expect(screen.queryByRole("region", { name: "模型与版本" })).toBeNull();
-  expect(screen.queryByRole("region", { name: "版本记录" })).toBeNull();
-  expect(onModel).not.toHaveBeenCalled();
-  expect(onSource).not.toHaveBeenCalled();
-  expect(onTab).not.toHaveBeenCalled();
+  fireEvent.click(source);
+  expect(props.onSource).toHaveBeenCalledExactlyOnceWith("model");
+  expect(props.onRecheck).not.toHaveBeenCalled();
 });
 
-it("prioritizes pending model review over stale or unchecked construction judgments", () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  workspace.stale = true;
-  workspace.analysis = null;
-  const { onTab, onModel } = home(workspace, { sources: [model] });
-  const state = within(screen.getByRole("region", { name: "当前状态" }));
+it("offers project ingestion when no model exists without treating a local preview as a project model", () => {
+  const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  const { props } = mount(data);
+  expect(screen.getByRole("main")).toHaveTextContent("无项目模型");
+  expect(screen.getByText(/还没有资料。添加 IFC/)).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "添加资料" }));
+  expect(props.onTab).toHaveBeenCalledExactlyOnceWith("sources");
+  expect(props.onRecheck).not.toHaveBeenCalled();
+});
 
-  expect(state.getByRole("heading", { name: "有新版本待检查" })).toBeVisible();
-  expect(
-    state.getByText(
-      "有 1 份模型的新版本尚未确认；施工判断仍依据当前基线，不代表新版本已经可施工。",
+it("builds navigator rows only from real sources and work packages, not legacy revision tokens", () => {
+  const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  const items = projectNavigatorItems({ data, sources: [model] });
+  expect(items.map((item) => item.key)).toEqual([
+    "source:model",
+    ...data.state.work_packages.map((wp) => `work-package:${wp.id}`),
+  ]);
+  expect(items[0]).toMatchObject({
+    label: "MEP",
+    file: "IFC 模型 · 最新版本 · 待确认",
+  });
+  data.state.work_packages = [];
+  expect(projectNavigatorItems({ data, sources: [] })).toEqual([]);
+});
+
+it("opens a selected historical revision through the real source register and history without substituting latest", async () => {
+  const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  const revisions: DTO<"ProjectSourceRevision">[] = [1, 2].map((sequence) => ({
+    id: `r${sequence}`,
+    project_id: data.state.project.id,
+    source_id: "model",
+    sequence,
+    original_filename: `model-r${sequence}.ifc`,
+    external_label: null,
+    sha256: "a".repeat(64),
+    media_type: "application/x-step",
+    size_bytes: 100,
+    storage_key: `model/r${sequence}`,
+    import_status: "STORED",
+    imported_at: "2026-01-01T00:00:00Z",
+  }));
+  vi.spyOn(api, "capabilities").mockResolvedValue({ capabilities: [] });
+  vi.spyOn(api, "sourceStatuses").mockResolvedValue([model]);
+  vi.spyOn(api, "sourceRevisions").mockResolvedValue(revisions);
+  vi.spyOn(api, "comparisons").mockResolvedValue([]);
+  vi.spyOn(api, "revisionImport").mockResolvedValue(null);
+  const { props } = mount(data, {
+    sources: [model],
+    object: { kind: "revision", sourceId: "model", id: "r1" },
+  });
+  const history = screen.getByRole("region", { name: "资料版本历史" });
+  const older = (await within(history).findByText("model-r1.ifc")).closest(
+    "article",
+  )!;
+  const latest = within(history).getByText("model-r2.ifc").closest("article")!;
+  expect(older).toHaveClass("is-focused");
+  expect(latest).not.toHaveClass("is-focused");
+  expect(within(older).getByText("当前基线")).toBeVisible();
+  expect(within(latest).getByText("最新 · 待确认")).toBeVisible();
+  expect(api.sourceRevisions).toHaveBeenCalledWith(
+    data.state.project.id,
+    "model",
+  );
+  await waitFor(() =>
+    expect(within(older).getByRole("status")).toHaveTextContent(
+      "已上传 · 尚未处理",
     ),
-  ).toBeVisible();
-  fireEvent.click(state.getByRole("button", { name: "核对待审核模型 →" }));
-  expect(onTab).toHaveBeenCalledExactlyOnceWith("sources");
-  expect(onModel).not.toHaveBeenCalled();
-});
-
-it("makes adding a project model the next step when there is no model, not checking a local preview", () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  workspace.stale = true;
-  workspace.analysis = null;
-  const { onTab, onModel } = home(workspace);
-  const state = within(screen.getByRole("region", { name: "当前状态" }));
-
-  expect(
-    state.getByText("尚未上传项目 IFC；本地预览不会成为项目工程依据。"),
-  ).toBeVisible();
-  expect(
-    state.queryByRole("button", { name: "检查当前施工条件 →" }),
-  ).toBeNull();
-  fireEvent.click(state.getByRole("button", { name: "添加项目模型 →" }));
-  expect(onTab).toHaveBeenLastCalledWith("sources");
-  expect(screen.queryByRole("region", { name: "模型与版本" })).toBeNull();
-  expect(onTab).toHaveBeenCalledOnce();
-  expect(onModel).not.toHaveBeenCalled();
-});
-
-it("opens the specific project document rather than just the document destination", async () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  const documents: DTO<"DocumentMetadata">[] = [
-    {
-      id: "drawing-1",
-      project_id: workspace.state.project.id,
-      filename: "East-wing drawing.pdf",
-      content_hash: "drawing-hash",
-      parser: "Docling",
-      created_at: "2026-01-01T00:00:00Z",
-    },
-    {
-      id: "method-2",
-      project_id: workspace.state.project.id,
-      filename: "Installation method.pdf",
-      content_hash: "method-hash",
-      parser: "Docling",
-      created_at: "2026-01-02T00:00:00Z",
-    },
-  ];
-  const { onDocument, onTab, refresh } = home(workspace, {}, documents);
-  expect(screen.queryByRole("region", { name: "项目文件" })).toBeNull();
-  fireEvent.click(await screen.findByRole("button", { name: "项目记录详情" }));
-  const files = within(await screen.findByRole("region", { name: "项目文件" }));
-  fireEvent.click(
-    await files.findByRole("button", { name: /Installation method.pdf/ }),
   );
-  expect(onDocument).toHaveBeenCalledExactlyOnceWith("method-2");
-  expect(onTab).not.toHaveBeenCalled();
-  refresh({ onDocument: undefined });
-  fireEvent.click(files.getByRole("button", { name: /East-wing drawing.pdf/ }));
-  expect(onTab).toHaveBeenCalledExactlyOnceWith("documents");
-  expect(onDocument).toHaveBeenCalledOnce();
+  expect(within(older).queryByRole("button", { name: "查看模型" })).toBeNull();
+  expect(props.onRecheck).not.toHaveBeenCalled();
+  expect(props.onSource).not.toHaveBeenCalled();
+  const register = screen.getByRole("region", { name: "项目资料" });
+  await waitFor(() => expect(donorButton("打开 MEP", register)).toBeDefined());
+  const open = donorButton("打开 MEP", register)!;
+  expect(open).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(open);
+  expect(props.onSource).toHaveBeenCalledExactlyOnceWith("model");
 });

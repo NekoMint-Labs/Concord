@@ -180,56 +180,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* a pane header's own menu: the pane's identity, reached as a menu when the pane
-   budget has given the list's column to the Inspector */
-.pane-header-menu {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  height: 25px;
-  margin-left: -6px;
-  padding: 0 6px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--ink);
-  font-size: var(--fs-section);
-  font-weight: 500;
-}
-.pane-header-menu:hover,
-.pane-header-menu[data-state="open"] {
-  background: var(--hover);
-}
-.pane-header-menu .count {
-  /* the count sits beside the pane's name: it is the header's own annotation, and
-     `margin-left: 0` is what says so against `.count`'s shared auto margin */
-  margin-left: 0;
-}
 /*
  * The same control in a header that already has its own title: a picker, not an
  * identity. It sits at the label tier and in muted ink so the subject beside it
  * stays the one thing at the pane's title size.
  */
 .pane-header-picker {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
   flex-shrink: 0;
-  height: 23px;
+  height: 25px;
   margin-left: -6px;
-  padding: 0 6px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--muted);
-  font-size: var(--fs-label);
-  font-weight: 500;
-  letter-spacing: 0.03em;
-}
-.pane-header-picker:hover,
-.pane-header-picker[data-state="open"] {
-  background: var(--hover);
-  color: var(--ink);
+  --bim-label--fz: var(--fs-label);
 }
 .pane-header-picker .count {
   font-size: var(--fs-label);
@@ -253,10 +213,6 @@
      changes length does not move it */
   margin-left: auto;
 }
-.pane-header-note {
-  color: var(--muted-2);
-  font-size: var(--fs-label);
-}
 /*
  * The count is the header's own annotation, not its far edge.
  *
@@ -270,12 +226,6 @@
  */
 .pane-header .count {
   margin-left: 0;
-}
-.pane-header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-left: auto;
 }
 /* a pane header that also navigates: the identity row sits above the switch */
 .pane-header.is-stacked {

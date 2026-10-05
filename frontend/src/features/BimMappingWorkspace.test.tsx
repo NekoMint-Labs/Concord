@@ -303,7 +303,7 @@ it("uses one shell and synchronizes geometry, checkbox, list and exact snapshot 
   act(() => viewer.props!.onSelected("12345"));
   expect(
     screen.getByRole("button", { name: "确认关联 0 个构件" }),
-  ).toBeDisabled();
+  ).toHaveAttribute("aria-disabled", "true");
   act(() => viewer.props!.onSelected("wall-l02"));
   expect(
     screen.getAllByRole("checkbox", { name: "关联 Wall" })[0],
@@ -355,7 +355,7 @@ it("captures submitted count, blocks duplicate confirmation and fences a pending
   );
   expect(
     screen.getByRole("button", { name: "确认关联 0 个构件" }),
-  ).toBeDisabled();
+  ).toHaveAttribute("aria-disabled", "true");
   await act(async () => finish([]));
   await waitFor(() =>
     expect(invalidate).toHaveBeenCalledWith({
@@ -483,7 +483,7 @@ it("resets selection across source, revision and project changes and never enabl
   await waitFor(() => expect(viewer.props!.mapping!.selectedIds).toEqual([]));
   expect(
     screen.getByRole("button", { name: "确认关联 0 个构件" }),
-  ).toBeDisabled();
+  ).toHaveAttribute("aria-disabled", "true");
   rerender(
     <QueryClientProvider client={cache}>
       <BimMappingWorkspace
@@ -521,6 +521,13 @@ it("resets selection across source, revision and project changes and never enabl
 it("keeps more than 200 visible candidates out of Agent scope until explicitly selected", async () => {
   const { cache, props } = mappingView();
   await screen.findByText("Mapping geometry");
+  const dock = screen.getByRole("region", { name: "关联候选构件" });
+  const tools = within(dock.querySelector<HTMLElement>(".mapping-dock-tools")!);
+  // Preserve named checkbox coverage without scanning all 201 accessible names.
+  const candidateCheckbox = (name: string) => {
+    const checkbox = within(dock).getByLabelText(name);
+    return within(checkbox.parentElement!).getByRole("checkbox", { name });
+  };
   const manyElements = Array.from({ length: 201 }, (_, i) => ({
     ...elements[0],
     global_id: `wall-${i}`,
@@ -546,16 +553,18 @@ it("keeps more than 200 visible candidates out of Agent scope until explicitly s
     undefined,
     undefined,
   );
-  const investigate = screen.getByRole("button", { name: "调查当前选择" });
-  expect(investigate).toBeDisabled();
-  fireEvent.click(screen.getByRole("checkbox", { name: "关联 Wall 0" }));
-  expect(props.onContext).toHaveBeenLastCalledWith(
-    "source-1",
-    "r1",
-    ["wall-0"],
-    undefined,
-    undefined,
-    undefined,
+  const investigate = tools.getByRole("button", { name: "调查当前选择" });
+  expect(investigate).toHaveAttribute("aria-disabled", "true");
+  fireEvent.click(candidateCheckbox("关联 Wall 0"));
+  await waitFor(() =>
+    expect(props.onContext).toHaveBeenLastCalledWith(
+      "source-1",
+      "r1",
+      ["wall-0"],
+      undefined,
+      undefined,
+      undefined,
+    ),
   );
   fireEvent.click(investigate);
   expect(props.onInvestigate).toHaveBeenLastCalledWith(
@@ -565,30 +574,32 @@ it("keeps more than 200 visible candidates out of Agent scope until explicitly s
     undefined,
   );
   props.onInvestigate.mockClear();
-  fireEvent.click(screen.getByRole("button", { name: "选择全部" }));
+  fireEvent.click(tools.getByRole("button", { name: "选择全部" }));
   expect(viewer.props!.mapping!.selectedIds).toHaveLength(201);
   expect(props.onContext.mock.calls.at(-1)?.[2]).toHaveLength(201);
-  expect(investigate).toBeDisabled();
+  expect(investigate).toHaveAttribute("aria-disabled", "true");
   expect(screen.getByText(/最多.*200.*构件/)).toBeVisible();
   fireEvent.click(investigate);
   expect(props.onInvestigate).not.toHaveBeenCalled();
   // The full binding selection is retained. Removing one element permits the exact 200.
-  fireEvent.click(screen.getByRole("checkbox", { name: "关联 Wall 200" }));
-  expect(investigate).toBeEnabled();
+  fireEvent.click(candidateCheckbox("关联 Wall 200"));
+  expect(investigate).not.toHaveAttribute("aria-disabled", "true");
   fireEvent.click(investigate);
   expect(props.onInvestigate.mock.calls.at(-1)?.[2]).toEqual(
     manyElements.slice(0, 200).map((item) => item.global_id),
   );
-  fireEvent.click(screen.getByRole("button", { name: "清除选择" }));
-  expect(props.onContext).toHaveBeenLastCalledWith(
-    "source-1",
-    "r1",
-    [],
-    undefined,
-    undefined,
-    undefined,
+  fireEvent.click(tools.getByRole("button", { name: "清除选择" }));
+  await waitFor(() =>
+    expect(props.onContext).toHaveBeenLastCalledWith(
+      "source-1",
+      "r1",
+      [],
+      undefined,
+      undefined,
+      undefined,
+    ),
   );
-  expect(investigate).toBeDisabled();
+  expect(investigate).toHaveAttribute("aria-disabled", "true");
   cache.clear();
 });
 
@@ -621,7 +632,7 @@ it("preserves the defined inspection impact scope and blocks oversized investiga
     ),
   );
   const investigate = screen.getByRole("button", { name: "调查当前选择" });
-  expect(investigate).toBeDisabled();
+  expect(investigate).toHaveAttribute("aria-disabled", "true");
   expect(screen.getByText(/最多.*200.*构件/)).toBeVisible();
   fireEvent.click(investigate);
   expect(props.onInvestigate).not.toHaveBeenCalled();

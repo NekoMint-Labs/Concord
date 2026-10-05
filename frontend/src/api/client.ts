@@ -17,6 +17,11 @@ export type ProjectSourceStatus = DTO<"ProjectSourceStatus">;
 export type ProjectSourceRevision = DTO<"ProjectSourceRevision">;
 export type Baseline = DTO<"Baseline">;
 export type InvestigationReport = DTO<"InvestigationReport">;
+export type Finding = DTO<"Finding">;
+export type Evidence = DTO<"Evidence">;
+export type Coordination = DTO<"Coordination">;
+export type ReCheck = DTO<"ReCheck">;
+export type FindingDecision = DTO<"FindingDecision">;
 
 const loopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(
   location.hostname,
@@ -252,6 +257,40 @@ export const api = {
     request<DTO<"RevisionComparisonDetail">>(
       `/api/projects/${project}/sources/${source}/bim-comparisons/${comparison}`,
     ),
+  engineeringFindings: (project: string) =>
+    request<Finding[]>(
+      `/api/projects/${encodeURIComponent(project)}/engineering/findings`,
+    ),
+  engineeringFinding: (project: string, id: string) =>
+    request<Finding>(
+      `/api/projects/${encodeURIComponent(project)}/engineering/findings/${encodeURIComponent(id)}`,
+    ),
+  engineeringEvidence: (project: string, id: string) =>
+    request<Evidence>(
+      `/api/projects/${encodeURIComponent(project)}/engineering/evidence/${encodeURIComponent(id)}`,
+    ),
+  engineeringDecision: (project: string, id: string, input: FindingDecision) =>
+    request<Finding>(
+      `/api/projects/${encodeURIComponent(project)}/engineering/findings/${encodeURIComponent(id)}/decisions`,
+      { method: "POST", body: JSON.stringify(input) },
+    ),
+  engineeringCoordination: (project: string, id: string) =>
+    request<Coordination[]>(
+      `/api/projects/${encodeURIComponent(project)}/engineering/findings/${encodeURIComponent(id)}/coordination`,
+    ),
+  engineeringRechecks: (project: string, id: string) =>
+    request<ReCheck[]>(
+      `/api/projects/${encodeURIComponent(project)}/engineering/findings/${encodeURIComponent(id)}/rechecks`,
+    ),
+  requestEngineeringRechecks: (
+    project: string,
+    id: string,
+    input: DTO<"ReCheckRequest">,
+  ) =>
+    request<ReCheck[]>(
+      `/api/projects/${encodeURIComponent(project)}/engineering/findings/${encodeURIComponent(id)}/rechecks`,
+      { method: "POST", body: JSON.stringify(input) },
+    ),
   agentSettings: (project: string) =>
     request<DTO<"AgentSettings-Output">>(
       `/api/projects/${project}/agent/settings`,
@@ -349,8 +388,14 @@ export const api = {
 };
 
 /** Binary downloads remain authenticated; bearer secrets are never put in URLs. */
-export async function readSource(path: string): Promise<Blob> {
-  const response = await fetch(apiUrl(path), { headers: requestHeaders() });
+export async function readSource(
+  path: string,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  const response = await fetch(apiUrl(path), {
+    headers: requestHeaders(),
+    ...(signal ? { signal } : {}),
+  });
   if (!response.ok) throw new APIError(response.status, "来源文件不可用");
   return response.blob();
 }

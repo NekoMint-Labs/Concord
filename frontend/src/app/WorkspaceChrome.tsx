@@ -1,0 +1,391 @@
+/* Source: OpenTakeoff web/src/components/WorkspaceChrome.jsx (Apache-2.0).
+ * Copyright 2026 Kentucky AI and the OpenTakeoff contributors.
+ * Revision: 788e39bfe9c42b3260ea75e84a655e4574f9bc8c.
+ * Modified for Concord: Chinese copy and Concord data binding. The donor
+ * structure, class names, keyboard behavior and slot contract are unchanged —
+ * every product action is still supplied by the application as a slot, exactly
+ * as the donor does. The donor's Quantities/Takeoffs and Request-Premium
+ * entries have no Concord counterpart and are not rendered.
+ */
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Icon } from "../vendor/opentakeoff/brand/icons";
+import { keyText } from "../vendor/opentakeoff/lib/keys";
+import type { StageObject } from "./stageContracts";
+
+/*
+ * The instrument bar.
+ *
+ * This is the window's whole chrome: one dark band, one row. The previous shell
+ * stacked a header over a second light "context" band and filled both, which meant
+ * twenty controls competed at the same weight and the single most important thing on
+ * screen - the engineering object being worked on - had the least room.
+ *
+ * The bar is organised by what a reader needs in order, left to right:
+ *
+ *   who/what   the wordmark, the project, and where inside it you are
+ *   find       one search entry for every object and action
+ *   scope      which working context the surfaces below are scoped to
+ *   act        the assistant, the one committed action for the current mode
+ *   more       everything administrative, diagnostic and mode-independent
+ *
+ * Mode-specific verbs are deliberately *not* here. They belong to the surface they
+ * change (the stage band), where they sit next to the object they act on. The rail
+ * owns mode switching, so the bar carries no second navigation.
+ */
+export function WorkspaceChrome({
+  title,
+  subtitle,
+  onOpen,
+  onNavigate,
+  navigationOpen,
+  onSearch,
+  fileMenu,
+  scope,
+  assistant,
+  action,
+  overflow,
+  navigationLabel = "对象",
+  busyLabel,
+}: {
+  title: string;
+  subtitle: string;
+  onOpen: () => void;
+  onNavigate: () => void;
+  navigationOpen: boolean;
+  onSearch: () => void;
+  fileMenu?: ReactNode;
+  scope?: ReactNode;
+  assistant?: ReactNode;
+  action?: ReactNode;
+  overflow?: ReactNode;
+  navigationLabel?: string;
+  busyLabel?: string;
+}) {
+  return (
+    <header className="concord-bar" role="banner">
+      <button
+        type="button"
+        className="concord-brand"
+        onClick={onOpen}
+        aria-label="打开或新建项目"
+        title="打开或新建项目"
+      >
+        <span className="concord-mark" aria-hidden="true" />
+        <span className="concord-wordmark">
+          conc<span>ord</span>
+        </span>
+      </button>
+
+      <div className="concord-identity" title={title}>
+        <strong>{title || "未命名工作区"}</strong>
+        <span className="concord-trail">{subtitle}</span>
+      </div>
+      {fileMenu}
+
+      <div className="concord-bar-mid">
+        <button
+          type="button"
+          className="concord-search"
+          onClick={onSearch}
+          title="查找对象、工程判断、资料或操作"
+        >
+          <Icon name="search" size={15} />
+          <span>查找对象、判断、资料或操作</span>
+          <kbd>{keyText("⌘K")}</kbd>
+        </button>
+      </div>
+
+      <div className="concord-bar-tools">
+        {busyLabel ? (
+          <span className="concord-busy" role="status">
+            {busyLabel}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          className="concord-bar-btn"
+          aria-label={`${navigationLabel}导航`}
+          aria-pressed={navigationOpen}
+          onClick={onNavigate}
+          title={`${navigationLabel}导航 — 当前工作区的对象列表`}
+        >
+          <Icon name="sheets" size={15} />
+          <span>{navigationLabel}</span>
+        </button>
+        {scope}
+        <span className="concord-bar-divider" aria-hidden="true" />
+        {assistant}
+        {action}
+        {overflow}
+      </div>
+    </header>
+  );
+}
+
+export type NavigatorItem = {
+  key: string;
+  label: string;
+  file: string;
+  count?: number;
+  /** The object's class, emitted as `data-kind` so a row can be styled by it. */
+  kind?: StageObject["kind"];
+};
+
+export function WorkspaceNavigator({
+  open,
+  title,
+  label,
+  placeholder,
+  empty,
+  emptySearch,
+  footerLabel,
+  items,
+  current,
+  onSelect,
+  onClose,
+  onFooter,
+  dockSide,
+  width,
+  dockHandle,
+}: {
+  open: boolean;
+  title: string;
+  label: string;
+  placeholder: string;
+  empty: string;
+  emptySearch: string;
+  footerLabel: string;
+  items: NavigatorItem[];
+  current?: string;
+  onSelect: (key: string) => void;
+  onClose: () => void;
+  onFooter: () => void;
+  dockSide?: "left" | "right";
+  width?: number;
+  dockHandle?: ReactNode;
+}) {
+  const [query, setQuery] = useState("");
+  const matches = useMemo(
+    () =>
+      items.filter((s) =>
+        `${s.label} ${s.file}`
+          .toLowerCase()
+          .includes(query.trim().toLowerCase()),
+      ),
+    [items, query],
+  );
+  return (
+    <aside
+      className="calm-navigator"
+      data-dock-side={dockSide}
+      style={{
+        width,
+        order: dockSide === "right" ? 20 : -20,
+      }}
+      hidden={!open}
+      aria-label={label}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          onClose();
+        }
+      }}
+    >
+      <header>
+        {dockHandle}
+        <strong>
+          {title} <small>{items.length}</small>
+        </strong>
+        <button type="button" aria-label={`关闭${label}`} onClick={onClose}>
+          ×
+        </button>
+      </header>
+      <label>
+        <Icon name="search" size={15} />
+        <input
+          name="workspace-navigator-search"
+          aria-label={label}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={placeholder}
+        />
+      </label>
+      <div className="calm-sheet-list">
+        {matches.map((s) => (
+          <button
+            type="button"
+            key={s.key}
+            data-kind={s.kind}
+            aria-current={s.key === current ? "page" : undefined}
+            onClick={() => onSelect(s.key)}
+            title={`${s.label} · ${s.file}`}
+          >
+            <Icon name="document" size={19} />
+            <span>
+              <strong>{s.label}</strong>
+              <small>{s.file}</small>
+            </span>
+            {!!s.count && <em>{s.count}</em>}
+          </button>
+        ))}
+        {!matches.length && <p>{items.length ? emptySearch : empty}</p>}
+      </div>
+      <footer>
+        <button type="button" onClick={onFooter}>
+          <Icon name="sheets" size={16} />
+          {footerLabel}
+        </button>
+      </footer>
+    </aside>
+  );
+}
+
+export type WorkspaceAction = {
+  id: string;
+  label: string;
+  group?: string;
+  shortcut?: string;
+  disabled?: boolean;
+  run: () => void;
+};
+
+export function WorkspaceCommandMenu({
+  open,
+  onClose,
+  actions,
+  onOpenChange,
+}: {
+  open: boolean;
+  onClose: () => void;
+  actions: WorkspaceAction[];
+  onOpenChange?: (open: boolean) => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [query, setQuery] = useState("");
+  const [index, setIndex] = useState(0);
+  const rows = actions
+    .filter((a) =>
+      `${a.label} ${a.group || ""} ${a.shortcut || ""}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()),
+    )
+    .slice(0, 50);
+  useEffect(() => {
+    if (!open) return;
+    setQuery("");
+    setIndex(0);
+    const dialog = dialogRef.current;
+    dialog?.showModal();
+    onOpenChange?.(true);
+    return () => {
+      dialog?.close();
+      onOpenChange?.(false);
+    };
+  }, [open, onOpenChange]);
+  useEffect(() => {
+    dialogRef.current
+      ?.querySelector(".is-highlighted")
+      ?.scrollIntoView({ block: "nearest" });
+  }, [index]);
+  const run = (row?: WorkspaceAction) => {
+    if (row && !row.disabled) {
+      onClose();
+      row.run();
+    }
+  };
+  return (
+    <dialog
+      ref={dialogRef}
+      className="calm-command-menu"
+      onKeyDown={(e) => e.stopPropagation()}
+      aria-label="查找对象或操作"
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          const r = e.currentTarget.getBoundingClientRect();
+          if (
+            e.clientX < r.left ||
+            e.clientX > r.right ||
+            e.clientY < r.top ||
+            e.clientY > r.bottom
+          )
+            onClose();
+        }
+      }}
+    >
+      <header>
+        <Icon name="search" size={18} />
+        <input
+          name="workspace-action-search"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={true}
+          aria-controls="workspace-action-results"
+          aria-activedescendant={
+            rows[index] ? `workspace-action-${rows[index].id}` : undefined
+          }
+          aria-label="搜索对象或操作"
+          autoFocus
+          value={query}
+          placeholder="查找对象、资料或操作…"
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIndex(0);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+              e.preventDefault();
+              setIndex((i) =>
+                Math.max(
+                  0,
+                  Math.min(
+                    rows.length - 1,
+                    i + (e.key === "ArrowDown" ? 1 : -1),
+                  ),
+                ),
+              );
+            } else if (e.key === "Enter") {
+              e.preventDefault();
+              run(rows[index]);
+            }
+          }}
+        />
+        <button type="button" aria-label="关闭查找" onClick={onClose}>
+          Esc
+        </button>
+      </header>
+      <div
+        className="calm-command-results"
+        id="workspace-action-results"
+        role="listbox"
+        aria-label="对象与操作"
+      >
+        {rows.map((row, i) => (
+          <button
+            type="button"
+            role="option"
+            tabIndex={-1}
+            aria-selected={i === index}
+            id={`workspace-action-${row.id}`}
+            key={row.id}
+            className={i === index ? "is-highlighted" : ""}
+            disabled={row.disabled}
+            onMouseEnter={() => setIndex(i)}
+            onClick={() => run(row)}
+          >
+            <span>
+              {row.label}
+              <small>{row.group}</small>
+            </span>
+            {row.shortcut && <kbd>{keyText(row.shortcut)}</kbd>}
+          </button>
+        ))}
+        {!rows.length && <p>没有匹配项，请尝试资料名称或“工作包”。</p>}
+      </div>
+      <footer>↑ ↓ 选择 · Enter 打开 · Esc 关闭</footer>
+    </dialog>
+  );
+}

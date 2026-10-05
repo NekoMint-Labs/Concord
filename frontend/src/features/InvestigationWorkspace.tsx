@@ -1,3 +1,4 @@
+import { Button } from "../components/ui/button";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Box } from "lucide-react";
@@ -88,23 +89,25 @@ export function InvestigationWorkspace({
   return (
     <section className="investigation-workspace" aria-label="调查依据工作区">
       <nav className="investigation-tabs" aria-label="调查来源">
-        <button
+        <Button
+          variant="ghost"
           type="button"
           className={visibleTab === "model" ? "active" : ""}
           aria-current={visibleTab === "model" ? "true" : undefined}
           onClick={() => setSourceTab("model")}
         >
           <Box size={13} /> 模型
-        </button>
+        </Button>
         {document && (
-          <button
+          <Button
+            variant="ghost"
             type="button"
             className={visibleTab === "documents" ? "active" : ""}
             aria-current={visibleTab === "documents" ? "true" : undefined}
             onClick={() => setSourceTab("documents")}
           >
             <FileText size={13} /> 文档 <small>1</small>
-          </button>
+          </Button>
         )}
       </nav>
       <div className={`investigation-visuals is-${visibleTab}`}>

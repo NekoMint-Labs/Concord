@@ -1,204 +1,49 @@
-import type { ReactNode } from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
-import fixture from "../../tests/fixtures/inspector.json";
-import type { DTO, Workspace } from "../api/client";
 import { ProjectSidebar } from "./ProjectSidebar";
-import { WorkspaceHeader } from "./WorkspaceHeader";
-
-vi.mock("../components/ui/AppMenu", () => ({
-  AppMenu: ({
-    label,
-    trigger,
-    children,
-  }: {
-    label: string;
-    trigger: ReactNode;
-    children: ReactNode;
-  }) => (
-    <div>
-      <button aria-label={label}>{trigger}</button>
-      <div role="menu">{children}</div>
-    </div>
-  ),
-  AppMenuLabel: ({ children }: { children: ReactNode }) => (
-    <div>{children}</div>
-  ),
-  AppMenuSeparator: () => <hr />,
-  AppMenuItem: ({
-    children,
-    onSelect,
-    active,
-  }: {
-    children: ReactNode;
-    onSelect: () => void;
-    active?: boolean;
-  }) => (
-    <button
-      role="menuitem"
-      aria-current={active ? "page" : undefined}
-      onClick={onSelect}
-    >
-      {children}
-    </button>
-  ),
-}));
 
 /**
- * The navigation chrome of the desktop pass.
+ * The workspace tool rail.
  *
- * Almost everything this pass changed is composition, and composition is judged
- * in a browser rather than here. What is asserted is the part a screenshot cannot
- * check: that a collapsed column is genuinely out of reach, that exactly one
- * sidebar control is on screen at a time, and that the project switcher is still
- * the picker it was - the pass restyled it and must not have changed what it does.
+ * The rail is tiered now: the three work modes, then the object and impact
+ * workspaces, then one utility face whose menu carries the administrative and
+ * diagnostic destinations (operations, the site map, diagnostics, layout, project
+ * settings). Composition is judged in a browser; what is asserted here is what a
+ * screenshot cannot check.
  */
-const data = structuredClone(fixture.waiting) as unknown as Workspace;
-const wp = data.state.work_packages.find((item) => item.id === "WP-200")!;
-const projects = [
-  { id: "harbor-east", name: "Harbor East / Building A" },
-  { id: "campus-west", name: "Campus West" },
-] as unknown as DTO<"Project">[];
+const workModes = ["工作", "项目", "浏览"];
+const workspaces = ["模型", "文档", "变更", "问题"];
 
-function sidebar({ collapsed = false, onCollapse = vi.fn() } = {}) {
-  render(
-    <ProjectSidebar
-      data={data}
-      project="harbor-east"
-      projects={projects}
-      selected="WP-200"
-      collapsed={collapsed}
-      onCollapse={onCollapse}
-      onProject={() => {}}
-      onSelect={() => {}}
-    />,
+it("marks exactly the active destination on the tool rail with aria-pressed", () => {
+  render(<ProjectSidebar tab="browse" onTab={vi.fn()} />);
+
+  expect(screen.getByRole("button", { name: "浏览" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
   );
-  return onCollapse;
-}
-
-it("carries the collapse control and the current project in its own header", () => {
-  const onCollapse = sidebar();
-  const current = screen.getByRole("button", { name: "切换项目" });
-  expect(within(current).getByText("A 栋项目")).toBeVisible();
-  expect(document.querySelector(".sidebar")).not.toHaveAttribute("inert");
-
-  fireEvent.click(screen.getByRole("button", { name: "收起侧栏" }));
-  expect(onCollapse).toHaveBeenCalledTimes(1);
+  for (const name of [...workModes, ...workspaces].filter(
+    (item) => item !== "浏览",
+  ))
+    expect(screen.getByRole("button", { name })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
 });
 
-it("takes a collapsed column out of reach instead of unmounting it", () => {
-  sidebar({ collapsed: true });
-  /* Off the window's edge is not the same as gone: the column keeps its layout so
-     the slide has something to move, and `inert` is what stops Tab reaching a
-     region that is not on screen. */
-  expect(document.querySelector(".sidebar")).toHaveAttribute("inert");
-});
-
-it("offers the way back only while the column is gone", () => {
-  const onToggleNav = vi.fn();
-  const view = render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <WorkspaceHeader data={data} wp={wp} onToggleNav={onToggleNav} />
-    </QueryClientProvider>,
-  );
-  expect(screen.queryByRole("button", { name: "展开侧栏" })).toBeNull();
-
-  view.rerender(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <WorkspaceHeader
-        data={data}
-        wp={wp}
-        navCollapsed
-        onToggleNav={onToggleNav}
-      />
-    </QueryClientProvider>,
-  );
-  fireEvent.click(screen.getByRole("button", { name: "展开侧栏" }));
-  expect(onToggleNav).toHaveBeenCalledTimes(1);
-});
-
-it("keeps fixture/debug wording out of the project picker", () => {
-  render(
-    <ProjectSidebar
-      data={data}
-      project="harbor-east"
-      projects={projects}
-      recent={[]}
-      selected="WP-200"
-      onCollapse={() => {}}
-      onProject={() => {}}
-      onSelect={() => {}}
-    />,
-  );
-
-  const trigger = screen.getByRole("button", { name: "切换项目" });
-  expect(within(trigger).getByText("A 栋项目")).toBeVisible();
-  expect(within(trigger).queryByText("演示 / 示例")).toBeNull();
-});
-
-it("keeps project actions and switching discoverable in the project switcher", async () => {
-  const onProject = vi.fn();
-  const onNewProject = vi.fn();
-  const onOpenProject = vi.fn();
+it("routes every rail face to its destination without a hidden package or model tree", () => {
+  const onTab = vi.fn();
   const onProjectSettings = vi.fn();
   render(
-    <ProjectSidebar
-      data={data}
-      project="harbor-east"
-      projects={projects}
-      selected="WP-200"
-      onCollapse={() => {}}
-      onProject={onProject}
-      onNewProject={onNewProject}
-      onOpenProject={onOpenProject}
-      onProjectSettings={onProjectSettings}
-      onSelect={() => {}}
-    />,
+    <ProjectSidebar onTab={onTab} onProjectSettings={onProjectSettings} />,
   );
 
-  expect(
-    await screen.findByRole("menuitem", { name: /新建项目/ }),
-  ).toBeVisible();
-  expect(screen.getByRole("menuitem", { name: /打开项目/ })).toBeVisible();
-  expect(screen.getByRole("menuitem", { name: /项目设置/ })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "浏览" }));
+  expect(onTab).toHaveBeenLastCalledWith("browse");
+  fireEvent.click(screen.getByRole("button", { name: "模型" }));
+  expect(onTab).toHaveBeenLastCalledWith("bim");
+  expect(onTab).toHaveBeenCalledTimes(2);
 
-  fireEvent.click(screen.getByRole("menuitem", { name: /新建项目/ }));
-  expect(onNewProject).toHaveBeenCalledOnce();
-  fireEvent.click(screen.getByRole("menuitem", { name: "Campus West" }));
-  expect(onProject).toHaveBeenCalledWith("campus-west");
-});
-
-it("opens Browse as a first-level destination without a hidden package or model tree", () => {
-  const onTab = vi.fn();
-  const onSelect = vi.fn();
-  render(
-    <ProjectSidebar
-      data={data}
-      project="harbor-east"
-      projects={projects}
-      selected="WP-200"
-      onCollapse={vi.fn()}
-      onProject={vi.fn()}
-      onSelect={onSelect}
-      onTab={onTab}
-    />,
-  );
-
-  const browse = screen.getByRole("button", { name: "浏览" });
-  expect(browse).not.toHaveAttribute("aria-current");
-  expect(browse).not.toHaveAttribute("aria-expanded");
-  fireEvent.click(browse);
-  expect(onTab).toHaveBeenCalledExactlyOnceWith("browse");
-  expect(onSelect).not.toHaveBeenCalled();
+  // The rail is faces only: it never hides a package or model tree behind it.
   expect(screen.queryByRole("searchbox", { hidden: true })).toBeNull();
   expect(
     screen.queryByRole("navigation", { name: "工作包", hidden: true }),
@@ -209,27 +54,42 @@ it("opens Browse as a first-level destination without a hidden package or model 
   expect(screen.queryByText("东翼风管安装")).toBeNull();
 });
 
-it("marks Browse as the active destination instead of a disclosure", () => {
+it("carries the open-judgement count on the Work face and nowhere else", () => {
+  render(<ProjectSidebar tab="work" attention={3} onTab={vi.fn()} />);
+  const work = screen.getByRole("button", { name: "工作" });
+  expect(work).toHaveTextContent("3");
+  expect(work).toHaveAttribute("aria-pressed", "true");
+  expect(
+    screen.getByLabelText("3 项待人工判断", { exact: false }),
+  ).toBeVisible();
+});
+
+it("moves the administrative destinations behind one utility face", () => {
+  const onTab = vi.fn();
+  const onProjectSettings = vi.fn();
   render(
     <ProjectSidebar
-      data={data}
-      project="harbor-east"
-      projects={projects}
-      selected="WP-200"
-      tab="browse"
-      onCollapse={vi.fn()}
-      onProject={vi.fn()}
-      onSelect={vi.fn()}
+      onTab={onTab}
+      onProjectSettings={onProjectSettings}
+      onLayout={vi.fn()}
+      onDiagnostics={vi.fn()}
     />,
   );
 
-  expect(screen.getByRole("button", { name: "浏览" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  for (const name of ["工作", "模型", "项目"]) {
-    expect(screen.getByRole("button", { name })).not.toHaveAttribute(
-      "aria-current",
-    );
-  }
+  // Operations and the site map are no longer first-level faces.
+  expect(screen.queryByRole("button", { name: "活动与运行" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "现场地图" })).toBeNull();
+
+  // The administrative tier is disclosed inside the rail, so the frame keeps one
+  // material and nothing floats over a docked column.
+  const more = screen.getByRole("button", { name: "更多工作区" });
+  expect(more).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(more);
+  expect(more).toHaveAttribute("aria-expanded", "true");
+
+  fireEvent.click(screen.getByRole("button", { name: "活动与运行" }));
+  expect(onTab).toHaveBeenLastCalledWith("operations");
+
+  fireEvent.click(screen.getByRole("button", { name: "设置" }));
+  expect(onProjectSettings).toHaveBeenCalledOnce();
 });

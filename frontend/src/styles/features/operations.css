@@ -9,9 +9,6 @@
  * white fill reads as a card on a page, which is the shape this direction
  * removed everywhere else.
  */
-.audit-list {
-  background: transparent;
-}
 .profile-summary {
   padding: var(--space-3);
   background: var(--surface-chrome);
@@ -34,20 +31,6 @@
   line-height: 1.6;
   color: var(--muted);
 }
-.audit-list > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  /* no horizontal inset: the row rules are the only separation, so the text
-     lines up with the table and the heading above it */
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--line-soft);
-  font-size: var(--fs-label);
-}
-.audit-list strong {
-  font-size: var(--fs-label);
-  font-weight: 500;
-}
 .operations-workspace {
   display: flex;
   flex-direction: column;
@@ -67,52 +50,40 @@
   padding: 16px 14px 32px;
   background: var(--surface-list);
 }
-.operation-console > header {
-  margin: 0 4px 12px;
+/*
+ * The three checks are a compact donor filter row in the stage band; the active
+ * one is the pressed control, not a stacked tab list.
+ */
+.operation-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex-shrink: 0;
 }
-.operation-console > header h3 {
-  margin-top: 2px;
-}
-.operation-tabs {
-  display: grid;
-  gap: 2px;
-}
-.operation-tabs button {
-  display: block;
-  width: 100%;
-  padding: 8px 9px;
-  border: 0;
-  border-radius: var(--radius-sm);
+.operation-filters button {
+  min-height: var(--ctl-m);
+  padding: 0 var(--sp-2);
+  border: var(--rule-soft);
+  border-radius: var(--r-1);
   background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.operation-filters button:hover {
+  background: var(--paper-shadow);
   color: var(--ink);
-  text-align: left;
 }
-.operation-tabs button:hover {
-  background: var(--hover);
-}
-.operation-tabs button.selected {
-  background: var(--accent-muted);
-}
-.operation-tabs strong,
-.operation-tabs small {
-  display: block;
-}
-.operation-tabs strong {
-  font-size: var(--fs-action);
-  font-weight: 500;
-}
-.operation-tabs button.selected strong {
-  font-weight: 600;
-}
-.operation-tabs small {
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: var(--fs-label);
+.operation-filters button[aria-pressed="true"] {
+  color: var(--cobalt);
+  background: var(--tint-select);
+  border-color: var(--ink-faint);
 }
 .operation-tool {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line-soft);
+  min-width: 0;
 }
 .operation-tool h4 {
   margin-bottom: 7px;
@@ -261,9 +232,6 @@
   .operation-console {
     max-height: 230px;
     border-bottom: 1px solid var(--line-soft);
-  }
-  .operation-tabs {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .operation-tool {
     margin-top: 12px;

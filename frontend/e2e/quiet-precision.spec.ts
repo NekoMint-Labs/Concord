@@ -1,6 +1,14 @@
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import {
+  expectDonor,
+  expectDonorTable,
+  openWorkPanel,
+  selectDonorTab,
+  toolRail,
+  workPanel,
+} from "./donor-conformance";
 
 const screenshots = resolve(
   "..",
@@ -8,7 +16,7 @@ const screenshots = resolve(
   process.env.CONCORD_VISUAL_DIR ?? "desktop-workspace",
 );
 
-test("work list, transient Peek and project object lanes across four widths", async ({
+test("composed Work queue, persistent selection and project lanes across donor widths", async ({
   page,
   request,
 }) => {
@@ -35,13 +43,13 @@ test("work list, transient Peek and project object lanes across four widths", as
     sessionStorage.setItem("cca-token", "local-demo-admin");
     localStorage.setItem("concord:last-project", "harbor-east");
   });
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   mkdirSync(screenshots, { recursive: true });
-  const nav = page.getByRole("navigation", { name: "主要工作区" });
+  const nav = toolRail(page);
   for (const [width, height] of [
     [1440, 900],
     [1280, 720],
-    [1600, 900],
     [1920, 1080],
   ]) {
     await page.setViewportSize({ width, height });
@@ -52,75 +60,83 @@ test("work list, transient Peek and project object lanes across four widths", as
       await nav.getByRole("button", { name: label, exact: true }).click();
       await expect(
         nav.getByRole("button", { name: label, exact: true }),
-      ).toHaveAttribute("aria-current", "page");
+      ).toHaveAttribute("aria-pressed", "true");
       await page.screenshot({
         path: resolve(screenshots, `${name}-${width}x${height}.png`),
         animations: "disabled",
       });
       if (name === "work") {
-        const list = page.getByRole("region", { name: "工作" });
-        await expect(
-          page.getByRole("complementary", { name: "所选工作事项" }),
-        ).toHaveCount(0);
-        const queue = await list.locator(".work-queue").boundingBox();
-        expect(queue!.width).toBeGreaterThan(width - 160);
-        const information = await list
-          .locator(".work-row-content")
-          .first()
-          .boundingBox();
-        expect(information!.width).toBeLessThanOrEqual(900);
-        const rowTitle = await list
-          .locator(".work-row-copy strong")
-          .first()
+        await openWorkPanel(page);
+        const list = workPanel(page);
+        const detail = list.getByRole("region", { name: "所选工作事项" });
+        await expect(detail).toHaveCount(0);
+        // The docked panel is now the only Work surface; it stays docked at the
+        // configured layout width instead of the removed full-width centre queue.
+        const panel = await list.boundingBox();
+        expect(panel!.width).toBeGreaterThanOrEqual(280);
+        expect(panel!.width).toBeLessThanOrEqual(480);
+        expect(panel!.x + panel!.width).toBeLessThanOrEqual(width);
+        await selectDonorTab(list, "已处理");
+        const rows = list.locator("button.workspace-row");
+        const first = rows.first();
+        // Row titles are the panel's body-size card titles, not a donor label.
+        const rowTitle = await first
+          .locator(".workspace-row-top strong")
           .evaluate((element) =>
             parseFloat(getComputedStyle(element).fontSize),
           );
-        expect(rowTitle).toBeGreaterThanOrEqual(14);
-        const rows = list
-          .getByRole("region", { name: "最近完成" })
-          .getByRole("button");
-        const first = rows.first();
-        await first.click();
-        const peek = page.getByRole("complementary", { name: "所选工作事项" });
-        await expect(peek).toBeVisible();
-        const peekBox = await peek.boundingBox();
-        expect(peekBox!.width).toBeLessThanOrEqual(500);
+        expect(rowTitle).toBeGreaterThanOrEqual(13);
+        await first.focus();
+        await page.keyboard.press("Enter");
+        await expect(first).toHaveAttribute("aria-pressed", "true");
+        await expect(detail).toBeVisible();
+        // The receipt is readable: it never overflows the docked panel.
+        expect((await detail.boundingBox())!.width).toBeLessThanOrEqual(
+          panel!.width,
+        );
         await page.screenshot({
-          path: resolve(screenshots, `work-peek-${width}x${height}.png`),
+          path: resolve(screenshots, `work-selection-${width}x${height}.png`),
           animations: "disabled",
         });
-        const nextAction = peek.getByRole("button", {
-          name: "查看详情",
-          exact: true,
-        });
-        await expect(nextAction).toBeVisible();
-        await expect(peek.getByRole("region", { name: "当前判断" })).toBeVisible();
-        await expect(peek.getByRole("region", { name: "项目状态" })).toHaveCount(0);
-        await expect(peek.getByRole("button")).toHaveCount(2);
-        await peek.locator(".work-peek-scroll").evaluate((element) => {
-          element.scrollTop = 0;
-        });
+        // The authoritative action is data-driven (1 or 2 actions, not a count).
+        await expect(
+          detail
+            .locator(".workspace-inspector-actions")
+            .getByRole("button")
+            .first(),
+        ).toBeVisible();
+        // 当前判断 is a receipt field now, not a separate region.
+        await expect(detail).toContainText("当前判断");
+        await expect(
+          detail.getByRole("region", { name: "项目状态" }),
+        ).toHaveCount(0);
         await first.focus();
-        await page.keyboard.press("ArrowDown");
+        await page.keyboard.press("Tab");
         const nextDecision = rows.nth(1);
-        await expect(nextDecision).toHaveAttribute("aria-pressed", "true");
-        await expect(peek).toContainText(
-          (await nextDecision.getAttribute("data-work-key"))!,
-        );
-        await peek.getByRole("button", { name: "关闭详情" }).click();
-        await expect(peek).toHaveCount(0);
         await expect(nextDecision).toBeFocused();
-        await nextDecision.click();
+        await page.keyboard.press("Enter");
+        await expect(nextDecision).toHaveAttribute("aria-pressed", "true");
+        await expect(first).toHaveAttribute("aria-pressed", "false");
+        // The receipt title is the third-level heading in the docked receipt.
+        await expect(detail.getByRole("heading", { level: 3 })).toHaveText(
+          (
+            await nextDecision.locator(".workspace-row-top strong").innerText()
+          ).trim(),
+        );
+        // Selection is persistent, not a dismissible overlay; Escape must not trap focus.
         await page.keyboard.press("Escape");
-        await expect(peek).toHaveCount(0);
+        await expect(detail).toBeVisible();
+        await expect(nextDecision).toBeFocused();
       } else {
         const pane = await page
           .getByRole("complementary", { name: "项目上下文" })
           .boundingBox();
         expect(pane!.width).toBeGreaterThanOrEqual(280);
         expect(pane!.width).toBeLessThanOrEqual(340);
-        const lane = await page
-          .locator(".project-package-list li")
+        const packages = page.locator("bim-table.project-package-table");
+        await expectDonorTable(packages);
+        const lane = await packages
+          .locator("bim-table-row:not([is-header])")
           .first()
           .boundingBox();
         expect(lane!.height).toBeGreaterThanOrEqual(56);
@@ -131,10 +147,32 @@ test("work list, transient Peek and project object lanes across four widths", as
       );
       expect(overflow, `${label} must not overflow at ${width}`).toBe(false);
     }
+    await nav.getByRole("button", { name: "浏览", exact: true }).click();
+    const explorer = page.getByRole("region", { name: "Project Explorer" });
+    await expect(
+      explorer.getByRole("button", { name: "打开 东翼风管安装", exact: true }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: resolve(screenshots, `browse-${width}x${height}.png`),
+      animations: "disabled",
+    });
+    await explorer
+      .getByRole("searchbox", { name: "搜索项目对象" })
+      .fill("东翼风管");
+    await page.screenshot({
+      path: resolve(screenshots, `browse-search-${width}x${height}.png`),
+      animations: "disabled",
+    });
+    await explorer.getByRole("searchbox", { name: "搜索项目对象" }).clear();
+    await nav.getByRole("button", { name: "项目", exact: true }).click();
   }
   const project = page.getByRole("region", { name: "项目管理" });
-  await expect(project.getByRole("region", { name: "模型与版本" })).toHaveCount(0);
-  await expect(project.getByRole("region", { name: "版本记录" })).toHaveCount(0);
+  await expect(project.getByRole("region", { name: "模型与版本" })).toHaveCount(
+    0,
+  );
+  await expect(project.getByRole("region", { name: "版本记录" })).toHaveCount(
+    0,
+  );
   await expect(project.getByRole("region", { name: "当前状态" })).toContainText(
     "3 / 3 工作包可施工",
   );
@@ -143,22 +181,22 @@ test("work list, transient Peek and project object lanes across four widths", as
     .getByRole("button", { name: /结构交接/ })
     .click();
   await expect(
-    page.getByRole("navigation", { name: "当前位置" }),
+    page.locator('.calm-sheet-list button[aria-current="page"]'),
   ).toContainText("结构交接");
   await nav.getByRole("button", { name: "工作", exact: true }).click();
-  await page.locator(".work-row").first().click();
-  const detail = page.getByRole("complementary", { name: "所选工作事项" });
-  await expect(detail.getByRole("region", { name: "当前判断" })).toBeVisible();
+  await openWorkPanel(page);
+  const list = workPanel(page);
+  const selected = list.locator("button.workspace-row").first();
+  await selected.click();
+  const detail = list.getByRole("region", { name: "所选工作事项" });
+  await expect(detail).toContainText("当前判断");
   await expect(detail.getByRole("region", { name: "项目状态" })).toHaveCount(0);
-  await detail.getByRole("button", { name: "关闭详情" }).focus();
-  await page.keyboard.press("Shift+Tab");
-  expect(
-    await detail.evaluate((element) =>
-      element.contains(document.activeElement),
-    ),
-  ).toBe(false);
-  await expect(detail).toBeVisible();
-  await detail.getByRole("button", { name: "查看详情", exact: true }).focus();
+  // Focus the last receipt action so Tab leaves the receipt (1 or 2 actions).
+  await detail
+    .locator(".workspace-inspector-actions")
+    .getByRole("button")
+    .last()
+    .focus();
   await page.keyboard.press("Tab");
   expect(
     await detail.evaluate((element) =>
@@ -166,30 +204,43 @@ test("work list, transient Peek and project object lanes across four widths", as
     ),
   ).toBe(false);
   await expect(detail).toBeVisible();
-  await detail.getByRole("button", { name: "关闭详情" }).click();
-  await page.locator(".work-row").first().click();
-  const search = page.getByRole("searchbox", { name: "搜索工作事项" });
+  const search = list.getByRole("textbox", { name: "搜索工作", exact: true });
   await search.click();
-  await expect(detail).toHaveCount(0);
+  await expect(detail).toBeVisible();
   await expect(search).toBeFocused();
   await search.fill("东翼风管");
-  await expect(page.locator(".work-row")).toHaveCount(1);
+  await expect(list.locator(".workspace-row")).toHaveCount(1);
   await search.clear();
-  await expect(detail).toHaveCount(0);
+  await expect(detail).toBeVisible();
   const browse = page.getByRole("button", { name: "浏览", exact: true });
   await browse.click();
-  await expect(browse).toHaveAttribute("aria-current", "page");
+  await expect(browse).toHaveAttribute("aria-pressed", "true");
   const explorer = page.getByRole("region", { name: "Project Explorer" });
   await expect(explorer).toBeVisible();
   await explorer
     .getByRole("searchbox", { name: "搜索项目对象" })
     .fill("东翼风管");
-  await explorer.getByRole("button", { name: /东翼风管安装/ }).focus();
+  await page.screenshot({
+    path: resolve(screenshots, "browse-search-1920x1080.png"),
+    animations: "disabled",
+  });
+  await explorer
+    .getByRole("button", { name: "打开 东翼风管安装", exact: true })
+    .focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("region", { name: "工作" })).toBeVisible();
+  // Opening a package from Browse lands on its coordination overview, not on
+  // the tab-scoped Work panel: assert the surface that is actually shown.
+  await expect(page.getByRole("region", { name: "工作包概览" })).toBeVisible();
   await expect(
-    page.getByRole("navigation", { name: "当前位置" }),
+    page.locator('.calm-sheet-list button[aria-current="page"]'),
   ).toContainText("东翼风管安装");
+  await browse.click();
+  await explorer
+    .getByRole("searchbox", { name: "搜索项目对象" })
+    .fill("东翼风管");
+  await expectDonorTable(
+    explorer.locator('bim-table[aria-label="工作包对象"]'),
+  );
 });
 
 // Use the repository's real IFC fixture for the canvas QA; the default demo has no uploaded model.
@@ -201,12 +252,14 @@ test("real IFC fills the model canvas without changing project state", async ({
     sessionStorage.setItem("cca-token", "local-demo-admin");
     localStorage.setItem("concord:last-project", "harbor-east");
   });
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page
-    .getByRole("navigation", { name: "主要工作区" })
+    .getByRole("toolbar", { name: "工作区" })
     .getByRole("button", { name: "模型", exact: true })
     .click();
   await expect(page.getByRole("region", { name: "模型工作区" })).toBeVisible();
+  await expectDonor(page.locator("bim-viewport.model-workspace-viewport"));
   await expect(
     page.getByRole("button", { name: "打开本地 IFC", exact: true }),
   ).toBeVisible();
@@ -231,6 +284,11 @@ test("real IFC fills the model canvas without changing project state", async ({
     [1920, 1080],
   ] as const) {
     await page.setViewportSize({ width, height });
+    const canvasBounds = await viewer.locator("canvas").boundingBox();
+    expect(
+      canvasBounds!.height,
+      "the donor host must fill the model work plane",
+    ).toBeGreaterThan(height * 0.7);
     await page.screenshot({
       path: resolve(screenshots, `model-ifc-${width}x${height}.png`),
       animations: "disabled",

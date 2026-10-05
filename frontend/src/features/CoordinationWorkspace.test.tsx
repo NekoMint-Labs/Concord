@@ -1,218 +1,220 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import type { ComponentProps } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/inspector.json";
-import type { Workspace } from "../api/client";
-import { CoordinationWorkspace } from "./CoordinationWorkspace";
+import { api, type ProjectSourceStatus, type Workspace } from "../api/client";
+import { ContextInspector } from "../app/ContextInspector";
+import { WorkPanel } from "./WorkPanel";
 
-const baseProps = {
-  selected: "WP-200",
-  busy: false,
-  onRecheck: vi.fn(),
-  onDetails: vi.fn(),
-  onImpact: vi.fn(),
-  onModel: vi.fn(),
-};
+// CoordinationWorkspace was retired; Work owns decisions, the inspector owns context.
+afterEach(() => vi.restoreAllMocks());
 
 function completed() {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  workspace.run = { ...workspace.run!, status: "COMPLETED" };
-  workspace.analysis_run = { ...workspace.analysis_run!, status: "COMPLETED" };
-  return workspace;
+  const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  data.run = { ...data.run!, status: "COMPLETED" };
+  data.analysis_run = { ...data.analysis_run!, status: "COMPLETED" };
+  return data;
 }
 
-it("makes readiness the primary work-package conclusion", () => {
-  const workspace = completed();
-  workspace.analysis!.readiness = workspace.analysis!.readiness.map((item) =>
+const model: ProjectSourceStatus = {
+  source: {
+    id: "model",
+    project_id: fixture.waiting.state.project.id,
+    name: "MEP",
+    kind: "BIM",
+    created_at: "2026-01-01T00:00:00Z",
+  },
+  latest_revision_id: "r2",
+  accepted_revision_id: "r1",
+  baseline_id: "b1",
+  has_pending_revision: true,
+};
+
+function mountWork(
+  workspace: Workspace,
+  overrides: Partial<ComponentProps<typeof WorkPanel>> = {},
+) {
+  vi.spyOn(api, "engineeringFindings").mockResolvedValue([]);
+  vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
+  vi.spyOn(api, "comparisons").mockResolvedValue([]);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  const props = {
+    workspace,
+    sources: [],
+    onPackage: vi.fn(),
+    onModels: vi.fn(),
+    onRecheck: vi.fn(),
+    onReport: vi.fn(),
+    onProject: vi.fn(),
+    ...overrides,
+  } satisfies ComponentProps<typeof WorkPanel>;
+  const content = () => (
+    <QueryClientProvider client={client}>
+      <WorkPanel {...props} />
+    </QueryClientProvider>
+  );
+  const view = render(content());
+  return { props, refresh: () => view.rerender(content()) };
+}
+
+function ready(data: Workspace) {
+  data.analysis!.readiness = data.analysis!.readiness.map((item) =>
     item.work_package_id === "WP-200" ? { ...item, status: "READY" } : item,
   );
+}
 
-  render(<CoordinationWorkspace workspace={workspace} {...baseProps} />);
+it("shows current readiness and opens the exact work package only when its receipt action is activated", () => {
+  const data = completed();
+  ready(data);
+  const { props } = mountWork(data);
+  fireEvent.click(screen.getByRole("button", { name: /^东翼风管安装 可施工/ }));
+  const receipt = within(screen.getByRole("region", { name: "所选工作事项" }));
+  expect(receipt.getByRole("heading", { name: "东翼风管安装" })).toBeVisible();
+  expect(receipt.getByText("当前检查没有未解决的阻塞条件。")).toBeVisible();
+  expect(receipt.getAllByText("就绪")).toHaveLength(2);
+  expect(receipt.getByText(/当前判断不替代工程验证/)).toBeVisible();
+  expect(props.onPackage).not.toHaveBeenCalled();
+  fireEvent.click(receipt.getByRole("button", { name: "查看详情" }));
+  expect(props.onPackage).toHaveBeenCalledExactlyOnceWith("WP-200");
+});
 
+it("does not label an unchecked work package ready", () => {
+  const data = completed();
+  data.analysis = null;
+  const { props } = mountWork(data);
+  const row = screen.getByRole("button", { name: /^东翼风管安装 尚未检查/ });
+  expect(row).toHaveTextContent("待检查");
+  expect(row).not.toHaveTextContent("可施工");
+  fireEvent.click(row);
+  const receipt = screen.getByRole("region", { name: "所选工作事项" });
+  expect(receipt).toHaveTextContent("未检查");
+  expect(within(receipt).queryByText("就绪")).toBeNull();
+  fireEvent.click(within(receipt).getByRole("button", { name: "查看工作包" }));
+  expect(props.onPackage).toHaveBeenCalledExactlyOnceWith("WP-200");
+});
+
+it.each(["stale", "failed"] as const)(
+  "requires an explicit recheck for a %s judgment instead of treating run completion as readiness",
+  (state) => {
+    const data = completed();
+    if (state === "stale") {
+      ready(data);
+      data.stale = true;
+    } else {
+      data.run!.status = "FAILED";
+      data.analysis_run!.status = "FAILED";
+    }
+    const { props } = mountWork(data);
+    const row = screen.getByRole("button", {
+      name: /^东翼风管安装 需要重新检查/,
+    });
+    expect(row).toHaveTextContent("需复核");
+    expect(row).not.toHaveTextContent("可施工");
+    fireEvent.click(row);
+    const receipt = screen.getByRole("region", { name: "所选工作事项" });
+    expect(receipt).toHaveTextContent(
+      "当前施工判断不是最新结果，不能据此继续施工。",
+    );
+    expect(within(receipt).queryByText("就绪")).toBeNull();
+    expect(props.onRecheck).not.toHaveBeenCalled();
+    fireEvent.click(within(receipt).getByRole("button", { name: "重新检查" }));
+    expect(props.onRecheck).toHaveBeenCalledOnce();
+    expect(props.onPackage).not.toHaveBeenCalled();
+  },
+);
+
+it("keeps pending source review separate from an authoritative blocker and a fresh ready result", () => {
+  const data = completed();
+  data.proposals = [];
+  const { props, refresh } = mountWork(data, { sources: [model] });
   expect(
-    screen.getByRole("heading", { name: "东翼风管安装", level: 1 }),
-  ).toBeVisible();
-  expect(screen.getByRole("heading", { name: "可施工" })).toBeVisible();
-  expect(screen.getByText("当前没有未解决的阻塞条件")).toBeVisible();
-  expect(screen.getByText(/上次检查/)).toBeVisible();
-  expect(screen.queryByText(/快照 v\d+/)).not.toBeInTheDocument();
-});
+    screen.getByRole("button", { name: /^MEP 有新版本/ }),
+  ).toHaveTextContent("待审核");
+  const blocker = screen.getByRole("button", {
+    name: /^东翼风管安装 暂不能施工/,
+  });
+  expect(blocker).toHaveTextContent("已阻塞");
+  fireEvent.click(blocker);
+  fireEvent.click(screen.getByRole("button", { name: "查看原因" }));
+  expect(props.onPackage).toHaveBeenCalledExactlyOnceWith("WP-200");
 
-it("does not call an unchecked new work package READY", () => {
-  const workspace = completed();
-  workspace.analysis = null;
-  render(<CoordinationWorkspace workspace={workspace} {...baseProps} />);
-  expect(screen.getByRole("heading", { name: "待检查" })).toBeVisible();
+  ready(data);
+  data.analysis!.constraints = [];
+  refresh();
+  const row = screen.getByRole("button", { name: /^东翼风管安装 可施工/ });
+  fireEvent.click(row);
   expect(
-    screen.queryByRole("heading", { name: "可施工" }),
-  ).not.toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "重新检查" })).toBeVisible();
-});
-
-it("does not show READY after a failed re-check", () => {
-  const workspace = completed();
-  workspace.run = { ...workspace.run!, status: "FAILED" };
-  workspace.analysis_run = { ...workspace.analysis_run!, status: "FAILED" };
-  render(<CoordinationWorkspace workspace={workspace} {...baseProps} />);
-  expect(screen.getByRole("heading", { name: "检查失败" })).toBeVisible();
+    screen.getByRole("region", { name: "所选工作事项" }),
+  ).toHaveTextContent("基于当前基线的判断；新版本仍待审核。");
   expect(
-    screen.queryByRole("heading", { name: "可施工" }),
-  ).not.toBeInTheDocument();
+    screen.getByRole("button", { name: /^MEP 有新版本/ }),
+  ).toHaveTextContent("待审核");
 });
 
-it("flags a pending model revision instead of presenting an old READY judgement as current", () => {
-  const workspace = completed();
-  workspace.stale = true;
-  workspace.analysis!.readiness = workspace.analysis!.readiness.map((item) =>
-    item.work_package_id === "WP-200" ? { ...item, status: "READY" } : item,
-  );
-  render(
-    <CoordinationWorkspace workspace={workspace} {...baseProps} pendingModel />,
-  );
-  expect(screen.getByRole("heading", { name: "待审核" })).toBeVisible();
-  expect(screen.getByRole("button", { name: "查看影响" })).toBeVisible();
-  expect(
-    screen.queryByRole("heading", { name: "可施工" }),
-  ).not.toBeInTheDocument();
+it("opens the package approval context without approving a proposal from the work list", () => {
+  const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  const before = structuredClone(data);
+  const { props } = mountWork(data);
+  const row = screen.getByRole("button", { name: /^东翼风管安装 需要决定/ });
+  expect(row).toHaveTextContent("待批准");
+  fireEvent.click(row);
+  fireEvent.click(screen.getByRole("button", { name: "处理" }));
+  expect(props.onPackage).toHaveBeenCalledExactlyOnceWith("WP-200");
+  expect(data).toEqual(before);
 });
 
-it("keeps real work-package BIM identity in the model context", () => {
-  const workspace = completed();
-  render(<CoordinationWorkspace workspace={workspace} {...baseProps} />);
-
-  expect(screen.getByText("模型上下文")).toBeVisible();
-  const selected = workspace.state.work_packages.find(
-    (item) => item.id === "WP-200",
-  )!;
-  expect(
-    screen.getByText(`${selected.element_ids.length} 个关联构件`),
-  ).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "打开模型" }));
-  expect(baseProps.onModel).toHaveBeenCalled();
-});
-
-it("presents a stale judgement as requiring review", () => {
-  const workspace = completed();
-  workspace.stale = true;
-  workspace.analysis!.readiness = workspace.analysis!.readiness.map((item) =>
-    item.work_package_id === "WP-200" ? { ...item, status: "READY" } : item,
+it("keeps work-package BIM identity and versions in the real contextual inspector without inventing schedule dates", () => {
+  vi.spyOn(api, "engineeringFindings").mockResolvedValue([]);
+  const data = completed();
+  const before = structuredClone(data);
+  const wp = data.state.work_packages.find((item) => item.id === "WP-200")!;
+  const onOpen = vi.fn();
+  const onClose = vi.fn();
+  const onTab = vi.fn();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  const content = () => (
+    <QueryClientProvider client={client}>
+      <ContextInspector
+        project={data.state.project.id}
+        data={data}
+        sources={[]}
+        object={{ kind: "work-package", id: wp.id }}
+        onClose={onClose}
+        onOpen={onOpen}
+        onWorkPackage={vi.fn()}
+        onTab={onTab}
+      />
+    </QueryClientProvider>
   );
+  const view = render(content());
+  const inspector = screen.getByRole("complementary", { name: "检查器" });
+  const field = (label: string) =>
+    within(inspector).getByText(label).nextElementSibling!;
+  expect(field("工作包编号")).toHaveTextContent(wp.id);
+  expect(field("构件")).toHaveTextContent(`${wp.element_ids.length} 个`);
+  expect(field("设计版本")).toHaveTextContent(wp.design_revision);
+  expect(field("已接受版本")).toHaveTextContent(wp.accepted_revision);
+  expect(inspector).not.toHaveTextContent(/\d{4}-\d{2}-\d{2}/);
+  fireEvent.click(screen.getByRole("button", { name: "查看工作包上下文 →" }));
+  expect(onOpen).toHaveBeenCalledExactlyOnceWith({
+    kind: "work-package",
+    id: wp.id,
+  });
+  fireEvent.click(screen.getByRole("button", { name: "打开工作面板 →" }));
+  expect(onTab).toHaveBeenCalledExactlyOnceWith("work");
+  fireEvent.click(screen.getByRole("button", { name: "关闭检查器" }));
+  expect(onClose).toHaveBeenCalledOnce();
+  expect(data).toEqual(before);
 
-  render(<CoordinationWorkspace workspace={workspace} {...baseProps} />);
-
-  expect(screen.getByRole("heading", { name: "需复核" })).toBeVisible();
-  expect(screen.getByText(/较早快照/)).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "重新检查" }));
-  expect(baseProps.onRecheck).toHaveBeenCalled();
-});
-
-it("opens evidence and action detail from a blocked work package", () => {
-  const workspace = structuredClone(fixture.waiting) as unknown as Workspace;
-  render(<CoordinationWorkspace workspace={workspace} {...baseProps} />);
-
-  expect(screen.getByRole("heading", { name: "待批准" })).toBeVisible();
-  expect(screen.getByText(/处理建议需要明确批准/)).toBeVisible();
-
-  fireEvent.click(screen.getByRole("button", { name: /项判断依据/ }));
-  expect(baseProps.onDetails).toHaveBeenCalledWith("evidence");
-  fireEvent.click(screen.getByRole("button", { name: "审查处理方案" }));
-  expect(baseProps.onDetails).toHaveBeenCalledWith("action");
-});
-
-it("switches the overview inspector without changing domain state", () => {
-  const workspace = completed();
-  render(<CoordinationWorkspace workspace={workspace} {...baseProps} />);
-
-  fireEvent.click(screen.getByRole("button", { name: "工程记录" }));
-  expect(screen.getByText("其他工程记录")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "现场资源" }));
-  expect(screen.getByText("资质")).toBeVisible();
-});
-
-it("opens real issue context and does not invent schedule dates", () => {
-  const onDocuments = vi.fn();
-  render(
-    <CoordinationWorkspace
-      workspace={completed()}
-      {...baseProps}
-      onDocuments={onDocuments}
-    />,
-  );
-  fireEvent.click(screen.getByRole("button", { name: "进度" }));
-  expect(screen.getByText("此工作包尚未记录日期。")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: /问题 \d+/ }));
-  expect(screen.getByRole("heading", { name: /未解决问题/ })).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "文档 →" }));
-  expect(onDocuments).toHaveBeenCalledOnce();
-});
-
-it("distinguishes current coordination from the package record without changing its facts", () => {
-  const workspace = completed();
-  const view = render(
-    <CoordinationWorkspace workspace={workspace} {...baseProps} />,
-  );
-  expect(screen.getByText("工作包概览")).toBeVisible();
-  expect(screen.getByRole("heading", { name: "协调详情" })).toBeVisible();
-  view.rerender(
-    <CoordinationWorkspace
-      workspace={workspace}
-      surface="work-packages"
-      {...baseProps}
-    />,
-  );
-  expect(screen.getByRole("heading", { name: "工作包详情" })).toBeVisible();
-  expect(screen.getByRole("button", { name: "工作包" })).toBeVisible();
-});
-
-it("does not let a pending baseline hide an authoritative blocker or a fresh recheck result", () => {
-  const workspace = completed();
-  workspace.state.project.id = "real-project";
-  workspace.proposals = [];
-  const wp = workspace.state.work_packages.find(
-    (item) => item.id === "WP-200",
-  )!;
-  wp.required_workers = 0;
-  wp.available_workers = 0;
-  wp.inspection_passed = true;
-  workspace.events = [];
-  const view = render(
-    <CoordinationWorkspace workspace={workspace} {...baseProps} pendingModel />,
-  );
-  expect(screen.getByRole("heading", { name: "已阻塞" })).toBeVisible();
-  workspace.analysis!.readiness = workspace.analysis!.readiness.map((item) =>
-    item.work_package_id === "WP-200" ? { ...item, status: "READY" } : item,
-  );
-  workspace.analysis!.constraints = [];
-  view.rerender(
-    <CoordinationWorkspace workspace={workspace} {...baseProps} pendingModel />,
-  );
-  expect(screen.getByRole("heading", { name: "可施工" })).toBeVisible();
-  expect(screen.getByText(/不代替现场核验或安全确认/)).toBeVisible();
-  expect(screen.getByText("未记录要求")).toBeVisible();
-  expect(screen.getByText("需要现场核验")).toBeVisible();
-  expect(screen.queryByText("检查有效")).toBeNull();
-});
-
-it("selects the clicked constraint before opening blocker details", () => {
-  const workspace = completed();
-  const first = workspace.analysis!.constraints.find(
-    (item) => item.work_package_id === baseProps.selected && item.blocking,
-  )!;
-  workspace.analysis!.constraints = [
-    first,
-    { ...first, id: "second-constraint", description: "Second blocker" },
-  ];
-  const calls: string[] = [];
-  render(
-    <CoordinationWorkspace
-      workspace={workspace}
-      {...baseProps}
-      onConstraint={(id) => calls.push(id)}
-      onDetails={(view) => calls.push(view)}
-    />,
-  );
-  fireEvent.click(screen.getByRole("button", { name: "问题 2" }));
-  fireEvent.click(
-    screen.getAllByRole("button", { name: /项判断依据 · 查看问题/ })[1],
-  );
-  expect(calls).toEqual(["second-constraint", "blocker"]);
+  data.stale = true;
+  ready(data);
+  view.rerender(content());
+  expect(field("当前判断")).toHaveTextContent("需要重新检查");
+  expect(inspector).toHaveTextContent("资料已更新，当前工程判断需要重新检查。");
+  expect(within(inspector).queryByText("就绪")).toBeNull();
 });

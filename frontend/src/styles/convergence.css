@@ -23,24 +23,8 @@
   border-left: 1px solid var(--line-soft);
   color: var(--muted);
 }
-.app-header .local-actions {
-  min-height: 48px;
-  margin-left: 0;
-  padding: 0 12px;
-  border: 0;
-  background: transparent;
-}
-.sidebar-section-label {
-  display: none;
-}
-.sidebar-primary {
-  padding-top: 14px;
-}
 .sidebar-primary button.active {
   color: var(--accent);
-}
-.package-nav small {
-  font-size: 10px;
 }
 .central-workspace {
   background: var(--concord-workspace-surface);
@@ -69,9 +53,9 @@
   background: var(--concord-model-surface);
 }
 @media (prefers-reduced-motion: reduce) {
-  .application-shell *,
-  .application-shell *::before,
-  .application-shell *::after {
+  .app-shell *,
+  .app-shell *::before,
+  .app-shell *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;

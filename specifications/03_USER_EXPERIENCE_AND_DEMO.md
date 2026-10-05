@@ -1,84 +1,37 @@
-# User Experience, Visual Direction, and Demo Contract
+# Demo and interaction constraints — visual direction retired
 
-## UI direction — Frozen
+**Retired UI plan:** the former fixed left/center/right shell, frozen shadcn stack
+and global run-strip direction are not current implementation instructions. Product
+navigation/composition is owned by [PRODUCT_WORKFLOW](../docs/PRODUCT_WORKFLOW.md),
+not a new mock or this historical handoff. The durable demo/safety constraints below
+remain; they are not evidence of acceptance of the dirty B/C integration.
 
-Design a **desktop-class engineering application**, not a marketing page, card-wall admin dashboard, or chat-first interface.
+## Interaction safety
 
-Primary layout pattern:
+- Navigation stays usable during long runs; stream progress and reconcile authoritative
+  state through normal queries rather than blocking the entire UI.
+- Only presentation state may update optimistically; project facts are server-owned.
+- Errors/degraded capabilities stay visible and recoverable.
+- Consequential conclusions link to persisted Evidence and exact revisions; inferred
+  interpretation is not structured engineering truth.
+- Dangerous actions show risk/approval requirements; no UI shortcut bypasses policy.
+- Common actions are keyboard accessible, focus remains visible and color is not the
+  only state signal. Respect reduced motion and use lazy heavy viewers.
 
-- persistent left project/work-package/event navigation;
-- large central workspace that can switch between Impact Graph, BIM, schedule/coordination, documents, and GIS;
-- right inspector for Evidence, revisions, constraints, element/work-package properties, and actions;
-- bottom/top run state/timeline where appropriate;
-- clear global status for current project/work package and current Agent Run.
+## Demonstration boundary
 
-Use React + Vite + TypeScript, Tailwind, shadcn/ui, React Flow, TanStack Query. UI code must be reusable by Web and Tauri Desktop.
+Synthetic demo sources are allowed when explicitly labelled. Seed/reset them through
+existing provider/repository contracts; never insert visual fixtures as fallback
+project data or hard-code final READY/BLOCKED outcomes.
 
-## Required interaction qualities
+The historical five-minute coordination story is: initially READY work package →
+change event → captured snapshot and streamed run → impact/Evidence/blockers →
+BLOCKED → proposed resolution → required human approval → explicitly simulated or
+controlled update → fresh recheck → READY only when real rules clear the blockers.
+A workforce/resource/predecessor scenario reuses the same core.
 
-- navigation and graph/viewer interaction remains responsive while an agent run is executing;
-- long-running reasoning never blocks the whole UI;
-- progressive run events arrive through AG-UI semantics, normally SSE;
-- optimistic UI is allowed only for presentation state, not authoritative project facts;
-- errors and degraded capabilities are visible and recoverable;
-- all consequential agent conclusions link to Evidence/revisions;
-- dangerous actions show risk level and approval requirement.
-
-## Main demo fixture
-
-Provide deterministic synthetic data representing a realistic building project with at least:
-
-- floors/areas/work packages;
-- design revisions V16/V17 (or equivalent);
-- structured BIM representation plus a real small IFC fixture if license/size permits;
-- schedule dependencies;
-- workforce/qualification state;
-- materials/equipment;
-- one inspection state;
-- one or more documents;
-- events for design change and workforce/resource conflict.
-
-The fixture must be seedable and resettable.
-
-## Five-minute flow
-
-1. Show an initially `READY` work package.
-2. Inject/activate a design-change event.
-3. Show Snapshot revision capture.
-4. Stream run progress.
-5. Show Impact Graph with affected work packages/sources.
-6. Show Evidence and explicit blockers.
-7. Transition to `BLOCKED`.
-8. Show resolution options and one ActionProposal.
-9. Require approval for an R3/R4-equivalent demonstration action as appropriate.
-10. Simulate/perform the controlled external state update.
-11. Re-check with a fresh Snapshot and transition to `READY` when blockers are actually cleared.
-12. Run the secondary workforce/resource case using the same engine.
-
-## Advanced capability proofs
-
-Provide small, focused proofs without bloating the main story:
-
-- IFC: import/query/select/highlight relevant element(s).
-- OR-Tools: solve a multi-task/crew/equipment/qualification fixture and show objective/result explanation.
-- Docling: parse a realistic PDF/Office document into normalized document/evidence data.
-- GIS: display project/site GeoJSON and link a project/event location when geo data exists.
-- Vision: analyze a safe demo image when model credentials are configured; show unavailable state otherwise.
-- Desktop: run the same project workspace in Tauri.
-- Server/full: capability status indicates PostgreSQL/S3/OTel/Temporal/pgvector health when enabled.
-
-## Capability UI
-
-Every optional/advanced capability reports one of:
-
-- `enabled`;
-- `available_disabled`;
-- `unavailable_dependency`;
-- `unavailable_credential`;
-- `unhealthy`.
-
-Do not equate successful import with healthy runtime integration.
-
-## Visual quality
-
-Prefer restrained engineering-product visual language: high information density, strong hierarchy, calm surfaces, clear status semantics, compact tables/panels, keyboard-friendly interactions, and limited decorative motion. Build a coherent workspace before adding many pages.
+Advanced IFC/document/solver/GIS/model/Desktop proofs are scoped capability evidence,
+not automatic Finding closure, Baseline acceptance or production qualification.
+Unavailable dependencies/credentials/health must be reported truthfully. Successful
+import alone does not establish healthy runtime integration. Current workflow,
+C target behavior and verification limits are linked from PRODUCT_WORKFLOW.

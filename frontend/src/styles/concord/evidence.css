@@ -1,0 +1,937 @@
+/*
+ * ── The evidence surface ────────────────────────────────────────────────────
+ *
+ * A Finding is a claim about something. This is that something: the exact sheet,
+ * model or extract, in the exact revision the claim was made against.
+ *
+ * It is composed canvas-first. A reviewer opens this surface to *look*, so the
+ * viewer takes the stage and the canonical record - the claim, its quality, its
+ * provenance, the exact target - is a reference rail beside it. The rail is
+ * deliberately complete and deliberately secondary: everything a decision must be
+ * able to check is one glance away, and nothing about it is on top of the drawing.
+ *
+ * The viewer internals belong to the viewer integration; this layer frames them and
+ * sets the table they sit on, and does not re-implement navigation, geometry or
+ * readiness.
+ */
+
+.evidence-workspace-host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  background: var(--c-work);
+}
+.evidence-context-surface {
+  --bim-panel--bg: transparent;
+  --bim-panel--border: none;
+  flex: 1;
+  min-height: 0;
+  border-radius: 0;
+}
+.evidence-context-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ── the object bar ───────────────────────────────────────────────────────── */
+/*
+ * One Concord bar for the whole surface, worn in the same three tiers as every other
+ * stage band: a mono kind caption, the object's own name at the action step over its
+ * revision, and the state that qualifies it. What this surface *is*, where it came
+ * from, how good the claim is, and what the viewer did - all in one line, so a
+ * reviewer never has to open a disclosure to find out whether they are looking at
+ * verified geometry. It is a paper shelf on the work plane, never a floating donor
+ * strip.
+ */
+.evidence-host-bar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-raised);
+}
+.evidence-host-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+.evidence-host-kind > svg {
+  color: var(--accent);
+}
+.evidence-host-kind-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.evidence-host-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.evidence-host-object {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--fs-action);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.evidence-host-revision {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-variant-numeric: tabular-nums;
+}
+.evidence-host-chips {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.evidence-host-chips .concord-chip[data-tone="neutral"],
+.concord-chip[data-tone="neutral"] {
+  border-color: var(--line);
+  background: var(--face-inset);
+  color: var(--ink-2);
+}
+
+/* ── the stage: rail beside canvas ────────────────────────────────────────── */
+
+.evidence-host-stage {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+/* A receipt with no viewer (nothing selected, or a state that cannot navigate)
+   takes the whole stage rather than leaving a 330px rail and an empty field. */
+.evidence-host-stage:not(:has(.evidence-canvas)) {
+  display: block;
+  overflow: auto;
+  padding: var(--space-6) var(--space-6);
+}
+.evidence-host-stage:not(:has(.evidence-canvas)) .evidence-target-receipt {
+  width: min(100%, 760px);
+  border: 0;
+  padding: 0;
+}
+
+/* ── the facts rail ───────────────────────────────────────────────────────── */
+/*
+ * The inspector beside the drafting field. It is not a second toolbar: it is the
+ * canonical record of the claim, read top to bottom - a quiet region title, the
+ * claim in the one section step, the exact target as a table with muted captions
+ * over real ink values, a clearly-marked state block, and the technical detail
+ * behind a disclosure. A reviewer scans it; it never competes with the pixels.
+ */
+.evidence-target-receipt {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  width: 320px;
+  min-height: 0;
+  padding: 0;
+  border-right: 1px solid var(--hairline);
+  background: var(--c-nav);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.evidence-receipt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+}
+/* The rail is a dock, one step below the work plane the record is read on. It has to
+   beat the transparent plane the context panel names for its own children. */
+.evidence-context-surface .evidence-target-receipt {
+  background: var(--c-nav);
+}
+.evidence-target-receipt .evidence-receipt-claim {
+  margin: 0;
+  padding: var(--space-4) var(--space-4) 0;
+  font-size: var(--fs-section);
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.evidence-receipt-caution {
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--c-warning);
+  background: var(--c-warning-surface);
+  color: var(--c-warning);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
+.evidence-receipt-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-4) 0;
+}
+.evidence-receipt-section > .t-label {
+  color: var(--muted);
+}
+/*
+ * The facts a reviewer checks before trusting the claim: which source revision,
+ * which page or element, which region. Rows, not a card per fact - a table read down
+ * its left column, with the value in real ink and tabular numerals so two readers
+ * compare the same figures.
+ */
+.evidence-primary-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line-soft);
+}
+.evidence-primary-facts > div {
+  display: grid;
+  grid-template-columns: minmax(76px, 34%) minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.evidence-primary-facts dt {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.evidence-primary-facts dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-meta);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.evidence-receipt-state {
+  margin: var(--space-4);
+}
+/* Stale evidence or a target that could not be located is a marked block, not a
+   sentence in the margin: the reader must be able to see the insufficiency. */
+.evidence-receipt-state[data-stale="true"],
+.evidence-receipt-state[data-alert="true"] {
+  padding: var(--space-3);
+  border: 1px solid var(--c-tint-danger);
+  border-left: 3px solid var(--c-danger);
+  border-radius: var(--radius-sm);
+  background: var(--c-danger-surface);
+}
+.evidence-receipt-state .workspace-state {
+  margin: 0;
+  padding: 0;
+}
+.evidence-receipt-state .workspace-state .button {
+  margin-top: var(--space-2);
+}
+
+/* ── the drafting field ───────────────────────────────────────────────────── */
+/*
+ * The drafting field. A drawing is a sheet placed on a table, a model floats in a
+ * viewport, an extract is a page - so all three sit on the same field one real step
+ * below the work plane, carrying the engineering grid. It is the *object* that gives
+ * the surface its weight: the sheet floats on the table, and there is no padded white
+ * frame around it competing for attention.
+ */
+.evidence-canvas {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background-color: var(--canvas);
+  background-image:
+    linear-gradient(var(--c-wash-canvas) 1px, transparent 1px),
+    linear-gradient(90deg, var(--c-wash-canvas) 1px, transparent 1px);
+  background-size:
+    22px 22px,
+    22px 22px;
+  box-shadow: inset 1px 0 0 var(--hairline);
+}
+/*
+ * The pre-mount state: a calm plate on the field rather than a stray line of mono
+ * text. It names what is missing in two tiers - the short state over the honest
+ * sentence - so an empty field still reads as a considered state.
+ */
+.evidence-canvas-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin: auto;
+  padding: var(--space-6);
+  text-align: center;
+}
+.evidence-canvas-idle-mark {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-lg);
+  background: var(--face-inset);
+  color: var(--muted);
+}
+.evidence-canvas-idle-state {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-action);
+  font-weight: 600;
+}
+.evidence-canvas-idle-note {
+  max-width: 44ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.7;
+}
+/* A viewer that could not open leaves its state block centred on the table: it is a
+   product state on the field, not a line of donor text at the top of an empty area. */
+.evidence-canvas > .workspace-state {
+  width: min(560px, calc(100% - var(--space-6)));
+  margin: auto;
+}
+.evidence-canvas > .workspace-state + * {
+  margin-bottom: auto;
+}
+.evidence-viewer-slot {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+/* The reopen control is a viewer tool, so it belongs on the viewer's own frame
+   rather than in the object bar: a small shelf on the field, not a floating bar. */
+.evidence-viewer-tools {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: 3;
+  display: flex;
+  gap: var(--space-1);
+  padding: 2px;
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-sm);
+  background: var(--face-raised);
+  box-shadow: var(--c-shadow-1);
+}
+.evidence-viewer-tools .button {
+  height: 24px;
+  border-color: transparent;
+  background: transparent;
+  font-size: var(--fs-label);
+}
+.evidence-viewer-tools .button:hover {
+  background: var(--face-raised);
+}
+
+/* ── the footer ───────────────────────────────────────────────────────────── */
+
+.evidence-host-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: var(--space-3);
+  min-height: 28px;
+  padding: 0 var(--space-4);
+  border-top: 1px solid var(--hairline);
+  background: var(--face-inset);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.04em;
+}
+
+/*
+ * Framing the viewer integrations.
+ *
+ * The viewer's own chrome is the viewer's: these rules set the table it sits on, give
+ * its plain controls the product's control face, and re-point the viewer's own scoped
+ * token block onto the product palette (the drawing viewer declares a cool-grey set in
+ * its own two-class scope, and this sheet's higher specificity settles it without
+ * editing the integration). Nothing here interprets geometry, navigation or readiness.
+ */
+.evidence-viewer-slot > section,
+.evidence-viewer-slot > .engineering-drawing {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+/* The drawing viewer's own token block, re-pointed at the product palette. */
+.evidence-canvas .engineering-drawing {
+  --ink: var(--c-ink);
+  --ink-muted: var(--c-ink-3);
+  --ink-faint: var(--c-line-control-soft);
+  --paper-bright: var(--c-raised);
+  --surface-pop: var(--c-inset);
+  --cobalt: var(--c-accent);
+  --accent-contrast: var(--c-on-accent);
+  --f-body: var(--font-ui);
+  --f-mono: var(--font-mono);
+}
+/* Only the single-mount viewers get a full-height host; the drawing viewer owns its own
+   scrolling paper region and must not be stretched by it. */
+.evidence-viewer-slot
+  :is([aria-label="IFC viewer"], [aria-label="CAD viewer"])
+  > div {
+  height: 100% !important;
+}
+.evidence-viewer-slot iframe {
+  height: 100% !important;
+  background: var(--c-well);
+}
+.evidence-viewer-slot [role="status"] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-1) var(--space-4);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-meta);
+}
+.evidence-viewer-slot [role="status"]::before {
+  content: "";
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  background: var(--c-info);
+}
+.evidence-viewer-slot [role="alert"] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-1) var(--space-4);
+  border-bottom: 1px solid var(--c-tint-danger);
+  background: var(--c-danger-surface);
+  color: var(--danger-fg);
+  font-size: var(--fs-meta);
+}
+.evidence-viewer-slot [role="alert"]::before {
+  content: "";
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  background: var(--c-danger);
+}
+
+/*
+ * ── the viewer's own chrome, re-skinned ─────────────────────────────────────
+ *
+ * The viewer integrations are byte-pinned donor code; this sheet may only re-point
+ * them by class selector and by the host markup around them. One rule holds for
+ * everything the viewer paints: one control language, at --control-h height and
+ * --radius-sm, in --fs-meta type, on --face-well/--face-inset faces closed by
+ * --line-control-soft boundaries, with copper spent only on the pressed or current
+ * tool. A toolbar is a *shelf* attached to the viewer - a plane separated by a
+ * hairline - never a floating white bar with a shadow. Nothing here reads geometry,
+ * navigation or readiness.
+ */
+
+/* the drawing viewer: a sheet on the drafting table, shelves above it */
+.evidence-canvas .engineering-drawing {
+  gap: 0;
+  padding: 0;
+}
+.evidence-canvas .engineering-drawing-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  min-height: calc(var(--control-h) + var(--space-3));
+  padding: var(--space-1) var(--space-4);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+}
+.evidence-canvas .engineering-drawing-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/*
+ * The drawing toolbar's "Tool" label and the workbench's "Annotate" caption are
+ * translated by the host-side chrome bridge (useViewerChromeLocalization), which swaps
+ * the donor text nodes inside the evidence viewer slot for the product's own words.
+ * There is exactly one translation mechanism here - the bridge - so nothing in CSS
+ * races it with a second painted copy.
+ */
+.evidence-canvas .engineering-drawing-toolbar button,
+.evidence-canvas .engineering-drawing-toolbar select,
+.evidence-canvas .engineering-drawing-toolbar input {
+  height: var(--control-h);
+  min-height: var(--control-h);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-sm);
+  background: var(--face-raised);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-meta);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.evidence-canvas .engineering-drawing-toolbar button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--face-raised);
+  color: var(--c-accent-deep);
+}
+.evidence-canvas .engineering-drawing-toolbar button:disabled,
+.evidence-canvas .engineering-drawing-toolbar select:disabled {
+  color: var(--muted-2);
+}
+.evidence-canvas .engineering-drawing-toolbar input {
+  width: 56px;
+}
+/* the viewer's own state lines - the measurement note, a status, an alert - read as
+   product state, not donor prose: a quiet strip with a marker, in the product's type */
+.evidence-canvas .engineering-drawing > p {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  margin: 0;
+  padding: var(--space-1) var(--space-4);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+}
+.evidence-canvas .engineering-drawing > p::before {
+  content: "";
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  background: var(--line-control-soft);
+}
+.evidence-canvas .engineering-drawing > p[role="status"]::before {
+  background: var(--c-info);
+}
+.evidence-canvas .engineering-drawing > p[role="alert"] {
+  border-bottom-color: var(--c-tint-danger);
+  background: var(--c-danger-surface);
+  color: var(--danger-fg);
+}
+.evidence-canvas .engineering-drawing > p[role="alert"]::before {
+  background: var(--c-danger);
+}
+.evidence-canvas .engineering-drawing-paper {
+  flex: 1;
+  max-height: none;
+  min-height: 140px;
+  padding: var(--space-5);
+  background: transparent;
+}
+/* the sheet itself: paper, an edge, and a shadow - the one place a drawing is an
+   object on a surface rather than a fill */
+.evidence-canvas .engineering-drawing-sheet {
+  border: 1px solid var(--line-control-soft);
+  background: var(--c-well);
+  box-shadow: var(--c-shadow-2);
+}
+.evidence-canvas .engineering-drawing-sheet svg[aria-label] rect {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 8 4;
+}
+.evidence-canvas .engineering-drawing ol[aria-label="Drawing measurements"] {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  list-style: none;
+}
+.evidence-canvas .engineering-drawing ol[aria-label="Drawing measurements"] li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/*
+ * the annotation workbench: a quiet sub-shelf under the main viewer controls.
+ * The donor draws it as a headline with its own white bar, 32px buttons and a cobalt
+ * pressed state; here it becomes second-order - an inset shelf, one caption tier down
+ * (--fs-label in --muted), controls at the product's own height and radius, and copper
+ * reserved for the armed tool.
+ */
+.evidence-canvas .annotation-workbench {
+  flex: none;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--face-inset);
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+.evidence-canvas .annotation-workbench button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: var(--control-h);
+  min-height: 0;
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--fs-meta);
+  cursor: pointer;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast);
+}
+.evidence-canvas .annotation-workbench button:hover:not(:disabled) {
+  border-color: var(--line-control-soft);
+  background: var(--face-raised);
+  color: var(--ink);
+}
+.evidence-canvas .annotation-workbench button[aria-pressed="true"],
+.evidence-canvas
+  .annotation-workbench
+  button[aria-pressed="true"]:hover:not(:disabled),
+.evidence-canvas .annotation-workbench .annotation-primary:not(:disabled),
+.evidence-canvas
+  .annotation-workbench
+  .annotation-primary:not(:disabled):hover {
+  border-color: var(--accent);
+  background: var(--c-tint-accent);
+  color: var(--c-accent-deep);
+  box-shadow: none;
+}
+.evidence-canvas .annotation-workbench button:disabled {
+  opacity: 1;
+  color: var(--muted-2);
+  cursor: default;
+}
+.evidence-canvas .annotation-workbench button:focus-visible,
+.evidence-canvas
+  .annotation-workbench
+  :is(input, select, textarea):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.evidence-canvas .annotation-tool-row,
+.evidence-canvas .annotation-properties,
+.evidence-canvas .annotation-favorites,
+.evidence-canvas .annotation-review-actions,
+.evidence-canvas .annotation-note-editor {
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-4);
+}
+.evidence-canvas .annotation-properties,
+.evidence-canvas .annotation-favorites,
+.evidence-canvas .annotation-note-editor,
+.evidence-canvas .annotation-review {
+  border-top: 1px solid var(--hairline);
+  background: var(--face-raised);
+}
+/* The caption keeps its own spacing; the bridge supplies its translated text. */
+.evidence-canvas .annotation-caption {
+  margin-right: var(--space-2);
+}
+.evidence-canvas .annotation-divider {
+  height: 18px;
+  border-left: 1px solid var(--line-soft);
+  margin: 0 var(--space-1);
+}
+.evidence-canvas .annotation-workbench label {
+  gap: var(--icon-gap);
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+}
+.evidence-canvas
+  .annotation-workbench
+  :is(input:not([type="checkbox"]):not([type="range"]), textarea, select) {
+  height: var(--control-h);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-sm);
+  background: var(--face-raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-meta);
+}
+.evidence-canvas .annotation-workbench textarea {
+  height: auto;
+  padding: var(--space-2);
+  line-height: 1.6;
+}
+.evidence-canvas .annotation-workbench input[type="range"] {
+  accent-color: var(--accent);
+}
+.evidence-canvas .annotation-swatches,
+.evidence-canvas .annotation-segments {
+  gap: var(--space-1);
+}
+.evidence-canvas .annotation-swatches button {
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  padding: 0;
+  border: 2px solid var(--face-raised);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px var(--line-control-soft);
+  background: var(--swatch);
+}
+.evidence-canvas .annotation-swatches button[aria-pressed="true"] {
+  border-color: var(--face-raised);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.evidence-canvas .annotation-segments {
+  padding: 2px;
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-sm);
+  background: var(--face-inset);
+}
+.evidence-canvas .annotation-segments button {
+  height: 22px;
+  font-size: var(--fs-label);
+  text-transform: capitalize;
+}
+.evidence-canvas .annotation-hint {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.evidence-canvas .annotation-count {
+  color: var(--c-accent-deep);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+}
+.evidence-canvas .annotation-favorites button {
+  border-color: var(--line-control-soft);
+  background: var(--face-raised);
+}
+.evidence-canvas .annotation-favorites i {
+  border-radius: 2px;
+}
+.evidence-canvas .annotation-note-editor label {
+  align-items: flex-start;
+  flex-direction: column;
+}
+.evidence-canvas .annotation-review-heading {
+  font-size: var(--fs-meta);
+}
+.evidence-canvas .annotation-review-heading span {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.evidence-canvas .annotation-match-list label {
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-sm);
+  background: var(--face-raised);
+}
+.evidence-canvas .annotation-match-list label.is-selected {
+  border-color: var(--accent);
+  background: var(--c-tint-accent);
+}
+.evidence-canvas .annotation-match-number {
+  color: var(--c-accent-deep);
+  font-family: var(--font-mono);
+}
+.evidence-canvas .annotation-split > button {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+/*
+ * the model viewport's own chrome. It overlays controls on the 3D canvas; Concord does
+ * not float a shadowed white bar over the model, so each group becomes a small shelf on
+ * the stage - a face and a hairline - with copper only on the active view or mode.
+ */
+.app-shell .evidence-canvas .viewer-actions,
+.app-shell .evidence-canvas .viewer-bottom-tools {
+  gap: var(--space-1);
+  padding: 2px;
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-sm);
+  background: var(--face-raised);
+  box-shadow: none;
+}
+.app-shell .evidence-canvas .viewer-actions button,
+.app-shell .evidence-canvas .viewer-bottom-tools button {
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+}
+.app-shell .evidence-canvas .viewer-actions button:hover:not(:disabled),
+.app-shell .evidence-canvas .viewer-bottom-tools button:hover:not(:disabled) {
+  background: var(--face-raised);
+  color: var(--ink);
+}
+.app-shell .evidence-canvas .viewer-actions button.is-active,
+.app-shell
+  .evidence-canvas
+  .viewer-actions
+  button.is-active:hover:not(:disabled),
+.app-shell .evidence-canvas .viewer-bottom-tools button.is-active,
+.app-shell
+  .evidence-canvas
+  .viewer-bottom-tools
+  button.is-active:hover:not(:disabled) {
+  background: var(--c-tint-accent);
+  color: var(--c-accent-deep);
+}
+/* The labels the viewer anchors to its own geometry, and its own centre message,
+   take the product radius and type so the model's chrome is one object, not two. */
+.app-shell .evidence-canvas .viewer-object-label {
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+}
+.app-shell .evidence-canvas .viewer-issue-label {
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--fs-meta);
+}
+.app-shell .evidence-canvas .viewer-message:not([hidden]) {
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-sm);
+  background: var(--face-raised);
+  color: var(--ink-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-meta);
+}
+
+/* the document viewer: an extract read as a document, on paper */
+.evidence-canvas [aria-label="Document viewer"] {
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  overflow-y: auto;
+}
+.evidence-canvas [aria-label="Document viewer"] > h2 {
+  font-size: var(--fs-section);
+  font-weight: 600;
+}
+.evidence-canvas [aria-label="Document viewer"] > p {
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+.evidence-canvas [aria-label="Document viewer"] article {
+  max-width: 76ch;
+  padding: var(--space-4);
+  border: 1px solid var(--line-control-soft);
+  border-radius: var(--radius-md);
+  background: var(--face-well);
+  box-shadow: var(--c-shadow-1);
+  color: var(--ink);
+  cursor: pointer;
+}
+.evidence-canvas [aria-label="Document viewer"] article:hover {
+  border-color: var(--line-control);
+}
+.evidence-canvas [aria-label="Document viewer"] article[data-selected] {
+  border-color: var(--accent);
+  box-shadow:
+    inset 3px 0 var(--accent),
+    var(--c-shadow-1);
+}
+.evidence-canvas [aria-label="Document viewer"] article > p:first-child,
+.evidence-canvas [aria-label="Document viewer"] article > small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+}
+.evidence-canvas [aria-label="Document viewer"] article > p {
+  font-size: var(--fs-body);
+  line-height: 1.8;
+}
+.evidence-canvas [aria-label="Document viewer"] table {
+  max-width: 900px;
+  border: 1px solid var(--line-control-soft);
+  background: var(--face-raised);
+}
+.evidence-canvas [aria-label="Document viewer"] caption {
+  padding-bottom: var(--space-1);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  text-align: left;
+}
+.evidence-canvas [aria-label="Document viewer"] tbody tr[data-selected] {
+  background: var(--c-tint-accent);
+  box-shadow: inset 3px 0 var(--accent);
+}
+.evidence-canvas [aria-label="Document viewer"] :is(article, tr):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* the model viewer keeps the application's own field behind the model */
+.evidence-canvas [aria-label="IFC viewer"] {
+  background: var(--c-detail);
+}
+.evidence-canvas [aria-label="IFC viewer"] > div {
+  height: 100% !important;
+}
+
+/* ── responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 1180px) {
+  .evidence-target-receipt {
+    width: 300px;
+  }
+}
+@media (max-width: 980px) {
+  .evidence-host-bar {
+    flex-wrap: wrap;
+  }
+  .evidence-host-stage {
+    flex-direction: column-reverse;
+    overflow: auto;
+  }
+  .evidence-target-receipt {
+    width: auto;
+    border-right: 0;
+    border-top: 1px solid var(--hairline);
+    overflow: visible;
+  }
+  .evidence-canvas {
+    min-height: 55vh;
+  }
+  .evidence-viewer-tools {
+    position: sticky;
+  }
+}

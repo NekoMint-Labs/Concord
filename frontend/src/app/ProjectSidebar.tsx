@@ -1,212 +1,246 @@
+/* The workspace tool rail.
+ *
+ * Donor contract: OpenTakeoff `web/src/pages/TakeoffCanvas.jsx` renders
+ * `<nav data-tool-rail>` — a column of tool faces grouped by a mono caption, with
+ * `aria-pressed` state. Concord binds its destinations to that rail; it does not
+ * invent a second navigation system.
+ *
+ * The round-2 rail is tiered rather than flat. A rail that shows ten equally
+ * weighted faces has told the reader nothing about where to start, so the faces
+ * now carry three weights:
+ *
+ *   primary    the three work modes — Work, Project, Browse. These are where the
+ *              job happens, and Work carries the open-judgement count, because
+ *              that count is the reason someone opens this application.
+ *   secondary  the object workspaces you go *into* from a mode — Model, Documents;
+ *              and the impact registers — Changes, Issues.
+ *   utility    one face. Operations, the site map, diagnostics, project settings,
+ *              layout and the control panel are administration or diagnostics:
+ *              reached deliberately, not carried permanently in first-level
+ *              navigation. They live behind 更多.
+ *
+ * The old Concord sidebar (project / model / change / issue tree plus a
+ * work-package explorer) stays gone. Destinations are work modes, not pages: the
+ * object list lives in the shell's navigator and the object itself opens in the
+ * central stage.
+ */
 import {
+  Activity,
   Box,
-  Building2,
-  ChevronsUpDown,
-  FolderOpen,
+  FileText,
+  FolderTree,
+  GitCompareArrows,
   Home,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus,
+  MoreHorizontal,
+  Search,
   Settings2,
+  ShieldCheck,
+  SlidersHorizontal,
+  Map as MapIcon,
+  Gauge,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { DTO, ProjectSourceStatus, Workspace } from "../api/client";
-import {
-  AppMenu,
-  AppMenuItem,
-  AppMenuLabel,
-  AppMenuSeparator,
-} from "../components/ui/AppMenu";
-import { AppTooltip } from "../components/ui/AppTooltip";
+import { useState } from "react";
 import { icon } from "../components/ui/icon";
-import { demoProjectName } from "../ui/demo/demoPresentation";
 import type { WorkspaceTab } from "./destinations";
 
-const workspaceLinks: {
+type RailItem = {
   tab: WorkspaceTab;
   label: string;
   icon: LucideIcon;
-}[] = [
-  { tab: "work", label: "工作", icon: Home },
-  { tab: "bim", label: "模型", icon: Box },
-  { tab: "project", label: "项目", icon: Building2 },
+  caption: string;
+};
+
+type RailGroup = {
+  caption?: string;
+  tier: "primary" | "secondary";
+  items: RailItem[];
+};
+
+const groups: RailGroup[] = [
+  {
+    caption: "工作",
+    tier: "primary",
+    items: [
+      { tab: "work", label: "工作", icon: Home, caption: "工程判断与依据" },
+      {
+        tab: "project",
+        label: "项目",
+        icon: FolderTree,
+        caption: "资料、版本与基线",
+      },
+      {
+        tab: "browse",
+        label: "浏览",
+        icon: Search,
+        caption: "查找任意工程对象",
+      },
+    ],
+  },
+  {
+    caption: "对象",
+    tier: "secondary",
+    items: [
+      { tab: "bim", label: "模型", icon: Box, caption: "BIM 模型工作区" },
+      {
+        tab: "documents",
+        label: "文档",
+        icon: FileText,
+        caption: "文档工作区",
+      },
+    ],
+  },
+  {
+    caption: "影响",
+    tier: "secondary",
+    items: [
+      {
+        tab: "impact",
+        label: "变更",
+        icon: GitCompareArrows,
+        caption: "版本变更影响",
+      },
+      {
+        tab: "packages",
+        label: "问题",
+        icon: ShieldCheck,
+        caption: "空间问题",
+      },
+    ],
+  },
 ];
 
 export function ProjectSidebar({
-  project,
-  projects,
-  recent = [],
   tab = "work",
-  collapsed = false,
-  onCollapse,
-  onProject,
-  onNewProject,
-  onOpenProject,
-  onOpenDemo,
-  onProjectSettings,
   onTab,
+  onProjectSettings,
+  onLayout,
+  onDiagnostics,
+  attention = 0,
 }: {
-  data: Workspace;
-  project: string;
-  projects: DTO<"Project">[] | undefined;
-  recent?: DTO<"Project">[];
-  sources?: ProjectSourceStatus[];
-  selected: string;
   tab?: WorkspaceTab;
-  collapsed?: boolean;
-  onCollapse: () => void;
-  onProject: (id: string) => void;
-  onNewProject?: () => void;
-  onOpenProject?: () => void;
-  onOpenDemo?: () => void;
+  onTab: (tab: WorkspaceTab) => void;
   onProjectSettings?: () => void;
-  onStructure?: () => void;
-  onSelect: (id: string) => void;
-  onTab?: (tab: WorkspaceTab) => void;
+  onLayout?: () => void;
+  onDiagnostics?: () => void;
+  /** Open engineering judgements. The rail is the only place this count lives now. */
+  attention?: number;
 }) {
-  const storedName =
-    projects?.find((item) => item.id === project)?.name ?? project;
-  const current = demoProjectName(project, storedName);
-  const demo = project === "harbor-east";
-  const otherProjects = projects
-    ?.filter(
-      (item) =>
-        item.id !== project &&
-        !recent.some((recentItem) => recentItem.id === item.id),
-    )
-    .slice(0, 5);
-
+  const [more, setMore] = useState(false);
+  const face = (item: RailItem) => {
+    const Face = item.icon;
+    return (
+      <button
+        key={item.tab}
+        type="button"
+        className={`rail-tile rail-tile-${item.tab === "work" ? "primary" : "plain"}`}
+        aria-pressed={tab === item.tab}
+        aria-label={item.label}
+        title={`${item.label} · ${item.caption}`}
+        onClick={() => onTab(item.tab)}
+      >
+        <Face {...icon} />
+        <span>{item.label}</span>
+        {item.tab === "work" && attention > 0 ? (
+          <em className="rail-count" aria-label={`${attention} 项待人工判断`}>
+            {attention}
+          </em>
+        ) : null}
+      </button>
+    );
+  };
   return (
-    <aside className="sidebar" aria-label="项目导航" inert={collapsed}>
-      <header className="sidebar-header">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            C
-          </span>
-          <span className="brand-name">
-            <strong>Concord</strong>
-          </span>
-          <AppTooltip label="收起侧栏" side="right">
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="收起侧栏"
-              onClick={onCollapse}
-            >
-              <PanelLeftClose {...icon} />
-            </button>
-          </AppTooltip>
+    <>
+      {groups.map((entry) => (
+        <div
+          key={entry.caption}
+          className={`rail-group rail-group-${entry.tier}`}
+        >
+          <span className="t-label">{entry.caption}</span>
+          {entry.items.map(face)}
         </div>
-        <div className="project-picker">
-          <AppMenu
-            label="切换项目"
-            align="start"
-            triggerClassName="project-trigger"
-            trigger={
-              <>
-                <Building2 className="project-mark" {...icon} />
-                <span className="project-name">
-                  <strong>{current}</strong>
-                </span>
-                <ChevronsUpDown className="project-chevron" {...icon} />
-              </>
-            }
-          >
-            <AppMenuLabel>当前项目</AppMenuLabel>
-            <AppMenuItem active onSelect={() => onProject(project)}>
-              {current}
-              {demo && " · 示例项目"}
-            </AppMenuItem>
-            {recent.some((item) => item.id !== project) && (
-              <>
-                <AppMenuSeparator />
-                <AppMenuLabel>最近项目</AppMenuLabel>
-                {recent
-                  .filter((item) => item.id !== project)
-                  .map((item) => (
-                    <AppMenuItem
-                      key={item.id}
-                      onSelect={() => onProject(item.id)}
-                    >
-                      {demoProjectName(item.id, item.name)}
-                      {item.id === "harbor-east" && " · 示例项目"}
-                    </AppMenuItem>
-                  ))}
-              </>
-            )}
-            {!!otherProjects?.length && (
-              <>
-                <AppMenuSeparator />
-                <AppMenuLabel>其他项目</AppMenuLabel>
-                {otherProjects.map((item) => (
-                  <AppMenuItem
-                    key={item.id}
-                    onSelect={() => onProject(item.id)}
-                  >
-                    {demoProjectName(item.id, item.name)}
-                    {item.id === "harbor-east" && " · 示例项目"}
-                  </AppMenuItem>
-                ))}
-              </>
-            )}
-            <AppMenuSeparator />
-            <AppMenuItem onSelect={() => onNewProject?.()}>
-              <Plus {...icon} /> 新建项目
-            </AppMenuItem>
-            <AppMenuItem onSelect={() => onOpenProject?.()}>
-              <FolderOpen {...icon} /> 打开项目…
-            </AppMenuItem>
-            <AppMenuItem onSelect={() => onOpenDemo?.()}>
-              <FolderOpen {...icon} /> 打开示例项目
-            </AppMenuItem>
-            <AppMenuItem onSelect={() => onProjectSettings?.()}>
-              <Settings2 {...icon} /> 项目设置
-            </AppMenuItem>
-          </AppMenu>
-        </div>
-      </header>
-
-      <div className="sidebar-content">
-        <nav className="sidebar-primary" aria-label="主要工作区">
-          {workspaceLinks.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.tab}
-                type="button"
-                className={tab === item.tab ? "active" : ""}
-                aria-current={tab === item.tab ? "page" : undefined}
-                aria-label={item.label}
-                onClick={() => {
-                  onTab?.(item.tab);
-                }}
-              >
-                <Icon {...icon} />
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-        <div className="sidebar-browse">
-          <button
-            type="button"
-            className={tab === "browse" ? "active" : ""}
-            aria-label="浏览"
-            aria-current={tab === "browse" ? "page" : undefined}
-            onClick={() => {
-              onTab?.("browse");
-            }}
-          >
-            <PanelLeftOpen {...icon} />
-            浏览
-          </button>
-        </div>
-      </div>
-      <div className="sidebar-footer">
-        <button type="button" onClick={() => onProjectSettings?.()}>
-          <Settings2 {...icon} /> 设置
+      ))}
+      <div className="rail-group rail-spacer rail-group-utility">
+        <button
+          type="button"
+          className="rail-tile rail-tile-more"
+          aria-expanded={more}
+          aria-label="更多工作区"
+          title="更多 — 活动、现场地图、诊断、布局与项目设置"
+          onClick={() => setMore((value) => !value)}
+        >
+          <MoreHorizontal {...icon} />
+          <span>更多</span>
         </button>
       </div>
-    </aside>
+      {/*
+       * The administrative tier. It is disclosed *inside* the rail rather than in a
+       * portalled menu: this is the frame, and a floating panel over a docked rail is a
+       * second material in the one place the material is supposed to be continuous.
+       * The faces are quieter than the work modes on purpose - they are reached
+       * deliberately and never carry the current position.
+       */}
+      {more && (
+        <div className="rail-group rail-group-admin">
+          <span className="t-label">管理</span>
+          <button
+            type="button"
+            className="rail-tile"
+            aria-label="活动与运行"
+            title="活动与运行 — 提交、运行与后台任务"
+            onClick={() => onTab("operations")}
+          >
+            <Activity {...icon} />
+            <span>活动</span>
+          </button>
+          <button
+            type="button"
+            className="rail-tile"
+            aria-label="现场地图"
+            title="现场地图 — 项目位置与场地范围"
+            onClick={() => onTab("gis")}
+          >
+            <MapIcon {...icon} />
+            <span>地图</span>
+          </button>
+          {onDiagnostics && (
+            <button
+              type="button"
+              className="rail-tile"
+              aria-label="能力诊断"
+              title="能力诊断 — 本地服务与解析能力"
+              onClick={onDiagnostics}
+            >
+              <Gauge {...icon} />
+              <span>诊断</span>
+            </button>
+          )}
+          {onLayout && (
+            <button
+              type="button"
+              className="rail-tile"
+              aria-label="工作区布局"
+              title="工作区布局 — 面板位置、尺寸与外观"
+              onClick={onLayout}
+            >
+              <SlidersHorizontal {...icon} />
+              <span>布局</span>
+            </button>
+          )}
+          {onProjectSettings && (
+            <button
+              type="button"
+              className="rail-tile"
+              aria-label="设置"
+              title="项目设置 — 名称、时区与结构"
+              onClick={onProjectSettings}
+            >
+              <Settings2 {...icon} />
+              <span>设置</span>
+            </button>
+          )}
+        </div>
+      )}
+    </>
   );
 }

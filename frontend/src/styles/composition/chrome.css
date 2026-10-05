@@ -1,31 +1,63 @@
 /* ---------- chrome: one 40px top edge across sidebar and header ---------- */
 
-.application-shell .brand,
-.application-shell .app-header,
-.application-shell .context-bar,
-.application-shell .local-actions {
+/*
+ * The top chrome takes the shell's dimmest plane, and the donor's own chrome
+ * bands (`.calm-header`, `.calm-context`) are the ones being assigned here: the
+ * donor paints both with `--paper-bright`, which in the graphite look is also
+ * the navigator's, the inspector's and the Work panel's plane, so the band that
+ * says "this is the window" was the same value as every column underneath it.
+ * Chrome and the window backdrop are now one material; the docks below are a
+ * step lighter; the work plane is a step lighter again.
+ */
+.app-shell .calm-header,
+.app-shell .calm-context {
+  background: var(--surface-chrome);
+}
+
+/*
+ * The accent stays flat and small. The donor's look paints two elements with the
+ * generated identity instead of a colour: the report CTA is a cobalt gradient
+ * under the workspace glow, and the pressed tool tile is a second gradient. Both
+ * are re-stated as the flat accent the rest of the product already spends -
+ * the record button keeps the accent fill and the action ink, and the active
+ * tool tile takes the same selected tint every other selection in the product
+ * takes, so "current destination" is learned once. Selectors are two classes
+ * deeper than the donor's because every Concord sheet is imported before the
+ * vendored look (`styles.css` import order).
+ */
+.app-shell.premium-workspace .calm-header .calm-report {
+  background: var(--accent);
+  background-image: none;
+  border-color: transparent;
+  color: var(--on-primary);
+  box-shadow: none;
+}
+/* The dark look's own effect is a phosphor glow it spends on three elements
+   (the pressed tool face, the report CTA and the annotation editor's active
+   tool). The accent is flat in this pass, so the effect is switched off once
+   rather than overridden at each site that spends it. */
+.app-shell.premium-workspace[data-workspace-look="graphite"],
+.app-shell.premium-workspace[data-workspace-look="hud"] {
+  --glow: none;
+}
+.app-shell.premium-workspace [data-tool-rail] button[aria-pressed="true"] {
+  background: var(--tint-select) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--accent) !important;
+}
+
+.app-shell .brand,
+.app-shell .app-header,
+.app-shell .context-bar {
   height: 40px;
   min-height: 40px;
 }
-.application-shell .brand {
-  padding: 0 8px 0 16px;
-  gap: 8px;
-}
-.application-shell .brand-mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  font-size: 10.5px;
-}
-.application-shell .brand-name strong {
-  font-size: 13.5px;
-  letter-spacing: -0.01em;
-}
-.application-shell .breadcrumb strong,
-.application-shell .breadcrumb button {
+.app-shell .breadcrumb strong,
+.app-shell .breadcrumb button {
   color: var(--ink);
 }
-.application-shell .workspace-location::before {
+.app-shell .workspace-location::before {
   margin-right: 6px;
   color: var(--line);
   font-weight: 400;
@@ -35,72 +67,146 @@
    takes the technical face for the same reason a revision does on 项目: B1, R2
    and V17 are identifiers an engineer compares across the header, the ledger and
    the table, and they read as one datum only if they are set the same way. */
-.application-shell .header-versions strong {
+.app-shell .header-versions strong {
   color: var(--ink);
   font-family: var(--font-mono);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.application-shell .header-versions .version-pending {
+.app-shell .header-versions .version-pending {
   color: var(--concord-warning-text);
 }
-.application-shell .header-versions > span,
-.application-shell .header-versions > span:not(:nth-child(2)) {
+.app-shell .header-versions > span,
+.app-shell .header-versions > span:not(:nth-child(2)) {
   padding: 0;
   border-radius: 0;
   background: none;
   color: var(--muted);
 }
-.application-shell .header-versions .version-current {
+.app-shell .header-versions .version-current {
   color: var(--ink-2);
 }
-.application-shell .header-versions > span:nth-child(3) {
+.app-shell .header-versions > span:nth-child(3) {
   color: var(--concord-warning-text);
 }
-.application-shell .header-versions i {
+.app-shell .header-versions i {
   width: 6px;
   height: 6px;
   margin-right: 6px;
 }
-.application-shell .local-actions > .button,
-.application-shell .local-actions > * > .button {
+.app-shell .local-actions bim-button {
   height: 26px;
-  padding: 0 8px;
-  border-radius: 4px;
-  color: var(--ink-2);
-  font-size: 12px;
-  font-weight: 500;
 }
 
 /* Top chrome is a location readout, not a second navigation system. */
-.application-shell .app-header {
+.app-shell .app-header {
   border-bottom: 1px solid var(--line-soft);
   background: var(--surface-workspace);
 }
-.application-shell .context-bar {
+.app-shell .context-bar {
   gap: 16px;
   padding: 0 20px;
 }
-.application-shell .breadcrumb {
+.app-shell .breadcrumb {
   color: var(--muted);
   gap: 7px;
   font-size: 12px;
 }
-.application-shell .workspace-location {
+.app-shell .workspace-location {
   margin-left: 6px;
   padding-left: 0;
   border-left: 0;
   color: var(--ink);
   font-weight: 500;
 }
-.application-shell .header-versions {
+.app-shell .header-versions {
   gap: 16px;
   color: var(--muted);
   font-size: var(--fs-label);
   margin-left: auto;
 }
-.application-shell .local-actions {
-  gap: 4px;
-  padding: 0 12px 0 8px;
-  padding-right: 16px;
+/* One donor toolbar integration owner; Radix/React retain action semantics. */
+.app-shell bim-toolbar.local-actions {
+  --bim-toolbar--bgc: transparent;
+  --bim-toolbar--border: none;
+  --bim-toolbar--bdrs: 0;
+  --bim-toolbar--w: 100%;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 40px;
+  min-height: 40px;
+  margin-left: 0;
+  padding: 0 16px 0 8px;
+}
+
+/*
+ * Chrome is a tool, not the visual subject: resting controls are labels you
+ * scan, so they sit one tier down from body ink; they come up to full ink on
+ * hover, and take the accent only when they are the current choice (pressed /
+ * expanded). The donor's own selected tint behind a pressed control is left as
+ * is - only the ink is re-assigned.
+ *
+ * The navigator's selected row is excluded: it marks itself with `aria-current`
+ * (not `aria-pressed`) and keeps its own colour, so a plain `.calm-navigator
+ * button` rule must not dim the one row that says "you are here".
+ */
+.app-shell.premium-workspace .calm-header button,
+.app-shell.premium-workspace .calm-context button,
+.app-shell.premium-workspace .calm-navigator button:not([aria-current="page"]) {
+  color: var(--muted);
+}
+.app-shell.premium-workspace .calm-header button:hover,
+.app-shell.premium-workspace .calm-context button:hover,
+.app-shell.premium-workspace
+  .calm-navigator
+  button:not([aria-current="page"]):hover {
+  color: var(--ink);
+}
+.app-shell.premium-workspace .calm-header button[aria-pressed="true"],
+.app-shell.premium-workspace .calm-header button[aria-expanded="true"],
+.app-shell.premium-workspace .calm-context button[aria-pressed="true"],
+.app-shell.premium-workspace .calm-context button[aria-expanded="true"],
+.app-shell.premium-workspace .calm-navigator button[aria-pressed="true"],
+.app-shell.premium-workspace .calm-navigator button[aria-expanded="true"] {
+  color: var(--accent);
+}
+
+/*
+ * The product name is the loudest text in the chrome. The donor sets it at 18px
+ * (--fs-xl), which shouts over every label beside it; --fs-l is a heading size
+ * one step down that still leads the row. Its colour is deliberately left alone.
+ */
+.app-shell.premium-workspace .calm-brand {
+  font-size: var(--fs-l);
+}
+
+/*
+ * A separator is a punctuation mark, not a rule that draws the eye: a shorter
+ * hairline divides without competing with the controls on either side. Its
+ * colour is deliberately left alone.
+ */
+.app-shell.premium-workspace .calm-separator {
+  height: var(--sp-3);
+}
+
+/*
+ * The left rail stops being nine bordered boxes shouting at once. The resting
+ * tiles drop their donor faces and become quiet labels; the current tile keeps
+ * the one selected face, so "where am I" is the single thing the rail says. The
+ * donor paints these with `!important` on the shared `[aria-pressed]` attribute,
+ * so the override must carry `!important` too; the inline style in the rail's
+ * markup is inert once this beats it.
+ */
+.app-shell.premium-workspace [data-tool-rail] button[aria-pressed="false"] {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--muted) !important;
+}
+.app-shell.premium-workspace
+  [data-tool-rail]
+  button[aria-pressed="false"]:hover {
+  background: var(--hover) !important;
+  color: var(--ink) !important;
 }

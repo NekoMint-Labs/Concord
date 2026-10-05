@@ -1,0 +1,607 @@
+/* Direct CSS port from OpenTakeoff workspaceChrome.css / workspacePanel.css.
+ * Copyright 2026 Kentucky AI and the OpenTakeoff contributors. Apache-2.0.
+ * Revision 60c82e34b389384401a083cefeb9389f89fbaae1.
+ * Modified for Concord: existing token names/primitives; product-only selectors.
+ * PaneSplit retains resize/stacking; no upstream appearance system is introduced. */
+
+.finding-workbench-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--surface-chrome);
+  border-bottom: 1px solid var(--line-soft);
+}
+.finding-workbench-toolbar small {
+  margin-left: 12px;
+  color: var(--muted);
+}
+.finding-workbench-toolbar > div {
+  display: flex;
+  gap: 8px;
+}
+.finding-workbench {
+  --finding-panel-width: 360px;
+  --control-height: 28px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  min-width: 0;
+}
+.finding-panel-pane,
+.finding-section {
+  margin-top: 14px;
+}
+.finding-section p {
+  font-size: var(--fs-body);
+  line-height: 1.7;
+  margin-top: 6px;
+}
+.finding-section .finding-help {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+/* Top-align so a two-line row title sits against its right-hand quality chip
+   instead of being vertically centred away from it. */
+.finding-evidence-link {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  text-align: left;
+  width: 100%;
+  gap: 8px;
+  padding: 10px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+}
+/*
+ * An evidence row carries two lines, so it cannot be a fixed-height control.
+ *
+ * `bim-button.button` fixes the host at the standard control height, which is
+ * shorter than a title plus its provenance line, so the three rows in a section
+ * collided and the list read as one block of overlapping text - the single worst
+ * thing to scan in this panel. The row keeps the control's *minimum* and grows
+ * with its copy. Two classes are needed because the host rule is
+ * `bim-button.button`; nothing about the button's own surface or states changes.
+ */
+.finding-evidence-link.button {
+  height: auto;
+  min-height: var(--control-h);
+}
+.finding-evidence-link:hover {
+  background: var(--hover);
+}
+.finding-evidence-link[aria-pressed="true"] {
+  background: var(--accent-muted);
+}
+.finding-evidence-link strong {
+  display: block;
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  color: var(--ink);
+}
+.finding-evidence-link small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  margin-top: 4px;
+}
+.finding-quality {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  font-size: var(--fs-label);
+  gap: 4px;
+  color: var(--muted);
+}
+.finding-inference {
+  padding-top: 16px;
+  border-top: 1px dashed var(--line-control-soft);
+}
+.finding-inference h4 {
+  margin-top: 12px;
+  font-size: var(--fs-meta);
+}
+.finding-workbench .finding-inference dl > div {
+  grid-template-columns: 64px 1fr;
+  line-height: 1.7;
+}
+.finding-decision-status {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+.evidence-workspace-host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  background: var(--surface-workspace);
+}
+.evidence-host-header,
+.evidence-host-footer {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+  padding: 12px 20px;
+  font-size: var(--fs-meta);
+}
+.evidence-host-header {
+  border-bottom: 1px solid var(--line-soft);
+}
+.evidence-host-header small {
+  margin-left: auto;
+  color: var(--muted);
+}
+.evidence-host-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: block;
+  padding: 24px 32px;
+  background: var(--surface-workspace);
+}
+.evidence-target-receipt {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: 0;
+  background: var(--surface-workspace);
+}
+.evidence-target-receipt > svg {
+  display: block;
+  color: var(--muted);
+  margin: 24px 0 16px;
+}
+.evidence-target-receipt h2 {
+  font-size: var(--fs-title);
+  line-height: 1.5;
+}
+.evidence-target-receipt dl {
+  margin: 16px 0;
+  font-size: var(--fs-body);
+  line-height: 1.7;
+}
+.evidence-target-receipt dl > div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  margin-top: 8px;
+  gap: 8px;
+}
+.evidence-target-receipt dt {
+  color: var(--muted);
+}
+.evidence-target-receipt dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.evidence-target-receipt code {
+  display: block;
+}
+.evidence-target-receipt p,
+.evidence-host-footer {
+  color: var(--muted);
+  font-size: var(--fs-label);
+  line-height: 1.7;
+}
+.evidence-host-footer {
+  justify-content: space-between;
+}
+@media (max-width: 1100px) {
+  .finding-workbench-toolbar small {
+    display: block;
+    margin-left: 0;
+  }
+  .evidence-host-header {
+    flex-wrap: wrap;
+  }
+  .evidence-host-header small {
+    margin-left: 0;
+  }
+}
+@media (max-width: 999px) {
+  .finding-decision-status {
+    grid-column: 1 / -1;
+  }
+  .finding-section {
+    margin-top: 0;
+  }
+  .evidence-host-stage {
+    place-items: start center;
+    padding: 16px;
+  }
+  .evidence-target-receipt {
+    padding: 16px;
+  }
+}
+
+/* ── Finding receipt: a docked panel section, not a page ─────────────────────
+   The receipt reads as one scannable document rather than a stack of donor
+   fields: an 18px object title, then a real section heading, its body, and a
+   metadata tier below it. Hierarchy is carried by type, colour and vertical
+   rhythm alone - the single donor hairline per section stays and no card is
+   introduced. The receipt is the panel's own detail plane; decisions happen in
+   place inside it, never in a modal. Higher specificity than the vendored
+   .workspace-inspector, which is imported after this file. */
+.workspace-panel .finding-receipt {
+  border-top: var(--rule-soft);
+  padding: var(--space-2) var(--space-4) 0;
+  /* Beats the donor's `max-height: 45%` on .workspace-inspector - min-height
+     wins over max-height, so the dock reserves room for complete sections
+     instead of squeezing the receipt to a clipped mid-line sliver. */
+  min-height: 300px;
+}
+/* The object-title step: the one 18px line in the receipt, in full ink so it
+   reads as the object being inspected rather than as a bigger section heading. */
+.workspace-panel .finding-receipt .workspace-inspector-title h2 {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+/* One clear step between sections, with the donor hairline carrying the seam. */
+.finding-receipt .finding-section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: var(--rule-soft);
+}
+.finding-receipt .finding-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+/* Section titles leave the mono-eyebrow tier for the UI face: 13px, 600, ink.
+   A step below the 18px title and a step above the 13px body it heads. */
+.finding-receipt .finding-section h3.t-label {
+  display: block;
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-ui);
+  font-size: var(--fs-action);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--ink);
+}
+/* Body scans softer than its heading: the section title is --ink, body --ink-2. */
+.finding-receipt .finding-section p {
+  margin-top: var(--space-1);
+  font-size: var(--fs-action);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+/* The explanatory one-liners are the metadata tier: small and quiet, scoped to
+   a section so they outrank the body `p` rule above. */
+.finding-receipt .finding-section .finding-help {
+  color: var(--muted-2);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
+
+/* The decision area is the receipt's own last section: it scrolls with the
+   receipt rather than becoming a separate footer surface. */
+.finding-decision-area {
+  margin-top: var(--space-4);
+  padding: var(--space-2) 0 var(--space-3);
+  border-top: var(--rule-soft);
+}
+.finding-decision-area .workspace-inspector-actions {
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+/* In-place decision strip / gap notice: compact, non-modal, donor rules. */
+.finding-decision-inline,
+.finding-gap-notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: var(--rule-soft);
+  border-radius: var(--r-1);
+  background: var(--paper-shadow);
+  color: var(--ink);
+}
+.finding-decision-inline:focus-visible,
+.finding-gap-notice:focus-visible {
+  outline: 2px solid var(--cobalt);
+  outline-offset: 2px;
+}
+.finding-decision-inline-title {
+  margin: 0;
+  font-size: var(--fs-s);
+  font-weight: 600;
+  color: var(--ink);
+}
+.finding-decision-inline-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-1);
+}
+.finding-decision-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.finding-decision-field input,
+.finding-decision-field textarea,
+.finding-decision-field select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--sp-1) var(--sp-2);
+  border: var(--rule-soft);
+  background: var(--paper-bright);
+  color: var(--ink);
+  font: inherit;
+}
+
+.explorer-preview-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+.finding-context-agent {
+  max-height: min(620px, 75vh);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.finding-context-questions,
+.finding-context-answer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.finding-context-answer {
+  padding-top: 12px;
+  border-top: 1px dashed var(--line-control-soft);
+}
+.finding-context-answer p {
+  font-size: var(--fs-meta);
+  line-height: 1.7;
+}
+.finding-context-answer .button {
+  white-space: normal;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.finding-follow-up-dialog {
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+}
+.finding-follow-up-dialog > .dialog-header,
+.finding-follow-up-dialog > .finding-follow-up-actions {
+  flex-shrink: 0;
+}
+.finding-follow-up {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.finding-follow-up .finding-section {
+  margin-top: 0;
+}
+.finding-recheck-sources ul,
+.finding-preview-history {
+  padding-left: 20px;
+  font-size: var(--fs-meta);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.finding-follow-up .app-select-trigger {
+  width: 100%;
+  margin-top: 8px;
+}
+.finding-follow-up .button {
+  white-space: normal;
+  text-align: left;
+}
+@media (max-width: 600px) {
+  .finding-recheck-sources {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Canonical IDs/target receipts must wrap without widening the evidence surface. */
+.evidence-target-receipt pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-label);
+}
+
+.workspace-technical-details,
+.evidence-technical-details {
+  margin-top: 12px;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  min-width: 0;
+}
+.workspace-technical-details summary,
+.evidence-technical-details summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
+.workspace-technical-details pre,
+.evidence-technical-details pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 8px 0;
+  font-size: var(--fs-label);
+}
+.workspace-technical-details dl > div,
+.finding-preview-history dl > div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 8px;
+  margin: 4px 0;
+}
+.workspace-technical-details dd,
+.finding-preview-history dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.workspace-state h3 {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.6;
+}
+.evidence-target-receipt > .workspace-state {
+  border-block: 1px solid var(--line-soft);
+  padding: 16px 0;
+  margin: 16px 0;
+}
+.evidence-target-receipt .evidence-quality {
+  margin-top: 8px;
+  font-size: var(--fs-body);
+  color: var(--ink-2);
+}
+.evidence-primary-facts {
+  padding: 12px 0;
+}
+.finding-follow-up {
+  padding: 16px 24px;
+}
+.finding-follow-up-dialog > .button {
+  margin: 12px 24px 20px;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+.finding-preview-history {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+}
+.finding-preview-history > li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.finding-preview-history dt {
+  color: var(--muted);
+}
+.finding-preview-history .finding-evidence-link {
+  white-space: normal;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.finding-quality {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 110px;
+}
+.finding-evidence-link > span:first-child {
+  min-width: 0;
+}
+.finding-evidence-link strong {
+  line-height: 1.6;
+}
+.finding-evidence-link small {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 800px) {
+  .evidence-target-receipt dl > div {
+    grid-template-columns: 90px minmax(0, 1fr);
+  }
+}
+
+/* Donor surfaces own the tonal planes; React owns only domain composition. */
+.evidence-context-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.evidence-context-surface {
+  /*
+   * The centre of the Work composition is the work plane, not a dock.
+   *
+   * This took the local object-list plane, which in the graphite look is also
+   * the navigator's, the inspector's and the Work dock's plane - so the three
+   * columns read as one field and the evidence the reader is actually working on
+   * was the same value as the list they chose it from. The receipt inside keeps
+   * its own work-plane fill (workbench.css above), which is why this only has to
+   * name the donor panel's plane.
+   */
+  --bim-panel--bg: var(--surface-workspace);
+  --bim-panel--border: none;
+  border-radius: 0;
+  min-height: 0;
+}
+.evidence-context-surface .evidence-host-stage,
+.evidence-context-surface .evidence-target-receipt {
+  background: transparent;
+}
+.model-workspace-viewport {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+bim-toolbar.finding-workbench-toolbar {
+  --bim-toolbar--border: 0;
+}
+
+.donor-toolbar-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  width: 100%;
+}
+.finding-workbench-toolbar .donor-toolbar-content {
+  justify-content: space-between;
+}
+.finding-workbench-toolbar .donor-toolbar-content > div {
+  display: flex;
+  gap: var(--space-2);
+}
+
+bim-toolbar.dialog-header {
+  --bim-toolbar--bgc: var(--surface-chrome);
+  --bim-toolbar--border: none;
+  --bim-toolbar--bdrs: var(--radius-sm);
+  --bim-toolbar--w: 100%;
+  flex-shrink: 0;
+}
+.dialog-header .donor-toolbar-content {
+  gap: var(--space-3);
+  padding: var(--space-2);
+}
+.workspace-state-surface {
+  --bim-panel--bg: var(--surface-list);
+  --bim-panel--border: none;
+  height: auto;
+  width: 100%;
+  border-radius: var(--radius-sm);
+}
+.workspace-state-content {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-content: start;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3);
+}
+.workspace-state.is-compact {
+  padding: var(--space-2) 0;
+}

@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Button } from "../components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Status } from "../components/Status";
+import { html } from "lit";
+import { ThatOpenDataTable } from "../components/ThatOpenDataTable";
+import { statusLabel, statusTone } from "../ui/labels";
 
 const capabilityNames: Record<string, string> = {
   database: "项目数据库",
@@ -57,64 +58,69 @@ export function Capabilities() {
     queryFn: () => api.capabilities(probe),
   });
   return (
-    <div className="content-view">
-      <div className="view-heading">
-        <div>
-          <h2>能力状态</h2>
-        </div>
-        <Button
-          size="sm"
-          variant="secondary"
+    <main className="workspace-stage-surface capabilities-stage">
+      {/* Capability health diagnoses the installation, not the selected work
+          package: it is local information inside the stage, not a page. The band
+          carries the probe control and the running profile only. */}
+      <header className="workspace-stage-band">
+        <span className="t-label">能力状态</span>
+        <span className="dot-leader" aria-hidden="true" />
+        <small>运行配置：{profile.data?.profile ?? "加载中"}</small>
+        <button
+          type="button"
           onClick={() => {
             setProbe(true);
             void capabilities.refetch();
           }}
         >
           探测服务
-        </Button>
-        <span className="profile-tag">
-          运行配置：{profile.data?.profile ?? "加载中"}
-        </span>
+        </button>
+      </header>
+      <div className="workspace-stage-body">
+        {profile.data && (
+          <div className="profile-summary">
+            <strong>{profile.data.runtime}</strong>
+            <span>
+              本地服务 {profile.data.database} / {profile.data.storage}
+            </span>
+            <p>
+              {profileLabels[profile.data.authentication] ??
+                profile.data.authentication}
+            </p>
+          </div>
+        )}
+        {capabilities.error && <p role="alert">能力请求失败。</p>}
+        <ThatOpenDataTable
+          aria-label="能力状态表"
+          className="capability-table"
+          columns={[
+            { name: "能力", width: "minmax(160px, 1fr)" },
+            { name: "实现", width: "minmax(180px, 1fr)" },
+            { name: "状态与原因", width: "minmax(240px, 2fr)" },
+          ]}
+          hiddenColumns={["状态"]}
+          data={(capabilities.data?.capabilities ?? []).map((cap) => ({
+            id: cap.name,
+            data: {
+              能力: capabilityLabel(cap.name),
+              实现: cap.implementation,
+              状态: cap.status,
+              状态与原因: `${reasonLabel(cap.reason)}${cap.service_reachable === null ? " · 尚未探测外部服务连通性" : ""}`,
+            },
+          }))}
+          dataTransform={{
+            能力: (value) => html`<strong>${value}</strong>`,
+            状态与原因: (value, row) =>
+              html`<div>
+                <span
+                  data-status=${row.状态}
+                  style=${`color: var(${statusTone(String(row.状态 ?? "")) === "blocked" ? "--danger-fg" : "--ink-2"})`}
+                  >${statusLabel(String(row.状态 ?? ""))}</span
+                ><br /><small>${value}</small>
+              </div>`,
+          }}
+        />
       </div>
-      {profile.data && (
-        <div className="profile-summary">
-          <strong>{profile.data.runtime}</strong>
-          <span>
-            本地服务 {profile.data.database} / {profile.data.storage}
-          </span>
-          <p>
-            {profileLabels[profile.data.authentication] ??
-              profile.data.authentication}
-          </p>
-        </div>
-      )}
-      {capabilities.error && <p role="alert">能力请求失败。</p>}
-      <table className="data-table capability-table">
-        <thead>
-          <tr>
-            <th>能力</th>
-            <th>实现</th>
-            <th>状态 / 原因</th>
-          </tr>
-        </thead>
-        <tbody>
-          {capabilities.data?.capabilities.map((cap) => (
-            <tr key={cap.name}>
-              <td>
-                <strong>{capabilityLabel(cap.name)}</strong>
-              </td>
-              <td>{cap.implementation}</td>
-              <td>
-                <Status value={cap.status} />
-                <small>{reasonLabel(cap.reason)}</small>
-                {cap.service_reachable === null && (
-                  <small>尚未探测外部服务连通性</small>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    </main>
   );
 }

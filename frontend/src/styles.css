@@ -1,3 +1,10 @@
+/* The vendored donor declares a Google-Fonts @import inside tokens.css. Concord
+ * is a local-first product: `frontend/e2e/real-project.spec.ts` holds
+ * `expect(remoteRequests).toEqual([])`, so the app must not fetch anything from
+ * the public internet at load. The import is therefore deliberately not
+ * re-declared here — the build drops it, and the donor font stack falls back to
+ * `system-ui` exactly as the donor itself specifies when the network is
+ * unavailable. */
 @import "tailwindcss";
 @import "@xyflow/react/dist/style.css";
 @import "maplibre-gl/dist/maplibre-gl.css";
@@ -8,6 +15,7 @@
 @import "./styles/ui.css";
 @import "./styles/shell.css";
 @import "./styles/features/inspector.css";
+@import "./styles/features/context-inspector.css";
 @import "./styles/features/documents.css";
 @import "./styles/features/events.css";
 @import "./styles/features/operations.css";
@@ -22,3 +30,21 @@
 @import "./styles/features/mapping.css";
 
 @import "./styles/features/agent-context.css";
+
+@import "./styles/workbench.css";
+@import "./vendor/opentakeoff/styles/tokens.css";
+@import "./vendor/opentakeoff/styles/app.css";
+@import "./vendor/opentakeoff/styles/premiumWorkspace.css";
+@import "./vendor/opentakeoff/components/workspaceChrome.css";
+@import "./vendor/opentakeoff/components/workspacePanel.css";
+/* The Concord material is a single layer imported last: it owns the palette
+ * (concord/tokens.css) and settles the donor + Concord sheets in one place
+ * instead of adding a fourth opinion about a button. */
+@import "./styles/concord/tokens.css";
+@import "./styles/concord/theme.css";
+@import "./styles/concord/shell.css";
+@import "./styles/concord/work.css";
+@import "./styles/concord/evidence.css";
+@import "./styles/concord/surfaces.css";
+@import "./styles/concord/secondary.css";
+@import "./styles/concord/entry.css";

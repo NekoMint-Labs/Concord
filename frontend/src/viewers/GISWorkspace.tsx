@@ -177,19 +177,10 @@ export default function GISWorkspace({
       ]);
   }, [selected, data.data, ready]);
   return (
-    <section className="gis-workspace">
-      <div className="view-toolbar">
-        <h2>现场地图</h2>
-        <span className="viewer-toolbar-note">项目现场与工作包位置</span>
-        <div className="viewer-toolbar-actions">
-          <span className="viewer-toolbar-note" role="status">
-            {failed ? "地图不可用" : ready ? "地图已就绪" : "正在加载地图"}
-          </span>
-        </div>
-      </div>
+    <main className="workspace-stage-surface gis-workspace">
       {/* Minimum context so a reader can tell what they are looking at: what the
-          polygon is, what the points are, and which work package is current. Not
-          a dashboard. */}
+          polygon is, what the points are, the map state, and which work package
+          is current. It is not a dashboard and not a page heading. */}
       <div className="gis-context">
         <ul className="gis-legend">
           <li>
@@ -201,6 +192,9 @@ export default function GISWorkspace({
             工作包位置
           </li>
         </ul>
+        <span className="gis-status" role="status">
+          {failed ? "地图不可用" : ready ? "地图已就绪" : "正在加载地图"}
+        </span>
         <p className="gis-selected">
           <span>当前工作包</span>
           {selected ? (
@@ -214,7 +208,9 @@ export default function GISWorkspace({
           )}
         </p>
       </div>
-      <div className="map-stage" ref={target} aria-label="项目现场地图" />
+      <div className="workspace-stage-body gis-stage-body">
+        <div className="map-stage" ref={target} aria-label="项目现场地图" />
+      </div>
       <p className="viewer-note">
         数据来源：项目本地 GeoJSON；未连接外部商业地图服务。
       </p>
@@ -223,6 +219,6 @@ export default function GISWorkspace({
           {`地图不可用：${error || data.error?.message}。工作包仍可在“工作包”视图中查看。`}
         </div>
       )}
-    </section>
+    </main>
   );
 }

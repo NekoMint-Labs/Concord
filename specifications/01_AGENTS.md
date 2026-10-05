@@ -1,10 +1,13 @@
-# AI Implementation Entry Point
+# Contributor constraint routing
 
-> Read this file first. It is the execution contract and document map.
+Read [00_READ_ME_FIRST](00_READ_ME_FIRST.md) first. This is a constraint map,
+not an autonomous execution contract. Current user scope takes priority.
 
 ## Mission
 
-Build the complete **Construction Coordination Agent** reference implementation: a local-first construction coordination and constraint-removal application that turns project change into traceable impacts, constraints, resolutions, controlled actions, and readiness re-checks.
+Preserve Concord's local-first construction coordination loop: trace project change
+through impacts, constraints, resolutions, controlled actions and readiness rechecks.
+Implement only the assigned scope; this document never authorizes a full rebuild.
 
 Invariant loop:
 
@@ -14,41 +17,28 @@ The finished product is not a chatbot, not a generic project-management suite, a
 
 ## Authority
 
-When personal implementation preference conflicts with this bundle, follow this bundle.
-
-Priority:
-
-1. explicit current user instruction;
-2. Frozen decisions in this bundle;
-3. Required/Default implementation decisions;
-4. consolidated decisions in `16_DEPLOYMENT_PROFILES_DECISIONS.md`;
-5. general prose.
+Priority: explicit current user scope; relevant durable safety/technical constraints;
+current contracts and PRODUCT_WORKFLOW; retained requirements/intent; historical prose.
+Retired UI directions, prompts and superseded frontend mandates have no authority.
 
 If current third-party APIs differ from an example, consult current official documentation and make the smallest compatible adjustment without changing project-owned boundaries. Record the adjustment.
 
-## Mandatory first read
+## Read by task
 
-Before meaningful implementation read:
-
-1. `02_PRODUCT_REQUIREMENTS.md`
-2. `03_USER_EXPERIENCE_AND_DEMO.md`
-3. `04_SYSTEM_ARCHITECTURE.md`
-4. `05_DOMAIN_DATA_SNAPSHOT_EVIDENCE.md`
-5. `13_SECURITY_PRIVACY_ACTIONS.md`
-6. `15_ENGINEERING_TESTING_CI.md`
-7. `16_DEPLOYMENT_PROFILES_DECISIONS.md`
-
-Then route by task:
+Read only the constraints needed for the concrete change. Architecture (`04`),
+snapshot/Evidence (`05`) and security (`13`) apply when their boundaries are touched.
+Routes below are relative to the repository root for `docs/` and to this directory
+for numbered specifications:
 
 | Work | Read |
 |---|---|
-| Product/UI/demo | `02`, `03`, `10` |
+| Product/UI/demo | `docs/PRODUCT_WORKFLOW.md`, then retained constraints in `02`, `03`, `10` |
 | Domain/persistence/snapshot/evidence | `05`, `12` |
 | Agent/LLM/vision | `06` |
 | DBOS/Temporal/events/context/tools | `07` |
 | Provider interfaces/integrations | `08` |
 | IFC/Docs/OR-Tools | `09` |
-| Frontend/BIM/GIS | `10` |
+| Frontend/BIM/GIS | `docs/PRODUCT_WORKFLOW.md`, `docs/EVIDENCE_VIEWER_ADAPTERS.md`, then `10` |
 | Tauri/Desktop | `11` |
 | Storage/retrieval/Postgres/pgvector | `12` |
 | Security/approval/privacy | `13` |
@@ -71,13 +61,16 @@ Then route by task:
 11. Never make PostgreSQL, Temporal, MinIO, OTel collector, cloud LLM credentials, or a dedicated service mandatory for local demo startup.
 12. Do not fake vendor integrations when no real API contract/credential exists.
 
-## Implementation posture
+## Task scope and evidence
 
-The strong coding agent is authorized to keep progressing autonomously inside these boundaries. Do not stop at plans, scaffolds, TODOs, placeholder adapters, or mock-only screens if the environment permits implementation.
+The former autonomous implementation posture and `17_FINAL_IMPLEMENTATION_PROMPT.md`
+are retired. Follow current user scope, owner coordination and review gates in
+[TEAM_DEVELOPMENT](../TEAM_DEVELOPMENT.md). Do not resume stopped work, widen a
+documentation task or claim acceptance from requirements. [PRODUCT_WORKFLOW](../docs/PRODUCT_WORKFLOW.md)
+owns current product behavior; [STATUS](../STATUS.md) and [VERIFICATION](../VERIFICATION.md)
+separate historical main evidence from the unaccepted local integration.
 
-Use vertical integration milestones, but continue past the first slice until the full final Definition of Done in `17_FINAL_IMPLEMENTATION_PROMPT.md` is satisfied.
-
-When an external integration cannot be live-verified because credentials/service/runtime are unavailable:
+When an in-scope external integration cannot be live-verified because credentials/service/runtime are unavailable:
 
 - implement the adapter against the real documented API/library;
 - add contract/unit tests and a deterministic fake where appropriate;

@@ -1,3 +1,7 @@
 # Generated API contract artifacts; regenerate, never reformat by hand.
 openapi.json
 src/api/schema.ts
+# Vendored OpenTakeoff workspace donor: byte-identical upstream files.
+# Recorded with digests in src/vendor/opentakeoff/README.md; reformatting would
+# break the copy-verbatim guarantee, so they are excluded from formatting.
+src/vendor/opentakeoff/

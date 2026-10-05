@@ -1,13 +1,28 @@
-import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { EmptyWorkPackages, WorkspaceViews } from "./WorkspaceViews";
+import { EmptyWorkPackages } from "./WorkspaceViews";
+import { App } from "../App";
 import fixture from "../../tests/fixtures/inspector.json";
 import { api, type InvestigationReport, type Workspace } from "../api/client";
-import type { WorkspaceInspectorView } from "../features/InvestigationInspector";
 
-afterEach(() => vi.restoreAllMocks());
+// Only the transport is isolated; App, Work and destination composition are real.
+vi.mock("../api/stream", () => ({ useRunStream: () => ({ events: [] }) }));
+
+const clients: QueryClient[] = [];
+afterEach(() => {
+  cleanup();
+  clients.splice(0).forEach((client) => client.clear());
+  vi.restoreAllMocks();
+  localStorage.clear();
+});
 
 it("offers the existing work-package creation flow from a fresh workspace", () => {
   const onCreate = vi.fn();
@@ -19,11 +34,9 @@ it("offers the existing work-package creation flow from a fresh workspace", () =
   expect(onCreate).toHaveBeenCalledOnce();
 });
 
-it("keeps the requested Action inspector open after reviewing a report's proposal", async () => {
-  vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
-  vi.spyOn(api, "documents").mockResolvedValue([]);
-  vi.spyOn(api, "baselines").mockResolvedValue([]);
+it("keeps the requested Action inspector open after reviewing a report's proposal from the real Work/App entry", async () => {
   const data = structuredClone(fixture.waiting) as unknown as Workspace;
+  const project = data.state.project.id;
   const report: InvestigationReport = {
     run_id: "investigation",
     analysis_id: "analysis",
@@ -38,7 +51,8 @@ it("keeps the requested Action inspector open after reviewing a report's proposa
       source_id: "model",
       from_revision_id: "r1",
       to_revision_id: "r2",
-      work_package_ids: ["WP-200"],
+      // Source-only reports must find their own proposal, not the selected WP.
+      work_package_ids: [],
       area_ids: [],
       element_ids: [],
     },
@@ -50,68 +64,72 @@ it("keeps the requested Action inspector open after reviewing a report's proposa
   )!;
   proposal.run_id = report.run_id;
   proposal.generation = report.generation;
+  const unrelatedTitle = "Unrelated previous report proposal";
+  data.proposals.unshift({
+    ...proposal,
+    id: "previous-proposal",
+    run_id: "previous-investigation",
+    title: unrelatedTitle,
+  });
   data.analysis!.id = report.analysis_id;
-  data.analysis_run!.id = report.run_id;
-  data.analysis_run!.generation = report.generation;
-  data.analysis_run!.analysis_id = report.analysis_id;
-  // Source-only reports must find their own proposal, not rely on requested WP selectors.
-  report.scope.work_package_ids = [];
-  const noop = () => {};
-  function Host() {
-    const [selected, setSelected] = useState("WP-100");
-    const [detailsOpen, setDetailsOpen] = useState(true);
-    const [view, setView] = useState<WorkspaceInspectorView>("investigation");
-    return (
-      <WorkspaceViews
-        project={data.state.project.id}
-        data={data}
-        selected={selected}
-        selectedConstraint=""
-        selectedElement=""
-        selectedSpatialIssue=""
-        onElementSelected={noop}
-        onSpatialIssueSelected={noop}
-        tab="work"
-        busy={false}
-        detailsOpen={detailsOpen}
-        inspectorView={view}
-        perform={async () => {}}
-        onTab={noop}
-        onSelected={(id) => {
-          setSelected(id);
-          setDetailsOpen(false);
-        }}
-        onConstraint={noop}
-        onDetailsOpen={setDetailsOpen}
-        onInspectorView={setView}
-        onRecheck={noop}
-        onStructure={noop}
-        report={report}
-        investigationContext={{
-          projectName: "Project",
-          workPackageId: "WP-200",
-          elementIds: [],
-        }}
-        onSourceContext={noop}
-        onBimContext={noop}
-        onAgentRun={noop}
-        onInvestigateSource={noop}
-        onInvestigateBim={noop}
-        onInspectImpact={noop}
-      />
-    );
-  }
+  const run = {
+    ...data.analysis_run!,
+    id: report.run_id,
+    project_id: project,
+    category: "investigation" as const,
+    generation: report.generation,
+    analysis_id: report.analysis_id,
+  };
+  data.analysis_run = run;
+  vi.spyOn(api, "projects").mockResolvedValue([data.state.project]);
+  vi.spyOn(api, "workspace").mockResolvedValue(data);
+  vi.spyOn(api, "profile").mockResolvedValue(
+    {} as Awaited<ReturnType<typeof api.profile>>,
+  );
+  vi.spyOn(api, "sourceStatuses").mockResolvedValue([]);
+  vi.spyOn(api, "documents").mockResolvedValue([]);
+  vi.spyOn(api, "baselines").mockResolvedValue([]);
+  vi.spyOn(api, "sourceRevisions").mockResolvedValue([]);
+  vi.spyOn(api, "capabilities").mockResolvedValue({ capabilities: [] });
+  vi.spyOn(api, "engineeringFindings").mockResolvedValue([]);
+  vi.spyOn(api, "runs").mockResolvedValue([run]);
+  vi.spyOn(api, "run").mockResolvedValue(run);
+  vi.spyOn(api, "investigation").mockResolvedValue(report);
+  const approve = vi.spyOn(api, "approve");
+  const reject = vi.spyOn(api, "reject");
+  const execute = vi.spyOn(api, "execute");
+  localStorage.setItem("concord:last-project", project);
+  localStorage.setItem(`concord:package:${project}`, "WP-100");
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  clients.push(client);
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({
-          defaultOptions: { queries: { retry: false, gcTime: 0 } },
-        })
-      }
-    >
-      <Host />
+    <QueryClientProvider client={client}>
+      <App />
     </QueryClientProvider>,
   );
+  const work = await screen.findByRole("complementary", { name: "工作与审核" });
+  expect(work).toBeVisible();
+  await waitFor(() => {
+    expect(api.investigation).toHaveBeenCalledWith(project, report.run_id);
+    expect(
+      client.getQueryData([
+        "investigation-report",
+        project,
+        run.id,
+        run.generation,
+        run.analysis_id,
+      ]),
+    ).toEqual(report);
+  });
+  fireEvent.click(within(work).getByRole("button", { name: "打开报告 →" }));
+  const investigation = await screen.findByRole("complementary", {
+    name: "工程调查详情",
+  });
+  expect(investigation).toHaveTextContent(report.answer.summary);
+  expect(investigation).not.toHaveTextContent(unrelatedTitle);
+  // Follow the real inspector action, not a test-only navigation Host.
   fireEvent.click(
     await screen.findByRole("button", { name: "审查处理方案 →" }),
   );
@@ -122,4 +140,17 @@ it("keeps the requested Action inspector open after reviewing a report's proposa
   expect(
     within(action).getByRole("button", { name: "建议处理" }),
   ).toHaveAttribute("aria-current", "true");
+  expect(action).not.toHaveTextContent(unrelatedTitle);
+  expect(screen.getByRole("combobox", { name: "工作包" })).toHaveValue(
+    "WP-200",
+  );
+  expect(
+    within(action).getByRole("button", { name: "批准 R4" }),
+  ).toHaveAttribute("aria-disabled", "true");
+  expect(
+    within(action).getByRole("button", { name: "执行并重新检查" }),
+  ).toHaveAttribute("aria-disabled", "true");
+  expect(approve).not.toHaveBeenCalled();
+  expect(reject).not.toHaveBeenCalled();
+  expect(execute).not.toHaveBeenCalled();
 });
