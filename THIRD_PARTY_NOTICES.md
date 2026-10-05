@@ -101,16 +101,16 @@ patterns and the design lineage is retained.
 - License: Apache-2.0; distributed copy: `frontend/public/licenses/OpenTakeoff-APACHE-2.0.txt`
 - Upstream NOTICE: retained in `frontend/public/licenses/OpenTakeoff-NOTICE.txt`
 - Copied verbatim into `frontend/src/vendor/opentakeoff/` (byte-identical, unmodified):
-  `web/src/styles/tokens.css` → `styles/tokens.css`,
   `web/src/styles/app.css` → `styles/app.css`,
   `web/src/styles/premiumWorkspace.css` → `styles/premiumWorkspace.css`,
   `web/src/components/workspaceChrome.css` → `components/workspaceChrome.css`,
   `web/src/components/workspacePanel.css` → `components/workspacePanel.css`.
+- Adapted: `web/src/styles/tokens.css` → `frontend/src/vendor/opentakeoff/styles/tokens.css`; the sole Concord adaptation is removal of the remote Google Fonts `@import` for local/offline-safe operation. Typography tokens and font-family fallback stacks are unchanged; this file is no longer byte-identical.
   Provenance and per-file digests: `frontend/src/vendor/opentakeoff/README.md`.
 - Ported to TypeScript with only type annotations added: `web/src/brand/icons.jsx` → `brand/icons.tsx`, `web/src/lib/ui.js` → `lib/ui.ts`, `web/src/lib/keys.ts` → `lib/keys.ts`.
 - Ported with product edits (dock set / layout key / copy): `web/src/lib/workspaceLayout.js` → `frontend/src/layout/workspaceLayout.ts`; `web/src/lib/focusMode.js` → `frontend/src/layout/focusMode.ts`; `web/src/components/WorkspaceLayout.jsx` → `frontend/src/layout/WorkspaceLayout.tsx`; `web/src/components/WorkspaceChrome.jsx` → `frontend/src/app/WorkspaceChrome.tsx`; `web/src/components/WorkspacePanel.jsx` → `frontend/src/features/WorkPanel.tsx`.
 - Modifications: TypeScript, Chinese product copy, Concord navigation and Finding/evidence data, and the Concord dock set (Work and the source navigator; the donor measuring-tools/Sheets/Takeoffs docks have no Concord counterpart). Removed estimating, quantities, pricing, premium, OCR, geometry and alternative-appearance concepts.
-- No upstream font binaries are installed; `styles/tokens.css` retains Google Fonts `@import` declarations. The entry does not re-declare them; no-egress behavior requires build/browser verification, not an assumption from this notice. B copied no engineering parser/viewer runtime or donor-specific domain contract. C's separately pinned Drawing adaptation is listed below. Fixtures are not production fallback records.
+- No upstream font binaries or replacement font assets are installed; `styles/tokens.css` no longer imports remote Google Fonts. No-egress behavior still requires build/browser verification, not an assumption from this notice. B copied no engineering parser/viewer runtime or donor-specific domain contract. C's separately pinned Drawing adaptation is listed below. Fixtures are not production fallback records.
 
 ## Lit runtime
 
