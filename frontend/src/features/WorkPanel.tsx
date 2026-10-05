@@ -311,7 +311,7 @@ export function WorkPanel({
             />
           </label>
         </div>
-        <div className="workspace-list" aria-label="工作事项">
+        <div className="workspace-list workspace-summary" aria-label="工作事项">
           {findings.isPending && !total && (
             <p className="workspace-receipt-note" role="status">
               正在读取工程 Findings…
