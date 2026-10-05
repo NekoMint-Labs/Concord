@@ -1,0 +1,20 @@
+--- a/src/types/index.ts
++++ b/src/types/index.ts
+@@ -121,6 +121,8 @@
+   up?:       Vec3Like
+   /** Vertical field of view in degrees (fallback 45 for orthographic). */
+   fovDeg:    number
++  cameraKind?: 'perspective' | 'orthogonal'
++  viewToWorldScale?: number
+   aspect:    number
+ }
+ 
+@@ -1510,6 +1512,8 @@
+   fieldOfView?:      number
+   aspectRatio?:      number
+   componentGuids?:   string[]
++  cameraKind?: 'perspective' | 'orthogonal'
++  viewToWorldScale?: number
+   /**
+    * Section planes in force when the viewpoint was taken. Absent = not
+    * recorded (older captures): opening it leaves the current cuts alone.

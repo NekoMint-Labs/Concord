@@ -1,0 +1,10 @@
+{
+  "revision": "60c82e34b389384401a083cefeb9389f89fbaae1",
+  "sha256": {
+    "components/AnnotationWorkbench.jsx": "2babbfbe020f1d3db1e7bf3b2febf6f93045adbb7b3c87970ad75e922021b50c",
+    "components/AnnotationWorkbench.css": "5cad3ade594ced37938c31fa4a42240ed6b92c0ff36b509f2187c3a1cefa7ebb",
+    "lib/annotationTools.js": "50f5dd6ea960c09977b6d5cf16512ba64515b576181a81997460835386ae9a82",
+    "lib/shapeCommands.js": "5fa321d0f6ee4114f39e3a8070cb8a3bc09f11d189be5a99fe86dbdc559a3912",
+    "lib/noteFields.ts": "f1e2ab31fd7f536245405bf5e3ea1e7d55fbbc2cd0f1f30adf4a7eb73d9e3d8d"
+  }
+}

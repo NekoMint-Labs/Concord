@@ -1,0 +1,46 @@
+--- a/src/lib/validator.ts
++++ b/src/lib/validator.ts
+@@ -12,6 +12,7 @@
+ //   • Model-aware — all operations accept an optional modelId so results are
+ //     stored under the correct model key when multiple models are loaded.
+ 
++import { readIndex, writeIndex, indexDiagnostics } from './concord-index-cache'
+ import { match } from 'ts-pattern'
+ import { useValidationStore } from '../stores/validationStore'
+ import { useModelStore }      from '../stores/modelStore'
+@@ -485,6 +486,19 @@
+     return
+   }
+ 
++  const cached = entryAtStart ? await readIndex(entryAtStart.opfsCacheKey) : null
++  if (resolvedId && modelRegistry.get(resolvedId) !== entryAtStart) return
++  if (cached && resolvedId) {
++    try {
++      const tree = parseSpatialNodeArray(cached.tree, 'cached spatial tree')
++      if (tree.length > 0) {
++        setSpatialTreeForModel(resolvedId, tree)
++        useValidationStore.getState().setDecompMapForModel(resolvedId, new Map(cached.decomp))
++        indexDiagnostics.hits++
++        return
++      }
++    } catch { indexDiagnostics.failures++ }
++  }
+   const ifcBuffer = resolveBuffer(modelId)
+   const bufferError = validateBufferForWorker(ifcBuffer)
+   if (bufferError) {
+@@ -505,6 +519,7 @@
+   // buffer for validation, IDS and export. The loading engine calls this only
+   // once its index phase holds a convert slot, so the copy and the parse are
+   // inside that admission.
++  indexDiagnostics.builds++
+   const bufferCopy = ifcBuffer!.slice(0)
+   const id = `tree-${++treeRequestSeq}`
+   log.debug(`Building spatial tree for "${resolvedId ?? 'active'}", id:`, id)
+@@ -523,6 +538,7 @@
+           return
+         }
+         const tree = parseSpatialNodeArray(msg.tree, 'buildSpatialTree')
++        if (entryAtStart && tree.length > 0) void writeIndex(entryAtStart.opfsCacheKey, { tree, decomp: msg.decomp ?? [] })
+         log.debug(`Spatial tree ready for "${resolvedId ?? 'active'}", nodes:`, tree.length)
+         if (resolvedId) {
+           setSpatialTreeForModel(resolvedId, tree)

@@ -144,6 +144,23 @@ def capabilities(svc, probe: bool = False) -> list[Capability]:
                 "distributed runtime", "Temporal", "temporalio", settings.runtime == "temporal"
             ),
             optional("IFC import", "IfcOpenShell", "ifcopenshell", True),
+            optional("IFC clash", "IfcClash", "ifcclash", False),
+            optional("IDS validation", "IfcTester", "ifctester", False),
+            optional(
+                "BCF transport",
+                "buildingSMART BCF client",
+                "bcf",
+                False,
+                distribution="bcf-client",
+            ),
+            optional(
+                "local OCR",
+                "RapidOCR / ONNX Runtime",
+                "rapidocr",
+                False,
+                distribution="rapidocr",
+                reason="Dependency inspection only; local ONNX models and OCR are not probed",
+            ),
             optional("optimization", "OR-Tools CP-SAT", "ortools", settings.optimization_enabled),
             optional(
                 "advanced documents", "Docling", "docling", settings.document_parser == "docling"

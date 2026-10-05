@@ -1,0 +1,32 @@
+{
+  "name": "concord-cad-integration",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.17.1",
+  "scripts": {
+    "build": "tsc --noEmit && vite build && node scripts/copy-assets.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mlightcad/cad-simple-viewer": "1.7.3",
+    "@mlightcad/cad-diff-viewer": "1.7.3",
+    "@mlightcad/data-model": "1.15.1",
+    "@mlightcad/three-renderer": "1.7.3",
+    "@mlightcad/mtext-parser": "1.5.3",
+    "@mlightcad/mtext-renderer": "0.13.2",
+    "lodash-es": "4.17.21",
+    "three": "0.172.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "@types/node": "22.20.1",
+    "@types/three": "0.172.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
