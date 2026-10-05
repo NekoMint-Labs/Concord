@@ -84,7 +84,8 @@ settings/restart invalidation, IDS selection/originals, stale closure rejection 
 explicit human closure. Additional real cases reject missing/partial geometry and
 optional IDS rules with no applicable elements.
 
-Default deployment registration remains A-owned and pending. Product/Golden,
+Configuration-driven deployment registration is implemented with two disabled-by-default
+switches and awaits A review; see `ENGINEERING_STARTUP.md`. Product/Golden,
 large-model, native packaging and native connector acceptance are separate work;
 these tests do not qualify those boundaries or complete Issue #17.
 

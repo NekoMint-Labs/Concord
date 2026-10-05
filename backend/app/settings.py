@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     cad_comparison_enabled: bool = False
     comparison_frontend_root: Path | None = None
     comparison_node: Path | None = None
+    # Optional engineering engines stay off in local/desktop profiles unless explicitly enabled.
+    ifc_clash_enabled: bool = False
+    ids_validation_enabled: bool = False
     vector_enabled: bool = False
     otel_enabled: bool = False
     otel_endpoint: str = "http://127.0.0.1:4318/v1/traces"

@@ -1,9 +1,9 @@
 """C-owned capability adapters for the merged ReCheck input contract.
 
 These wrappers keep SDK calls and result normalization in the engineering adapter
-boundary. Registration remains a composition-root decision; callers pass instances
-to ``build_services(..., engineering_capabilities=...)`` after choosing the
-capability names used by their Finding dependencies.
+boundary. Configuration-driven registration remains a composition-root decision;
+callers may also pass explicit instances to ``build_services``. Optional SDKs are
+loaded only when checks run.
 """
 
 from __future__ import annotations
@@ -125,18 +125,7 @@ class IfcClashCapability:
             check_all=check_all,
         )
         self.condition = ClashCondition()
-
-    @property
-    def parameters(self) -> ClashParameters:
-        return self._parameters
-
-    @property
-    def mode(self) -> str:
-        return self._mode
-
-    @property
-    def version(self) -> str:
-        return capability_version(
+        self.version = capability_version(
             self._engine_version,
             {
                 "mode": self.mode,
@@ -145,6 +134,14 @@ class IfcClashCapability:
             },
             adapter_version="targeted-clash-v3",
         )
+
+    @property
+    def parameters(self) -> ClashParameters:
+        return self._parameters
+
+    @property
+    def mode(self) -> str:
+        return self._mode
 
     def check(self, request: CapabilityCheck) -> CapabilityCheckResult:
         try:
@@ -235,10 +232,7 @@ class IfcTesterCapability:
         self.adapter = adapter if adapter is not None else IfcTesterAdapter()
         self._engine_version = version or _version("ifctester")
         self.condition = IDSCondition()
-
-    @property
-    def version(self) -> str:
-        return capability_version(
+        self.version = capability_version(
             self._engine_version,
             {"ifcopenshell": _package_version("ifcopenshell"), "xmlschema": _version("xmlschema")},
             adapter_version="selected-ids-v3",

@@ -4,6 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.adapters.capability_environment import fixed, model_credential, optional
+from app.adapters.engineering_environment import engineering_status
 from app.domain.runs import Capability
 
 
@@ -144,8 +145,7 @@ def capabilities(svc, probe: bool = False) -> list[Capability]:
                 "distributed runtime", "Temporal", "temporalio", settings.runtime == "temporal"
             ),
             optional("IFC import", "IfcOpenShell", "ifcopenshell", True),
-            optional("IFC clash", "IfcClash", "ifcclash", False),
-            optional("IDS validation", "IfcTester", "ifctester", False),
+            *engineering_status(settings, svc.rechecks.capabilities),
             optional(
                 "BCF transport",
                 "buildingSMART BCF client",

@@ -6,7 +6,7 @@ A's grouped ReCheck and versioned IDS seam is consumed by `IfcClashCapability` a
 
 B's product host is available in Draft #24 at `5fca9eb`, under `frontend/src/app/EvidenceWorkspaceHost.tsx`. B's latest reply confirms that #24 will wait for C's modules, qualify a pinned combined tree and rebase after #22 lands, without copying C-owned viewer code. Its quality check now passes; Web is blocked by the missing C modules on the isolated B branch. The four previously identified conflicts and actual combined browser/Golden acceptance remain pending.
 
-Issue #17 remains **incomplete**, despite its closed GitHub state. Default `create_app` registration still passes no engineering providers to `build_services`; trusted PDF/CAD invocation/publication, native-host connectors, large-model/native and combined product/Golden acceptance remain outstanding. #22 remains Draft until acceptance and peer review are complete.
+Issue #17 remains **incomplete**, despite its closed GitHub state. Configuration-driven `create_app` registration is implemented behind two disabled-by-default switches, with lazy SDK loading and registry-aware capability inspection; see `ENGINEERING_STARTUP.md`. Trusted PDF/CAD invocation/publication, native-host connectors, large-model/native and combined product/Golden acceptance remain outstanding. #22 remains Draft until acceptance and peer review are complete.
 
 ## Implemented and locally qualified
 
@@ -183,7 +183,7 @@ Chinese OCR is opt-in, local and lazy through Docling's RapidOCR/ONNX backend. P
 
 The grouped input, durable execution, IDS selection and atomic publication contracts from #23 are available. C now consumes them in real ReCheck integration tests. Engineering adapter drafts still require trusted invocation before becoming persisted domain records. Remaining work is:
 
-1. Coordinate default deployment registration with A. C supplies the real `IfcClashCapability` and `IfcTesterCapability`; the application composition root must register the selected providers before recovery, preserve lightweight startup and report unavailable engines explicitly. The integration-test injection path already works.
+1. Obtain A review of configuration-driven provider registration before recovery. `CCA_IFC_CLASH_ENABLED` and `CCA_IDS_VALIDATION_ENABLED` default to false; selected providers remain SDK-lazy and capability inspection reports registry/dependency state explicitly. Explicit provider injection remains supported. See `ENGINEERING_STARTUP.md` for configuration and recovery qualification.
 2. Positive verification is implemented inside C's adapters for the supported clash/IDS conditions. Review and qualify its default deployment invocation and integrated Golden story with A/B; see `ENGINEERING_POSITIVE_VERIFICATION.md`. Empty output without actual complete geometry/non-vacuous applicability proof still cannot resolve.
 3. Connect PDF/CAD Change drafts and remaining derived artifacts through trusted invocation/publication. The canonical mappers exist; isolated draft normalization is not persisted product execution.
 4. Validate C's four lazy surfaces with B's actual #24 host. Resolve the four previewed conflicts in `frontend/package.json`, `THIRD_PARTY_NOTICES.md`, `docs/EVIDENCE_VIEWER_ADAPTERS.md` and `frontend/src/features/ProjectSourceRegister.test.tsx` with B. Validate the resulting manifest/lock pair, preserve both owners' changes and rerun checks on the combined tree. Source inspection is not browser acceptance.
