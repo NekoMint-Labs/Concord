@@ -7,6 +7,10 @@ import {
 import type { DrawingArtifact } from "./drawingArtifactTypes";
 const entries = new Map<string, { artifact: DrawingArtifact; bytes: number }>();
 let retainedBytes = 0;
+let generation = 0;
+export function drawingArtifactCacheGeneration() {
+  return generation;
+}
 export function drawingArtifactKey(sourceHash: string) {
   return JSON.stringify([sourceHash, DRAWING_ENGINE, DRAWING_RENDER_OPTIONS]);
 }
@@ -43,6 +47,7 @@ export function cacheDrawingArtifact(key: string, artifact: DrawingArtifact) {
   }
 }
 export function clearDrawingArtifactCache() {
+  ++generation;
   entries.clear();
   retainedBytes = 0;
 }

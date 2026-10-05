@@ -3,12 +3,14 @@ import {
   drawingArtifactKey,
   cachedDrawingArtifact,
   cacheDrawingArtifact,
+  drawingArtifactCacheGeneration,
 } from "./drawingArtifactCache";
 import { produceDrawingArtifact } from "./produceDrawingArtifact";
 import type { DrawingArtifact } from "./drawingArtifactTypes";
 import type { DrawingSource } from "./pdfDiffTypes";
 type Progress = (page: number, total: number) => void;
 interface Preparation {
+  generation: number;
   abort: AbortController;
   promise: Promise<DrawingArtifact>;
   users: number;
@@ -16,7 +18,24 @@ interface Preparation {
   timer: ReturnType<typeof setTimeout>;
 }
 const pending = new Map<string, Preparation>();
-function start(key: string, source: DrawingSource): Preparation {
+function assertGeneration(generation: number) {
+  if (generation !== drawingArtifactCacheGeneration())
+    throw new Error("Drawing preparation invalidated by cache reset");
+}
+function start(
+  key: string,
+  source: DrawingSource,
+  generation: number,
+): Preparation {
+  for (const [oldKey, entry] of pending) {
+    if (entry.generation !== generation) {
+      pending.delete(oldKey);
+      clearTimeout(entry.timer);
+      entry.abort.abort(
+        new Error("Drawing preparation invalidated by cache reset"),
+      );
+    }
+  }
   if (pending.size >= 2)
     throw new Error("Drawing preparation capacity is exhausted");
   const abort = new AbortController();
@@ -26,14 +45,20 @@ function start(key: string, source: DrawingSource): Preparation {
     120000,
   );
   const entry: Preparation = {
+    generation,
     abort,
     timer,
     listeners,
     users: 0,
     promise: produceDrawingArtifact(source, abort.signal, (page, total) => {
-      for (const listener of listeners) listener.notify(page, total);
+      if (
+        !abort.signal.aborted &&
+        generation === drawingArtifactCacheGeneration()
+      )
+        for (const listener of listeners) listener.notify(page, total);
     })
       .then((artifact) => {
+        assertGeneration(generation);
         abort.signal.throwIfAborted();
         cacheDrawingArtifact(key, artifact);
         return artifact;
@@ -61,6 +86,13 @@ function subscribe(
       result: { error: unknown } | { artifact: DrawingArtifact },
     ) => {
       if (ended) return;
+      if ("artifact" in result) {
+        try {
+          assertGeneration(entry.generation);
+        } catch (error) {
+          result = { error };
+        }
+      }
       ended = true;
       signal.removeEventListener("abort", cancelled);
       if (listener) entry.listeners.delete(listener);
@@ -93,15 +125,22 @@ export async function prepareDrawingSource(
   signal: AbortSignal,
   progress?: Progress,
 ) {
+  const generation = drawingArtifactCacheGeneration();
   signal.throwIfAborted();
   const snapshot = snapshotDrawingSource(source);
-  if ((await sha256(snapshot.data)) !== snapshot.sourceHash)
-    throw new Error("Drawing bytes do not match their source hash");
+  const hash = await sha256(snapshot.data);
   signal.throwIfAborted();
+  assertGeneration(generation);
+  if (hash !== snapshot.sourceHash)
+    throw new Error("Drawing bytes do not match their source hash");
   const key = drawingArtifactKey(snapshot.sourceHash);
   const cached = cachedDrawingArtifact(key);
   if (cached) return { artifact: cached, cacheHit: true };
-  const entry = pending.get(key) ?? start(key, snapshot);
+  const previous = pending.get(key);
+  const entry =
+    previous?.generation === generation
+      ? previous
+      : start(key, snapshot, generation);
   return {
     artifact: await subscribe(entry, key, signal, progress),
     cacheHit: false,

@@ -94,3 +94,21 @@ it("enforces a total byte budget and never inserts an oversized or misbound arti
   ).toThrow("identity");
   expect(cachedDrawingArtifact(drawingArtifactKey("c"))).toBeUndefined();
 });
+
+it("replaces a cached artifact without counting the old bytes twice", () => {
+  const key = drawingArtifactKey("a");
+  cacheDrawingArtifact(key, artifact("a", 17 * 1024 * 1024));
+  cacheDrawingArtifact(key, artifact("a", 1));
+  cacheDrawingArtifact(
+    drawingArtifactKey("b"),
+    artifact("b", 17 * 1024 * 1024),
+  );
+  expect(cachedDrawingArtifact(key)?.sheets[0].image.size).toBe(1);
+  expect(cachedDrawingArtifact(drawingArtifactKey("b"))).toBeDefined();
+  expect(() =>
+    cacheDrawingArtifact(drawingArtifactKey("c"), {
+      ...artifact("c"),
+      engine: "wrong engine" as typeof DRAWING_ENGINE,
+    }),
+  ).toThrow("identity");
+});
