@@ -318,7 +318,10 @@ function ProjectApplication({
       return;
     }
     if (next !== "bim") setMappingMode(false);
-    if (next === "work") agent.clearScope();
+    if (next === "work") {
+      agent.clearScope();
+      setWorkOpen(true);
+    }
     if (next !== tab || inspectorView === "investigation")
       setDetailsOpen(false);
     setTab(next);

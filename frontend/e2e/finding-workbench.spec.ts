@@ -524,8 +524,9 @@ for (const viewport of viewports) {
     await expect(panel).toContainText("人工复核净高与吊顶");
     await panel.getByRole("button", { name: "关闭工作与审核面板" }).click();
     await expect(panel).toHaveCount(0);
-    await expect(page.locator(".calm-work")).toBeFocused();
-    await page.locator(".calm-work").click();
+    await toolRail(page)
+      .getByRole("button", { name: "工作", exact: true })
+      .click();
     await expect(panel).toBeVisible();
     await capture(page, "actual-panel-restored");
     expect(errors).toEqual([]);
@@ -668,14 +669,15 @@ test("actual empty project command / docking / layout / focus; no synthetic Find
   await page.keyboard.press("Enter");
   // The command navigates to the Work destination; the docked panel is a
   // togglable dock, so open it before reading it.
-  const toggle = page.locator(".calm-work");
   await openWorkPanel(page);
   const panel = workPanel(page);
   await expect(panel).toBeVisible();
   await expect(panel).toContainText("当前项目尚无资料版本或工程判断可供检查。");
-  await toggle.click();
+  await panel.getByRole("button", { name: "关闭工作与审核面板" }).click();
   await expect(panel).toHaveCount(0);
-  await toggle.click();
+  await toolRail(page)
+    .getByRole("button", { name: "工作", exact: true })
+    .click();
   await expect(panel).toBeVisible();
   await page.getByRole("button", { name: "布局", exact: true }).click();
   const layout = page.getByRole("dialog", { name: "你的工作区" });

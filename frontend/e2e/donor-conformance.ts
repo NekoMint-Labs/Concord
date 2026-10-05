@@ -242,15 +242,12 @@ export const toolRail = (page: Page) =>
 export const workPanel = (page: Page) =>
   page.getByRole("complementary", { name: "工作与审核" });
 
-/**
- * Open the docked Work panel from the header's 工作 toggle. The panel is a
- * togglable dock (`aria-expanded` on `button.calm-work`), not a permanently
- * visible surface, so callers must open it before reading its rows.
- */
+/** Open the docked Work panel from the workspace tool rail. */
 export async function openWorkPanel(page: Page) {
-  const toggle = page.locator(".calm-work");
-  if ((await toggle.getAttribute("aria-expanded")) !== "true") {
-    await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-expanded", "true");
-  }
+  const panel = workPanel(page);
+  if (await panel.isVisible()) return;
+  await toolRail(page)
+    .getByRole("button", { name: "工作", exact: true })
+    .click();
+  await expect(panel).toBeVisible();
 }
