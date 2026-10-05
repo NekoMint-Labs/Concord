@@ -1,0 +1,63 @@
+"""Real IFC pressure source invariants; no browser/detector result is fabricated."""
+
+import hashlib
+import importlib.util
+import sys
+from pathlib import Path
+
+import pytest
+
+pytestmark = pytest.mark.integration
+
+
+@pytest.fixture
+def generator():
+    pytest.importorskip("ifcopenshell")
+    scripts = Path(__file__).resolve().parents[2] / "scripts"
+    spec = importlib.util.spec_from_file_location(
+        "pressure_fixture", scripts / "generate_ifc_pressure_fixture.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(scripts))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(scripts))
+    return module.create_pressure_model
+
+
+def test_pressure_source_is_reproducible_and_has_distinct_geometry(generator, tmp_path):
+    import ifcopenshell
+    import ifcopenshell.geom
+    import ifcopenshell.util.placement
+
+    first = tmp_path / "a" / "pressure.ifc"
+    second = tmp_path / "b" / "pressure.ifc"
+    manifest = generator(first, 12)
+    assert generator(second, 12) == manifest
+    assert first.read_bytes() == second.read_bytes()
+    assert manifest["sha256"] == hashlib.sha256(first.read_bytes()).hexdigest()
+    assert manifest["sourceBytes"] == first.stat().st_size
+    model = ifcopenshell.open(str(first))
+    beams = model.by_type("IfcBeam")
+    assert len(beams) == 12
+    assert len({beam.GlobalId for beam in beams}) == 12
+    assert len({beam.Representation.id() for beam in beams}) == 12
+    assert len({beam.Representation.Representations[0].Items[0].id() for beam in beams}) == 12
+    assert set(manifest["targetGlobalIds"]) == {beams[0].GlobalId, beams[-1].GlobalId}
+    assert set(model.by_type("IfcRelContainedInSpatialStructure")[0].RelatedElements) == set(beams)
+    placements = [
+        ifcopenshell.util.placement.get_local_placement(beam.ObjectPlacement) for beam in beams
+    ]
+    assert len({tuple(matrix[:3, 3]) for matrix in placements}) == 12
+    settings = ifcopenshell.geom.settings()
+    for beam in (beams[0], beams[-1]):
+        assert len(ifcopenshell.geom.create_shape(settings, beam).geometry.verts) > 0
+
+
+@pytest.mark.parametrize("count", [0, -1, 100_001])
+def test_pressure_size_rejects_before_writing(generator, tmp_path, count):
+    with pytest.raises(ValueError, match="element count"):
+        generator(tmp_path / "pressure.ifc", count)
+    assert list(tmp_path.iterdir()) == []

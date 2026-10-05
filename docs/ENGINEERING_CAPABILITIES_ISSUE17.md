@@ -920,3 +920,20 @@ A's persisted ReCheck service: paired evidence publication, cache reuse, configu
 invalidation, R3 recheck fencing, selected original IDS bytes and explicit unresolved output
 were verified in four integration scenarios. Adapter and input modules measured 99% scoped
 branch/statement coverage; this is not repository-wide coverage.
+
+## October 5, 2026 scaled IFC qualification
+
+The opt-in pressure lane now authors reproducible IFC4 geometry and qualifies
+10,000- and 50,000-element sources through the real pinned viewer. Both sources
+passed one cold and two warm sessions with exact revision/hash, native distant
+GlobalId navigation, BCF selection/scope, cache reuse and worker/DOM exit checks.
+All 565 existing frontend tests and four real source-authoring tests passed;
+typecheck/build passed. This continuation changes only qualification sources and
+documentation. Full scope, timings, the corrected new-lane wait, reproduction
+commands and remaining native/product limitations are recorded in
+[`IFC_PRESSURE_QUALIFICATION.md`](IFC_PRESSURE_QUALIFICATION.md).
+
+A's trusted PDF/CAD invocation/publication handoff and platform review, B's font
+cleanup and actual integration/rebase, native connectors and final persisted
+Golden acceptance remain outstanding. #22 remains Draft; these results do not
+complete Issue #17 or constitute a final approval.

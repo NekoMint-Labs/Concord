@@ -93,3 +93,14 @@ Run this command inside the cached adapted donor directory. Concord's root
 Vitest excludes independent viewer trees, which have their own locked SDKs.
 The browser BCF interoperability checks require Concord's locked BIM Python
 extra in .venv. Generated exports remain under ignored .verification-work.
+
+## Scaled browser qualification
+
+The optional `playwright.ifc-pressure.config.ts` lane generates deterministic
+synthetic IFC geometry, then checks cold/warm cache behavior, distant GlobalId
+navigation, BCF provenance and three complete resource lifetimes using the real
+pinned donor. The 10,000- and 50,000-element cases passed on October 5, 2026.
+See `docs/IFC_PRESSURE_QUALIFICATION.md` for commands, exact source sizes, timings
+and limitations. Geometry commitment precedes background spatial indexing, so
+SDK model-load notification timings alone are not full import timings. These
+results do not qualify packaged WebView or arbitrary complex-project geometry.
